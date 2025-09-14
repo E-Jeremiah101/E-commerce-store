@@ -1,7 +1,41 @@
 import { ArrowRight, CheckCircle, HandHeart } from 'lucide-react'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom';
+import { useCartStore } from '../stores/useCartStore';
+import axios from '../lib/axios';
 
 const PurchaseSuccessPage = () => {
+    const [isProcessing, setIsProcessing] = useState(true);
+    const {clearCart} = useCartStore();
+    const [error, setError] = useState(null)
+
+    useEffect(() =>{
+        const handleCheckoutSuccess = async (sessionId) => {
+            try {
+                await axios.post('/payments/checkout-success', {
+                    sessionId
+                });
+                clearCart()
+            } catch (error) {
+               console.log(error) 
+            } finally{
+                setIsProcessing(false)
+                
+            }
+        }
+
+        const sessionId = new URLSearchParams(window.location.search).get('session_id');
+
+        if(sessionId){
+            handleCheckoutSuccess(sessionId)
+        }else{
+            setIsProcessing(false)
+            setError("No session ID found in the URL");
+        }
+    }, [clearCart]);
+
+    if(isProcessing) return "Processing...";
+    if(error) return `Error: ${error}`;
   return (
     <div className="h-screen flex items-center justify-center px-4">
       {/* <Confetti/> */}
@@ -42,11 +76,13 @@ const PurchaseSuccessPage = () => {
               Thanks for trusting us!
             </button>
 
-            <button className="w-full bg-gray-600 hover:bg-emerald-600 font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center">
-              <HandHeart className="mr-2" size={18} />
+            <Link
+              to={"/"}
+              className="w-full bg-gray-600 hover:bg-emerald-600 font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+              
               Continue Shopping
               <ArrowRight className='ml-2' size={18}/>
-            </button>
+            </Link>
           </div>
         </div>
       </div>
