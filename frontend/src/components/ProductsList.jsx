@@ -79,7 +79,7 @@ const ProductsList = () => {
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-gray-300">
                   #
-                  {product.price.toLocaleString("en-NG", {
+                  {product.price.toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                   })}
                 </div>

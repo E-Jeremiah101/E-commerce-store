@@ -37,7 +37,7 @@ const ProductCard = ({product}) => {
           <p>
             <span className="text-3xl font-bold text-emerald-400">
               #
-              {product.price.toLocaleString("en-NG", {
+              {product.price.toLocaleString(undefined, {
                 minimumFractionDigits: 0,
               })}
             </span>

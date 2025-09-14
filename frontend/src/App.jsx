@@ -11,7 +11,7 @@ import { useEffect } from "react";
 import LoadingSpinner from "./components/LoadingSpinner.jsx";
 import CartPage from "./pages/CartPage.jsx";
 import { useCartStore } from "./stores/useCartStore.js";
-
+import PurchaseSuccessPage from "./pages/PurchaseSuccessPage.jsx"
 
 
 function App() {
@@ -63,7 +63,14 @@ function App() {
               }
             />
             <Route path="/category/:category" element={<CategoryPage />} />
-            <Route path="/cart" element={user ? <CartPage /> : <Navigate to='/login'/>} />
+            <Route
+              path="/cart"
+              element={user ? <CartPage /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/purchase-success"
+              element={user ? <PurchaseSuccessPage /> : <Navigate to="/login" />}
+            />
           </Routes>
         </div>
         <Toaster />

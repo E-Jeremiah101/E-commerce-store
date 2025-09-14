@@ -27,8 +27,9 @@ export  const createCheckoutSession = async(req, res) =>{
                         images:[ product.image],
                     },
                     unit_amount: amount
-                }
-            }
+                },
+                quantity: product.quantity || 1,
+            };
         });
 
         let coupon = null;
@@ -44,23 +45,23 @@ export  const createCheckoutSession = async(req, res) =>{
           line_items: lineItems,
           mode: "payment",
           success_url: `${process.env.CLIENT_URL}/purchase-success?session_id={CHECKOUT_SESSION_ID}`,
-          cancle_url: `${process.env.CLIENT_URL}/purchase-cancle`,
+          cancel_url: `${process.env.CLIENT_URL}/purchase-cancel`,
           discounts: coupon
-          ? [
-            {
-                coupon:await createStripeCoupon(coupon.discountPercentage),
-            }
-          ]
-          : [],
+            ? [
+                {
+                  coupon: await createStripeCoupon(coupon.discountPercentage),
+                },
+              ]
+            : [],
           metadata: {
             userId: req.user._id.toString(),
             couponCode: couponCode || "",
             products: JSON.stringify(
-               products.map((p) => ({
+              products.map((p) => ({
                 id: p._id,
                 quantity: p.quantity,
-                price:p.price,
-               })) 
+                price: p.price,
+              }))
             ),
           },
         });
