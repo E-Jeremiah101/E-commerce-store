@@ -3,42 +3,54 @@ import { motion } from "framer-motion";
 import { PlusCircle, Upload, Loader } from "lucide-react";
 import { useProductStore } from "../stores/useProductStore.jsx";
 
-
-const categories = ["jeans", "t-shirts", "shoes", "glasses", "jackets", "suits", "bags"];
+const categories = [
+  "jeans",
+  "t-shirts",
+  "shoes",
+  "glasses",
+  "jackets",
+  "suits",
+  "bags",
+];
 
 const CreateProductForm = () => {
-    const [newProduct, setNewProduct] = useState({
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    description: "",
+    price: "",
+    category: "",
+    image: "",
+  });
+
+  const { createProduct, loading } = useProductStore();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await createProduct(newProduct);
+      setNewProduct({
         name: "",
         description: "",
         price: "",
         category: "",
         image: "",
-    });
-
-   
-    const {createProduct, loading} = useProductStore();
-
-    const handleSubmit =async (e) => {
-        e.preventDefault();
-        try {
-          await createProduct(newProduct);
-          setNewProduct({name: "", description: "", price: "", category: "", image: ""});
-        } catch (error) {
-          console.log("error creating a product");
-        }
-    };
-    const handleImageChange = (e) => {
-      const file = e.target.files[0];
-      if(file) {
-        const reader = new FileReader();
-
-        reader.onloadend = () => {
-          setNewProduct({ ...newProduct, image: reader.result})
-        }
-
-        reader.readAsDataURL(file);
-      }
+      });
+    } catch (error) {
+      console.log("error creating a product");
     }
+  };
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+
+      reader.onloadend = () => {
+        setNewProduct({ ...newProduct, image: reader.result });
+      };
+
+      reader.readAsDataURL(file);
+    }
+  };
 
   return (
     <motion.div
@@ -185,6 +197,6 @@ const CreateProductForm = () => {
       </form>
     </motion.div>
   );
-}
+};
 
-export default CreateProductForm
+export default CreateProductForm;

@@ -1,33 +1,33 @@
-import {Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 import HomePage from "./pages/HomePage.jsx";
 import SignUpPage from "./pages/SignUpPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import AdminPage from "./pages/AdminPage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
-import Navbar from "./components/Navbar.jsx"
+import Navbar from "./components/Navbar.jsx";
 import { Toaster } from "react-hot-toast";
 import { useUserStore } from "./stores/useUserStore.js";
 import { useEffect } from "react";
 import LoadingSpinner from "./components/LoadingSpinner.jsx";
 import CartPage from "./pages/CartPage.jsx";
 import { useCartStore } from "./stores/useCartStore.js";
-import PurchaseSuccessPage from "./pages/PurchaseSuccessPage.jsx"
-
+import PurchaseSuccessPage from "./pages/PurchaseSuccessPage.jsx";
+import PurchaseCancelPage from "./pages/PurchaseCancelPage.jsx";
 
 function App() {
-  const {user, checkAuth, checkingAuth} = useUserStore();
-  const {getCartItems} = useCartStore();
+  const { user, checkAuth, checkingAuth } = useUserStore();
+  const { getCartItems } = useCartStore();
 
   useEffect(() => {
-    checkAuth()
+    checkAuth();
   }, [checkAuth]);
 
   useEffect(() => {
     if (!user) return;
-     getCartItems();
+    getCartItems();
   }, [getCartItems, user]);
 
-  if(checkingAuth) return <LoadingSpinner/>
+  if (checkingAuth) return <LoadingSpinner />;
   return (
     <>
       <div className="min-h-screen bg-gray-900 text-white relative overflow-hidden">
@@ -69,7 +69,13 @@ function App() {
             />
             <Route
               path="/purchase-success"
-              element={user ? <PurchaseSuccessPage /> : <Navigate to="/login" />}
+              element={
+                user ? <PurchaseSuccessPage /> : <Navigate to="/login" />
+              }
+            />
+            <Route
+              path="/purchase-cancel"
+              element={user ? <PurchaseCancelPage /> : <Navigate to="/login" />}
             />
           </Routes>
         </div>
@@ -79,4 +85,4 @@ function App() {
   );
 }
 
-export default App
+export default App;

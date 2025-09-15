@@ -1,43 +1,42 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { useCartStore } from '../stores/useCartStore';
-import { MoveRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { loadStripe } from '@stripe/stripe-js';
-import axios from '../lib/axios';
+import React from "react";
+import { motion } from "framer-motion";
+import { useCartStore } from "../stores/useCartStore";
+import { MoveRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { loadStripe } from "@stripe/stripe-js";
+import axios from "../lib/axios";
 const OrderSummary = () => {
+  const stripePromise = loadStripe(
+    "pk_test_51S3kJFJ8hCAIqKl90xm7Qf4GnPFdQC7HL0lLeIOpRxQcBFRUfcsjnNSVYCk5pddXPOadHQPjKqEeWv5C98VMT5ZL00QiKbylbA"
+  );
+  const { total, subtotal, coupon, cart, isCouponApplied } = useCartStore();
 
-    const stripePromise = loadStripe(
-      "pk_test_51S3kJFJ8hCAIqKl90xm7Qf4GnPFdQC7HL0lLeIOpRxQcBFRUfcsjnNSVYCk5pddXPOadHQPjKqEeWv5C98VMT5ZL00QiKbylbA"
-    );
-    const {total, subtotal, coupon, cart, isCouponApplied} = useCartStore();
+  const savings = subtotal - total;
+  const formattedSubtotal = subtotal.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+  });
+  const formattedTotal = total.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+  });
+  const formattedSavings = savings.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+  });
 
-    const savings = subtotal - total;
-    const formattedSubtotal = subtotal.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
+  const handlePayment = async () => {
+    const stripe = await stripePromise;
+    const res = await axios.post("/payments/create-checkout-session", {
+      products: cart,
+      couponCode: coupon ? coupon.code : null,
     });
-    const formattedTotal = total.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-    });
-    const formattedSavings = savings.toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-    });
 
-    const handlePayment = async() => {
-      const stripe = await stripePromise;
-      const res = await axios.post("/payments/create-checkout-session", {
-        products: cart,
-        coupon: coupon ?coupon.code : null,});
-
-        const session= res.data
-        const result = await stripe.redirectToCheckout({
-          sessionId: session.id,
-        })
-        if (result.error){
-          console.error("Error:", result.error)
-        }
+    const session = res.data;
+    const result = await stripe.redirectToCheckout({
+      sessionId: session.id,
+    });
+    if (result.error) {
+      console.error("Error:", result.error);
     }
-
+  };
 
   return (
     <motion.div
@@ -98,13 +97,13 @@ const OrderSummary = () => {
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-normal text-gray-400">or</span>
           <Link className="inline-flex items-center gap-2 text-sm font-medium text-emerald-400 underline hover:text-emerald-300 hover:no-underline">
-            Continue Shopping 
-            <MoveRight size={16}/>
+            Continue Shopping
+            <MoveRight size={16} />
           </Link>
         </div>
       </div>
     </motion.div>
   );
-}
+};
 
-export default OrderSummary
+export default OrderSummary;

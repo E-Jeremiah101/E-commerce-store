@@ -9,14 +9,9 @@ import Coupon from "../models/coupon.model.js";
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
 
-
-
 const router = express.Router();
 
 router.post("/create-checkout-session", protectRoute, createCheckoutSession);
 router.post("/checkout-success", protectRoute, checkoutSuccess);
 
-
-
 export default router;
-

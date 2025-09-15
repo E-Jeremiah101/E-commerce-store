@@ -1,12 +1,13 @@
 import express from "express";
 import {
-    getAllProducts, 
-    getFeaturedProducts,
-    getProductsByCategory,
-    getRecommendedProducts, 
-    createProduct,
-    toggleFeaturedProduct, 
-    deleteProduct} from "../controllers/product.controller.js";
+  getAllProducts,
+  getFeaturedProducts,
+  getProductsByCategory,
+  getRecommendedProducts,
+  createProduct,
+  toggleFeaturedProduct,
+  deleteProduct,
+} from "../controllers/product.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
 
