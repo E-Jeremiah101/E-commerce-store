@@ -40,11 +40,10 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
 if(process.env.NODE_ENV ==="production"){
-   const frontendPath = path.join(__dirname, "../frontend/dist"); // adjust if needed
-   app.use(express.static(frontendPath));
-
-   app.get("*", (req, res) => {
-     res.sendFile(path.join(frontendPath, "index.html"));
+   const buildPath = path.join(__dirname, "../frontend/build");
+   app.use(express.static(buildPath));
+   app.get(/.*/, (req, res) => {
+     res.sendFile(path.join(buildPath, "index.html"));
    });
 }
 
