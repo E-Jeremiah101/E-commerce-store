@@ -4,6 +4,7 @@ import authRouthes from "./routes/auth.route.js";
 import productRoutes from "./routes/product.routes.js"
 import {connectDB} from "./lib/db.js";
 import cookieParser from "cookie-parser";
+import path from "path"
 import cartRoutes from "./routes/cart.route.js";
 import couponRoutes from "./routes/coupon.route.js";
 import paymentRoutes from "./routes/payment.route.js";
@@ -14,6 +15,8 @@ dotenv.config()
 const app = express();
 await connectRedis(); //connect once at startup
 const PORT = process.env.PORT || 5000;
+
+const __dirname = path.resolve()
 
 app.use(express.json({limit: "10mb"})); // allow to parse the body of the request
 app.use(cookieParser())
@@ -34,8 +37,15 @@ app.use("/api/coupons", couponRoutes);
 app.use("/api/payments", paymentRoutes);
 
 //analyticsRoutes
-app.use("/api/analytics", analyticsRoutes)
+app.use("/api/analytics", analyticsRoutes);
 
+if(process.env.NODE_ENV ==="production"){
+    app.use(express.static(path.join(__dirname, "/frontend/dist")));
+
+    app.get("*", (req, res) => {
+        res.sendFile(path.resolve(__dirname, "frontend", "dist", "index.html"))
+    })
+}
 
 
 
