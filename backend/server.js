@@ -40,13 +40,12 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
 if(process.env.NODE_ENV ==="production"){
-  // Serve React build folder
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
+   const frontendPath = path.join(__dirname, "../frontend/dist"); // adjust if needed
+   app.use(express.static(frontendPath));
 
-  // Wildcard route for React
-  app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
-  });
+   app.get("*", (req, res) => {
+     res.sendFile(path.join(frontendPath, "index.html"));
+   });
 }
 
 
