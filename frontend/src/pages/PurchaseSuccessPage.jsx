@@ -1,5 +1,5 @@
 import { ArrowRight, CheckCircle, HandHeart } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCartStore } from "../stores/useCartStore";
 import axios from "../lib/axios";
@@ -7,16 +7,21 @@ import Confetti from "react-confetti";
 
 const PurchaseSuccessPage = () => {
   const [isProcessing, setIsProcessing] = useState(true);
+   const [orderNumber, setOrderNumber] = useState(""); 
+
   const { clearCart } = useCartStore();
   const [error, setError] = useState(null);
+ 
 
   useEffect(() => {
     const handleCheckoutSuccess = async (sessionId) => {
       try {
-        await axios.post("/payments/checkout-success", {
+      const response =   await axios.post("/payments/checkout-success", {
           sessionId,
         });
         clearCart();
+
+        setOrderNumber(response.data.orderNumber);
       } catch (error) {
         console.log(error);
       } finally {
@@ -27,7 +32,6 @@ const PurchaseSuccessPage = () => {
     const sessionId = new URLSearchParams(window.location.search).get(
       "session_id"
     );
-
     if (sessionId) {
       handleCheckoutSuccess(sessionId);
     } else {
@@ -37,7 +41,9 @@ const PurchaseSuccessPage = () => {
   }, [clearCart]);
 
   if (isProcessing) return "Processing...";
+
   if (error) return `Error: ${error}`;
+
   return (
     <div className="h-screen flex items-center justify-center px-4">
       <Confetti
@@ -59,16 +65,16 @@ const PurchaseSuccessPage = () => {
           </h1>
 
           <p className="text-gray-300 text-center mb-2">
-            Thank you for your order, {"we're"} processing it now.
+            Thank you for your order. {"We're"} processing it now.
           </p>
           <p className="text-emerald-400 text-center text-sm mb-6">
-            Check your email for your details and updates.
+            Check your email for order details and updates.
           </p>
           <div className="bg-gray-700 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-400">Order number</span>
               <span className="text-sm font-semibold text-emerald-400">
-                #12345
+                {orderNumber}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -80,14 +86,17 @@ const PurchaseSuccessPage = () => {
           </div>
 
           <div className="space-y-4">
-            <button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center">
+            <button
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4
+             rounded-lg transition duration-300 flex items-center justify-center"
+            >
               <HandHeart className="mr-2" size={18} />
               Thanks for trusting us!
             </button>
-
             <Link
               to={"/"}
-              className="w-full bg-gray-600 hover:bg-emerald-600 font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center"
+              className="w-full bg-gray-700 hover:bg-gray-600 text-emerald-400 font-bold py-2 px-4 
+            rounded-lg transition duration-300 flex items-center justify-center"
             >
               Continue Shopping
               <ArrowRight className="ml-2" size={18} />
@@ -98,5 +107,4 @@ const PurchaseSuccessPage = () => {
     </div>
   );
 };
-
 export default PurchaseSuccessPage;

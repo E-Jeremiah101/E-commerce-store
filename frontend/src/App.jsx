@@ -3,6 +3,7 @@ import HomePage from "./pages/HomePage.jsx";
 import SignUpPage from "./pages/SignUpPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import AdminPage from "./pages/AdminPage.jsx";
+import OrderHistoryPage from "./pages/OrderHistoryPage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
 import Navbar from "./components/Navbar.jsx";
 import { Toaster } from "react-hot-toast";
@@ -13,6 +14,7 @@ import CartPage from "./pages/CartPage.jsx";
 import { useCartStore } from "./stores/useCartStore.js";
 import PurchaseSuccessPage from "./pages/PurchaseSuccessPage.jsx";
 import PurchaseCancelPage from "./pages/PurchaseCancelPage.jsx";
+import AdminOrdersPage from "./pages/check.jsx";
 
 function App() {
   const { user, checkAuth, checkingAuth } = useUserStore();
@@ -67,6 +69,12 @@ function App() {
               path="/cart"
               element={user ? <CartPage /> : <Navigate to="/login" />}
             />
+
+            <Route
+              path="/order-history"
+              element={user ? <OrderHistoryPage /> : <Navigate to="/login" />}
+            />
+
             <Route
               path="/purchase-success"
               element={

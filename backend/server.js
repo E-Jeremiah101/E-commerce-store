@@ -10,7 +10,8 @@ import couponRoutes from "./routes/coupon.route.js";
 import paymentRoutes from "./routes/payment.route.js";
 import analyticsRoutes from "./routes/analytics.route.js";
 import { connectRedis } from "./lib/redis.js";
-
+import orderRoute from "./routes/orderRoute.js";
+import adminOrderRoutes from "./routes/adminOrder.route.js";
 dotenv.config()
 const app = express();
 await connectRedis(); //connect once at startup
@@ -38,6 +39,12 @@ app.use("/api/payments", paymentRoutes);
 
 //analyticsRoutes
 app.use("/api/analytics", analyticsRoutes);
+
+//orderRoutes
+app.use("/api/orders", orderRoute);
+
+//adminOderRoute
+app.use("/api/admin/orders", adminOrderRoutes);
 
 if(process.env.NODE_ENV ==="production"){
    const buildPath = path.join(__dirname, "../frontend/build");

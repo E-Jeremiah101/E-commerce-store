@@ -20,20 +20,19 @@ export const useUserStore = create((set, get) => ({
       set({ user: res.data, loading: false });
     } catch (error) {
       set({ loading: false });
-      toast.error(error.response.data.message || "An error occured, try again");
+      toast.error(error.response.data.message || "An error occurred");
     }
   },
-
   login: async (email, password) => {
     set({ loading: true });
 
     try {
       const res = await axios.post("/auth/login", { email, password });
-      console.log("user is here", res.data);
+
       set({ user: res.data, loading: false });
     } catch (error) {
       set({ loading: false });
-      toast.error(error.response.data.message || "An error occured, try again");
+      toast.error(error.response.data.message || "An error occurred");
     }
   },
 
@@ -43,7 +42,7 @@ export const useUserStore = create((set, get) => ({
       set({ user: null });
     } catch (error) {
       toast.error(
-        error.response?.data?.message || "An error occured during logout"
+        error.response?.data?.message || "An error occurred during logout"
       );
     }
   },
@@ -58,49 +57,54 @@ export const useUserStore = create((set, get) => ({
       set({ checkingAuth: false, user: null });
     }
   },
-  refreshToken: async () => {
-    if(get().checkingAuth) return;
 
-    set({checkingAuth: true});
+  refreshToken: async () => {
+    // Prevent multiple simultaneous refresh attempts
+    if (get().checkingAuth) return;
+
+    set({ checkingAuth: true });
     try {
-      const response= await axios.post("/auth/refresh-token");
-      set({checkingAuth: false});
+      const response = await axios.post("/auth/refresh-token");
+      set({ checkingAuth: false });
       return response.data;
     } catch (error) {
-      set({user: null, checkingAuth: false});
+      set({ user: null, checkingAuth: false });
       throw error;
     }
-  }
+  },
 }));
 
-//Implementing the axios interceptors for refreshing the access tokens
+// TODO: Implement the axios interceptors for refreshing access token
 
-//Axios interceptor for token refresh
-
+// Axios interceptor for token refresh
 let refreshPromise = null;
+
 axios.interceptors.response.use(
   (response) => response,
-  async () => {
+  async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry){
+    if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
-        if(refreshPromise){
+        // If a refresh is already in progress, wait for it to complete
+        if (refreshPromise) {
           await refreshPromise;
           return axios(originalRequest);
         }
 
+        // Start a new refresh process
         refreshPromise = useUserStore.getState().refreshToken();
         await refreshPromise;
         refreshPromise = null;
 
         return axios(originalRequest);
-      } catch (error) {
+      } catch (refreshError) {
+        // If refresh fails, redirect to login or handle as needed
         useUserStore.getState().logout();
         return Promise.reject(refreshError);
       }
     }
-    return Promise.reject(error)
+    return Promise.reject(error);
   }
 );

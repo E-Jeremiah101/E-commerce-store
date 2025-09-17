@@ -3,7 +3,8 @@ import Product from "../models/product.model.js";
 export const getCartProducts = async (req, res) => {
   try {
     const products = await Product.find({ _id: { $in: req.user.cartItems } });
-    //add quantity for each product
+
+    // add quantity for each product
     const cartItems = products.map((product) => {
       const item = req.user.cartItems.find(
         (cartItem) => cartItem.id === product.id
@@ -13,7 +14,7 @@ export const getCartProducts = async (req, res) => {
 
     res.json(cartItems);
   } catch (error) {
-    console.log("Error in getCartProducts", error.message);
+    console.log("Error in getCartProducts controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -29,14 +30,12 @@ export const addToCart = async (req, res) => {
     } else {
       user.cartItems.push(productId);
     }
+
     await user.save();
     res.json(user.cartItems);
   } catch (error) {
     console.log("Error in addToCart controller", error.message);
-    res.status(500).json({
-      message: "Server error",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -52,10 +51,7 @@ export const removeAllFromCart = async (req, res) => {
     await user.save();
     res.json(user.cartItems);
   } catch (error) {
-    res.status(500).json({
-      message: "Server error",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -77,15 +73,10 @@ export const updateQuantity = async (req, res) => {
       await user.save();
       res.json(user.cartItems);
     } else {
-      res.status(404).json({
-        message: "Product not found",
-      });
+      res.status(404).json({ message: "Product not found" });
     }
   } catch (error) {
-    console.log("Error in updateQuantity controller");
-    res.status(500).json({
-      message: "Server error",
-      error: error.message,
-    });
+    console.log("Error in updateQuantity controller", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };

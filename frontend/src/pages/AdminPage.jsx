@@ -4,11 +4,13 @@ import React, { useEffect, useState } from "react";
 import AnalyticsTab from "../components/AnalyticsTab.jsx";
 import ProductsList from "../components/ProductsList.jsx";
 import CreateProductForm from "../components/CreateProductForm.jsx";
+import AdminOrdersPage from "../components/AdminOrder.jsx"
 import { useProductStore } from "../stores/useProductStore.jsx";
 const tabs = [
   { id: "create", label: "Create Product", icon: PlusCircle },
   { id: "products", label: "Products", icon: ShoppingBasket },
   { id: "analytics", label: "Analytics", icon: BarChart },
+  { id: "AdminOrder", label: "Orders", icon: BarChart },
 ];
 
 const AdminPage = () => {
@@ -50,6 +52,7 @@ const AdminPage = () => {
         {activeTab === "create" && <CreateProductForm />}
         {activeTab === "products" && <ProductsList />}
         {activeTab === "analytics" && <AnalyticsTab />}
+        {activeTab === "AdminOrder" && <AdminOrdersPage />}
       </div>
     </div>
   );
