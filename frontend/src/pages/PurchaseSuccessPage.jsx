@@ -8,9 +8,10 @@ import Confetti from "react-confetti";
 const PurchaseSuccessPage = () => {
   const [isProcessing, setIsProcessing] = useState(true);
    const [orderNumber, setOrderNumber] = useState(""); 
+ const [error, setError] = useState(null);
 
   const { clearCart } = useCartStore();
-  const [error, setError] = useState(null);
+ 
  
 
   useEffect(() => {
@@ -19,9 +20,14 @@ const PurchaseSuccessPage = () => {
       const response =   await axios.post("/payments/checkout-success", {
           sessionId,
         });
+
         clearCart();
 
         setOrderNumber(response.data.orderNumber);
+
+        const url = new URL(window.location);
+        url.searchParams.delete("session_id");
+        window.history.replaceState({}, document.title, url);
       } catch (error) {
         console.log(error);
       } finally {

@@ -105,11 +105,5 @@ export const useCartStore = create((set, get) => ({
 
     set({ subtotal, total });
   },
-  // getOrderNumber: () => {
-    
-  //     return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
-    
-
-    
-  // }
+ 
 }));

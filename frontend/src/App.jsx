@@ -14,7 +14,7 @@ import CartPage from "./pages/CartPage.jsx";
 import { useCartStore } from "./stores/useCartStore.js";
 import PurchaseSuccessPage from "./pages/PurchaseSuccessPage.jsx";
 import PurchaseCancelPage from "./pages/PurchaseCancelPage.jsx";
-import AdminOrdersPage from "./pages/check.jsx";
+
 
 function App() {
   const { user, checkAuth, checkingAuth } = useUserStore();

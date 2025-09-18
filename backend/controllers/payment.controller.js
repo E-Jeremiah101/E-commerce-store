@@ -1,6 +1,8 @@
 import Coupon from "../models/coupon.model.js";
 import Order from "../models/order.model.js";
 import { stripe } from "../lib/stripe.js";
+import User from "../models/user.model.js";
+import { sendEmail } from "../lib/mailer.js";
 
 export const createCheckoutSession = async (req, res) => {
   try {
@@ -64,6 +66,8 @@ export const createCheckoutSession = async (req, res) => {
             id: p._id,
             quantity: p.quantity,
             price: p.price,
+            name: p.name,
+            image: p.image,
           }))
         ),
       },
@@ -87,6 +91,16 @@ export const checkoutSuccess = async (req, res) => {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (session.payment_status === "paid") {
+      const existingOrder = await Order.findOne({ stripeSessionId: sessionId });
+      if (existingOrder) {
+        return res.status(200).json({
+          success: true,
+          message: "Order already exists",
+          orderId: existingOrder._id,
+          orderNumber: existingOrder.orderNumber,
+        });
+      }
+
       // deactivate coupon if used
       if (session.metadata.couponCode) {
         await Coupon.findOneAndUpdate(
@@ -127,12 +141,81 @@ export const checkoutSuccess = async (req, res) => {
 
       await newOrder.save();
 
+      await User.findByIdAndUpdate(session.metadata.userId, { cartItems: [] });
+
+      // ✅ Fetch user to get their email
+      const user = await User.findById(session.metadata.userId);
+
+      // ✅ Create product rows for the email
+      const productRows = products
+        .map(
+          (p) => `
+    <tr>
+      <td style="padding: 8px; border: 1px solid #ddd;">${p.name}</td>
+      <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">${
+        p.quantity
+      }</td>
+      <td style="padding: 8px; border: 1px solid #ddd; text-align:right;">$${p.price.toFixed(
+        2
+      )}</td>
+    </tr>
+  `
+        )
+        .join("");
+
+      await sendEmail({
+        to: user.email,
+        subject: `Your EcoStore Order Confirmation -  ${newOrder.orderNumber}`,
+        text: `Hi ${user.name}, thank you for your order! Your order number is ${newOrder.orderNumber}.`,
+        html: `
+          <!DOCTYPE html>
+    <html>
+      <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+        <div style="max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px;">
+          <h2 style="color: #2ecc71; text-align: center;">🎉 Thank you for your order!</h2>
+          <p>Hi <strong>${user.name}</strong>,</p>
+          <p>We’ve received your order <strong>${
+            newOrder.orderNumber
+          }</strong> and it’s now being processed.</p>
+
+          <h3 style="margin-top: 20px;">🛒 Order Summary</h3>
+          <table style="width:100%; border-collapse: collapse; margin-top: 10px;">
+            <thead>
+              <tr>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align:left;">Product</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align:center;">Qty</th>
+                <th style="padding: 8px; border: 1px solid #ddd; text-align:right;">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${productRows}
+            </tbody>
+          </table>
+
+          <p style="margin-top: 20px; font-size: 16px;">
+            <strong>Total:</strong> $${newOrder.totalAmount.toFixed(2)} <br>
+            <strong>Estimated delivery:</strong> 3–5 business days
+          </p>
+
+          <p>You’ll get another email once your items are shipped 🚚</p>
+          <p>If you have any questions, just reply to this email — we’re happy to help!</p>
+
+          <p style="margin-top: 30px; font-size: 14px; color: #555;">
+            Best regards, <br>
+            <strong>The EcoStore Team 🌱</strong>
+          </p>
+        </div>
+      </body>
+    </html>
+        `,
+      });
+
       res.status(200).json({
         success: true,
         message:
           "Payment successful, order created, and coupon deactivated if used.",
         orderId: newOrder._id,
-        orderNumber: newOrder.orderNumber, // ✅ send to frontend
+        orderNumber: newOrder.orderNumber, // send to frontend
       });
     }
   } catch (error) {
