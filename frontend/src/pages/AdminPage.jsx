@@ -1,4 +1,4 @@
-import { BarChart, PlusCircle, ShoppingBasket } from "lucide-react";
+import { BarChart, PlusCircle, ShoppingBasket, Package } from "lucide-react";
 import { motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import AnalyticsTab from "../components/AnalyticsTab.jsx";
@@ -10,7 +10,7 @@ const tabs = [
   { id: "create", label: "Create Product", icon: PlusCircle },
   { id: "products", label: "Products", icon: ShoppingBasket },
   { id: "analytics", label: "Analytics", icon: BarChart },
-  { id: "AdminOrder", label: "Orders", icon: BarChart },
+  { id: "AdminOrder", label: "Orders", icon: Package },
 ];
 
 const AdminPage = () => {

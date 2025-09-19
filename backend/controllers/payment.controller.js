@@ -155,8 +155,11 @@ export const checkoutSuccess = async (req, res) => {
       <td style="padding: 8px; border: 1px solid #ddd; text-align:center;">${
         p.quantity
       }</td>
-      <td style="padding: 8px; border: 1px solid #ddd; text-align:right;">$${p.price.toFixed(
-        2
+      <td style="padding: 8px; border: 1px solid #ddd; text-align:right;">#${p.price.toLocaleString(
+        undefined,
+        {
+          minimumFractionDigits: 0,
+        }
       )}</td>
     </tr>
   `
@@ -176,7 +179,8 @@ export const checkoutSuccess = async (req, res) => {
           <p>Hi <strong>${user.name}</strong>,</p>
           <p>We’ve received your order <strong>${
             newOrder.orderNumber
-          }</strong> and it’s now being processed.</p>
+          }</strong>.</p>
+          <p><strong>Current Status:</strong> <span style="color: orange;">Pending ⏳</span></p>
 
           <h3 style="margin-top: 20px;">🛒 Order Summary</h3>
           <table style="width:100%; border-collapse: collapse; margin-top: 10px;">
@@ -193,7 +197,12 @@ export const checkoutSuccess = async (req, res) => {
           </table>
 
           <p style="margin-top: 20px; font-size: 16px;">
-            <strong>Total:</strong> $${newOrder.totalAmount.toFixed(2)} <br>
+            <strong>Total:</strong> #${newOrder.totalAmount.toLocaleString(
+              undefined,
+              {
+                minimumFractionDigits: 0,
+              }
+            )} <br>
             <strong>Estimated delivery:</strong> 3–5 business days
           </p>
 

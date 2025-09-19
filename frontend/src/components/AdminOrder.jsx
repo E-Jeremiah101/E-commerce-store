@@ -97,7 +97,10 @@ const AdminOrdersPage = () => {
               </ul>
 
               <p className="font-bold">
-                Total: ${order.totalAmount.toFixed(2)}
+                Total: $
+                {order.totalAmount.toLocaleString(undefined, {
+                  minimumFractionDigits: 0,
+                })}
               </p>
             </div>
           ))}

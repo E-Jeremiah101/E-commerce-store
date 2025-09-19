@@ -70,14 +70,25 @@ const OrderHistoryPage = () => {
                     />
                     <span>{item.product?.name}</span>
                     <span>
-                      {item.quantity} x ${item.price}
+                      <span className="mt-4 font-bold">{item.quantity}</span>x
+                      {"   "}
+                      <span className="mt-4 font-bold">
+                        {" "}
+                        #
+                        {item.price.toLocaleString(undefined, {
+                          minimumFractionDigits: 0,
+                        })}
+                      </span>
                     </span>
                   </li>
                 ))}
               </ul>
 
               <p className="mt-4 font-bold">
-                Total: ${order.totalAmount.toFixed(2)}
+                Total: #
+                {order.totalAmount.toLocaleString(undefined, {
+                  minimumFractionDigits: 0,
+                })}
               </p>
             </div>
           ))}
