@@ -1,8 +1,14 @@
 import React, { useState } from 'react'
-import {UserPlus, User, LogOut, Mail, Lock, Loader, ArrowRight } from "lucide-react";
+import {UserPlus, User, Mail, Lock, Loader, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from 'framer-motion';
+import {
+  checkRequired,
+  checkLength,
+  checkEmail,
+} from "../utils/validateForm.js";
 import { useUserStore } from '../stores/useUserStore';
+
 
 const SignUpPage = () => {
   const [formData, setFormData] = useState({
@@ -12,12 +18,68 @@ const SignUpPage = () => {
     confirmPassword: "",
   });
 
-  const {signup, loading} = useUserStore();
+  const [errors, setErrors] = useState({});
+  const [success, setSuccess] = useState({});
 
-  const handleSubmit = (e) => {
+  const [backendError, setBackendError] = useState("");
+
+
+  const {signup, loading} = useUserStore();
+ let newErrors = {};
+ 
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Called here")
-    signup(formData);
+    console.log("Called here");
+
+    setBackendError("");
+
+    let nameRequired = checkRequired(formData.name, "Full name");
+
+    if (nameRequired) {
+      newErrors.name = nameRequired;
+    }
+
+    let emailRequired = checkRequired(formData.email, "Email");
+    if (emailRequired) {
+      newErrors.email = emailRequired;
+    } else {
+      let emailValid = checkEmail(formData.email);
+      if (emailValid) newErrors.email = emailValid;
+    }
+    let passwordRequired = checkRequired(formData.password, "Password");
+    if (passwordRequired) {
+      newErrors.password = passwordRequired;
+    } else {
+      let passwordLength = checkLength(formData.password, 6, 25, "Password");
+      if (passwordLength) newErrors.password = passwordLength;
+    }
+
+    if (formData.confirmPassword !== formData.password) {
+      newErrors.confirmPassword = "Password do not match";
+    }
+
+    // stop if frontend validation fails
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    // call backend
+    const result = await signup(formData);
+
+    if (result?.error) {
+      setBackendError(result.error); // shows under button
+      return;
+    }
+
+    setErrors(newErrors);
+    setSuccess({
+      name: !newErrors.name,
+      email: !newErrors.email,
+      password: !newErrors.password,
+    });
+
+    // signup(formData);
   }
   return (
     <div className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -41,21 +103,24 @@ const SignUpPage = () => {
         <div className="bg-gray-600 py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* name */}
-            <div>
+            <div
+              className={`form-control ${
+                success.name ? "success" : errors.name ? "error" : ""
+              }`}
+            >
               <label
                 htmlFor="name"
                 className="block text-sm font-medium text-gray-300"
               >
                 Full name
               </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="mt-1 relative rounded-md shadow-sm mb-0">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <User className="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
                 <input
                   type="text"
                   id="name"
-                  required
                   value={formData.name}
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
@@ -64,9 +129,16 @@ const SignUpPage = () => {
                   placeholder="John Doe"
                 />
               </div>
+
+              <small>{errors.name}</small>
             </div>
+
             {/* email */}
-            <div>
+            <div
+              className={`form-control ${
+                success.email ? "success" : errors.email ? "error" : ""
+              }`}
+            >
               <label
                 htmlFor="email"
                 className="block text-sm font-medium text-gray-300"
@@ -78,9 +150,8 @@ const SignUpPage = () => {
                   <Mail className="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
                 <input
-                  type="email"
+                  type="text"
                   id="email"
-                  required
                   value={formData.email}
                   onChange={(e) =>
                     setFormData({ ...formData, email: e.target.value })
@@ -89,9 +160,15 @@ const SignUpPage = () => {
                   placeholder="Johdoe@example.com"
                 />
               </div>
+              <small>{errors.email}</small>
             </div>
+
             {/* Password */}
-            <div>
+            <div
+              className={`form-control ${
+                success.password ? "success" : errors.password ? "error" : ""
+              }`}
+            >
               <label
                 htmlFor="password"
                 className="block text-sm font-medium text-gray-300"
@@ -105,7 +182,6 @@ const SignUpPage = () => {
                 <input
                   type="password"
                   id="password"
-                  required
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })
@@ -114,9 +190,19 @@ const SignUpPage = () => {
                   placeholder="******"
                 />
               </div>
+              <small>{errors.password}</small>
             </div>
+
             {/* confirm password */}
-            <div>
+            <div
+              className={`form-control ${
+                success.confirmPassword
+                  ? "success"
+                  : errors.confirmPassword
+                  ? "error"
+                  : ""
+              }`}
+            >
               <label
                 htmlFor="confirmPassword"
                 className="block text-sm font-medium text-gray-300"
@@ -130,39 +216,54 @@ const SignUpPage = () => {
                 <input
                   type="password"
                   id="confirmPassword"
-                  required
                   value={formData.confirmPassword}
                   onChange={(e) =>
-                    setFormData({ ...formData, confirmPassword: e.target.value })
+                    setFormData({
+                      ...formData,
+                      confirmPassword: e.target.value,
+                    })
                   }
                   className="block w-full px-3 py-2 pl-10 bg-gray-700 border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-2x1 "
                   placeholder="******"
                 />
               </div>
+              <small>Password do not match</small>
             </div>
 
-            <button type='submit'
-            className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-500 transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 duration-150 ease-in-out disabled:opacity-50'
-            disabled={loading}>
+            <button
+              type="submit"
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-500 transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 duration-150 ease-in-out disabled:opacity-50"
+              disabled={loading}
+            >
               {loading ? (
                 <>
-                  <Loader className='mr-2 w-5 animate-spin' aria-hidden='true'/>
-                Loading...
+                  <Loader
+                    className="mr-2 w-5 animate-spin"
+                    aria-hidden="true"
+                  />
+                  Loading...
                 </>
               ) : (
                 <>
-                  <UserPlus className='mr-2 w-5 ' aria-hidden='true'/>
+                  <UserPlus className="mr-2 w-5 " aria-hidden="true" />
                   Sign Up
                 </>
               )}
-
             </button>
+            {backendError && (
+              <p className="mt-2 text-sm text-red-400 text-center">
+                {backendError}
+              </p>
+            )}
           </form>
 
-          <p className='mt-8 text-center text-sm text-gray-400'>
+          <p className="mt-8 text-center text-sm text-gray-400">
             Already have an account?{" "}
-            <Link to='/login' className='font-medium text-emerald-400 hover:text-emerald-300'>
-             Login here <ArrowRight className='inline h-4 w-4'/>
+            <Link
+              to="/login"
+              className="font-medium text-emerald-400 hover:text-emerald-300"
+            >
+              Login here <ArrowRight className="inline h-4 w-4" />
             </Link>
           </p>
         </div>

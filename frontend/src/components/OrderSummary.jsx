@@ -1,11 +1,15 @@
-import React from "react";
+import React, {useEffect} from "react";
 import { motion } from "framer-motion";
 import { useCartStore } from "../stores/useCartStore";
 import { MoveRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { loadStripe } from "@stripe/stripe-js";
 import axios from "../lib/axios";
+import { useUserStore } from "../stores/useUserStore";
+
+
 const OrderSummary = () => {
+  const { user, setUser } = useUserStore();
   const stripePromise = loadStripe(
     "pk_test_51S3kJFJ8hCAIqKl90xm7Qf4GnPFdQC7HL0lLeIOpRxQcBFRUfcsjnNSVYCk5pddXPOadHQPjKqEeWv5C98VMT5ZL00QiKbylbA"
   );
@@ -22,7 +26,31 @@ const OrderSummary = () => {
     minimumFractionDigits: 0,
   });
 
+  // Fetch fresh profile when OrderSummary mounts
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const { data } = await axios.get("/users/me");
+        setUser(data);
+      } catch (err) {
+        console.error("Error refreshing user:", err);
+      }
+    };
+    fetchUser();
+  }, [setUser]);
+
+  const defaultPhone = user?.phones?.find((p) => p.isDefault)?.number || "";
+  const defaultAddress =
+    user?.addresses?.find((a) => a.isDefault)?.address || "";
+
+
   const handlePayment = async () => {
+    if (!defaultPhone || !defaultAddress) {
+      alert(
+        "⚠️ You must add a phone number and address before checkout. Please update your Personal Information Page."
+      );
+      return;
+    }
     const stripe = await stripePromise;
     const res = await axios.post("/payments/create-checkout-session", {
       products: cart,
@@ -53,8 +81,8 @@ const OrderSummary = () => {
             <dt className="text-base font-normal text-gray-300">
               Original price
             </dt>
-            <dt className="text-base font-medium text-white">
-              #{formattedSubtotal}
+            <dt className="text-sm font-medium text-white">
+              ₦ {formattedSubtotal}
             </dt>
           </dl>
 
@@ -62,7 +90,7 @@ const OrderSummary = () => {
             <dl className="flex items-center justify-between gap-4">
               <dt className="text-base font-normal text-gray-300">Savings</dt>
               <dt className="text-base font-medium text-emerald-400">
-                #{formattedSavings}
+                ₦ {formattedSavings}
               </dt>
             </dl>
           )}
@@ -78,21 +106,46 @@ const OrderSummary = () => {
             </dl>
           )}
           <dl className="flex items-center justify-between gap-4">
-            <dt className="text-base font-normal text-gray-300">Total</dt>
-            <dt className="text-base font-medium text-emerald-400">
-              #{formattedTotal}
+            <dt className="text-base font-normal text-gray-300">Total </dt>
+            <dt className="text-lg font-medium text-emerald-400">
+              ₦ {formattedTotal}
             </dt>
           </dl>
         </div>
 
         <motion.button
-          className="flex w-full items-center justify-center rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-300"
+          className="flex w-full items-center justify-center rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handlePayment}
+          disabled={!defaultPhone || !defaultAddress}
         >
           Proceed to Checkout
         </motion.button>
+        {(!defaultPhone || !defaultAddress) && (
+          <div className="bg-red-100 text-red-700 p-3 rounded-md text-sm mb-3">
+            ⚠️ You must add a <strong>phone number</strong> and{" "}
+            <strong>address</strong> before checkout. <br />
+            <Link to="/Personal-info" className="text-blue-600 underline">
+              Update your Personal Information
+            </Link>
+          </div>
+        )}
+        <div className="space-y-2">
+          <dl className="flex items-center justify-between gap-4">
+            <dt className="text-base font-normal text-gray-300">Address:</dt>
+            <dt
+              className="text-xs font-thin text-gray-200 truncate"
+              title={defaultAddress}
+            >
+              {defaultAddress}
+            </dt>
+          </dl>
+          <dl className="flex items-center justify-between gap-4">
+            <dt className="text-base font-normal text-gray-300">Phone:</dt>
+            <dt className="text-sm font-thin text-gray-300">{defaultPhone}</dt>
+          </dl>
+        </div>
 
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-normal text-gray-400">or</span>

@@ -76,6 +76,7 @@ export const useProductStore = create((set) => ({
   fetchFeaturedProducts: async () => {
     set({ loading: true });
     try {
+      let url = "/products/featured"
       const response = await axios.get("/products/featured");
       set({ products: response.data, loading: false });
     } catch (error) {

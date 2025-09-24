@@ -28,6 +28,12 @@ const ProductsList = () => {
             >
               Price
             </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              Sizes
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              Colors
+            </th>
             <th
               scope="col"
               className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider"
@@ -82,6 +88,18 @@ const ProductsList = () => {
                   })}
                 </div>
               </td>
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm text-gray-300">
+                  {product.sizes?.join(", ") || "N/A"}
+                </div>
+              </td>
+
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm text-gray-300">
+                  {product.colors?.join(", ") || "N/A"}
+                </div>
+              </td>
+              
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-gray-300">{product.category}</div>
               </td>

@@ -19,6 +19,19 @@ const userSchema = new mongoose.Schema(
       required: [true, "Password is required"],
       minlength: [6, "Password must be at least 6 characters long"],
     },
+    addresses: [
+      {
+        label: { type: String, default: "Home" },
+        address: { type: String, required: true },
+        isDefault: { type: Boolean, default: false },
+      },
+    ],
+    phones: [
+      {
+        number: { type: String, required: true },
+        isDefault: { type: Boolean, default: false },
+      },
+    ],
     cartItems: [
       {
         quantity: {
@@ -29,6 +42,12 @@ const userSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: "Product",
         },
+        size: {
+           type: String 
+          },
+        color: {
+           type: String 
+          },
       },
     ],
     role: {

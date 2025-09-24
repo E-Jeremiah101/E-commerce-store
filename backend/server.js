@@ -12,6 +12,7 @@ import analyticsRoutes from "./routes/analytics.route.js";
 import { connectRedis } from "./lib/redis.js";
 import orderRoute from "./routes/orderRoute.js";
 import adminOrderRoutes from "./routes/adminOrder.route.js";
+import userRoutes from "./routes/user.route.js"
 dotenv.config()
 const app = express();
 await connectRedis(); //connect once at startup
@@ -45,6 +46,8 @@ app.use("/api/orders", orderRoute);
 
 //adminOderRoute
 app.use("/api/admin/orders", adminOrderRoutes);
+
+app.use("/api/users", userRoutes)
 
 if(process.env.NODE_ENV ==="production"){
    const buildPath = path.join(__dirname, "../frontend/build");

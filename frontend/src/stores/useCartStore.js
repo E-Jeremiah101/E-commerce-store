@@ -46,22 +46,39 @@ export const useCartStore = create((set, get) => ({
   clearCart: async () => {
     set({ cart: [], coupon: null, total: 0, subtotal: 0 });
   },
-  addToCart: async (product) => {
+  addToCart: async (product, selectedSize, selectedColor) => {
     try {
-      await axios.post("/cart", { productId: product._id });
+      await axios.post("/cart", {
+        productId: product._id,
+        ...(selectedSize && { size: selectedSize }),
+  ...(selectedColor && { color: selectedColor }),
+      });
       toast.success("Product added to cart");
 
       set((prevState) => {
         const existingItem = prevState.cart.find(
-          (item) => item._id === product._id
+          (item) =>
+            item._id === product._id &&
+            item.size === selectedSize &&
+            item.color === selectedColor
         );
         const newCart = existingItem
           ? prevState.cart.map((item) =>
-              item._id === product._id
+              item._id === product._id &&
+              item.size === selectedSize &&
+              item.color === selectedColor
                 ? { ...item, quantity: item.quantity + 1 }
                 : item
             )
-          : [...prevState.cart, { ...product, quantity: 1 }];
+          : [
+              ...prevState.cart,
+              {
+                ...product,
+                quantity: 1,
+                size: selectedSize,
+                color: selectedColor,
+              },
+            ];
         return { cart: newCart };
       });
       get().calculateTotals();
@@ -69,23 +86,28 @@ export const useCartStore = create((set, get) => ({
       toast.error(error.response.data.message || "An error occurred");
     }
   },
-  removeFromCart: async (productId) => {
-    await axios.delete(`/cart`, { data: { productId } });
+  removeFromCart: async (productId, size, color) => {
+    await axios.delete(`/cart`, { data: { productId, size, color } });
     set((prevState) => ({
-      cart: prevState.cart.filter((item) => item._id !== productId),
+      cart: prevState.cart.filter(
+        (item) =>
+          !(item._id === productId && item.size === size && item.color === color)
+      ),
     }));
     get().calculateTotals();
   },
-  updateQuantity: async (productId, quantity) => {
+  updateQuantity: async (productId, quantity, size, color) => {
     if (quantity === 0) {
-      get().removeFromCart(productId);
+      get().removeFromCart(productId, size, color);
       return;
     }
 
-    await axios.put(`/cart/${productId}`, { quantity });
+    await axios.put(`/cart/${productId}`, { quantity, size, color });
     set((prevState) => ({
       cart: prevState.cart.map((item) =>
-        item._id === productId ? { ...item, quantity } : item
+        item._id === productId && item.size === size && item.color === color
+          ? { ...item, quantity: Math.max(quantity, 1) }
+          : item
       ),
     }));
     get().calculateTotals();
@@ -105,5 +127,4 @@ export const useCartStore = create((set, get) => ({
 
     set({ subtotal, total });
   },
- 
 }));

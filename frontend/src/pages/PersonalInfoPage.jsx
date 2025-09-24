@@ -1,0 +1,248 @@
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { motion } from "framer-motion";
+import { useUserStore } from "../stores/useUserStore";
+import { Check, User, Phone, Mail,  Loader, Home } from "lucide-react";
+
+const PersonalInfoPage = () => {
+    const { user, setUser } = useUserStore();
+  const [loading, setLoading] = useState(true);
+
+  // Fetch profile on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const { data } = await axios.get("/api/users/me");
+        setUser({
+          ...data,
+          phones: data.phones?.length
+            ? data.phones
+            : [
+                { number: "", isDefault: true },
+                { number: "", isDefault: false },
+              ],
+          addresses: data.addresses?.length
+            ? data.addresses
+            : [
+                { label: "Home", address: "", isDefault: true },
+                { label: "Work", address: "", isDefault: false },
+              ],
+        });
+      } catch (err) {
+        console.error("Error fetching profile:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [setUser]);
+
+  // Handle save
+  const handleSave = async () => {
+    if (!user) return;
+
+    const defaultPhone = user.phones?.find((p) => p.isDefault);
+    const defaultAddress = user.addresses?.find((a) => a.isDefault);
+
+    if (!defaultPhone?.number?.trim() || !defaultAddress?.address?.trim()) {
+      alert("⚠️ Please provide a default phone and address before saving.");
+      return;
+    }
+
+    try {
+      await axios.put("/api/users/me", {
+        phones: user.phones,
+        addresses: user.addresses,
+      });
+      alert("Profile updated ✅");
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      alert("❌ Failed to update profile.");
+    }
+  };
+
+  if (loading || !user) return <p>Loading...</p>;
+
+  // Ensure safe defaults for rendering
+  const phones = user.phones || [
+    { number: "", isDefault: true },
+    { number: "", isDefault: false },
+  ];
+  const addresses = user.addresses || [
+    { label: "Home", address: "", isDefault: true },
+    { label: "Work", address: "", isDefault: false },
+  ];
+ 
+  return (
+    <div className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <motion.div
+        className="sm:mx-auto sm:w-full sm:max-w-md"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+      >
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-emerald-400">
+          Personal Info
+        </h2>
+      </motion.div>
+
+      <motion.div
+        className=" mt-8 sm:mx-auto sm:w-full sm:max-w-md"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.2 }}
+      >
+        <div className="bg-gray-600 py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <form className="space-y-6">
+            {/* name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Full name
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </div>
+                <input
+                  type="text"
+                  readOnly
+                  value={user.name}
+                  className="block w-full px-3 py-2 pl-10 bg-gray-700 border-none rounded-md shadow-sm focus:outline-none text-gray-300 "
+                />
+              </div>
+            </div>
+            {/* email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300">
+                Email address
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </div>
+                <input
+                  type="text"
+                  value={user.email}
+                  readOnly
+                  className="block w-full px-3 py-2 pl-10 bg-gray-700 border-none rounded-md shadow-sm focus:outline-none text-gray-300 "
+                />
+              </div>
+            </div>
+            {/* Password */}
+            {phones.map((p, i) => (
+              <div key={i}>
+                <label className="block text-sm font-medium text-gray-300">
+                  Phone Number
+                </label>
+                <div className="mt-1 relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Phone
+                      className="h-5 w-5 text-gray-400"
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Enter your Phone Number "
+                    value={p.number}
+                    onChange={(e) => {
+                      const updated = [...phones];
+                      updated[i].number = e.target.value;
+                      setUser({ ...user, phones: updated });
+                    }}
+                    className="block w-full px-3 py-2 pl-10 bg-gray-700 border-none rounded-md shadow-sm placeholder-gray-400 focus:outline-none text-gray-300  "
+                  />
+
+                  <div></div>
+                </div>
+
+                <label className="flex items-center mt-1">
+                  <input
+                    type="radio"
+                    className="hidden peer"
+                    checked={p.isDefault}
+                    onChange={() => {
+                      const updated = phones.map((ph, idx) => ({
+                        ...ph,
+                        isDefault: idx === i,
+                      }));
+                      setUser({ ...user, phones: updated });
+                    }}
+                  />
+                  <span className="ml-2 text-xs w-4 h-4 rounded-full border-2 border-gray-400 peer-checked:border-green-600 peer-checked:bg-green-600"></span>
+                  <span className="ml-2 text-xs">Default</span>
+                </label>
+              </div>
+            ))}
+
+            {addresses.map((a, i) => (
+              <div key={i}>
+                <label className="block text-sm font-medium text-gray-300">
+                  Delivery Address
+                </label>
+                <div className="mt-1 relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Home
+                      className="h-5 w-5 text-gray-400"
+                      aria-hidden="true"
+                    />
+                  </div>
+                  <input
+                    value={a.address}
+                    onChange={(e) => {
+                      const updated = [...addresses];
+                      updated[i].address = e.target.value;
+                      setUser({ ...user, addresses: updated });
+                    }}
+                    className="block w-full px-3 py-2 pl-10 bg-gray-700 border-none  rounded-md shadow-sm placeholder-gray-400 focus:outline-none text-gray-300 "
+                    placeholder="Enter your Address "
+                  />
+                </div>
+
+                <label className="flex items-center mt-1">
+                  <input
+                    type="radio"
+                    className="hidden peer"
+                    checked={a.isDefault}
+                    onChange={() => {
+                      const updated = addresses.map((ad, idx) => ({
+                        ...ad,
+                        isDefault: idx === i,
+                      }));
+                      setUser({ ...user, addresses: updated });
+                    }}
+                  />
+                  <span className="ml-2 text-xs w-4 h-4 rounded-full border-2 border-gray-400 peer-checked:border-green-600 peer-checked:bg-green-600"></span>
+                  <span className="ml-2 text-xs">Default</span>
+                </label>
+              </div>
+            ))}
+
+            <button
+              onClick={handleSave}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-500 transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 duration-150 ease-in-out disabled:opacity-50"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <Loader
+                    className="mr-2 w-5 animate-spin"
+                    aria-hidden="true"
+                  />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <Check className="mr-2 w-5 " aria-hidden="true" />
+                  Save Changes
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+export default PersonalInfoPage;

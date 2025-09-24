@@ -6,6 +6,7 @@ export const useUserStore = create((set, get) => ({
   user: null,
   loading: false,
   checkingAuth: true,
+  setUser: (userData) => set({ user: userData }),
 
   signup: async ({ name, email, password, confirmPassword }) => {
     set({ loading: true });
@@ -20,20 +21,24 @@ export const useUserStore = create((set, get) => ({
       set({ user: res.data, loading: false });
     } catch (error) {
       set({ loading: false });
-      toast.error(error.response.data.message || "An error occurred");
+      return{error: error.response?.data?.message || "An error occurred"};
     }
+
   },
   login: async (email, password) => {
     set({ loading: true });
 
-    try {
-      const res = await axios.post("/auth/login", { email, password });
-
-      set({ user: res.data, loading: false });
-    } catch (error) {
-      set({ loading: false });
-      toast.error(error.response.data.message || "An error occurred");
-    }
+      try {
+        const res = await axios.post("/auth/login", { email, password });
+        console.log("user is here", res.data);
+        set({ user: res.data, loading: false });
+        return { success: true, data: res.data };
+      } catch (error) {
+        set({ loading: false });
+        
+         return{error: error.response?.data?.message || "An error occured, try again"}
+       
+      }
   },
 
   logout: async () => {

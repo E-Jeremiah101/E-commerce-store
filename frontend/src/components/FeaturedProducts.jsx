@@ -36,9 +36,12 @@ const FeaturedProducts = ({featuredProducts}) => {
     return (
       <div className="py-12">
         <div className="container mx-auto px-4">
-          <h2 className="text-center text-5xl sm:text-6xl font-bold text-emerald-400 mc-4">
-            Featured
+          <h2 className="text-center text-5xl sm:text-6xl font-bold font-bebas text-white mc-4">
+            Featured Products
           </h2>
+          <div className="flex justify-center  mb-10 mt-5">
+            <div className="border w-60"></div>
+          </div>
           <div className="relative">
             <div className="overflow-hidden">
               <div
@@ -67,7 +70,7 @@ const FeaturedProducts = ({featuredProducts}) => {
                           {product.name}
                         </h3>
                         <p className="text-emerald-300 font-medium mb-4">
-                          #
+                          ₦{" "}
                           {product.price.toLocaleString(undefined, {
                             minimumFractionDigits: 0,
                           })}

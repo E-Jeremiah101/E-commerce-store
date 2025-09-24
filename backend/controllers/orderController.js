@@ -1,13 +1,37 @@
 import Order from "../models/order.model.js";
-import {sendEmail} from "../lib/mailer.js"
+import {sendEmail} from "../lib/mailer.js";
+import User from "../models/user.model.js";
 
 export const getUserOrders = async (req, res) => {
     try {
         const userId =  req.user._id;
 
-        const orders = await Order.find({user: userId}).populate("products.product", "name image price").sort({createdAt: -1});
+        const orders = await Order.find({user: userId}).populate("products.product", "name image price").sort({createdAt: -1}).lean();
 
-        res.status(200).json({ success: true, orders });
+        // res.status(200).json({ success: true, orders });
+        res.status(200).json({
+          success: true,
+          count: orders.length,
+          orders: orders.map((order) => ({
+            _id: order._id,
+            orderNumber: order.orderNumber,
+            status: order.status,
+            deliveredAt: order.deliveredAt,
+            totalAmount: order.totalAmount,
+            deliveryAddress: order.deliveryAddress,
+            phone: order.phone,
+            createdAt: order.createdAt,
+            products: order.products.map((p) => ({
+              _id: p._id,
+              product: p.product, // populated snapshot
+              quantity: p.quantity,
+              price: p.price,
+              size: p.size || null,
+              color: p.color || null,
+              selectedCategory: p.selectedCategory || null,
+            })),
+          })),
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -19,10 +43,34 @@ export const getUserOrders = async (req, res) => {
 export const getAllOrders = async (req, res) => {
   try {
     const orders = await Order.find()
-      .populate("user", "name email") // show user info
-      .populate("products.product", "name price image")
+      .populate("user", "name email phone address") // show user info
+      .populate("products.product", "name price image ")
       .sort({ createdAt: -1 });
-    res.status(200).json({ success: true, orders });
+      res.status(200).json({
+        success: true,
+        count: orders.length,
+        orders: orders.map((order) => ({
+          _id: order._id,
+          orderNumber: order.orderNumber,
+          user: order.user,
+          status: order.status,
+          deliveredAt: order.deliveredAt,
+          totalAmount: order.totalAmount,
+          deliveryAddress: order.deliveryAddress, // from order model
+          phone: order.phone,
+          createdAt: order.createdAt,
+          products: order.products.map((p) => ({
+            _id: p._id,
+            product: p.product, // populated snapshot
+            quantity: p.quantity,
+            price: p.price,
+            size: p.size || null,
+            color: p.color || null,
+            selectedCategory: p.selectedCategory || null,
+          })),
+        })),
+      });
+    // res.status(200).json({ success: true, orders });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -110,5 +158,57 @@ export const updateOrderStatus = async (req, res) => {
   } catch (error) {
     console.error("❌ Error updating order status:", error.message);
     res.status(500).json({ message: error.message });;
+  }
+};
+
+// Create new order
+export const createOrder = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate("cartItems.product");
+
+    if (!user || !user.cartItems.length) {
+      return res.status(400).json({ message: "Cart is empty" });
+    }
+
+    // Get default phone & address
+    const defaultPhone = user.phones.find((p) => p.isDefault) || user.phones[0];
+    const defaultAddress = user.addresses.find((a) => a.isDefault) || user.addresses[0];
+
+    // Build order items
+    const orderItems = user.cartItems.map((item) => ({
+      product: item.product._id,
+      name: item.product.name,
+      price: item.product.price,
+      quantity: item.quantity,
+      selectedSize: item.size || null,
+      selectedColor: item.color || null,
+      selectedCategory: item.category || null,
+    }));
+
+    const totalPrice = orderItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
+
+    // Create order snapshot
+    const order = new Order({
+      user: user._id,
+      products:orderItems,
+      totalPrice,
+      phone: defaultPhone?.number || "",
+      address: defaultAddress?.address || "",
+      status: "Pending",
+    });
+
+    await order.save();
+
+    // Clear cart after order
+    user.cartItems = [];
+    await user.save();
+
+    res.status(201).json({ message: "Order placed ✅", order });
+  } catch (err) {
+    console.error("Error creating order", err);
+    res.status(500).json({ message: "Server error" });
   }
 };

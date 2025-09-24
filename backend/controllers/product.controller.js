@@ -24,7 +24,7 @@ export const getFeaturedProducts = async (req, res) => {
     // which is good for performance
     featuredProducts = await Product.find({ isFeatured: true }).lean();
 
-    if (!featuredProducts) {
+    if (!featuredProducts.length === 0) {
       return res.status(404).json({ message: "No featured products found" });
     }
 
@@ -41,7 +41,7 @@ export const getFeaturedProducts = async (req, res) => {
 
 export const createProduct = async (req, res) => {
   try {
-    const { name, description, price, image, category } = req.body;
+    const { name, description, price, image, category, sizes, colors } = req.body;
 
     let cloudinaryResponse = null;
 
@@ -59,6 +59,8 @@ export const createProduct = async (req, res) => {
         ? cloudinaryResponse.secure_url
         : "",
       category,
+      sizes: sizes || [],
+      colors: colors || [],
     });
 
     res.status(201).json(product);
@@ -121,8 +123,12 @@ export const getRecommendedProducts = async (req, res) => {
 
 export const getProductsByCategory = async (req, res) => {
   const { category } = req.params;
+  const {size, color} = req.query
   try {
-    const products = await Product.find({ category });
+    let filter = { category };
+    if (size) filter.sizes = size; 
+    if (color) filter.colors = color;
+    const products = await Product.find( filter );
     res.json({ products });
   } catch (error) {
     console.log("Error in getProductsByCategory controller", error.message);
@@ -151,7 +157,7 @@ async function updateFeaturedProductsCache() {
   try {
     // The lean() method  is used to return plain JavaScript objects instead of full Mongoose documents. This can significantly improve performance
 
-    const featuredProducts = await Product.find({ isFeatured: true }).lean();
+    const featuredProducts = await Product.find({ isFeatured: true }).select("name price image category sizes colors").lean();
     await redis.set("featured_products", JSON.stringify(featuredProducts));
   } catch (error) {
     console.log("error in update cache function");

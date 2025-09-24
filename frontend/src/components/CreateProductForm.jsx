@@ -20,6 +20,8 @@ const CreateProductForm = () => {
     price: "",
     category: "",
     image: "",
+    sizes: [],
+    colors: [],
   });
 
   const { createProduct, loading } = useProductStore();
@@ -34,6 +36,8 @@ const CreateProductForm = () => {
         price: "",
         category: "",
         image: "",
+        sizes: [],
+        colors: [],
       });
     } catch (error) {
       console.log("error creating a product");
@@ -149,6 +153,52 @@ const CreateProductForm = () => {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Sizes Input */}
+        <div>
+          <label
+            htmlFor="sizes"
+            className="block text-sm font-medium text-gray-300"
+          >
+            Sizes (comma separated)
+          </label>
+          <input
+            type="text"
+            id="sizes"
+            value={newProduct.sizes.join(", ")}
+            onChange={(e) =>
+              setNewProduct({
+                ...newProduct,
+                sizes: e.target.value.split(",").map((s) => s.trim()),
+              })
+            }
+            placeholder="e.g., S, M, L, XL"
+            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          />
+        </div>
+
+        {/* Colors Input */}
+        <div>
+          <label
+            htmlFor="colors"
+            className="block text-sm font-medium text-gray-300"
+          >
+            Colors (comma separated)
+          </label>
+          <input
+            type="text"
+            id="colors"
+            value={newProduct.colors.join(", ")}
+            onChange={(e) =>
+              setNewProduct({
+                ...newProduct,
+                colors: e.target.value.split(",").map((c) => c.trim()),
+              })
+            }
+            placeholder="e.g., Red, Blue, Green"
+            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          />
         </div>
 
         <div className="mt-1 flex items-center">

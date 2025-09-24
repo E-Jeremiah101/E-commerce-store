@@ -14,6 +14,7 @@ import CartPage from "./pages/CartPage.jsx";
 import { useCartStore } from "./stores/useCartStore.js";
 import PurchaseSuccessPage from "./pages/PurchaseSuccessPage.jsx";
 import PurchaseCancelPage from "./pages/PurchaseCancelPage.jsx";
+import PersonalInfoPage from "./pages/PersonalInfoPage.jsx"
 
 
 function App() {
@@ -74,6 +75,11 @@ function App() {
               path="/order-history"
               element={user ? <OrderHistoryPage /> : <Navigate to="/login" />}
             />
+
+            <Route path="Personal-info"
+             element={user ? <PersonalInfoPage/> : <Navigate to="PersonalInfoPage"/>}
+             />
+             
 
             <Route
               path="/purchase-success"

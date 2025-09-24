@@ -1,10 +1,18 @@
 import { Link } from "react-router-dom";
-import React from "react";
+import React, { useState } from "react";
 
 const CategoryItem = ({ category }) => {
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
+
   return (
     <div className="relative overflow-hidden h-94 w-full rounded-lg group">
-      <Link to={"/category" + category.href}>
+      <Link
+        to={{
+          pathname: "/category" + category.href,
+          state: { size: selectedSize, color: selectedColor },
+        }}
+      >
         <div className="w-full h-full cursor-pointer">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-500 opacity-50 z-10">
             <img
@@ -13,11 +21,57 @@ const CategoryItem = ({ category }) => {
               className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
               loading="lazy"
             />
+
             <div className="absolute bottom-0 left-0 right-0 p-4 z-20">
               <h3 className="text-white text-2xl font-bold mb-2">
                 {category.name}
               </h3>
-              <p className="text-gray-200 text-sm">Explore {category.name}</p>
+              <p className="text-gray-200 text-sm mb-2">
+                Explore {category.name}
+              </p>
+
+              {/* Sizes */}
+              {category.sizes && category.sizes.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {category.sizes.map((size) => (
+                    <span
+                      key={size}
+                      className={`px-2 py-1 rounded text-xs border cursor-pointer ${
+                        selectedSize === size
+                          ? "bg-emerald-500 text-white"
+                          : "bg-gray-700 text-gray-200"
+                      }`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedSize(size);
+                      }}
+                    >
+                      {size}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Colors */}
+              {category.colors && category.colors.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {category.colors.map((color) => (
+                    <span
+                      key={color}
+                      className={`w-5 h-5 rounded-full border cursor-pointer ${
+                        selectedColor === color ? "ring-2 ring-emerald-400" : ""
+                      }`}
+                      style={{ backgroundColor: color }}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setSelectedColor(color);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

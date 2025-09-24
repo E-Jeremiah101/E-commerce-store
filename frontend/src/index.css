@@ -2,3 +2,35 @@
 body::-webkit-scrollbar {
   display: none;
 }
+@font-face{
+  font-family: Jeremy;
+  font-weight: normal;
+  font-style: normal;
+  src: url(./assets/fonts/Urbanist/static/Urbanist-ExtraLightItalic.ttf) format("truetype");
+}
+/* body {
+  font-family: "Jeremy", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+} */
+
+/* Error state */
+.form-control.error input {
+  border-color: #e74c3c; /* red border */
+}
+.form-control.error small {
+  color: #f77263;
+  visibility: visible;
+}
+
+/* Success state */
+.form-control.success input {
+  border-color: #2ecc71;
+}
+
+.form-control.success small {
+  visibility: hidden;
+}
+small{
+  visibility: hidden;
+}

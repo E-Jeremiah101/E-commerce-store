@@ -5,13 +5,19 @@ const OrderHistoryPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
- const fetchOrders = async () => {
+  const [refreshing, setRefreshing] = useState(false);
+
+ const fetchOrders = async (isRefresh = false) => {
       try {
+        if(isRefresh) setRefreshing(true);
+        else setLoading(true);
+
         const { data } = await axios.get("/orders/my-orders", {headers:{Authorization: `Bearer ${localStorage.getItem("token")}`}});
         setOrders(data.orders);
       } catch (error) {
         console.error("Error fetching orders:", error);
       } finally {
+        if (isRefresh) setRefreshing(false);
         setLoading(false);
       }
     };
@@ -28,10 +34,19 @@ const OrderHistoryPage = () => {
       <h1 className="text-2xl font-bold mb-6">My Orders</h1>
 
       <button
-        onClick={fetchOrders}
-        className="bg-emerald-600 text-white px-4 py-2 rounded mb-4"
+        onClick={() => fetchOrders(true)}
+        disabled={refreshing}
+        className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded mb-4 disabled:opacity-50"
       >
-        Refresh Orders
+        {refreshing ? (
+          <>
+          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            <span>Refreshing...</span>
+          </>
+        ) : (
+          <span>Refresh Orders</span>
+        )}
+        
       </button>
       {orders.length === 0 ? (
         <p>No orders found.</p>

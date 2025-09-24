@@ -24,6 +24,9 @@ const orderSchema = new mongoose.Schema(
           required: true,
           min: 0,
         },
+        selectedSize: { type: String },
+        selectedColor: { type: String },
+        selectedCategory: { type: String },
       },
     ],
     orderNumber: {
@@ -35,6 +38,14 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
       default: "Pending",
+    },
+    deliveryAddress: {
+      type: String,
+      required: true,
+    },
+    phone: {
+      type: String,
+      required: true,
     },
     deliveredAt: Date,
     totalAmount: {
