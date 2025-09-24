@@ -139,7 +139,7 @@ const AdminOrdersPage = () => {
                           Color: {item.color || "N/A"}
                         </span>
                         <span className="bg-gray-600 px-2 py-1 rounded">
-                          Category: {item.Selectedcategory || "N/A"}
+                          Category: {item.selectedCategory || "N/A"}
                         </span>
                       </div>
 

@@ -64,8 +64,8 @@ export const getAllOrders = async (req, res) => {
             product: p.product, // populated snapshot
             quantity: p.quantity,
             price: p.price,
-            size: p.size || null,
-            color: p.color || null,
+            size: p.selectedSize || null, // ✅ matches schema
+            color: p.selectedColor || null,
             selectedCategory: p.selectedCategory || null,
           })),
         })),
