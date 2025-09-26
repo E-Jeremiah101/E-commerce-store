@@ -5,6 +5,11 @@ import {
   LogIn,
   LogOut,
   Lock,
+  Home,
+  User,
+  UserCircle,
+  Package,
+  ShoppingBag,
   Menu,
   X,
 } from "lucide-react";
@@ -41,7 +46,7 @@ const Navbar = () => {
               to={"/personal-info"}
               className="text-gray-300 hover:text-emerald-400"
             >
-              Personal Info
+              Profile
             </Link>
           )}
 
@@ -50,7 +55,7 @@ const Navbar = () => {
               to={"/order-history"}
               className="text-gray-300 hover:text-emerald-400"
             >
-              My Orders
+              Orders
             </Link>
           )}
 
@@ -126,49 +131,60 @@ const Navbar = () => {
         <div className="md:hidden bg-gray-800 px-4 py-3 space-y-3">
           <Link
             to={"/"}
-            className="block text-gray-300 hover:text-emerald-400"
+            className="flex items-center gap-2 text-xl text-gray-300 hover:text-emerald-400 hover:text-3xl mb-7 transition-all
+            duration-600
+            "
             onClick={() => setIsOpen(false)}
           >
-            Home
+            <Home className="inline-block" />
+            <span>Home</span>
           </Link>
 
           {user && (
             <Link
               to={"/personal-info"}
-              className="block hover:text-emerald-400"
+              className="flex items-center gap-2 text-xl text-gray-300 hover:text-emerald-400 hover:text-3xl mb-7  transition-all
+            duration-600"
               onClick={() => setIsOpen(false)}
             >
-              Personal Info
+              <User className="inline-block" />
+              <span>Profile</span>
             </Link>
           )}
 
           {user && (
             <Link
               to={"/order-history"}
-              className="block hover:text-emerald-400"
+              className="flex items-center gap-2 text-xl text-gray-300 hover:text-emerald-400 hover:text-3xl  mb-7  transition-all
+            duration-600"
               onClick={() => setIsOpen(false)}
             >
-              My Orders
+              <Package className="inline-block" />
+              <span>Orders</span>
             </Link>
           )}
 
           {user && (
             <Link
               to={"/cart"}
-              className="block hover:text-emerald-400"
+              className="flex items-center gap-2 text-xl text-gray-300 hover:text-emerald-400 hover:text-3xl mb-7  transition-all
+            duration-600"
               onClick={() => setIsOpen(false)}
             >
-              Cart ({cart.length})
+              <ShoppingBag className="inline-block" />
+              <span>Cart</span> ({cart.length})
             </Link>
           )}
 
           {isAdmin && (
             <Link
               to={"/secret-dashboard"}
-              className="block hover:text-emerald-400"
+              className="flex items-center gap-2 text-xl  text-gray-300 hover:text-emerald-400 hover:text-3xl mb-7  transition-all
+            duration-500"
               onClick={() => setIsOpen(false)}
             >
-              Dashboard
+              <UserCircle className="inline-block" />
+              <span>Dashboard</span>
             </Link>
           )}
 
@@ -178,7 +194,7 @@ const Navbar = () => {
                 logout();
                 setIsOpen(false);
               }}
-              className="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md flex items-center justify-center"
+              className="w-full bg-gray-700 text-xl hover:bg-gray-600 text-white py-2 px-4 rounded-md flex items-center justify-center"
             >
               <LogOut size={18} />
               <span className="ml-2">Log Out</span>

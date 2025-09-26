@@ -26,8 +26,8 @@ export const getUserOrders = async (req, res) => {
               product: p.product, // populated snapshot
               quantity: p.quantity,
               price: p.price,
-              size: p.size || null,
-              color: p.color || null,
+              size: p.selectedSize || null,
+              color: p.selectedColor || null,
               selectedCategory: p.selectedCategory || null,
             })),
           })),
@@ -56,7 +56,7 @@ export const getAllOrders = async (req, res) => {
           status: order.status,
           deliveredAt: order.deliveredAt,
           totalAmount: order.totalAmount,
-          deliveryAddress: order.deliveryAddress, // from order model
+          deliveryAddress: order.deliveryAddress,
           phone: order.phone,
           createdAt: order.createdAt,
           products: order.products.map((p) => ({
@@ -64,7 +64,7 @@ export const getAllOrders = async (req, res) => {
             product: p.product, // populated snapshot
             quantity: p.quantity,
             price: p.price,
-            size: p.selectedSize || null, // ✅ matches schema
+            size: p.selectedSize || null, 
             color: p.selectedColor || null,
             selectedCategory: p.selectedCategory || null,
           })),

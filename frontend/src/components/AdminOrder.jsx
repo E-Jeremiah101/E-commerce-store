@@ -38,7 +38,11 @@ const AdminOrdersPage = () => {
     fetchOrders();
   }, []);
 
-  if (loading) return <p>Loading orders...</p>;
+  if (loading) return (
+    <div className="flex justify-center items-center">
+      <p className="text-gray-500">Loading orders</p>
+    </div>
+  );
 
   return (
     <div className="p-6">

@@ -49,7 +49,11 @@ const AnalyticsTab = () => {
   }, []);
 
   if(isLoading){
-    return <div>Loading...</div>
+    return (
+      <div className="flex justify-center items-center">
+        <p className="text-gray-500">Loading analytics</p>
+      </div>
+    );
   }; 
 
   return (

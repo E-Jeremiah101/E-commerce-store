@@ -6,6 +6,9 @@ const ProductsList = () => {
   const { deleteProduct, toggleFeaturedProduct, products } = useProductStore();
 
   console.log("products", products);
+  // <div className="flex justify-center items-center">
+  //       <p className="text-gray-500">Loading analytics</p>
+  //     </div>
   return (
     <motion.div
       className="bg-gray-800 shadow-lg rounded-lg overflow-hidden max-w-4xl mx-auto"
