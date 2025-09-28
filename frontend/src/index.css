@@ -8,11 +8,7 @@ body::-webkit-scrollbar {
   font-style: normal;
   src: url(./assets/fonts/Urbanist/static/Urbanist-ExtraLightItalic.ttf) format("truetype");
 }
-/* body {
-  font-family: "Jeremy", sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-} */
+
 
 /* Error state */
 .form-control.error input {

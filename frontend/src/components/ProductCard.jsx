@@ -32,7 +32,7 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="flex-w-full relative flex-col overflow-hidden rounded-lg border border-gray-700 shadow-lg">
+    <div className="flex-w-full relative flex-col overflow-hidden rounded-lg  border-gray-700 shadow-lg">
       {/* Product Image */}
       <div className="relative mx-3 mt-3 flex h-60 overflow-hidden rounded-xl">
         <img
@@ -45,11 +45,11 @@ const ProductCard = ({ product }) => {
 
       {/* Product Info */}
       <div className="mt-4 px-5 pb-5 space-y-3">
-        <h5 className="text-xl font-semibold tracking-tight text-white">
+        <h5 className="text-xl font-semibold  tracking-widest text-black">
           {product.name}
         </h5>
 
-        <p className="text-3xl font-bold text-emerald-400">
+        <p className="text-3xl  text-black">
           ₦{" "}
           {product.price.toLocaleString(undefined, {
             minimumFractionDigits: 0,
@@ -59,11 +59,11 @@ const ProductCard = ({ product }) => {
         {/* Size Selection */}
         {product.sizes?.length > 0 && (
           <div>
-            <label className="text-sm text-gray-300 mr-2">Size:</label>
+            <label className="text-sm text-gray-900 mr-2">Size:</label>
             <select
               value={selectedSize}
               onChange={(e) => setSelectedSize(e.target.value)}
-              className="bg-gray-700 text-white px-2 py-1 rounded"
+              className="bg-gray-700 text-white px-2 py-1 rounded text-sm"
             >
               {product.sizes.map((size) => (
                 <option key={size} value={size}>
@@ -77,7 +77,7 @@ const ProductCard = ({ product }) => {
         {/* Color Selection */}
         {product.colors?.length > 0 && (
           <div>
-            <label className="text-sm text-gray-300 mr-2">Color:</label>
+            <label className="text-sm text-gray-800 mr-2">Color:</label>
             <select
               value={selectedColor}
               onChange={(e) => setSelectedColor(e.target.value)}
@@ -94,7 +94,7 @@ const ProductCard = ({ product }) => {
 
         {/* Add to Cart Button */}
         <button
-          className="w-full mt-3 flex items-center justify-center rounded-lg bg-emerald-600 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-300"
+          className="w-full mt-3 flex items-center justify-center rounded-lg bg-black px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-900 tracking-widest"
           onClick={handleAddToCart}
         >
           <ShoppingCart size={22} className="mr-2" />

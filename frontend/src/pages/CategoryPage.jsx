@@ -1,20 +1,37 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useProductStore } from "../stores/useProductStore.jsx";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import ProductCard from "../components/ProductCard.jsx";
+import GoBackButton from "../components/GoBackButton";
 
 const CategoryPage = () => {
   const { fetchProductsByCategory, products } = useProductStore();
 
   const { category } = useParams();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchProductsByCategory(category);
-  }, [fetchProductsByCategory, category]);
+    const fetchData = async () => {
+      setIsLoading(true);
+      await fetchProductsByCategory(category);
+      setIsLoading(false);
+    };
+    fetchData();
+  }, [fetchProductsByCategory, category]);;
 
   console.log("products:", products);
+  if (isLoading)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+      </div>
+    );
   return (
+    <>
+    <div className="p-6">
+                <GoBackButton />
+              </div>
     <div className="min-h-screen">
       <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <motion.h1
@@ -36,7 +53,7 @@ const CategoryPage = () => {
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           {products?.length === 0 && (
-            <h2 className="text-3xl font-semibold text-gray-300 text-center col-span-full">
+            <h2 className="text-3xl font-semibold text-black text-center col-span-full">
               No products found
             </h2>
           )}
@@ -46,6 +63,7 @@ const CategoryPage = () => {
         </motion.div>
       </div>
     </div>
+    </>
   );
 };
 

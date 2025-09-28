@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import React, { useState } from "react";
+import { useState } from "react";
 
 const CategoryItem = ({ category }) => {
   const [selectedSize, setSelectedSize] = useState("");
@@ -14,7 +14,7 @@ const CategoryItem = ({ category }) => {
         }}
       >
         <div className="w-full h-full cursor-pointer">
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-500 opacity-50 z-10">
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent to-gray-500 z-10">
             <img
               src={category.imageUrl}
               alt={category.name}

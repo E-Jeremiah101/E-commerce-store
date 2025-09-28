@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import ProductCard from "./ProductCard.jsx";
 import axios from "../lib/axios";
-import LoadingSpinner from "./LoadingSpinner.jsx";
 import toast from "react-hot-toast";
 
 const PeopleAlsoBought = () => {
@@ -15,7 +14,7 @@ const PeopleAlsoBought = () => {
         setRecommendations(res.data);
       } catch (error) {
         toast.error(
-          error.response.data.message ||
+          error.response?.data?.message ||
             "An error occured while fetching recommendations"
         );
       } finally {
@@ -24,13 +23,17 @@ const PeopleAlsoBought = () => {
     };
     fetchRecommendations();
   }, []);
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) return (
+    <div className="flex justify-center items-center h-40">
+      <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+    </div>
+  );
   return (
-    <div className="mt-8">
-      <h3 className="text-2xl font-semibold text-emerald-400">
+    <div className="mt-20">
+      <h3 className="text-2xl font-semibold text-black tracking-widest">
         People also bought
       </h3>
-      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-col-3">
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {recommendations.map((product) => (
           <ProductCard key={product._id} product={product} />
         ))}
@@ -39,4 +42,4 @@ const PeopleAlsoBought = () => {
   );
 };
 
-export default PeopleAlsoBought;
+export default PeopleAlsoBought

@@ -61,12 +61,10 @@ export const createCheckoutSession = async (req, res) => {
         );
       }
     }
-
+    //convert to naira
     const totalInNaira = totalAmount / 100;
-    let rewardCoupon = null;
-    if (totalInNaira >= 150000) {
-      rewardCoupon = await createNewCoupon(req.user._id);
-    }
+
+    
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -84,6 +82,7 @@ export const createCheckoutSession = async (req, res) => {
       metadata: {
         userId: req.user._id.toString(),
         couponCode: couponCode || "",
+        totalInNaira,
         products: JSON.stringify(
           products.map((p) => ({
             id: p._id,
@@ -171,6 +170,11 @@ export const checkoutSuccess = async (req, res) => {
 
       // clear cart only if this is a new order (not when returning existing)
       await User.findByIdAndUpdate(session.metadata.userId, { cartItems: [] });
+
+      if (order.totalInNaira >= 150000) {
+        const rewardCoupon = await createNewCoupon(user._id);
+        // send reward coupon email 
+      }
 
       // send email only if new
       if (isNew) {

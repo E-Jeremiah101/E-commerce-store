@@ -25,26 +25,30 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="fixed top-0 w-full bg-gray-900 bg-opacity-90 backdrop-blur-md shadow-lg z-40 transition-all duration-300 border-b border-emerald-800">
-      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+    <header className="w-full bg-black bg-opacity-90 backdrop-blur-md shadow-lg z-40 transition-all duration-300 border-b border-black">
+      
+      <div className="container mx-auto px-4 py-3 flex justify-center items-center ">
         {/* Logo */}
-        {/* <Link
+        <Link
           to={"/"}
           className="text-2xl font-bold text-emerald-400 flex items-center"
         >
-          Eco-Sore
-        </Link> */}
+          <img src="/logo-buz.jpg" alt=""  className="h-30" />
+        </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-4">
-          <Link to={"/"} className="text-gray-300 hover:text-emerald-400">
+        <nav className="hidden md:flex justify-between gap-4">
+          <Link
+            to={"/"}
+            className="text-white hover:text-gray-300 tracking-widest"
+          >
             Home
           </Link>
 
           {user && (
             <Link
               to={"/personal-info"}
-              className="text-gray-300 hover:text-emerald-400"
+              className="text-white hover:text-gray-300 tracking-widest"
             >
               Profile
             </Link>
@@ -53,7 +57,7 @@ const Navbar = () => {
           {user && (
             <Link
               to={"/order-history"}
-              className="text-gray-300 hover:text-emerald-400"
+              className="text-white hover:text-gray-300 tracking-widest"
             >
               Orders
             </Link>
@@ -62,15 +66,15 @@ const Navbar = () => {
           {user && (
             <Link
               to={"/cart"}
-              className="relative group text-gray-300 hover:text-emerald-400"
+              className="relative group text-white hover:text-gray-300"
             >
               <ShoppingCart
-                className="inline-block mr-1 group-hover:text-emerald-400"
+                className="inline-block mr-1 group-hover:text-gray-300"
                 size={20}
               />
-              <span className="hidden sm:inline">Cart</span>
+              <span className="hidden sm:inline tracking-widest">Cart</span>
               {cart.length > 0 && (
-                <span className="absolute -top-2 -left-2 bg-emerald-500 text-white rounded-full px-2 py-0.5 text-xs group-hover:bg-emerald-400">
+                <span className="absolute -top-2 -left-2 bg-white text-black rounded-full px-2 py-0.5 text-xs group-hover:bg-gray-300">
                   {cart.length}
                 </span>
               )}
@@ -80,38 +84,36 @@ const Navbar = () => {
           {isAdmin && (
             <Link
               to={"/secret-dashboard"}
-              className="bg-emerald-700 text-white hover:bg-emerald-600 px-3 py-1 rounded-md flex items-center"
+              className=" text-white hover:bg-gray-600 px-3 py-1 rounded-md border flex items-center tracking-widest "
             >
-              <Lock className="inline-block mr-1" size={18} />
+              <Lock className="inline-block mr-1 racking-widest" size={18} />
               Dashboard
             </Link>
           )}
         </nav>
+
         <nav className="hidden md:flex items-center gap-4">
           {user ? (
             <button
               onClick={logout}
-              className="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md flex items-center"
+              className="text-white py-2 px-4 rounded-md flex items-center"
             >
               <LogOut size={18} />
-              <span className="hidden sm:inline ml-2">Log Out</span>
             </button>
           ) : (
             <>
               <Link
                 to={"/signup"}
-                className="bg-emerald-600 hover:bg-gray-700 text-white py-2 px-4 rounded-md flex items-center"
+                className=" text-white py-2 px-4 rounded-md flex items-center"
               >
-                <UserPlus className="mr-2" size={18} />
-                Sign Up
+                <UserPlus className="mr-2" size={22} />
               </Link>
 
               <Link
                 to={"/login"}
-                className="bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-md flex items-center"
+                className=" text-white py-2 px-4 rounded-md flex items-center"
               >
-                <LogIn className="mr-2" size={18} />
-                Login
+                <LogIn className="mr-2" size={22} />
               </Link>
             </>
           )}
@@ -125,7 +127,6 @@ const Navbar = () => {
           {isOpen ? <X size={28} /> : <Menu size={28} />}
         </button>
       </div>
-
       {/* Mobile Dropdown */}
       {isOpen && (
         <div className="md:hidden bg-gray-800 px-4 py-3 space-y-3">
@@ -220,6 +221,41 @@ const Navbar = () => {
           )}
         </div>
       )}
+
+      <div className="h-50 hidden md:flex justify-center items-center text-white">
+        <ul className="flex flex-wrap justify-center gap-x-7 gap-y-7 px-30 max-w-5xl text-gray-100 text-sm  text-center tracking-widest">
+          <Link>
+            <span className="hover:text-gray-300">T-SHIRT</span>
+          </Link>
+          <Link>
+            <span className="hover:text-gray-300">SUITS & BLAZERS</span>
+          </Link>
+          <Link>
+            <span className="hover:text-gray-300">UNDERWEAR & SOCKS</span>
+          </Link>
+          <Link>
+            <span className="hover:text-gray-300">FOOTWEAR</span>
+          </Link>
+          <Link>
+            <span className="hover:text-gray-300">ACCESSORIES</span>
+          </Link>
+          <Link>
+            <span className="hover:text-gray-300">BOTTOMS</span>
+          </Link>
+          <Link>
+            <span className="hover:text-gray-300">BAGS</span>
+          </Link>
+          <Link>
+            <span className="hover:text-gray-300">ADDIDAS COLLECTION</span>
+          </Link>
+          <Link>
+            <span className="hover:text-gray-300">FENDI COLLECTION</span>
+          </Link>
+          <Link>
+            <span className="hover:text-gray-300">GUCCI COLLECTION</span>
+          </Link>
+        </ul>
+      </div>
     </header>
   );
 };

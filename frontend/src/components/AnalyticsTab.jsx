@@ -50,8 +50,8 @@ const AnalyticsTab = () => {
 
   if(isLoading){
     return (
-      <div className="flex justify-center items-center">
-        <p className="text-gray-500">Loading analytics</p>
+      <div className="flex justify-center items-center h-screen">
+        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
       </div>
     );
   }; 
@@ -135,7 +135,7 @@ const AnalyticsCard = ({title, value, icons: Icon, color}) => {
      >
        <div className="flex justify-between items-center">
          <div className="z-10">
-           <p className="text-emerald-300 text-sm mb-1 font-semibold">
+           <p className="text-yellow-700 text-lg mb-1 font-bold">
              {title}
            </p>
            <h3 className="text-white text-3xl font-bold">{value}</h3>

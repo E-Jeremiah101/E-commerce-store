@@ -71,10 +71,11 @@ const PurchaseSuccessPage = () => {
           </h1>
 
           <p className="text-gray-300 text-center mb-2">
-            Thank you for your order. {"We're"} processing it now.
+            Thank you for your order on Eco Store!
           </p>
           <p className="text-emerald-400 text-center text-sm mb-6">
-            Check your email for order details and updates.
+            Congratulations! Your order was successfully submitted. You will receive a confirmation email or SMS about your order. Please do well to always check your email or SMS for more updates on your order.
+            
           </p>
           <div className="bg-gray-700 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between mb-2">

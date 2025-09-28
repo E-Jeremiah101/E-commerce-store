@@ -39,13 +39,18 @@ const AdminOrdersPage = () => {
   }, []);
 
   if (loading) return (
-    <div className="flex justify-center items-center">
-      <p className="text-gray-500">Loading orders</p>
+    <div className="flex justify-center items-center h-screen">
+      <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
     </div>
   );
 
   return (
-    <div className="p-6">
+    <motion.div
+      className="px-4 lg:px-28 "
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8 }}
+    >
       <div className="text-2xl font-bold flex justify-center mb-6">
         <h1>All Orders</h1>
       </div>
@@ -60,8 +65,8 @@ const AdminOrdersPage = () => {
               className="border rounded-lg p-4 bg-gray-800 text-gray-100"
             >
               <div className="flex justify-between mb-2">
-                <span className="text-emerald-500">
-                  Order #{order.orderNumber}
+                <span className="text-yellow-600">
+                  {order.orderNumber}
                 </span>
                 <span>
                   <select
@@ -90,16 +95,16 @@ const AdminOrdersPage = () => {
                 </span>
               </div>
 
-              <p className="text-sm text-gray-400 mb-2">
+              <p className="text-sm text-gray-200 mb-2">
                 Customer Name: {order.user.name}
               </p>
-              <p className="text-sm text-gray-400 mb-2">
+              <p className="text-sm text-gray-200 mb-2">
                 Customer Email: {order.user.email}
               </p>
-              <p className="text-sm text-gray-400 mb-2">
+              <p className="text-sm text-gray-200 mb-2">
                 Customer Phone: {order.phone || "Not provided"}
               </p>
-              <p className="text-sm text-gray-400 mb-2">
+              <p className="text-sm text-gray-200 mb-2">
                 Delivery Address: {order.deliveryAddress || "Not provided"}
               </p>
 
@@ -120,10 +125,10 @@ const AdminOrdersPage = () => {
                     <div className="flex-1 space-y-3">
                       {/* Product Name & Total Price */}
                       <div className="flex justify-between items-center">
-                        <h3 className="text-white font-medium">
+                        <h3 className="text-white font-medium tracking-widest">
                           {item.product.name}
                         </h3>
-                        <p className="text-emerald-400 font-semibold">
+                        <p className="text-yellow-100 font-semibold tracking-widest">
                           ₦
                           {(item.price * item.quantity).toLocaleString(
                             undefined,
@@ -135,20 +140,20 @@ const AdminOrdersPage = () => {
                       </div>
 
                       {/* Extra Details (size, color, category) */}
-                      <div className="flex flex-wrap gap-2 text-xs text-gray-300">
-                        <span className="bg-gray-600 px-2 py-1 rounded">
+                      <div className="flex flex-wrap gap-2 text-xs text-gray-200">
+                        <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
                           Size: {item.size || "N/A"}
                         </span>
-                        <span className="bg-gray-600 px-2 py-1 rounded">
+                        <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
                           Color: {item.color || "N/A"}
                         </span>
-                        <span className="bg-gray-600 px-2 py-1 rounded">
+                        <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
                           Category: {item.selectedCategory || "N/A"}
                         </span>
                       </div>
 
                       {/* Quantity & Unit Price */}
-                      <div className="flex justify-between text-sm text-gray-400">
+                      <div className="flex justify-between text-sm text-gray-300">
                         <span>Qty: {item.quantity}</span>
                         {item.quantity > 1 && (
                           <span className="italic">
@@ -165,7 +170,7 @@ const AdminOrdersPage = () => {
                 ))}
               </ul>
 
-              <p className="font-bold text-green-500 p-4 rounded">
+              <p className="font-bold text-yellow-100 p-4 rounded tracking-widest">
                 Total: ₦ {""}
                 {order.totalAmount.toLocaleString(undefined, {
                   minimumFractionDigits: 0,
@@ -175,7 +180,7 @@ const AdminOrdersPage = () => {
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

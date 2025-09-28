@@ -110,6 +110,8 @@ export const getRecommendedProducts = async (req, res) => {
           description: 1,
           image: 1,
           price: 1,
+          sizes: 1, // 👈 include sizes
+          colors: 1,
         },
       },
     ]);

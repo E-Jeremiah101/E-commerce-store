@@ -63,7 +63,7 @@ const CreateProductForm = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
     >
-      <h2 className="text-2xl font-semibold mb-6 text-emerald-300">
+      <h2 className="text-2xl font-semibold mb-6 text-white tracking-wider">
         Create a New Product
       </h2>
 
@@ -71,7 +71,7 @@ const CreateProductForm = () => {
         <div>
           <label
             htmlFor="name"
-            className="block text-sm font-medium text-gray-300"
+            className="block text-sm font-medium text-gray-300 tracking-wider"
           >
             Product Name
           </label>
@@ -83,7 +83,7 @@ const CreateProductForm = () => {
             onChange={(e) =>
               setNewProduct({ ...newProduct, name: e.target.value })
             }
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600"
             required
           />
         </div>
@@ -91,7 +91,7 @@ const CreateProductForm = () => {
         <div>
           <label
             htmlFor="description"
-            className="block text-sm font-medium text-gray-300"
+            className="block text-sm font-medium text-gray-300 tracking-wider"
           >
             Description
           </label>
@@ -103,7 +103,7 @@ const CreateProductForm = () => {
             onChange={(e) =>
               setNewProduct({ ...newProduct, description: e.target.value })
             }
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600"
             required
           />
         </div>
@@ -111,7 +111,7 @@ const CreateProductForm = () => {
         <div>
           <label
             htmlFor="price"
-            className="block text-sm font-medium text-gray-300"
+            className="block text-sm font-medium text-gray-300 tracking-wider"
           >
             Price
           </label>
@@ -124,7 +124,7 @@ const CreateProductForm = () => {
               setNewProduct({ ...newProduct, price: e.target.value })
             }
             step="0.01"
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600"
             required
           />
         </div>
@@ -132,7 +132,7 @@ const CreateProductForm = () => {
         <div>
           <label
             htmlFor="category"
-            className="block text-sm font-medium text-gray-300"
+            className="block text-sm font-medium text-gray-300 tracking-wider"
           >
             Category
           </label>
@@ -143,7 +143,7 @@ const CreateProductForm = () => {
             onChange={(e) =>
               setNewProduct({ ...newProduct, category: e.target.value })
             }
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:gray-600 focus:border-gray-600"
             required
           >
             <option value="">Select a category</option>
@@ -159,7 +159,7 @@ const CreateProductForm = () => {
         <div>
           <label
             htmlFor="sizes"
-            className="block text-sm font-medium text-gray-300"
+            className="block text-sm font-medium text-gray-300 tracking-wider"
           >
             Sizes (comma separated)
           </label>
@@ -174,7 +174,7 @@ const CreateProductForm = () => {
               })
             }
             placeholder="e.g., S, M, L, XL"
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600"
           />
         </div>
 
@@ -182,7 +182,7 @@ const CreateProductForm = () => {
         <div>
           <label
             htmlFor="colors"
-            className="block text-sm font-medium text-gray-300"
+            className="block text-sm font-medium text-gray-300 tracking-wider"
           >
             Colors (comma separated)
           </label>
@@ -197,7 +197,7 @@ const CreateProductForm = () => {
               })
             }
             placeholder="e.g., Red, Blue, Green"
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600"
           />
         </div>
 
@@ -212,13 +212,14 @@ const CreateProductForm = () => {
           />
           <label
             htmlFor="image"
-            className="cursor-pointer bg-gray-700 border border-gray-600 hover:bg-gray-600 rounded-md shadow-sm py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-o focus:ring-emerald-500 focus:border-emerald-500"
+            className="cursor-pointer bg-gray-700 border border-gray-600 hover:bg-gray-600 rounded-md shadow-sm py-2 px-3 text-sm 
+            text-white focus:outline-none focus:ring-2 focus:ring-o focus:ring-emerald-500 focus:border-emerald-500"
           >
-            <Upload className="h-5 w-5 inline-block mr-2" />
+            <Upload className="h-5 w-5 inline-block mr-2 text-white" />
             Upload Image
           </label>
           {newProduct.image && (
-            <span className="ml-3 text-sm text-gray-400">
+            <span className="ml-3 text-sm text-gray-300">
               Image uploaded ✅{" "}
             </span>
           )}
@@ -226,7 +227,7 @@ const CreateProductForm = () => {
 
         <button
           type="submit"
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offest-2 focus:ring-emerald-500 disabled:opacity-50"
+          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-yellow-700 hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-offest-2  disabled:opacity-50"
           disabled={loading}
         >
           {loading ? (
