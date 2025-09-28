@@ -24,7 +24,7 @@ const CategoryPage = () => {
   if (isLoading)
     return (
       <div className="flex justify-center items-center h-screen">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin "></div>
       </div>
     );
   return (
@@ -33,7 +33,7 @@ const CategoryPage = () => {
                 <GoBackButton />
               </div>
     <div className="min-h-screen">
-      <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-16 ">
         <motion.h1
           className="text-center text-4xl sm:text-5xl font-bold text-white-400 mb-8"
           initial={{ opacity: 0, y: -20 }}

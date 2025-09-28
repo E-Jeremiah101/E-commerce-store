@@ -26,14 +26,13 @@ const Navbar = () => {
 
   return (
     <header className="w-full bg-black bg-opacity-90 backdrop-blur-md shadow-lg z-40 transition-all duration-300 border-b border-black">
-      
       <div className="container mx-auto px-4 py-3 flex justify-center items-center ">
         {/* Logo */}
         <Link
           to={"/"}
           className="text-2xl font-bold text-emerald-400 flex items-center"
         >
-          <img src="/logo-buz.jpg" alt=""  className="h-30" />
+          <img src="/logo-buz.jpg" alt="" className="h-30" />
         </Link>
 
         {/* Desktop Nav */}
@@ -122,17 +121,17 @@ const Navbar = () => {
         {/* Mobile Toggle */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="md:hidden text-gray-300 hover:text-emerald-400"
+          className="md:hidden text-gray-300 hover:text-gray-400"
         >
           {isOpen ? <X size={28} /> : <Menu size={28} />}
         </button>
       </div>
       {/* Mobile Dropdown */}
       {isOpen && (
-        <div className="md:hidden bg-gray-800 px-4 py-3 space-y-3">
+        <div className="md:hidden bg-black px-4 py-3 space-y-3">
           <Link
             to={"/"}
-            className="flex items-center gap-2 text-xl text-gray-300 hover:text-emerald-400 hover:text-3xl mb-7 transition-all
+            className="flex items-center gap-2 text-xl text-white hover:text-gray-300 hover:text-3xl mb-7 transition-all
             duration-600
             "
             onClick={() => setIsOpen(false)}
@@ -144,7 +143,7 @@ const Navbar = () => {
           {user && (
             <Link
               to={"/personal-info"}
-              className="flex items-center gap-2 text-xl text-gray-300 hover:text-emerald-400 hover:text-3xl mb-7  transition-all
+              className="flex items-center gap-2 text-xl text-white hover:text-gray-300 hover:text-3xl mb-7 transition-all
             duration-600"
               onClick={() => setIsOpen(false)}
             >
@@ -156,7 +155,7 @@ const Navbar = () => {
           {user && (
             <Link
               to={"/order-history"}
-              className="flex items-center gap-2 text-xl text-gray-300 hover:text-emerald-400 hover:text-3xl  mb-7  transition-all
+              className="flex items-center gap-2 text-xl text-white hover:text-gray-300 hover:text-3xl mb-7 transition-all
             duration-600"
               onClick={() => setIsOpen(false)}
             >
@@ -168,7 +167,7 @@ const Navbar = () => {
           {user && (
             <Link
               to={"/cart"}
-              className="flex items-center gap-2 text-xl text-gray-300 hover:text-emerald-400 hover:text-3xl mb-7  transition-all
+              className="flex items-center gap-2 text-xl text-white hover:text-gray-300 hover:text-3xl mb-7 transition-all
             duration-600"
               onClick={() => setIsOpen(false)}
             >
@@ -180,8 +179,8 @@ const Navbar = () => {
           {isAdmin && (
             <Link
               to={"/secret-dashboard"}
-              className="flex items-center gap-2 text-xl  text-gray-300 hover:text-emerald-400 hover:text-3xl mb-7  transition-all
-            duration-500"
+              className="flex items-center gap-2 text-xl text-white hover:text-gray-300 hover:text-3xl mb-7 transition-all
+            duration-600"
               onClick={() => setIsOpen(false)}
             >
               <UserCircle className="inline-block" />

@@ -82,14 +82,14 @@ const FeaturedProducts = ({ featuredProducts }) => {
                         />
                       </div>
                       <div className="p-4">
-                        <h3 className="text-lg font-semibold mb-2 text-white">
+                        <h3 className="text-lg  mb-2 text-black tracking-widest">
                           {product.name}
                         </h3>
 
                         {/* Size Dropdown */}
                         {product.sizes && product.sizes.length > 0 && (
                           <div className="mb-2">
-                            <label className="text-sm text-black mr-2">
+                            <label className="text-sm text-black mr-2 tracking-widest">
                               Size:
                             </label>
                             <select
@@ -116,7 +116,7 @@ const FeaturedProducts = ({ featuredProducts }) => {
                         {/* Color Dropdown */}
                         {product.colors && product.colors.length > 0 && (
                           <div className="mb-2">
-                            <label className="text-sm text-black mr-2">
+                            <label className="text-sm text-black mr-2 tracking-widest">
                               Color:
                             </label>
                             <select
@@ -140,7 +140,7 @@ const FeaturedProducts = ({ featuredProducts }) => {
                           </div>
                         )}
 
-                        <p className="text-emerald-300 font-medium mb-4">
+                        <p className="text-black font-medium mb-4 tracking-widest">
                           ₦{" "}
                           {product.price.toLocaleString(undefined, {
                             minimumFractionDigits: 0,
@@ -155,7 +155,7 @@ const FeaturedProducts = ({ featuredProducts }) => {
                               selectedColor,
                             })
                           }
-                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 px-4 rounded transition-colors duration-300 flex items-center justify-center"
+                          className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded transition-colors duration-300 flex items-center justify-center tracking-widest"
                         >
                           <ShoppingCart className="w-5 h-5 mr-2" />
                           Add to cart
