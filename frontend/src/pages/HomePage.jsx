@@ -3,13 +3,19 @@ import { useProductStore } from "../stores/useProductStore.jsx";
 import { useEffect } from "react";
 import FeaturedProducts from "../components/FeaturedProducts.jsx";
 const categories = [
-  { href: "/jeans", name: "Jeans", imageUrl: "/jeans.jpg" },
-  { href: "/t-shirts", name: "T-shirts", imageUrl: "/tshirts.jpg" },
-  { href: "/shoes", name: "Shoes", imageUrl: "/shoes.jpg" },
-  { href: "/glasses", name: "Glasses", imageUrl: "/glasses.jpg" },
-  { href: "/jackets", name: "Jackets", imageUrl: "/jackets.jpg" },
-  { href: "/suits", name: "Suits", imageUrl: "/suits.webp" },
-  { href: "/bags", name: "Bags", imageUrl: "/bags.jpg" },
+  { href: "/bottoms", name: "Bottoms", imageUrl: "/jeans-man.jpg" },
+  { href: "/t-shirts", name: "T-Shirt", imageUrl: "/man-tshirt.jpg" },
+  { href: "/footwears", name: "Footwear", imageUrl: "/black-shoe.jpg" },
+  { href: "/accessories", name: "Accessories", imageUrl: "/watch.jpg" },
+  { href: "/jackets", name: "Jackets & Outerwear", imageUrl: "/jacket-nice2.jpg" },
+  { href: "/sets", name: "Sets & Cords", imageUrl: "/complete-outfit2.jpg" },
+  {
+    href: "/underwear&socks",
+    name: "Underwears & Socks",
+    imageUrl: "/boxers.jpg",
+  },
+  { href: "/suits&blazers", name: "Suits & Blazers", imageUrl: "/suits-good.jpg" },
+  { href: "/bags", name: "Bags", imageUrl: "/Bag-man.jpg" },
 ];
 const HomePage = () => {
   const {fetchFeaturedProducts, products, isLoading} = useProductStore();
@@ -69,10 +75,10 @@ const HomePage = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 m-0 sm:mt-0 mt-9 gap-30 ">
           <div className="text-black flex justify-center items-center">
             <div className="text-center">
-              <h1 className="text-3xl tracking-widest sm:text-5xl mb-5">BAGGY JEANS</h1>
+              <h1 className="text-3xl tracking-widest sm:text-5xl mb-5">CLASSIC WEARS</h1>
               <p className="text-1xl sm:text-2xl tracking-widest">
                 Stay Relaxed, Stay Stylish: Redefine Comfort with the Perfect
-                Baggy Fit!
+                style Fit!
               </p>
             </div>
           </div>

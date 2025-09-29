@@ -223,25 +223,29 @@ const Navbar = () => {
 
       <div className="h-50 hidden md:flex justify-center items-center text-white">
         <ul className="flex flex-wrap justify-center gap-x-7 gap-y-7 px-30 max-w-5xl text-gray-100 text-sm  text-center tracking-widest">
-          <Link>
+          <Link to={"/category/t-shirts"}>
             <span className="hover:text-gray-300">T-SHIRT</span>
           </Link>
-          <Link>
+          <Link to={"/category/suits&blazer"}>
             <span className="hover:text-gray-300">SUITS & BLAZERS</span>
           </Link>
-          <Link>
+          <Link to={"/category/underwear&socks"}>
             <span className="hover:text-gray-300">UNDERWEAR & SOCKS</span>
           </Link>
-          <Link>
+          <Link to={"/category/footwears"}>
             <span className="hover:text-gray-300">FOOTWEAR</span>
           </Link>
-          <Link>
+          <Link to={"/category/sets"}>
+            <span className="hover:text-gray-300">SETS & CO-ORDS</span>
+          </Link>
+
+          <Link to={"/category/accessories"}>
             <span className="hover:text-gray-300">ACCESSORIES</span>
           </Link>
-          <Link>
+          <Link to={"/category/bottoms"}>
             <span className="hover:text-gray-300">BOTTOMS</span>
           </Link>
-          <Link>
+          <Link to={"/category/bags"}>
             <span className="hover:text-gray-300">BAGS</span>
           </Link>
           <Link>

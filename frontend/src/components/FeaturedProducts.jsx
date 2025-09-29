@@ -48,9 +48,12 @@ const FeaturedProducts = ({ featuredProducts }) => {
   return (
     <div className="py-12 mt-17">
       <div className="container mx-auto px-4">
-        <h2 className="text-center text-4xl sm:text-6xl font-bold font-bebas text-gray-900 mc-4 tracking-widest ">
+        <div className=" flex text-center align-middle text-4xl sm:text-6xl font-bold font-bebas text-white mc-4 tracking-widest justify-center ">
+          <h2 className="bg-black rounded">
           FEATURED PRODUCTS
         </h2>
+        </div>
+        
         <div className="flex justify-center mb-10 mt-5">
           <div className="border w-60"></div>
         </div>
@@ -103,7 +106,7 @@ const FeaturedProducts = ({ featuredProducts }) => {
                               }
                               className="bg-gray-800 text-white px-2 py-1 rounded border border-gray-600"
                             >
-                              <option value="">Select Size</option>
+                              <option value=""></option>
                               {product.sizes.map((size) => (
                                 <option key={size} value={size}>
                                   {size}
@@ -130,7 +133,7 @@ const FeaturedProducts = ({ featuredProducts }) => {
                               }
                               className="bg-gray-800 text-white px-2 py-1 rounded border border-gray-600"
                             >
-                              <option value="">Select Color</option>
+                              <option value=""></option>
                               {product.colors.map((color) => (
                                 <option key={color} value={color}>
                                   {color}

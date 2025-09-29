@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { useUserStore } from "../stores/useUserStore";
-import { Check, User, Phone, Mail,  Loader, Home } from "lucide-react";
+import { Check, User, Phone, Mail, Lock, Loader, Home } from "lucide-react";
 import GoBackButton from "../components/GoBackButton";
 
 const PersonalInfoPage = () => {
@@ -115,11 +115,13 @@ if(loading   || !user) return (
                     />
                   </div>
                   <input
-                    type="text"
                     readOnly
                     value={user.name}
-                    className="block w-full px-3 py-2 pl-10  border-2 rounded-md shadow-sm focus:outline-none text-gray-800 "
+                    className="block w-full px-3 py-2 pl-10 rounded-md shadow-lg focus:outline-none text-gray-800 "
                   />
+                  <div className="absolute inset-y-0 right-3 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-red-400" aria-hidden="true" />
+                  </div>
                 </div>
               </div>
               {/* email */}
@@ -135,11 +137,13 @@ if(loading   || !user) return (
                     />
                   </div>
                   <input
-                    type="text"
                     value={user.email}
                     readOnly
-                    className="block w-full px-3 py-2 pl-10  border-2 rounded-md shadow-sm focus:outline-none text-gray-800"
+                    className="block w-full px-3 py-2 pl-10  rounded-md shadow-lg focus:outline-none text-gray-800"
                   />
+                  <div className="absolute inset-y-0 right-3 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-red-400" aria-hidden="true" />
+                  </div>
                 </div>
               </div>
               {/* Password */}
@@ -164,7 +168,7 @@ if(loading   || !user) return (
                         updated[i].number = e.target.value;
                         setUser({ ...user, phones: updated });
                       }}
-                      className="block w-full px-3 py-2 pl-10  border-2 rounded-md shadow-sm focus:outline-none text-gray-800 "
+                      className="block w-full px-3 py-2 pl-10  border-1 rounded-md shadow-sm focus:outline-none text-gray-800 "
                     />
 
                     <div></div>
@@ -208,7 +212,7 @@ if(loading   || !user) return (
                         updated[i].address = e.target.value;
                         setUser({ ...user, addresses: updated });
                       }}
-                      className="block w-full px-3 py-2 pl-10  border-2 rounded-md shadow-sm focus:outline-none text-gray-800 placeholder-gray-400  "
+                      className="block w-full px-3 py-2 pl-10  border-1 rounded-md shadow-sm focus:outline-none text-gray-800 placeholder-gray-400  "
                       placeholder="Enter your Address "
                     />
                   </div>

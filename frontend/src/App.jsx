@@ -84,7 +84,7 @@ function App() {
             <Route
               path="Personal-info"
               element={
-                user ? <PersonalInfoPage /> : <Navigate to="PersonalInfoPage" />
+                user ? <PersonalInfoPage /> : <Navigate to="/login" />
               }
             />
 
