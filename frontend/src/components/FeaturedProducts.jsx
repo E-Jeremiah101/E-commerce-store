@@ -1,16 +1,44 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCartStore } from "../stores/useCartStore";
-import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 const FeaturedProducts = ({ featuredProducts }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [itemsPerPage, setItemsPerPage] = useState(4);
 
-  // Track selected options for each product
+  // store selected size & color per product
   const [selectedOptions, setSelectedOptions] = useState({});
 
   const { addToCart } = useCartStore();
 
+  useEffect(() => {
+    if (featuredProducts?.length > 0) {
+      const defaults = {};
+      featuredProducts.forEach((product) => {
+        defaults[product._id] = {
+          size: product.sizes?.[0] || "",
+          color: product.colors?.[0] || "",
+        };
+      });
+      setSelectedOptions(defaults);
+    }
+  }, [featuredProducts]);
+
+  const handleAddToCart = (product) => {
+    const { size, color } = selectedOptions[product._id] || {};
+
+    if (product.sizes?.length > 0 && !size) {
+      toast.error("Please select a size");
+      return;
+    }
+    if (product.colors?.length > 0 && !color) {
+      toast.error("Please select a color");
+      return;
+    }
+
+    addToCart(product, size || null, color || null);
+  };
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 640) setItemsPerPage(1);
@@ -34,28 +62,11 @@ const FeaturedProducts = ({ featuredProducts }) => {
   const isStartDisabled = currentIndex === 0;
   const isEndDisabled = currentIndex >= featuredProducts.length - itemsPerPage;
 
-  // Handle dropdown changes
-  const handleOptionChange = (productId, type, value) => {
-    setSelectedOptions((prev) => ({
-      ...prev,
-      [productId]: {
-        ...prev[productId],
-        [type]: value,
-      },
-    }));
-  };
-
   return (
-    <div className="py-12 mt-17">
+    <div className="py-12">
       <div className="container mx-auto px-4">
-        <div className=" flex text-center align-middle text-4xl sm:text-6xl font-bold font-bebas text-white mc-4 tracking-widest justify-center ">
-          <h2 className="bg-black rounded">
-          FEATURED PRODUCTS
-        </h2>
-        </div>
-        
-        <div className="flex justify-center mb-10 mt-5">
-          <div className="border w-60"></div>
+        <div className=" flex text-center align-middle text-3xl sm:text-6xl font-bold font-bebas text-black mc-4 tracking-widest justify-center mb-5">
+          <h2 className="rounded">FEATURED PRODUCTS</h2>
         </div>
         <div className="relative">
           <div className="overflow-hidden">
@@ -68,15 +79,13 @@ const FeaturedProducts = ({ featuredProducts }) => {
               }}
             >
               {featuredProducts?.map((product) => {
-                const selectedSize = selectedOptions[product._id]?.size || "";
-                const selectedColor = selectedOptions[product._id]?.color || "";
-
+                const { size, color } = selectedOptions[product._id] || {};
                 return (
                   <div
                     key={product._id}
-                    className="w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 flex-shrink-0 px-2"
+                    className='w-full sm:w-1/2 lg:w-1/3 xl:w-1/4 flex-shrink-0 px-2'
                   >
-                    <div className="bg-opacity-10 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden h-full transition-all duration-300 hover:shadow-xl border-2 border-gray-200/30">
+                    <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden h-full transition-all duration-300 hover:shadow-xl border border-emerald-500/30">
                       <div className="overflow-hidden">
                         <img
                           src={product.image}
@@ -88,61 +97,6 @@ const FeaturedProducts = ({ featuredProducts }) => {
                         <h3 className="text-lg  mb-2 text-black tracking-widest">
                           {product.name}
                         </h3>
-
-                        {/* Size Dropdown */}
-                        {product.sizes && product.sizes.length > 0 && (
-                          <div className="mb-2">
-                            <label className="text-sm text-black mr-2 tracking-widest">
-                              Size:
-                            </label>
-                            <select
-                              value={selectedSize}
-                              onChange={(e) =>
-                                handleOptionChange(
-                                  product._id,
-                                  "size",
-                                  e.target.value
-                                )
-                              }
-                              className="bg-gray-800 text-white px-2 py-1 rounded border border-gray-600"
-                            >
-                              <option value=""></option>
-                              {product.sizes.map((size) => (
-                                <option key={size} value={size}>
-                                  {size}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-
-                        {/* Color Dropdown */}
-                        {product.colors && product.colors.length > 0 && (
-                          <div className="mb-2">
-                            <label className="text-sm text-black mr-2 tracking-widest">
-                              Color:
-                            </label>
-                            <select
-                              value={selectedColor}
-                              onChange={(e) =>
-                                handleOptionChange(
-                                  product._id,
-                                  "color",
-                                  e.target.value
-                                )
-                              }
-                              className="bg-gray-800 text-white px-2 py-1 rounded border border-gray-600"
-                            >
-                              <option value=""></option>
-                              {product.colors.map((color) => (
-                                <option key={color} value={color}>
-                                  {color}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-
                         <p className="text-black font-medium mb-4 tracking-widest">
                           ₦{" "}
                           {product.price.toLocaleString(undefined, {
@@ -150,18 +104,64 @@ const FeaturedProducts = ({ featuredProducts }) => {
                           })}
                         </p>
 
+                        {/* Size Selector */}
+                        {product.sizes?.length > 0 && (
+                          <div className="mb-2">
+                            <label className="text-sm text-gray-900 mr-2 tracking-widest"></label>
+                            <select
+                              value={size}
+                              onChange={(e) =>
+                                setSelectedOptions((prev) => ({
+                                  ...prev,
+                                  [product._id]: {
+                                    ...prev[product._id],
+                                    size: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="bg-gray-700 text-white px-2 py-1 rounded text-sm tracking-widest"
+                            >
+                              {product.sizes.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Color Selector */}
+                        {product.colors?.length > 0 && (
+                          <div className="mb-2">
+                            <label className="text-sm text-gray-800 mr-2 tracking-widest"></label>
+                            <select
+                              value={color}
+                              onChange={(e) =>
+                                setSelectedOptions((prev) => ({
+                                  ...prev,
+                                  [product._id]: {
+                                    ...prev[product._id],
+                                    color: e.target.value,
+                                  },
+                                }))
+                              }
+                              className="bg-gray-700 text-white text-sm px-2 py-1 rounded tracking-widest"
+                            >
+                              {product.colors.map((c) => (
+                                <option key={c} value={c}>
+                                  {c}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
                         <button
-                          onClick={() =>
-                            addToCart({
-                              ...product,
-                              selectedSize,
-                              selectedColor,
-                            })
-                          }
+                          onClick={() => handleAddToCart(product)}
                           className="w-full bg-black hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded transition-colors duration-300 flex items-center justify-center tracking-widest"
                         >
                           <ShoppingCart className="w-5 h-5 mr-2" />
-                          Add to cart
+                          Add to Cart
                         </button>
                       </div>
                     </div>
@@ -171,27 +171,26 @@ const FeaturedProducts = ({ featuredProducts }) => {
             </div>
           </div>
 
-          {/* Left Arrow */}
+          {/* Navigation buttons */}
           <button
             onClick={prevSlide}
             disabled={isStartDisabled}
             className={`absolute top-1/2 -left-4 transform -translate-y-1/2 p-2 rounded-full transition-colors duration-300 ${
               isStartDisabled
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-emerald-600 hover:bg-emerald-500"
+                : "bg-black hover:bg-black/60"
             }`}
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
 
-          {/* Right Arrow */}
           <button
             onClick={nextSlide}
             disabled={isEndDisabled}
             className={`absolute top-1/2 -right-4 transform -translate-y-1/2 p-2 rounded-full transition-colors duration-300 ${
               isEndDisabled
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-emerald-600 hover:bg-emerald-500"
+                : "bg-black hover:bg-black/60"
             }`}
           >
             <ChevronRight className="w-6 h-6" />
