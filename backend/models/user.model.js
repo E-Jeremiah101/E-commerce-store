@@ -19,6 +19,8 @@ const userSchema = new mongoose.Schema(
       required: [true, "Password is required"],
       minlength: [6, "Password must be at least 6 characters long"],
     },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
     addresses: [
       {
         label: { type: String, default: "Home" },
@@ -43,11 +45,11 @@ const userSchema = new mongoose.Schema(
           ref: "Product",
         },
         size: {
-           type: String 
-          },
+          type: String,
+        },
         color: {
-           type: String 
-          },
+          type: String,
+        },
       },
     ],
     role: {

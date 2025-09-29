@@ -30,7 +30,7 @@ const LoginPage = () => {
     console.log(email, password);
   };
   return (
-    <div className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="flex flex-col justify-center  py-12 items-center sm:px-6 lg:px-8">
       <motion.div
         className="sm:mx-auto sm:w-full sm:max-w-md"
         initial={{ opacity: 0, y: -20 }}
@@ -48,7 +48,7 @@ const LoginPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.2 }}
       >
-        <div className="py-8 px-4 shadow border sm:rounded-lg sm:px-10 ">
+        <div className="py-8 px-4 shadow-2xl  rounded-lg sm:px-10 ">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* email */}
             <div>
@@ -133,7 +133,7 @@ const LoginPage = () => {
           </p>
           <p className="mt-8 text-center text-sm text-gray-400">
             <Link
-              to="/signup"
+              to="/forgot-password"
               className="font-medium text-black hover:text-gray-800"
             >
               Forget Password?

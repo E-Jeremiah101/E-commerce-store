@@ -13,7 +13,9 @@ import CartPage from "./pages/CartPage.jsx";
 import { useCartStore } from "./stores/useCartStore.js";
 import PurchaseSuccessPage from "./pages/PurchaseSuccessPage.jsx";
 import PurchaseCancelPage from "./pages/PurchaseCancelPage.jsx";
-import PersonalInfoPage from "./pages/PersonalInfoPage.jsx"
+import PersonalInfoPage from "./pages/PersonalInfoPage.jsx";
+import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
+import ForgotPasswordPage from "./pages/ForgetPasswordPage.jsx";
 
 
 
@@ -83,9 +85,7 @@ function App() {
 
             <Route
               path="Personal-info"
-              element={
-                user ? <PersonalInfoPage /> : <Navigate to="/login" />
-              }
+              element={user ? <PersonalInfoPage /> : <Navigate to="/login" />}
             />
 
             <Route
@@ -97,6 +97,11 @@ function App() {
             <Route
               path="/purchase-cancel"
               element={user ? <PurchaseCancelPage /> : <Navigate to="/login" />}
+            />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route
+              path="/reset-password/:token"
+              element={<ResetPasswordPage />}
             />
           </Routes>
         </div>

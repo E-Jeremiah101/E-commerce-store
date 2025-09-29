@@ -4,16 +4,15 @@ import { PlusCircle, Upload, Loader } from "lucide-react";
 import { useProductStore } from "../stores/useProductStore.jsx";
 
 const categories = [
-  "Bottoms",
-  "T-Shirt",
-  "Footwear",
-  "Accessories",
-  "Jackets & Outerwear",
-  "Sets & Cords",
-  "Underwears & Socks",
-  "Suits & Blazers",
-  "Bags"
-
+  "bottoms",
+  "t-Shirt",
+  "footwears",
+  "accessories",
+  "jackets&Outerwear",
+  "sets&cords",
+  "underwear&socks",
+  "suits&blazers",
+  "bags",
 ];
 
 const CreateProductForm = () => {
