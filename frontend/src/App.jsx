@@ -16,6 +16,7 @@ import PurchaseCancelPage from "./pages/PurchaseCancelPage.jsx";
 import PersonalInfoPage from "./pages/PersonalInfoPage.jsx";
 import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import ForgotPasswordPage from "./pages/ForgetPasswordPage.jsx";
+import SearchResultsPage from "./pages/SearchResultsPage.jsx";
 
 
 
@@ -103,6 +104,7 @@ function App() {
               path="/reset-password/:token"
               element={<ResetPasswordPage />}
             />
+            <Route path="/search" element={<SearchResultsPage/>} />
           </Routes>
         </div>
         <Toaster />

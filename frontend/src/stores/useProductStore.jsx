@@ -16,8 +16,12 @@ export const useProductStore = create((set) => ({
         loading: false,
       }));
     } catch (error) {
-      toast.error(error.response.data.error);
-      set({ loading: false });
+       console.error(
+         "Error creating product:",
+         error.response?.data || error.message
+       );
+       toast.error(error.response?.data?.message || "Failed to create product");
+       set({ loading: false });
     }
   },
   fetchAllProducts: async () => {

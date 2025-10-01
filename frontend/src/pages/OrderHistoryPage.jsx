@@ -3,6 +3,7 @@ import axios from "../lib/axios";
 import { motion } from "framer-motion";
 import {RefreshCw} from "lucide-react"
 import GoBackButton from "../components/GoBackButton";
+import { div } from "framer-motion/client";
 
 const OrderHistoryPage = () => { 
   const [orders, setOrders] = useState([]); 
@@ -83,7 +84,10 @@ const OrderHistoryPage = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             {orders.length === 0 ? (
-              <p className="text-gray-500">You have no orders yet.</p>
+              <div className="text-gray-500 tracking-widest items-center flex justify-center">
+                <p >You have no orders yet.</p>
+              </div>
+              
             ) : (
               <div className="space-y-6">
                 {orders.map((order) => {
@@ -145,14 +149,22 @@ const OrderHistoryPage = () => {
                               className="flex items-center justify-between p-4 bg-gray-100 rounded-lg mb-2"
                             >
                               <img
-                                src={item.product.image}
-                                alt={item.product.name}
+                                src={
+                                  item.image ||
+                                  item.product?.image ||
+                                  "/placeholder.png"
+                                }
+                                alt={
+                                  item.name || item.product?.name || "Product"
+                                }
                                 className="w-20 h-20 object-cover rounded"
                               />
                               <div className="flex-1 ml-4">
                                 <div className="flex justify-between items-center">
                                   <p className="font-semibold text-gray-800 tracking-widest">
-                                    {item.product.name}
+                                    {item.name ||
+                                      item.product?.name ||
+                                      "Unknown Product"}
                                   </p>
                                   <p className="text-yellow-800 font-semibold tracking-widest">
                                     ₦
@@ -175,9 +187,11 @@ const OrderHistoryPage = () => {
                                 </div>
                                 <div className="flex justify-between text-sm mt-2 text-gray-700">
                                   <span>Qty: {item.quantity}</span>
-                                  <span>
-                                    ₦{item.price.toLocaleString()} each
-                                  </span>
+                                  {item.quantity > 1 && (
+                                    <span>
+                                      ₦{item.price.toLocaleString()} each
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </li>

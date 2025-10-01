@@ -5,7 +5,7 @@ import { useProductStore } from "../stores/useProductStore.jsx";
 
 const categories = [
   "bottoms",
-  "t-Shirt",
+  "t-shirts",
   "footwears",
   "accessories",
   "jackets&Outerwear",

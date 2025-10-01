@@ -27,6 +27,8 @@ const orderSchema = new mongoose.Schema(
         selectedSize: { type: String },
         selectedColor: { type: String },
         selectedCategory: { type: String },
+        name: { type: String, required: true },
+        image: { type: String, required: true },
       },
     ],
     orderNumber: {

@@ -141,6 +141,8 @@ export const checkoutSuccess = async (req, res) => {
         user: session.metadata.userId,
         products: products.map((p) => ({
           product: p.id,
+          name: p.name,
+          image:p.image,
           quantity: p.quantity,
           price: p.price,
           selectedSize: p.size || "",
@@ -226,10 +228,10 @@ export const checkoutSuccess = async (req, res) => {
               <html>
                 <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
                   <div style="max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px;">
-                    <h2 style="color: #2ecc71; text-align: center;">🎉 Thank you for your order!</h2>
+                    <h2 style="color: #2ecc71; text-align: center;"> Thank you for your order!</h2>
                     <p>Hi <strong>${user.name}</strong>,</p>
                     <p>We’ve received your order <strong>${order.orderNumber}</strong>.</p>
-                    <p><strong>Current Status:</strong> <span style="color: orange;">Pending ⏳</span></p>
+                    <p><strong>Current Status:</strong> <span style="color: orange;">Pending</span></p>
 
                     <h3 style="margin-top: 20px;">🛒 Order Summary</h3>
                     <table style="width:100%; border-collapse: collapse; margin-top: 10px;">
@@ -252,7 +254,7 @@ export const checkoutSuccess = async (req, res) => {
 
                     <p style="margin-top: 30px; font-size: 14px; color: #555;">
                       Best regards, <br>
-                      <strong>The EcoStore Team 🌱</strong>
+                      <strong>The Eco-Store Team 🌱</strong>
                     </p>
                   </div>
                 </body>
@@ -331,3 +333,5 @@ async function createNewCoupon(userId) {
 
   return newCoupon;
 }
+
+

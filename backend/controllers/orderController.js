@@ -23,12 +23,14 @@ export const getUserOrders = async (req, res) => {
             createdAt: order.createdAt,
             products: order.products.map((p) => ({
               _id: p._id,
-              product: p.product, // populated snapshot
+              product: p.product || null,
               quantity: p.quantity,
               price: p.price,
               size: p.selectedSize || null,
               color: p.selectedColor || null,
               selectedCategory: p.selectedCategory || null,
+              name: p.name || p.product?.name || "Unknown Product",
+              image: p.image || p.product?.image || "/placeholder.png",
             })),
           })),
         });
@@ -61,12 +63,14 @@ export const getAllOrders = async (req, res) => {
           createdAt: order.createdAt,
           products: order.products.map((p) => ({
             _id: p._id,
-            product: p.product, // populated snapshot
+            product: p.product || null,
             quantity: p.quantity,
             price: p.price,
-            size: p.selectedSize || null, 
+            size: p.selectedSize || null,
             color: p.selectedColor || null,
             selectedCategory: p.selectedCategory || null,
+            name: p.name || p.product?.name || "Unknown Product",
+            image: p.image || p.product?.image || "/placeholder.png",
           })),
         })),
       });
@@ -119,11 +123,11 @@ export const updateOrderStatus = async (req, res) => {
 
             ${
               status === "Delivered"
-                ? `<p>🎉 Your package has been delivered. We hope you enjoy your purchase!</p>`
+                ? `<p>Your package has been delivered. We hope you enjoy your purchase!</p>`
                 : status === "Shipped"
                 ? `<p>🚚 Your order is on the way! You’ll receive it soon.</p>`
                 : status === "Processing"
-                ? `<p>⏳ We’re currently preparing your order.</p>`
+                ? `<p>We’re currently preparing your order.</p>`
                 : status === "Cancelled"
                 ? `<p>❌ Unfortunately, your order has been cancelled. Please contact support if this wasn’t expected.</p>`
                 : ""
@@ -131,7 +135,7 @@ export const updateOrderStatus = async (req, res) => {
 
             <p style="margin-top: 30px; font-size: 14px; color: #555;">
               Best regards, <br>
-              <strong>The EcoStore Team 🌱</strong>
+              <strong>The Eco-Store Team 🌱</strong>
             </p>
           </div>
         </body>
@@ -178,6 +182,7 @@ export const createOrder = async (req, res) => {
     const orderItems = user.cartItems.map((item) => ({
       product: item.product._id,
       name: item.product.name,
+      image: item.product.image,
       price: item.product.price,
       quantity: item.quantity,
       selectedSize: item.size || null,
@@ -196,7 +201,7 @@ export const createOrder = async (req, res) => {
       products:orderItems,
       totalPrice,
       phone: defaultPhone?.number || "",
-      address: defaultAddress?.address || "",
+      deliveryAddress: defaultAddress?.address || "",
       status: "Pending",
     });
 

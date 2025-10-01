@@ -2,9 +2,11 @@ import { useState } from "react";
 import axios from "../lib/axios";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
+import { useUserStore } from "../stores/useUserStore";
 
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
+  const {loading} = useUserStore()
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,12 +52,27 @@ const ForgotPasswordPage = () => {
         <button
           type="submit"
           className="w-full bg-black hover:bg-black/80 text-white py-2 rounded"
+          disabled={loading}
         >
-          Send Reset Link
+          {loading ? (
+            <>
+              <Loader className="mr-2 w-5 animate-spin" aria-hidden="true" />
+              Loging...
+            </>
+          ) : (
+            <>
+              
+             Send Reset Link
+            </>
+          )}
+          
         </button>
 
-        <Link to="/login" className="text-sm my-8 flex justify-center text-center font-bold text-blue-600">
-            Back To Login
+        <Link
+          to="/login"
+          className="text-sm my-8 flex justify-center text-center font-bold text-blue-600"
+        >
+          Back To Login
         </Link>
       </form>
     </div>

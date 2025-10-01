@@ -15,7 +15,7 @@ const LoginPage = () => {
     e.preventDefault();
     setBackendError("");
 
-    // optional: frontend validation
+    
     if (!email || !password) {
       setBackendError("Email and password are required");
       return;
@@ -106,7 +106,7 @@ const LoginPage = () => {
                     className="mr-2 w-5 animate-spin"
                     aria-hidden="true"
                   />
-                  Loading...
+                  Loging...
                 </>
               ) : (
                 <>

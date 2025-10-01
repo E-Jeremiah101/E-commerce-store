@@ -89,7 +89,7 @@ export const login = async (req, res) => {
         role: user.role,
       });
     } else {
-      res.status(401).json({ message: "Invalid email or password" });
+      res.status(400).json({ message: "Invalid email or password" });
     }
   } catch (error) {
     console.log("Error in login controller", error.message);
@@ -131,17 +131,16 @@ export const refreshToken = async (req, res) => {
         message: "Invalid refresh token",
       });
     }
-    const accessToken = jwt.sign(
-      { userId: decoded.userId },
-      process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: "15m" }
+
+    //generate new tokens
+    const { accessToken, refreshToken: newRefreshToken } = generateTokens(
+      decoded.userId
     );
-    res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+   //save new refresh token in redis
+   await storeRefreshToken(decoded.userId, newRefreshToken);
+   //Update cookie
+   setCookies(res, accessToken, newRefreshToken)
+   
 
     res.json({ message: "Token refresh successfully" });
   } catch (error) {
@@ -185,10 +184,36 @@ export const forgotPassword = async (req, res) => {
     `;
 
     await sendEmail({
-      to: email, // 👈 this must not be undefined
+      to: email,
       subject: "Password Reset Request",
-      text: `Reset your password here: ${resetUrl}`,
-      html: `<p>Click <a href="${resetUrl}">here</a> to reset your password</p>`,
+      text: `We received a request to reset your password. 
+      If you made this request, use the link below to reset it:
+      ${resetUrl}
+      If you did not request a password reset, you can safely ignore this email.`,
+      html: `<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto;">
+      <h2 style="color: #222;">Password Reset Request</h2>
+      <p>Hello,</p>
+      <p>We received a request to reset your password. If you made this request, please click the button below:</p>
+
+      <p style="text-align: center; margin: 30px 0;">
+        <a href="${resetUrl}" target="_blank" 
+           style="background-color: #2563eb; color: #fff; text-decoration: none; 
+                  padding: 12px 24px; border-radius: 6px; font-weight: bold; display: inline-block;">
+          Reset My Password
+        </a>
+      </p>
+
+      <p>If the button above doesn’t work, copy and paste this link into your browser:</p>
+      <p style="word-break: break-all;">
+        <a href="${resetUrl}" target="_blank" style="color: #2563eb;">${resetUrl}</a>
+      </p>
+
+      <p>If you didn’t request a password reset, you can safely ignore this email. 
+      Your account will remain secure.</p>
+
+      <p style="margin-top: 30px;">Best regards,<br><strong>Eco-Store</strong></p>
+    </div>
+  `,
     });
 
     res.json({ message: "Reset email sent" });

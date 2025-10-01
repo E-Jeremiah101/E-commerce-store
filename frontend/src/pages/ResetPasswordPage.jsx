@@ -40,7 +40,7 @@ const ResetPasswordPage = () => {
         />
         <button
           type="submit"
-          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-2 rounded"
+          className="w-full bg-black hover:bg-black/80 text-white py-2 rounded"
         >
           Reset Password
         </button>

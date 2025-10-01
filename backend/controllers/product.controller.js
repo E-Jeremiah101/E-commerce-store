@@ -66,7 +66,7 @@ export const createProduct = async (req, res) => {
     res.status(201).json(product);
   } catch (error) {
     console.log("Error in createProduct controller", error.message);
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ error: "Server error", error: error.message });
   }
 };
 
@@ -164,4 +164,48 @@ async function updateFeaturedProductsCache() {
   } catch (error) {
     console.log("error in update cache function");
   }
-}
+};
+
+export const searchProducts = async (req, res) => {
+  try {
+    const { q } = req.query;
+    const products = await Product.find({
+      name: { $regex: q, $options: "i"},
+    });
+    res.json(products)
+  } catch (error) {
+    console.error("Search error:", error);
+    res.status(500).json({ message: "Error searching products" });
+  }
+};
+
+export const getSearchSuggestions = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q) return res.json([]);
+
+    // search in product name and category
+    const suggestions = await Product.find(
+      {
+        $or: [
+          { name: { $regex: q, $options: "i" } },
+          { category: { $regex: q, $options: "i" } },
+        ],
+      },
+      { name: 1, category: 1 }
+    ).limit(5);
+
+    // return unique values for dropdown
+    const uniqueSuggestions = [
+      ...new Set(
+        suggestions.flatMap((s) => [s.name, s.category].filter(Boolean))
+      ),
+    ];
+
+    res.json(uniqueSuggestions);
+  } catch (error) {
+    console.error("Error in getSearchSuggestions:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+

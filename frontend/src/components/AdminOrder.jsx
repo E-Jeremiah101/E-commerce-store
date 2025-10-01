@@ -116,8 +116,8 @@ const AdminOrdersPage = () => {
                   >
                     {/* Product Image */}
                     <img
-                      src={item.product.image}
-                      alt={item.product.name}
+                      src={item.image||item.product.image}
+                      alt={item.name||item.product.name}
                       className="w-20 h-20 object-cover rounded"
                     />
 
@@ -126,7 +126,7 @@ const AdminOrdersPage = () => {
                       {/* Product Name & Total Price */}
                       <div className="flex justify-between items-center">
                         <h3 className="text-white font-medium tracking-widest">
-                          {item.product.name}
+                          {item.name||item.product.name}
                         </h3>
                         <p className="text-yellow-100 font-semibold tracking-widest">
                           ₦

@@ -28,7 +28,7 @@ const HomePage = () => {
   return (
     <div className="relative min-h-screen text-white overflow-hidden">
       <div className="relative">
-        <div>
+        <div> 
           <img
             src="/Three-man.webp"
             alt=""
