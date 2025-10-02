@@ -13,12 +13,19 @@ import { connectRedis } from "./lib/redis.js";
 import orderRoute from "./routes/orderRoute.js";
 import adminOrderRoutes from "./routes/adminOrder.route.js";
 import userRoutes from "./routes/user.route.js"
+import cors from "cors"
 dotenv.config()
 const app = express();
 await connectRedis(); //connect once at startup
 const PORT = process.env.PORT || 5000;
 
-const __dirname = path.resolve()
+const __dirname = path.resolve();
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL, // allowed frontend
+    credentials: true, // allow cookies/tokens
+  })
+);
 
 app.use(express.json({limit: "10mb"})); // allow to parse the body of the request
 app.use(cookieParser())
@@ -47,10 +54,10 @@ app.use("/api/orders", orderRoute);
 //adminOderRoute
 app.use("/api/admin/orders", adminOrderRoutes);
 
-app.use("/api/users", userRoutes)
+app.use("/api/users", userRoutes);
 
 if(process.env.NODE_ENV ==="production"){
-   const buildPath = path.join(__dirname, "../frontend/build");
+   const buildPath = path.join(__dirname, "../frontend/dist");
    app.use(express.static(buildPath));
    app.get("*", (req, res) => {
      res.sendFile(path.join(buildPath, "index.html"));
