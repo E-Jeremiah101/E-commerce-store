@@ -19,7 +19,7 @@ const CartItem = ({ item }) => {
 
         {/* Product Info */}
         <div className="inline-block w-full min-w-0 flex-1 space-y-2 md:order-2 md:max-w-md">
-          <p className="text-base font-medium text-white hover:text-emerald-400 hover:underline tracking-widest">
+          <p className="text-base font-medium text-white hover:text-gray-200 tracking-widest">
             {item.name}
           </p>
           <p className="text-sm text-gray-400 tracking-widest">

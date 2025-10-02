@@ -1,25 +1,52 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-    baseURL: import.meta.mode === "development" ? "http://localhost:5000/api" : "/api",
-    withCredentials: true, //send cookies to server
+  baseURL:
+    import.meta.mode === "development" ? "http://localhost:5000/api" : "/api",
+  withCredentials: true, //send cookies to server
 });
 
-// Intercept 401 errors
+// Robust 401 interceptor for token refresh
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 axiosInstance.interceptors.response.use(
-  (res) => res,
-  async (err) => {
-    if (err.response?.status === 401 && !err.config._retry) {
-      err.config._retry = true;
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        }).then(() => axiosInstance(originalRequest));
+      }
+      originalRequest._retry = true;
+      isRefreshing = true;
       try {
         await axiosInstance.post("/auth/refresh-token");
-        return api(err.config); // retry original request
+        processQueue(null);
+        return axiosInstance(originalRequest);
       } catch (refreshError) {
+        processQueue(refreshError, null);
         console.error("Refresh failed, logging out");
-        // optional: redirect to login
+        // Optionally redirect to login or clear user state here
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
-    return Promise.reject(err);
+    return Promise.reject(error);
   }
 );
 

@@ -87,6 +87,7 @@ const LoginPage = () => {
                 <input
                   type="password"
                   id="password"
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="block text-black w-full px-3 py-2 pl-10  border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-black sm:text-2x1  "

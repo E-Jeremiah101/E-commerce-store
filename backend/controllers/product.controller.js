@@ -167,18 +167,25 @@ async function updateFeaturedProductsCache() {
 };
 
 export const searchProducts = async (req, res) => {
+  const query = req.query.q; // <--- define query here
+  if (!query)
+    return res.status(400).json({ message: "No search query provided" });
+
   try {
-    const { q } = req.query;
     const products = await Product.find({
-      name: { $regex: q, $options: "i"},
+      $or: [
+        { name: { $regex: query, $options: "i" } },
+        { description: { $regex: query, $options: "i" } },
+        { category: { $regex: query, $options: "i" } },
+      ],
     });
-    res.json(products)
+
+    res.status(200).json(products);
   } catch (error) {
     console.error("Search error:", error);
-    res.status(500).json({ message: "Error searching products" });
+    res.status(500).json({ message: "Server error" });
   }
 };
-
 export const getSearchSuggestions = async (req, res) => {
   try {
     const { q } = req.query;

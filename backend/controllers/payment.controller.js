@@ -86,13 +86,7 @@ export const createCheckoutSession = async (req, res) => {
         products: JSON.stringify(
           products.map((p) => ({
             id: p._id,
-            quantity: p.quantity,
             price: p.price,
-            name: p.name,
-            image: p.image,
-            size: p.size || null,
-            color: p.color || null,
-            category: p.category || null,
           }))
         ),
       },
