@@ -1,10 +1,10 @@
 import express from "express";
 import dotenv from "dotenv";
 import authRouthes from "./routes/auth.route.js";
-import productRoutes from "./routes/product.routes.js"
-import {connectDB} from "./lib/db.js";
+import productRoutes from "./routes/product.routes.js";
+import { connectDB } from "./lib/db.js";
 import cookieParser from "cookie-parser";
-import path from "path"
+import path from "path";
 import cartRoutes from "./routes/cart.route.js";
 import couponRoutes from "./routes/coupon.route.js";
 import paymentRoutes from "./routes/payment.route.js";
@@ -12,10 +12,10 @@ import analyticsRoutes from "./routes/analytics.route.js";
 import { connectRedis } from "./lib/redis.js";
 import orderRoute from "./routes/orderRoute.js";
 import adminOrderRoutes from "./routes/adminOrder.route.js";
-import userRoutes from "./routes/user.route.js"
+import userRoutes from "./routes/user.route.js";
 import cors from "cors";
 import { fileURLToPath } from "url";
-dotenv.config()
+dotenv.config();
 const app = express();
 await connectRedis(); //connect once at startup
 const PORT = process.env.PORT || 5000;
@@ -28,8 +28,8 @@ app.use(
   })
 );
 
-app.use(express.json({limit: "10mb"})); // allow to parse the body of the request
-app.use(cookieParser())
+app.use(express.json({ limit: "10mb" })); // allow to parse the body of the request
+app.use(cookieParser());
 
 //authRoute
 app.use("/api/auth", authRouthes);
@@ -65,18 +65,17 @@ const buildPath = path.join(__dirname, "../frontend/dist");
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(buildPath));
 
-  // Catch-all must use app.use, not app.get
   app.use((req, res, next) => {
-    res.sendFile(path.join(buildPath, "index.html"));
+    if (!req.originalUrl.startsWith("/api")) {
+      res.sendFile(path.join(buildPath, "index.html"));
+    } else {
+      next();
+    }
   });
 }
 
-
-
-
-
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 
-    connectDB();
+  connectDB();
 });
