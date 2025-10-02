@@ -193,7 +193,7 @@ export const checkoutSuccess = async (req, res) => {
         <td style="padding:8px;border:1px solid #ddd;text-align:center;">${
           p.quantity
         }</td>
-        <td style="padding:8px;border:1px solid #ddd;text-align:right;">#${p.price.toLocaleString()}</td>
+        <td style="padding:8px;border:1px solid #ddd;text-align:right;">₦${p.price.toLocaleString()}</td>
       </tr>`;
           })
           .join("");

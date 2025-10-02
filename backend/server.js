@@ -59,8 +59,8 @@ app.use("/api/users", userRoutes);
 if(process.env.NODE_ENV ==="production"){
    const buildPath = path.join(__dirname, "../frontend/dist");
    app.use(express.static(buildPath));
-   app.get("*", (req, res) => {
-     res.sendFile(path.join(buildPath, "index.html"));
+   app.use((req, res) => {
+     res.sendFile(path.join(__dirname, "../frontend/dist/index.html"));
    });
 }
 
