@@ -30,9 +30,9 @@ const setCookies = (res, accessToken, refreshToken) => {
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true, //prevent xss attacks (cross site scripting attacks)
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict", //prevent CSRF attack(croos-site request forgery)
-    maxAge: 7 * 24 * 60 * 60 * 1000, //expires in 15 mins
+    secure: process.env.NODE_ENV === "production", // always secure in production
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict", // allow cross-origin in production
+    maxAge: 7 * 24 * 60 * 60 * 1000, //expires in 7 days
   });
 };
 
