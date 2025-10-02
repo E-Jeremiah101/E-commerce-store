@@ -20,7 +20,7 @@ const app = express();
 await connectRedis(); //connect once at startup
 const PORT = process.env.PORT || 5000;
 
-const __dirname = path.resolve();
+// const __dirname = path.resolve();
 app.use(
   cors({
     origin: process.env.CLIENT_URL, // allowed frontend
@@ -57,13 +57,18 @@ app.use("/api/admin/orders", adminOrderRoutes);
 
 app.use("/api/users", userRoutes);
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const buildPath = path.join(__dirname, "../frontend/dist");
+
 if (process.env.NODE_ENV === "production") {
-  const buildPath = path.join(__dirname, "frontend", "dist");
   app.use(express.static(buildPath));
 
-  app.use((req, res) => {
+  // Catch-all must use app.use, not app.get
+  app.use((req, res, next) => {
     res.sendFile(path.join(buildPath, "index.html"));
-  });;
+  });
 }
 
 
