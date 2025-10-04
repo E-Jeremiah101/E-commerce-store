@@ -55,6 +55,12 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    subtotal: Number,
+    discount: { type: Number, default: 0 },
+    coupon: {
+      code: String,
+      discount: Number,
+    },
     stripeSessionId: {
       type: String,
       unique: true,

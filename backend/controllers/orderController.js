@@ -1,6 +1,7 @@
 import Order from "../models/order.model.js";
 import {sendEmail} from "../lib/mailer.js";
 import User from "../models/user.model.js";
+import Coupon from "../models/coupon.model.js";
 
 export const getUserOrders = async (req, res) => {
     try {
@@ -18,6 +19,9 @@ export const getUserOrders = async (req, res) => {
             status: order.status,
             deliveredAt: order.deliveredAt,
             totalAmount: order.totalAmount,
+            subtotal: order.subtotal,
+            discount: order.discount,
+            coupon: order.coupon,
             deliveryAddress: order.deliveryAddress,
             phone: order.phone,
             createdAt: order.createdAt,
@@ -58,6 +62,9 @@ export const getAllOrders = async (req, res) => {
           status: order.status,
           deliveredAt: order.deliveredAt,
           totalAmount: order.totalAmount,
+          subtotal: order.subtotal,
+          discount: order.discount,
+          coupon: order.coupon,
           deliveryAddress: order.deliveryAddress,
           phone: order.phone,
           createdAt: order.createdAt,
@@ -190,16 +197,41 @@ export const createOrder = async (req, res) => {
       selectedCategory: item.category || null,
     }));
 
-    const totalPrice = orderItems.reduce(
+    const subtotal = orderItems.reduce(
       (sum, item) => sum + item.price * item.quantity,
       0
     );
 
+    let discount = 0;
+    let coupon = null;
+
+    if (req.body.couponCode) {
+      const foundCoupon = await Coupon.findOne({
+        code: req.body.couponCode,
+        isActive: true,
+      });
+
+      if (foundCoupon) {
+        if (foundCoupon.type === "percentage") {
+          discount = (subtotal * foundCoupon.value) / 100;
+        } else if (foundCoupon.type === "fixed") {
+          discount = foundCoupon.value;
+        }
+
+        coupon = { code: foundCoupon.code, discount: discount};
+      }
+    }
+        const totalAmount = Math.max(subtotal - discount, 0);
+
+
     // Create order snapshot
     const order = new Order({
       user: user._id,
-      products:orderItems,
-      totalPrice,
+      products: orderItems,
+      subtotal,
+      discount: discount,
+      totalAmount,
+      coupon,
       phone: defaultPhone?.number || "",
       deliveryAddress: defaultAddress?.address || "",
       status: "Pending",

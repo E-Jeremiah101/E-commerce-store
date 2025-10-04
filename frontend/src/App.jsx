@@ -18,26 +18,36 @@ import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import ForgotPasswordPage from "./pages/ForgetPasswordPage.jsx";
 import SearchResultsPage from "./pages/SearchResultsPage.jsx";
 
-
-
 function App() {
   const { user, checkAuth, checkingAuth } = useUserStore();
   const { getCartItems } = useCartStore();
   const location = useLocation();
   useEffect(() => {
+    // don't run auth check on reset/forgot password, login, or signup routes
+    if (
+      location.pathname.startsWith("/reset-password") ||
+      location.pathname === "/forgot-password" ||
+      location.pathname === "/login" ||
+      location.pathname === "/signup" 
+    ) {
+      // Set checkingAuth to false so spinner doesn't show
+      useUserStore.setState({ checkingAuth: false });
+      return;
+    }
     checkAuth();
-  }, [checkAuth]);
+  }, [checkAuth, location.pathname]);
 
   useEffect(() => {
     if (!user) return;
     getCartItems();
   }, [getCartItems, user]);
 
-  if (checkingAuth) return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
-    </div>
-  );
+  if (checkingAuth)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+      </div>
+    );
   return (
     <>
       <div className="min-h-screen bg-white text-black  relative overflow-hidden ">
@@ -104,7 +114,7 @@ function App() {
               path="/reset-password/:token"
               element={<ResetPasswordPage />}
             />
-            <Route path="/search" element={<SearchResultsPage/>} />
+            <Route path="/search" element={<SearchResultsPage />} />
           </Routes>
         </div>
         <Toaster />

@@ -47,7 +47,7 @@ const OrderSummary = () => {
   const handlePayment = async () => {
     if (!defaultPhone || !defaultAddress) {
       alert(
-        "⚠️ You must add a phone number and address before checkout. Please update your Personal Information Page."
+        "⚠️ You must add a phone number and address before checkout. Please update your Profile Page."
       );
       return;
     }

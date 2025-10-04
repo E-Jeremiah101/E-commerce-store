@@ -56,7 +56,9 @@ const AdminOrdersPage = () => {
       </div>
 
       {orders.length === 0 ? (
-        <p>No orders yet.</p>
+        <p className="items-center flex justify-center mt-7 tracking-widest ">
+          No orders yet.
+        </p>
       ) : (
         <div className="space-y-6">
           {orders.map((order) => (
@@ -65,9 +67,7 @@ const AdminOrdersPage = () => {
               className="border rounded-lg p-4 bg-gray-800 text-gray-100"
             >
               <div className="flex justify-between mb-2">
-                <span className="text-yellow-600">
-                  {order.orderNumber}
-                </span>
+                <span className="text-yellow-600">{order.orderNumber}</span>
                 <span>
                   <select
                     value={order.status}
@@ -116,8 +116,8 @@ const AdminOrdersPage = () => {
                   >
                     {/* Product Image */}
                     <img
-                      src={item.image||item.product.image}
-                      alt={item.name||item.product.name}
+                      src={item.image || item.product.image}
+                      alt={item.name || item.product.name}
                       className="w-20 h-20 object-cover rounded"
                     />
 
@@ -126,7 +126,7 @@ const AdminOrdersPage = () => {
                       {/* Product Name & Total Price */}
                       <div className="flex justify-between items-center">
                         <h3 className="text-white font-medium tracking-widest">
-                          {item.name||item.product.name}
+                          {item.name || item.product.name}
                         </h3>
                         <p className="text-yellow-100 font-semibold tracking-widest">
                           ₦
@@ -176,6 +176,21 @@ const AdminOrdersPage = () => {
                   minimumFractionDigits: 0,
                 })}
               </p>
+              {/*  */}
+              <h2 className="text-xl font-semibold">Order Summary</h2>
+
+              {order.coupon?.code && (
+                <>
+                  <p className="text-red-600">
+                    Coupon Applied: {order.coupon.code} (-₦
+                    {order.coupon.discount})
+                  </p>
+                  <p className="text-sm">Discount: ₦{order.discount}</p>
+                </>
+              )}
+
+              <p className="font-bold">Subtotal: ₦{order.subtotal}</p>
+              {/*  */}
             </div>
           ))}
         </div>
@@ -185,143 +200,3 @@ const AdminOrdersPage = () => {
 };
 
 export default AdminOrdersPage;
-
-// import { useEffect, useState } from "react";
-// import axios from "../lib/axios";
-// import { motion } from "framer-motion";
-// const AdminOrdersPage = () => {
-//   const [orders, setOrders] = useState([]);
-//   const [loading, setLoading] = useState(true);
-
-//   const fetchOrders = async () => {
-//     try {
-//       setLoading(true);
-//       const { data } = await axios.get("/admin/orders", {
-//         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-//       });
-//       setOrders(data.orders);
-//     } catch (error) {
-//       console.error("Error fetching orders:", error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   const handleStatusChange = async (orderId, newStatus) => {
-//     try {
-//       await axios.put(
-//         `/admin/orders/${orderId}/status`,
-//         { status: newStatus },
-//         {
-//           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-//         }
-//       );
-//       fetchOrders(); // refresh after update
-//     } catch (err) {
-//       console.error(err);
-//     }
-//   };
-
-//   useEffect(() => {
-//     fetchOrders();
-//   }, []);
-
-//   if (loading) return <p>Loading orders...</p>;
-
-//   return (
-//     <div className="p-6">
-//       <div className="text-2xl font-bold flex justify-center mb-6"><h1>All Orders</h1></div>
-
-//       {orders.length === 0 ? (
-//         <p>No orders yet.</p>
-//       ) : (
-//         <div className="space-y-6">
-//           {orders.map((order) => (
-//             <div
-//               key={order._id}
-//               className="border rounded-lg p-4 bg-gray-800 text-gray-100"
-//             >
-//               <div className="flex justify-between mb-2">
-//                 <span className="text-emerald-500">
-//                   Order #{order.orderNumber}
-//                 </span>
-//                 <span>
-//                   <select
-//                     value={order.status}
-//                     onChange={(e) =>
-//                       handleStatusChange(order._id, e.target.value)
-//                     }
-//                     className="bg-gray-700 text-white px-2 py-1 rounded"
-//                   >
-//                     <option className="text-yellow-600" value="Pending">
-//                       Pending
-//                     </option>
-//                     <option className="text-yellow-600" value="Processing">
-//                       Processing
-//                     </option>
-//                     <option className="text-yellow-600" value="Shipped">
-//                       Shipped
-//                     </option>
-//                     <option className="text-green-600" value="Delivered">
-//                       Delivered
-//                     </option>
-//                     <option className="text-red-600" value="Cancelled">
-//                       Cancelled
-//                     </option>
-//                   </select>
-//                 </span>
-//               </div>
-
-//               <p className="text-sm text-gray-400 mb-2">
-//                 Customer Name: {order.user.name}
-//               </p>
-//               <p className="text-sm text-gray-400 mb-2">
-//                 Customer Email: {order.user.email}
-//               </p>
-//               <p className="text-sm text-gray-400 mb-2">
-//                 Customer Phone: {order.phone || "Not provided"}
-//               </p>
-//               <p className="text-sm text-gray-400 mb-2">
-//                 Delivery Address: {order.deliveryAddress || "Not provided"}
-//               </p>
-
-//               <ul className="space-y-2 mb-2">
-//                 {order.products.map((item) => (
-//                   <li
-//                     key={item._id}
-//                     className="flex justify-between items-center"
-//                   >
-//                     <img
-//                       src={item.product.image}
-//                       alt={item.product.name}
-//                       className="w-16 h-16 object-cover rounded mr-4"
-//                     />
-//                     <div className="flex-1">
-//                       <h3>{item.product.name}</h3>
-//                       <p>
-//                         ₦{" "}
-//                         {item.price.toLocaleString(undefined, {
-//                           minimumFractionDigits: 0,
-//                         })}{" "}
-//                       </p>
-//                       <p className="text-yellow-300">Qty ({item.quantity})</p>
-//                     </div>
-//                   </li>
-//                 ))}
-//               </ul>
-
-//               <p className="font-bold text-green-500">
-//                 Total: ₦ {""}
-//                 {order.totalAmount.toLocaleString(undefined, {
-//                   minimumFractionDigits: 0,
-//                 })}
-//               </p>
-//             </div>
-//           ))}
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default AdminOrdersPage;

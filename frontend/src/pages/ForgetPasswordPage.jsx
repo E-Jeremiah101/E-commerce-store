@@ -3,10 +3,16 @@ import axios from "../lib/axios";
 import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import { useUserStore } from "../stores/useUserStore";
+import { useEffect } from "react";
 
 const ForgotPasswordPage = () => {
+  // Ensure spinner does not show if user navigates directly here
+  
+  useEffect(() => {
+    useUserStore.setState({ checkingAuth: false });
+  }, []);
   const [email, setEmail] = useState("");
-  const {loading} = useUserStore()
+  const { loading } = useUserStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,12 +66,8 @@ const ForgotPasswordPage = () => {
               Loging...
             </>
           ) : (
-            <>
-              
-             Send Reset Link
-            </>
+            <>Send Reset Link</>
           )}
-          
         </button>
 
         <Link
