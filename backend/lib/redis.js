@@ -25,12 +25,11 @@ redis.on("error", (err) => console.log("❌ Redis Client Error", err));
 redis.on("reconnecting", () => console.log("♻️ Redis reconnecting..."));
 redis.on("end", () => console.error("🔌 Redis connection closed"));
 
-// let isConnected = false;
+
 
 export const connectRedis = async() =>{
   if (!redis.isOpen){
     await redis.connect();
-    // isConnected = true;
     console.log("✅ Connected to Redis");
   }
 };

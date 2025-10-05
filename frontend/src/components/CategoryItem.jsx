@@ -23,7 +23,7 @@ const CategoryItem = ({ category }) => {
             />
 
             <div className="sm:absolute block sm:bottom-0 sm:left-0 sm:right-0 p-2 sm:p-4 z-20">
-              <h3 className="text-black/80 text-lg sm:text-2xl font-bold mb-2 tracking-widest">
+              <h3 className="text-orange-200/80 text-base sm:text-2xl sm:font-bold mb-2 tracking-widest h-15">
                Explore {category.name}
               </h3>
               <p className="text-white hidden sm:block text-sm mb-1 sm:mb-2 sm:bg-black w-fit tracking-widest rounded-md">
