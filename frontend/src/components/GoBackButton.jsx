@@ -16,10 +16,10 @@ export default function GoBackButton() {
   return (
     <button
       onClick={handleGoBack} // 👈 go back to previous page
-      className="flex items-center text-gray-700 hover:text-gray-900 mb-4"
+      className="flex items-center text-gray-700 hover:text-gray-900 "
     >
-      <ArrowLeft size={20} className="mr-2" />
-      <span className="font-medium">Back</span>
+      <ArrowLeft size={25} className="mr-2" />
+
     </button>
   );
 }

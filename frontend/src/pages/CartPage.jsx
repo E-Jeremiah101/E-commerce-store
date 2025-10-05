@@ -13,9 +13,17 @@ const CartPage = () => {
 
   return (
     <>
-    <div className="p-6">
-                <GoBackButton />
-              </div>
+    <motion.div
+            className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center bg-white  z-40 py-5"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="absolute left-4 text-black">
+              <GoBackButton />
+            </div>
+           
+          </motion.div>
     <div className="py-8 md:py-16">
       <div className="mx-auto max-w-screen-xl px-4 2xl:px-0">
         <div className="mt-6 sm:mt-8 md:gap-6 lg:flex lg:items-start xl:gap-8">

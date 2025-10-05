@@ -29,40 +29,44 @@ const CategoryPage = () => {
     );
   return (
     <>
-    <div className="p-6">
-                <GoBackButton />
-              </div>
-    <div className="min-h-screen">
-      <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-16 ">
-        <motion.h1
-          className="text-center text-4xl sm:text-5xl font-bold text-white-400 mb-8"
+      <motion.div
+        className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center bg-white  z-40 py-5"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+      >
+        <div className="absolute left-4 text-black">
+          <GoBackButton />
+        </div>
+        <span
+          className="text-center text-xl  text-gray-900 tracking-widest"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
           {category.charAt(0).toUpperCase() + category.slice(1)}
-        </motion.h1>
-        <div className="flex justify-center  mb-10 mt-5">
-          <div className="border w-30"></div>
-        </div>
+        </span>
+      </motion.div>
 
-        <motion.div
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          {products?.length === 0 && (
-            <h2 className="text-3xl font-semibold text-black text-center col-span-full">
-              No products found
-            </h2>
-          )}
-          {products?.map((product) => (
-            <ProductCard key={product._id} product={product} />
-          ))}
-        </motion.div>
+      <div className="min-h-screen">
+        <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-16 ">
+          <motion.div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            {products?.length === 0 && (
+              <h2 className="text-3xl font-semibold text-black text-center col-span-full">
+                No products found
+              </h2>
+            )}
+            {products?.map((product) => (
+              <ProductCard key={product._id} product={product} />
+            ))}
+          </motion.div>
+        </div>
       </div>
-    </div>
     </>
   );
 };

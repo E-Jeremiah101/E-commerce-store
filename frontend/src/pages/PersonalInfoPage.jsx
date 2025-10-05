@@ -79,32 +79,32 @@ if(loading   || !user) return (
  
   return (
     <>
-      <div className="p-6">
-        <GoBackButton />
-      </div>
       <div className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <motion.div
-          className="sm:mx-auto sm:w-full sm:max-w-md"
+          className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center bg-white  z-40 py-4"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 tracking-widest">
+          <div className="absolute left-4 text-black">
+            <GoBackButton  />
+          </div>
+          <span className=" text-center text-xl  text-gray-900 tracking-widest">
             Personal Info
-          </h2>
+          </span>
         </motion.div>
 
         <motion.div
-          className=" mt-8 sm:mx-auto sm:w-full sm:max-w-md"
+          className=" w-full mt-8 md:mx-auto md:w-full md:max-w-md"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
         >
-          <div className=" py-8 px-4 shadow border sm:rounded-lg sm:px-10">
+          <div className=" py-8 px-4 md:shadow  sm:rounded-lg sm:px-10">
             <form className="space-y-6">
               {/* name */}
               <div>
-                <label className="block text-sm font-medium text-gray-800">
+                <label className="block text-sm font-medium text-gray-800 mb-4">
                   Full name
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
@@ -117,7 +117,7 @@ if(loading   || !user) return (
                   <input
                     readOnly
                     value={user.name}
-                    className="block w-full px-3 py-2 pl-10 rounded-md shadow-lg focus:outline-none text-gray-800 "
+                    className="block w-full px-4 py-4  pl-10 rounded-md shadow-lg focus:outline-none text-gray-800 "
                   />
                   <div className="absolute inset-y-0 right-3 pl-3 flex items-center pointer-events-none">
                     <Lock className="h-5 w-5 text-red-400" aria-hidden="true" />
@@ -126,7 +126,7 @@ if(loading   || !user) return (
               </div>
               {/* email */}
               <div>
-                <label className="block text-sm font-medium text-gray-800">
+                <label className="block text-sm font-medium text-gray-800 mb-4">
                   Email address
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
@@ -139,7 +139,7 @@ if(loading   || !user) return (
                   <input
                     value={user.email}
                     readOnly
-                    className="block w-full px-3 py-2 pl-10  rounded-md shadow-lg focus:outline-none text-gray-800"
+                    className="block w-full px-4 py-4  pl-10  rounded-md shadow-lg focus:outline-none text-gray-800"
                   />
                   <div className="absolute inset-y-0 right-3 pl-3 flex items-center pointer-events-none">
                     <Lock className="h-5 w-5 text-red-400" aria-hidden="true" />
@@ -149,7 +149,7 @@ if(loading   || !user) return (
               {/* Password */}
               {phones.map((p, i) => (
                 <div key={i}>
-                  <label className="block text-sm font-medium text-gray-800">
+                  <label className="block text-sm font-medium text-gray-800 mb-4">
                     Phone Number
                   </label>
                   <div className="mt-1 relative rounded-md shadow-sm">
@@ -168,7 +168,7 @@ if(loading   || !user) return (
                         updated[i].number = e.target.value;
                         setUser({ ...user, phones: updated });
                       }}
-                      className="block w-full px-3 py-2 pl-10  border-1 rounded-md shadow-sm focus:outline-none text-gray-800 "
+                      className="block w-full px-4 py-4  pl-10 bg-gray-100 rounded-md shadow-sm focus:outline-none text-gray-800 "
                     />
 
                     <div></div>
@@ -195,7 +195,7 @@ if(loading   || !user) return (
 
               {addresses.map((a, i) => (
                 <div key={i}>
-                  <label className="block text-sm font-medium text-gray-800">
+                  <label className="block text-sm font-medium text-gray-800 mb-4">
                     Delivery Address
                   </label>
                   <div className="mt-1 relative rounded-md shadow-sm">
@@ -212,7 +212,7 @@ if(loading   || !user) return (
                         updated[i].address = e.target.value;
                         setUser({ ...user, addresses: updated });
                       }}
-                      className="block w-full px-3 py-2 pl-10  border-1 rounded-md shadow-sm focus:outline-none text-gray-800 placeholder-gray-400  "
+                      className="block w-full px-4 py-4 pl-10 bg-gray-100 rounded-md shadow-sm focus:outline-none text-gray-800 placeholder-gray-400  "
                       placeholder="Enter your Address "
                     />
                   </div>
@@ -238,7 +238,7 @@ if(loading   || !user) return (
 
               <button
                 onClick={handleSave}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800 duration-150 ease-in-out disabled:opacity-50"
+                className="w-full flex mt-10 justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-800 duration-150 ease-in-out disabled:opacity-50"
                 disabled={loading}
               >
                 {loading ? (

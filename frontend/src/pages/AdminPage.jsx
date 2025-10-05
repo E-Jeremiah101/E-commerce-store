@@ -23,19 +23,21 @@ const AdminPage = () => {
   }, [fetchAllProducts]);
   return (
     <>
-      <div className="p-6">
-        <GoBackButton />
-      </div>
-      <div className="min-h-screen relative overflow-hidden">
+      <motion.div
+                className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center bg-white  z-40 py-4"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+              >
+                <div className="absolute left-4 text-black">
+                  <GoBackButton  />
+                </div>
+                <span className=" text-center text-xl  text-gray-900 tracking-widest">
+                  Admin Dashboard
+                </span>
+              </motion.div>
+      <div className="min-h-screen relative  mt-2">
         <div className="relative z-10 container mx-auto px-4 py-16">
-          <motion.h1
-            className="text-4xl font-bold mb-8 text-black text-center tracking-widest"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            Admin Dashboard
-          </motion.h1>
 
           <div className="flex justify-center mb-8 ">
             {tabs.map((tab) => (
