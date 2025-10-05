@@ -40,11 +40,10 @@ const Navbar = () => {
   };
 
   return (
-    <header className="w-full bg-black bg-opacity-90 backdrop-blur-md shadow-lg z-40 border-b border-black ">
-
+    <header className="w-full bg-black bg-opacity-90 backdrop-blur-md shadow-lg border-b border-black fixed  top-0 left-0 z-40 transition-all duration-300 ">
       {/* Mobile View */}
 
-      <div className="sm:hidden">
+      <div className="sm:hidden ">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           {/* Left: Logo */}
           <Link to={"/"} className="flex sm:hidden items-center gap-2">
@@ -317,10 +316,9 @@ const Navbar = () => {
             </ul>
           </div>
         </div>
-         {/* SearchBar */}
-      
+        {/* SearchBar */}
       </div>
-     {isSearchOpen && (
+      {isSearchOpen && (
         <div className="px-4 py-6 bg-black hidden sm:block">
           <SearchBar />
         </div>

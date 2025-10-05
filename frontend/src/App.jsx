@@ -18,6 +18,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import ForgotPasswordPage from "./pages/ForgetPasswordPage.jsx";
 import SearchResultsPage from "./pages/SearchResultsPage.jsx";
 
+
 function App() {
   const { user, checkAuth, checkingAuth } = useUserStore();
   const { getCartItems } = useCartStore();

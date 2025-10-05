@@ -2,6 +2,8 @@ import CategoryItem from "../components/CategoryItem.jsx";
 import { useProductStore } from "../stores/useProductStore.jsx";
 import { useEffect } from "react";
 import FeaturedProducts from "../components/FeaturedProducts.jsx";
+import { motion } from "framer-motion";
+import Footer from "../components/Footer.jsx";
 const categories = [
   { href: "/bottoms", name: "Bottoms", imageUrl: "/jeans-man.jpg" },
   { href: "/t-shirts", name: "T-Shirt", imageUrl: "/man-tshirt.jpg" },
@@ -27,26 +29,39 @@ const HomePage = () => {
   }, [fetchFeaturedProducts])
   return (
     <div className="relative min-h-screen text-white overflow-hidden">
-      <div className="relative">
-        <div> 
-          <img
+      <div className="relative py-16">
+        <div>
+          <motion.img
             src="/Three-man.webp"
             alt=""
             className="h-[22rem]       
       sm:h-[32rem]    
       lg:h-[36rem]     
       w-full object-cover object-center"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
           />
         </div>
         {/* Text below image (only visible on mobile) */}
         <div className="md:hidden text-center text-white px-4 py-6 bg-black ">
-          <h1 className="text-3xl font-bold mb-3 tracking-wider">
+          <motion.h1
+            className="text-3xl font-bold mb-3 tracking-wider"
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: 1, y: -20 }}
+            transition={{ duration: 0.8 }}
+          >
             Discover What's New
-          </h1>
-          <p className="flex flex-wrap justify-center px-15 max-w-5xl text-gray-300 text-sm tracking-wide">
+          </motion.h1>
+          <motion.p
+            className="flex flex-wrap justify-center px-15 max-w-5xl text-gray-300 text-sm tracking-wide"
+            initial={{ opacity: 0, y: 0 }}
+            animate={{ opacity: 1, y: -20 }}
+            transition={{ duration: 0.8 }}
+          >
             Discover the latest trends in eco-friendly fashion designed to
             inspire your look and lifestyle.
-          </p>
+          </motion.p>
         </div>
 
         {/* Desktop view */}
@@ -61,35 +76,39 @@ const HomePage = () => {
         </div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-4  md:px-8 py-12">
         <h1 className="text-black text-3xl tracking-widest font-bold mb-4">
           Collections
         </h1>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6 gap-x-6 gap-y-2 ">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 md:gap-6 gap-x-6 gap-y-2 ">
           {categories.map((category) => (
             <CategoryItem category={category} key={category.name} />
           ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 m-0 sm:mt-0 mt-9 gap-5 sm:gap-30 ">
+        <div className="grid grid-cols-1 md:grid-cols-2 m-0 md:mt-0 mt-9 gap-5 md:gap-30 ">
           <div className="text-black flex justify-center items-center">
             <div className="text-center">
-              <h1 className="text-3xl tracking-widest sm:text-5xl mb-4">CLASSIC WEARS</h1>
-              <p className="text-1xl sm:text-2xl tracking-widest">
+              <h1 className="text-3xl tracking-widest md:text-5xl mb-4">
+                CLASSIC WEARS
+              </h1>
+              <p className="text-1xl md:text-2xl tracking-widest">
                 Stay Relaxed, Stay Stylish: Redefine Comfort with the Perfect
                 style Fit!
               </p>
             </div>
           </div>
-          <div>
-            <img src="/man-black.png" alt="" className="h-115 sm:h-130" />
+          <div className="hidden md:block">
+            <img src="/man-black.png" alt="" className="h-115 md:h-130" />
           </div>
         </div>
         {!isLoading && products.length > 0 && (
           <FeaturedProducts featuredProducts={products} />
         )}
       </div>
+      
+      <Footer/>
     </div>
   );
 }
