@@ -66,16 +66,16 @@ const HomePage = () => {
           Collections
         </h1>
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-6 ">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 sm:gap-6 gap-x-6 gap-y-3 ">
           {categories.map((category) => (
             <CategoryItem category={category} key={category.name} />
           ))}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 m-0 sm:mt-0 mt-9 gap-30 ">
+        <div className="grid grid-cols-1 sm:grid-cols-2 m-0 sm:mt-0 mt-9 gap-5 sm:gap-30 ">
           <div className="text-black flex justify-center items-center">
             <div className="text-center">
-              <h1 className="text-3xl tracking-widest sm:text-5xl mb-5">CLASSIC WEARS</h1>
+              <h1 className="text-3xl tracking-widest sm:text-5xl mb-4">CLASSIC WEARS</h1>
               <p className="text-1xl sm:text-2xl tracking-widest">
                 Stay Relaxed, Stay Stylish: Redefine Comfort with the Perfect
                 style Fit!
@@ -83,7 +83,7 @@ const HomePage = () => {
             </div>
           </div>
           <div>
-            <img src="/man-black.png" alt="" className="h-130" />
+            <img src="/man-black.png" alt="" className="h-115 sm:h-130" />
           </div>
         </div>
         {!isLoading && products.length > 0 && (

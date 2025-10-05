@@ -14,19 +14,19 @@ const CategoryItem = ({ category }) => {
         }}
       >
         <div className="w-full h-full cursor-pointer">
-          <div className=" inset-0 bg-gradient-to-b from-transparent to-gray-500 z-10">
+          <div className="sm:absolute block inset-0 bg-gradient-to-b from-transparent to-gray-500 z-10">
             <img
               src={category.imageUrl}
               alt={category.name}
-              className="w-full h-59 object-fill transition-transform duration-500 ease-out group-hover:scale-110"
+              className="w-full h-59 sm:h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
               loading="lazy"
             />
 
-            <div className="p-2 z-20">
-              <h3 className="text-black/80  text-lg font mb-2 tracking-widest">
-                {category.name}
+            <div className="sm:absolute block sm:bottom-0 sm:left-0 sm:right-0 p-2 sm:p-4 z-20">
+              <h3 className="text-black/80 text-lg sm:text-2xl font-bold mb-2 tracking-widest">
+               Explore {category.name}
               </h3>
-              <p className="text-white text-sm mb-1 w-fit tracking-widest rounded-md">
+              <p className="text-white hidden sm:block text-sm mb-1 sm:mb-2 sm:bg-black w-fit tracking-widest rounded-md">
                 Explore {category.name}
               </p>
 
