@@ -131,7 +131,7 @@ const FeaturedProducts = ({ featuredProducts }) => {
                         )}
 
                         {/* Color Selector */}
-                        {product.colors?.length > 0 && (
+                        {/* {product.colors?.length > 0 && (
                           <div className="mb-2">
                             <label className="text-sm text-gray-800 mr-2 tracking-widest"></label>
                             <select
@@ -154,7 +154,7 @@ const FeaturedProducts = ({ featuredProducts }) => {
                               ))}
                             </select>
                           </div>
-                        )}
+                        )} */}
 
                         <button
                           onClick={() => handleAddToCart(product)}

@@ -76,9 +76,9 @@ const HomePage = () => {
         </div>
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4  md:px-8 py-12">
-        <h1 className="text-black text-3xl tracking-widest font-bold mb-4">
-          Collections
+      <div className="relative z-10 max-w-7xl mx-auto px-4  md:px-8">
+        <h1 className="text-black text-lg tracking-widest  mb-4">
+         Collections
         </h1>
 
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 md:gap-6 gap-x-6 gap-y-2 ">
