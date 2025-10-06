@@ -3,7 +3,7 @@ import { useProductStore } from "../stores/useProductStore.jsx";
 import { useEffect } from "react";
 import FeaturedProducts from "../components/FeaturedProducts.jsx";
 import { motion } from "framer-motion";
-import Footer from "../components/Footer.jsx";
+import Footer from "../components/Footer.Jsx";
 const categories = [
   { href: "/bottoms", name: "Bottoms", imageUrl: "/jeans-man.jpg" },
   { href: "/t-shirts", name: "T-Shirt", imageUrl: "/man-tshirt.jpg" },

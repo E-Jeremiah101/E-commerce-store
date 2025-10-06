@@ -45,7 +45,7 @@ const ProductCard = ({ product }) => {
 
       {/* Product Info */}
       <div className="mt-4 px-5 pb-5 space-y-3">
-        <h5 className="text-xl font-semibold  tracking-widest text-black">
+        <h5 className="text-xl font-semibold  tracking-widest text-black h-15">
           {product.name}
         </h5>
 
@@ -57,7 +57,7 @@ const ProductCard = ({ product }) => {
         </p>
 
         {/* Size Selection */}
-        {product.sizes?.length > 0 && (
+        {/* {product.sizes?.length > 0 && (
           <div>
             <label className="text-sm text-gray-900 mr-2">Size:</label>
             <select
@@ -72,10 +72,10 @@ const ProductCard = ({ product }) => {
               ))}
             </select>
           </div>
-        )}
+        )} */}
 
         {/* Color Selection */}
-        {product.colors?.length > 0 && (
+        {/* {product.colors?.length > 0 && (
           <div>
             <label className="text-sm text-gray-800 mr-2">Color:</label>
             <select
@@ -90,14 +90,14 @@ const ProductCard = ({ product }) => {
               ))}
             </select>
           </div>
-        )}
+        )} */}
 
         {/* Add to Cart Button */}
         <button
           className="w-full mt-3 flex items-center justify-center rounded-lg bg-black px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-900 tracking-widest"
           onClick={handleAddToCart}
         >
-          <ShoppingCart size={22} className="mr-2" />
+          {/* <ShoppingCart size={22} className="mr-2" /> */}
           Add to Cart
         </button>
       </div>
