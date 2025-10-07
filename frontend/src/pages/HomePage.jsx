@@ -5,7 +5,7 @@ import FeaturedProducts from "../components/FeaturedProducts.jsx";
 import { motion } from "framer-motion";
 import ScrollReveal from "../components/ScrollReveal.jsx";
 import FAQSection from "../components/FAQSection";
-// import Footer from "../components/Footer.Jsx";
+import Footer from "../components/Footer.Jsx";
 const categories = [
   { href: "/bottoms", name: "Bottoms", imageUrl: "/jeans-man.jpg" },
   { href: "/t-shirts", name: "T-Shirt", imageUrl: "/man-tshirt.jpg" },
@@ -42,6 +42,7 @@ const HomePage = () => {
   }, [fetchFeaturedProducts]);
 
   return (
+    <>
     <motion.div
       className="relative min-h-screen text-white overflow-hidden"
       initial={{ opacity: 0 }}
@@ -66,7 +67,7 @@ const HomePage = () => {
           />
         </div>
         {/* Text below image (only visible on mobile) */}
-        <div className="md:hidden text-center text-white px-4 py-6 bg-black ">
+        <div className="lg:hidden text-center text-white px-4 py-6 bg-black ">
           <h1 className="text-3xl font-bold mb-3 tracking-wider">
             Discover What's New
           </h1>
@@ -78,7 +79,7 @@ const HomePage = () => {
 
         {/* Desktop view */}
 
-        <div className="hidden md:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white px-4 py-2 rounded">
+        <div className="hidden lg:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white px-4 py-2 rounded">
           <h1 className="text-center text-5xl sm:text-5xl font-bold mb-4 tracking-widest">
             Discover What's New
           </h1>
@@ -131,7 +132,11 @@ const HomePage = () => {
       </div>
 
       <FAQSection />
+
+      
     </motion.div>
+    <Footer/>
+    </>
   );
 };
 
