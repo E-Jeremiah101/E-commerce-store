@@ -17,6 +17,7 @@ import PersonalInfoPage from "./pages/PersonalInfoPage.jsx";
 import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import ForgotPasswordPage from "./pages/ForgetPasswordPage.jsx";
 import SearchResultsPage from "./pages/SearchResultsPage.jsx";
+import ViewProductPage from "./pages/ViewProductPage.jsx";
 
 
 function App() {
@@ -85,6 +86,7 @@ function App() {
               }
             />
             <Route path="/category/:category" element={<CategoryPage />} />
+            <Route path="/product/:id" element={<ViewProductPage />} />
             <Route
               path="/cart"
               element={user ? <CartPage /> : <Navigate to="/login" />}

@@ -66,7 +66,7 @@ const ProductsList = () => {
                 <div className="flex items-center">
                   <img
                     className="h-10 w-10 rounded-full object-cover"
-                    src={product.image}
+                    src={product.images?.[0]}
                     alt={product.name}
                   />
                   <div className="ml-4">

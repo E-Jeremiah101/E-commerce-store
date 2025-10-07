@@ -9,6 +9,7 @@ import {
   deleteProduct,
   searchProducts,
   getSearchSuggestions,
+  getProductById,
 } from "../controllers/product.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
@@ -32,5 +33,6 @@ router.delete("/:id", protectRoute, adminRoute, deleteProduct);
 router.get("/search", searchProducts);
 
 router.get("/suggestions", getSearchSuggestions);
+router.get("/:id", getProductById);
 
 export default router;

@@ -4,6 +4,7 @@ import axios from "../lib/axios";
 
 export const useProductStore = create((set) => ({
   products: [],
+  product: null,
   loading: false,
 
   setProducts: (products) => set({ products }),
@@ -16,12 +17,12 @@ export const useProductStore = create((set) => ({
         loading: false,
       }));
     } catch (error) {
-       console.error(
-         "Error creating product:",
-         error.response?.data || error.message
-       );
-       toast.error(error.response?.data?.message || "Failed to create product");
-       set({ loading: false });
+      console.error(
+        "Error creating product:",
+        error.response?.data || error.message
+      );
+      toast.error(error.response?.data?.message || "Failed to create product");
+      set({ loading: false });
     }
   },
   fetchAllProducts: async () => {
@@ -80,12 +81,24 @@ export const useProductStore = create((set) => ({
   fetchFeaturedProducts: async () => {
     set({ loading: true });
     try {
-      let url = "/products/featured"
+      let url = "/products/featured";
       const response = await axios.get("/products/featured");
       set({ products: response.data, loading: false });
     } catch (error) {
       set({ error: "Failed to fetch products", loading: false });
       console.log("Error fetching featured products:", error);
+    }
+  },
+  fetchProductById: async (id) => {
+    
+    try {
+      const res = await axios.get(`/products/${id}`);
+      const product = res.data.product || res.data;
+      set({ product });
+      return product;
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      throw error;
     }
   },
 }));

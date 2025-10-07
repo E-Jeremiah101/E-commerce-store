@@ -1,38 +1,111 @@
-import React from "react";
 import { Minus, Plus, Trash } from "lucide-react";
 import { useCartStore } from "../stores/useCartStore.js";
+import { motion } from "framer-motion";
 
 const CartItem = ({ item }) => {
   const { removeFromCart, updateQuantity } = useCartStore();
+   
+
 
   return (
-    <div className="rounded-lg border p-4 shadow-sm border-black bg-black md:p-6">
-      <div className="space-y-4 md:flex md:items-center md:justify-between md:gap-6 md:space-y-0 ">
-        {/* Product Image */}
-        <div className="shrink-0 md:order-1">
-          <img
-            className="h-20 md:h-32 rounded object-cover"
-            src={item.image}
-            alt={item.name}
-          />
-        </div>
+    <motion.div
+      className="px-1 lg:pr-28 text-lg "
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.8 }}
+    >
+      <div className="space-y-6">
+        <div className="border rounded-lg p-4 bg-gray-800 text-gray-100">
+          <div className="flex justify-between mb-2"></div>
 
-        {/* Product Info */}
-        <div className="inline-block w-full min-w-0 flex-1 space-y-2 md:order-2 md:max-w-md">
-          <p className="text-base font-medium text-white hover:text-gray-200 tracking-widest">
-            {item.name}
-          </p>
-          <p className="text-sm text-gray-400 tracking-widest">
-            {item.description}
-          </p>
+          <ul className="space-y-4 mb-4">
+            <li className="flex gap-4 p-4 bg-gray-700 rounded-lg shadow">
+              {/* Product Image */}
+              <img
+                src={item.images?.[0]}
+                alt={item.name}
+                className="w-23 h-23 object-cover rounded"
+              />
 
-          {/* Size and Color */}
-          <div className="flex gap-4 text-sm text-gray-300 tracking-widest">
-            {item.size && <span>Size: {item.size}</span>}
-            {item.color && <span>Color: {item.color}</span>}
-          </div>
+              {/* Product Info */}
+              <div className="flex-1 space-y-3">
+                {/* Product Name & Total Price */}
+                <div className="flex justify-between items-center">
+                  <h3 className="text-white font-medium tracking-widest">
+                    {item.name}
+                  </h3>
+                </div>
 
-          <div className="flex items-center gap-4 mt-5">
+                {/* Extra Details (size, color, category) */}
+                <div className="flex flex-wrap gap-2 text-xs text-gray-200">
+                  {item.size && (
+                    <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
+                      Size: {item.size}
+                    </span>
+                  )}
+
+                  {item.color && (
+                    <span className="bg-gray-600 px-2 py-1 rounded  tracking-widest">
+                      Color: {item.color}
+                    </span>
+                  )}
+                </div>
+
+                {/* Quantity & Unit Price */}
+                <div className="flex justify-between text-sm text-gray-300">
+                  {/* quantity */}
+
+                  <div className="bg-gray-600 px-2 py-1 rounded tracking-widest text-lg flex justify-between items-center gap-3">
+                    <button
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-gray-600 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 "
+                      onClick={() =>
+                        updateQuantity(
+                          item._id,
+                          item.quantity - 1,
+                          item.size,
+                          item.color
+                        )
+                      }
+                    >
+                      <Minus className="text-gray-300 w-12 h-8 " />
+                    </button>
+                    <span> {item.quantity}</span>
+                    <button
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-gray-600 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 "
+                      onClick={() =>
+                        updateQuantity(
+                          item._id,
+                          item.quantity + 1,
+                          item.size,
+                          item.color
+                        )
+                      }
+                    >
+                      <Plus className="text-gray-300 w-4 h-4 " />
+                    </button>
+                  </div>
+
+                  {item.quantity > 1 && (
+                    <span className="italic text-sm">
+                      ₦
+                      {item.price.toLocaleString(undefined, {
+                        minimumFractionDigits: 0,
+                      })}{" "}
+                      each
+                    </span>
+                  )}
+                </div>
+              </div>
+            </li>
+          </ul>
+          <div className="flex justify-between">
+            <p className="text-gray-200 font-semibold tracking-widest">
+              ₦
+              {(item.price * item.quantity).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+              })}
+            </p>
+
             <button
               className="inline-flex items-center text-sm font-medium text-red-400 hover:text-red-300 hover:underline"
               onClick={() => removeFromCart(item._id, item.size, item.color)}
@@ -41,65 +114,8 @@ const CartItem = ({ item }) => {
             </button>
           </div>
         </div>
-
-        {/* Quantity + Price */}
-        <div className="flex items-center justify-between md:order-3 md:justify-end w-full md:w-auto gap-6">
-          {/* Quantity Controls */}
-          <div className="flex items-center gap-2">
-            <button
-              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-gray-600 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 "
-              onClick={() =>
-                updateQuantity(
-                  item._id,
-                  item.quantity - 1,
-                  item.size,
-                  item.color
-                )
-              }
-            >
-              <Minus className="text-gray-300 w-4 h-4" />
-            </button>
-
-            <p className="text-white font-medium">{item.quantity}</p>
-
-            <button
-              className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-gray-600 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 "
-              onClick={() =>
-                updateQuantity(
-                  item._id,
-                  item.quantity + 1,
-                  item.size,
-                  item.color
-                )
-              }
-            >
-              <Plus className="text-gray-300 w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Price */}
-          <div className="text-end md:order-4 md:w-40">
-            <p className="text-base font-bold text-yellow-100">
-              ₦{" "}
-              {(item.price * item.quantity).toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-              })}
-            </p>
-
-            {/* Show unit price only if quantity > 1 */}
-            {item.quantity > 1 && (
-              <p className="text-sm text-gray-300">
-                ₦
-                {item.price.toLocaleString(undefined, {
-                  minimumFractionDigits: 0,
-                })}{" "}
-                each
-              </p>
-            )}
-          </div>
-        </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

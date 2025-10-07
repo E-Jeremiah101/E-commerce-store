@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import axios from "../lib/axios";
 import { useCartStore } from "../stores/useCartStore";
 import { toast } from "react-hot-toast";
-import { ShoppingCart } from "lucide-react";
 import GoBackButton from "../components/GoBackButton";
+import { motion } from "framer-motion";
 
 const SearchResultsPage = () => {
   const [products, setProducts] = useState([]);
@@ -14,9 +14,14 @@ const SearchResultsPage = () => {
   const [selectedOptions, setSelectedOptions] = useState({});
   const { addToCart } = useCartStore();
 
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
+
   useEffect(() => {
     const fetchResults = async () => {
       if (!query) return;
+      setLoading(true);
+      setSearched(true);
       try {
         const res = await axios.get(`/products/search?q=${query}`);
         setProducts(res.data);
@@ -32,6 +37,8 @@ const SearchResultsPage = () => {
         setSelectedOptions(defaults);
       } catch (error) {
         console.error("Error fetching search results:", error);
+      }finally{
+        setLoading(false);
       }
     };
     fetchResults();
@@ -55,16 +62,31 @@ const SearchResultsPage = () => {
 
   return (
     <>
-      <div className="p-6">
-        <GoBackButton />
-      </div>
+      <motion.div
+        className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center bg-white  z-40 py-4"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+      >
+        <div className="absolute left-4 text-black">
+          <GoBackButton />
+        </div>
+        <span className=" text-center text-xl  text-gray-900 tracking-widest">
+          Search Results
+        </span>
+      </motion.div>
 
-      <div className="p-6">
-        <h1 className="text-3xl font-bold mb-4">
-          Search Results for: "{query}"
+      <div className="p-6 mt-8">
+        <h1 className="text-center text-xl text-black tracking-widest py-4">
+           {query}
         </h1>
 
-        {products.length === 0 ? (
+        {loading ? (
+          <div className="flex justify-center items-center h-40">
+      <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+    </div>) :
+
+        products.length === 0 ? (
           <p>No products found.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -74,82 +96,29 @@ const SearchResultsPage = () => {
               return (
                 <div
                   key={product._id}
-                  className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden h-full transition-all duration-300 hover:shadow-xl border border-emerald-500/30"
+                  className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden h-full transition-all duration-300 hover:shadow-xl border border-white"
                 >
                   <img
-                    src={product.image}
+                    src={product.images?.[0]}
                     alt={product.name}
                     className="w-full h-48 object-cover transition-transform duration-300 ease-in-out hover:scale-110"
                   />
                   <div className="p-4">
-                    <h3 className="text-lg  mb-2 text-black tracking-widest">
+                    <h3 className="text-lg h-11 mb-2 font-semibold text-black tracking-widest">
                       {product.name}
                     </h3>
-                    <p className="text-gray-500 text-sm mb-1">
-                      {product.category}
-                    </p>
+
                     <p className="text-black font-medium mb-4 tracking-widest">
-                      ₦
+                      ₦{" "}
                       {product.price.toLocaleString(undefined, {
                         minimumFractionDigits: 0,
                       })}
                     </p>
-
-                    {product.sizes?.length > 0 && (
-                      <div className="mb-2">
-                        <select
-                          value={size}
-                          onChange={(e) =>
-                            setSelectedOptions((prev) => ({
-                              ...prev,
-                              [product._id]: {
-                                ...prev[product._id],
-                                size: e.target.value,
-                              },
-                            }))
-                          }
-                          className="bg-gray-700 text-white px-2 py-1 rounded text-sm tracking-widest"
-                        >
-                          {product.sizes.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    {product.colors?.length > 0 && (
-                      <div className="mb-2">
-                        <select
-                          value={color}
-                          onChange={(e) =>
-                            setSelectedOptions((prev) => ({
-                              ...prev,
-                              [product._id]: {
-                                ...prev[product._id],
-                                color: e.target.value,
-                              },
-                            }))
-                          }
-                          className="bg-gray-700 text-white px-2 py-1 rounded text-sm tracking-widest"
-                        >
-                          {product.colors.map((c) => (
-                            <option key={c} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    <button
-                      onClick={() => handleAddToCart(product)}
-                      className="mt-auto w-full bg-black hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded flex items-center justify-center"
-                    >
-                      <ShoppingCart className="w-5 h-5 mr-2" />
-                      Add to Cart
-                    </button>
+                    <Link to={`/product/${product._id}`}>
+                      <button className="mt-auto w-full bg-black hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded flex items-center justify-center">
+                        View Product
+                      </button>
+                    </Link>
                   </div>
                 </div>
               );

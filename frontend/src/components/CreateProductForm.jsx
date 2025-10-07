@@ -21,7 +21,7 @@ const CreateProductForm = () => {
     description: "",
     price: "",
     category: "",
-    image: "",
+    images: [],
     sizes: [],
     colors: [],
   });
@@ -37,7 +37,7 @@ const CreateProductForm = () => {
         description: "",
         price: "",
         category: "",
-        image: "",
+        images: [],
         sizes: [],
         colors: [],
       });
@@ -46,16 +46,19 @@ const CreateProductForm = () => {
     }
   };
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-
-      reader.onloadend = () => {
-        setNewProduct({ ...newProduct, image: reader.result });
-      };
-
-      reader.readAsDataURL(file);
-    }
+    const files = Array.from(e.target.files);
+    const readers = files.map(
+      (file) =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        })
+    );
+    Promise.all(readers).then((images) => {
+      setNewProduct((prev) => ({ ...prev, images }));
+    });
   };
 
   return (
@@ -206,26 +209,35 @@ const CreateProductForm = () => {
         <div className="mt-1 flex items-center">
           <input
             type="file"
-            id="image"
+            id="images"
             onChange={handleImageChange}
             className="sr-only"
             accept="image/*"
             required
+            multiple
           />
           <label
-            htmlFor="image"
+            htmlFor="images"
             className="cursor-pointer bg-gray-700 border border-gray-600 hover:bg-gray-600 rounded-md shadow-sm py-2 px-3 text-sm 
             text-white focus:outline-none focus:ring-2 focus:ring-o focus:ring-emerald-500 focus:border-emerald-500"
           >
             <Upload className="h-5 w-5 inline-block mr-2 text-white" />
-            Upload Image
+            Upload Images
           </label>
-          {newProduct.image && (
-            <span className="ml-3 text-sm text-gray-300">
-              Image uploaded ✅{" "}
-            </span>
-          )}
         </div>
+
+        {newProduct.images.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {newProduct.images.map((img, index) => (
+              <img
+                key={index}
+                src={img}
+                alt={`preview-${index}`}
+                className="w-20 h-20 object-cover rounded border border-gray-600"
+              />
+            ))}
+          </div>
+        )}
 
         <button
           type="submit"

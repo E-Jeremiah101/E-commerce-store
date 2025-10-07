@@ -40,7 +40,7 @@ export const createCheckoutSession = async (req, res) => {
           currency: "ngn",
           product_data: {
             name: product.name,
-            images: [product.image],
+            images: [product.images?.[0]],
           },
           unit_amount: amount,
         },
@@ -90,7 +90,7 @@ export const createCheckoutSession = async (req, res) => {
             price: p.price,
             price: p.price,
             name: p.name,
-            image: p.image,
+            image: p.images?.[0],
             size: p.size || null,
             color: p.color || null,
             category: p.category || null,

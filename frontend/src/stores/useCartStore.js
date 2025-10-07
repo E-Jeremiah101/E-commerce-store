@@ -8,6 +8,7 @@ export const useCartStore = create((set, get) => ({
   total: 0,
   subtotal: 0,
   isCouponApplied: false,
+  isLoading: false,
 
   getMyCoupon: async () => {
     try {
@@ -47,7 +48,11 @@ export const useCartStore = create((set, get) => ({
     set({ cart: [], coupon: null, total: 0, subtotal: 0 });
   },
   addToCart: async (product, selectedSize, selectedColor) => {
+    const  { calculateTotals} = get();
+    set({isLoading: true})
     try {
+      set({ isLoading: true });
+
       await axios.post("/cart", {
         productId: product._id,
         ...(selectedSize && { size: selectedSize }),
@@ -79,11 +84,14 @@ export const useCartStore = create((set, get) => ({
                 color: selectedColor,
               },
             ];
-        return { cart: newCart };
+        return({cart: newCart})
       });
-      get().calculateTotals();
+      
+      calculateTotals();
     } catch (error) {
       toast.error(error.response.data.message || "An error occurred");
+    }finally{
+      set({isLoading: false})
     }
   },
   removeFromCart: async (productId, size, color) => {

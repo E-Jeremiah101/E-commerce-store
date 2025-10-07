@@ -40,7 +40,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className="w-full bg-black bg-opacity-90 backdrop-blur-md shadow-lg border-b border-black fixed  top-0 left-0 z-40 transition-all duration-300 ">
+    <header className="w-full bg-black bg-opacity-90 backdrop-blur-md shadow-lg border-b border-black fixed lg:static  top-0 left-0 z-40 transition-all duration-300 ">
       {/* Mobile View */}
 
       <div className="sm:hidden ">
@@ -277,7 +277,7 @@ const Navbar = () => {
             </div>
           </div>
 
-          <div className="h-50 hidden md:flex justify-center items-center text-white">
+          <div className="h-50 hidden lg:flex justify-center items-center text-white">
             <ul className="flex flex-wrap justify-center gap-x-7 gap-y-7 px-30 max-w-5xl text-gray-100 text-sm  text-center tracking-widest">
               <Link to={"/category/t-shirts"}>
                 <span className="hover:text-gray-300">T-SHIRT</span>

@@ -15,10 +15,13 @@ const productSchema = new mongoose.Schema(
       min: 0,
       required: true,
     },
-    image: {
-      type: String,
-      required: [true, "Image is required"],
-    },
+    images: [
+      {
+        type: String,
+        required: true,
+        validate: [(val) => val.length > 0, "Must have at least one image"],
+      },
+    ],
     sizes: [{ type: String }],
     colors: [{ type: String }],
     category: {
