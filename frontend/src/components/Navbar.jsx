@@ -48,7 +48,7 @@ const Navbar = () => {
           {/* Left: Logo */}
           <Link to={"/"} className="flex sm:hidden items-center gap-2">
             <img src="/logo-buz.jpg" alt="Logo" className="h-10 w-auto" />
-            <span className="text-emerald-400 font-bold text-xl">BUZ</span>
+            <span className="text-emerald-400 font-bold text-xl">Eco~Store</span>
           </Link>
 
           {/* Right: Actions */}
