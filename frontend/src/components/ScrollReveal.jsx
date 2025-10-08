@@ -14,11 +14,11 @@ const ScrollReveal = ({ children, delay = 0 }) => {
   }, [controls, inView]);
 
   const variants = {
-    hidden: { opacity: 1, y: 40 }, // ✅ visible by default
+    hidden: { opacity: 1, y: 20 }, // ✅ visible by default
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.8, ease: "easeOut", delay },
+      transition: { duration: 0.2, ease: "easeOut", delay },
     },
   };
 
