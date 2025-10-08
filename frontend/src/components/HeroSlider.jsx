@@ -3,19 +3,19 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const slides = [
   {
-    url: "/hat-shot.jpg",
+    url: "/hat-shot.webp",
     title: "Discover What's New",
     description:
       "Discover the latest trends in eco-friendly fashion designed to inspire your look and lifestyle.",
   },
   {
-    url: "/portrait-happy-young-woman.jpg",
+    url: "/portrait-happy-young-womans.jpg",
     title: "Redefine Your Wardrobe",
     description:
       "Step into timeless fashion built for confidence and comfort every day.",
   },
   {
-    url: "/man-sit.jpg",
+    url: "/man-sit.webp",
     title: "Timeless Basics",
     description: "Everyday pieces made to last and inspire.",
   },
