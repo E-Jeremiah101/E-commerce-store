@@ -20,7 +20,7 @@ const Footer = () => {
                 <th className=" ">Follow Us on:</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="text-gray-100">
               <tr>
                 <td>
                   {" "}
@@ -64,12 +64,12 @@ const Footer = () => {
           </form>
         </div>
       </div>
-      <Link to={"/"} className="flex justify-center items-center ">
-        <img src="/logo-buz.jpg" alt="Logo" className="h-10 w-auto" />
+      <Link to={"/"} className="flex justify-center items-center mb-3">
+        <img src="/logo-buz.jpg" alt="Logo" className="h-10 w-auto " />
         <span className="text-emerald-400 font-bold text-xl">Eco~Store</span>
       </Link>
       <hr className="border-1 my-1" />
-      <div className="flex justify-center items-center gap-2">
+      <div className="flex justify-center items-center gap-2 text-sm font-light">
        <FaRegCopyright /> {new Date().getFullYear()} {" "}
         <span className="">All Right Reserved</span>
       </div>
