@@ -1,4 +1,4 @@
-import React from 'react'
+
 import {
   FaFacebook,
   FaXTwitter,
@@ -13,13 +13,9 @@ const Footer = () => {
         <table className="border-separate border-spacing-x-15  border-spacing-y-4">
           <thead className="text-lg">
             <tr className="">
-              <th className=" ">
-                Links
-              </th>
+              <th className=" ">Links</th>
               <th className="  ">Support</th>
-              <th className=" ">
-                Follow Us on:
-              </th>
+              <th className=" ">Follow Us on:</th>
             </tr>
           </thead>
           <tbody>
@@ -56,12 +52,11 @@ const Footer = () => {
           <button className="bg-blue-600 px-2 border-blue-600 rounded-sm border-1 ml-3 py-1">
             Subscribe
           </button>
-          
         </form>
       </div>
-      <div className='block border-1 w-full mt-4'></div>
+      <div className="block border-1 w-full mt-4"></div>
     </div>
   );
-}
+};
 
-export default Footer
+export default Footer;

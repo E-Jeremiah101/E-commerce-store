@@ -5,7 +5,7 @@ import FeaturedProducts from "../components/FeaturedProducts.jsx";
 import { motion } from "framer-motion";
 import ScrollReveal from "../components/ScrollReveal.jsx";
 import FAQSection from "../components/FAQSection";
-import Footer from "../components/Footer.Jsx";
+import Footer from "../components/Footer.jsx";
 const categories = [
   { href: "/bottoms", name: "Bottoms", imageUrl: "/jeans-man.jpg" },
   { href: "/t-shirts", name: "T-Shirt", imageUrl: "/man-tshirt.jpg" },
