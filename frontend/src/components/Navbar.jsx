@@ -9,7 +9,6 @@ import {
   User,
   UserCircle,
   Package,
-  ShoppingBag,
   Menu,
   X,
   Search,
@@ -149,7 +148,7 @@ const Navbar = () => {
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-2 tracking-widest"
               >
-                <ShoppingCart /> Cart ({cart.length})
+                <ShoppingCart /> Cart <span className="border-1 rounded-3xl h-6 w-6 items-center flex justify-center text-sm font-bold">{cart.length}</span>
               </Link>
             )}
 

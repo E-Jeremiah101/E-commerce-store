@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams,Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useProductStore } from "../stores/useProductStore";
 import toast from "react-hot-toast";
+import {
+  ShoppingCart} from "lucide-react"
 import { useCartStore } from "../stores/useCartStore";
 import { useUserStore } from "../stores/useUserStore";
 import GoBackButton from "../components/GoBackButton";
@@ -22,7 +24,7 @@ const ViewProductPage = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(true);
  
-
+const { cart } = useCartStore();
   useEffect(() => {
     const loadProduct = async () => {
       setLoading(true);
@@ -66,17 +68,30 @@ const ViewProductPage = () => {
     <div className="min-h-screen bg-white">
       {/* Header */}
       <motion.div
-        className="flex items-center justify-center bg-white py-5 fixed top-0 left-0 right-0 z-40 shadow-sm"
+        className="flex items-center justify-between bg-white py-5 fixed top-0 left-0 right-0 z-40 shadow-sm px-6"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <div className="absolute left-4">
+        <div className="">
           <GoBackButton />
         </div>
         <span className="text-lg font-semibold tracking-wider text-gray-900">
           {product.name}
         </span>
+        
+          <Link
+            to={"/cart"}
+            className="relative text-black "
+          >
+            <ShoppingCart size={22} />
+            {cart.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-black text-white rounded-full px-2 text-xs">
+                {cart.length}
+              </span>
+            )}
+          </Link>
+        
       </motion.div>
 
       {/* Content */}
@@ -181,7 +196,7 @@ const ViewProductPage = () => {
           </div>
         </div>
       </div>
-      
+
       <div className=" border-gray-700 py-3 lg:pr-80  px-4 sm:px-6">
         <button
           onClick={() => setIsOpen(!isOpen)}

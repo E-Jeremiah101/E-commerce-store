@@ -9,7 +9,7 @@ const ProductCard = ({ product }) => {
     <div className="flex-w-full relative flex-col h-full overflow-hidden rounded-lg  border-gray-700 shadow-lg">
       {/* Product Image */}
       
-        <div className="relative mx-4 mt-3 flex overflow-hidden h-48 ">
+        <div className="relative rounded-1xl mt-3 flex overflow-hidden h-44 ">
           <img
             className="object-cover w-full  "
             src={product.images?.[0]}
