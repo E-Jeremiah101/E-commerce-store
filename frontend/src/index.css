@@ -30,3 +30,54 @@ body::-webkit-scrollbar {
 small{
   visibility: hidden;
 }
+
+
+/* Dark mode Quill customization */
+.ql-toolbar {
+  background-color: #1f2937 !important; /* matches bg-gray-800 */
+  border: 1px solid #374151 !important; /* subtle border */
+}
+
+.ql-toolbar button svg {
+  stroke: #ffffff !important; /* make icons white */
+}
+
+.ql-toolbar button:hover svg {
+  stroke: #facc15 !important; /* yellow-500 on hover */
+}
+
+.ql-toolbar .ql-stroke {
+  stroke: white !important;
+}
+.ql-toolbar .ql-fill {
+  fill: white !important;
+}
+.ql-toolbar .ql-picker {
+  color: white !important;
+}
+
+.ql-toolbar .ql-picker-options {
+  background-color: #1f2937 !important;
+  color: #ffffff !important;
+  border: 1px solid #374151 !important;
+}
+
+/* Make the editor area dark too */
+.ql-container {
+  background-color: #1f2937 !important; /* dark editor area */
+  color: #ffffff !important;
+  border: 1px solid #374151 !important;
+  border-radius: 0.5rem;
+}
+
+.ql-editor {
+  min-height: 150px;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #ffffff !important;
+}
+
+/* Selection and link colors */
+.ql-editor a {
+  color: #60a5fa !important; /* blue links */
+}

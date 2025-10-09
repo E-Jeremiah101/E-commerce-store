@@ -6,6 +6,8 @@ import toast from "react-hot-toast";
 import { useCartStore } from "../stores/useCartStore";
 import { useUserStore } from "../stores/useUserStore";
 import GoBackButton from "../components/GoBackButton";
+import { ChevronUp, ChevronDown } from "lucide-react";
+import DOMPurify from "dompurify";
 
 const ViewProductPage = () => {
   const { id } = useParams();
@@ -17,8 +19,9 @@ const ViewProductPage = () => {
   const [selectedImage, setSelectedImage] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
-
+  const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(true);
+ 
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -127,7 +130,7 @@ const ViewProductPage = () => {
                     <button
                       key={i}
                       onClick={() => setSelectedColor(color)}
-                      className={`px-3 py-1 rounded-full border ${
+                      className={`px-3 py-1 rounded-full hover:bg-gray-300  border ${
                         selectedColor === color
                           ? "border-black bg-black text-white"
                           : "border-gray-300"
@@ -146,12 +149,12 @@ const ViewProductPage = () => {
                 <h3 className="text-gray-800 font-medium mb-2 tracking-widest">
                   Sizes:
                 </h3>
-                <div className="flex gap-2 flex-wrap tracking-widest">
+                <div className="flex gap-2 flex-wrap tracking-widest ">
                   {product.sizes.map((size, i) => (
                     <button
                       key={i}
                       onClick={() => setSelectedSize(size)}
-                      className={`px-3 py-1 rounded-full border ${
+                      className={`px-3 py-1 rounded-full hover:bg-gray-300 border ${
                         selectedSize === size
                           ? "border-black bg-black text-white"
                           : "border-gray-300"
@@ -163,7 +166,6 @@ const ViewProductPage = () => {
                 </div>
               </div>
             )}
-            <p className="text-gray-700">{product.description}</p>
 
             {/* Add to Cart Button */}
             <button
@@ -177,6 +179,34 @@ const ViewProductPage = () => {
               {isLoading ? "Adding to Cart..." : "Add to Cart"}
             </button>
           </div>
+        </div>
+      </div>
+      
+      <div className=" border-gray-700 py-3 lg:pr-80  px-4 sm:px-6">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center w-full text-left focus:outline-none"
+        >
+          <span className="text-black/70 bg-gray-200 rounded-4xl mr-3 transition-transform duration-300 h-7 w-7 flex items-center justify-center">
+            {isOpen ? <ChevronDown size={22} /> : <ChevronUp size={22} />}
+          </span>
+
+          <span className="text-lg font-bold text-black/80 hover:text-black/60 transition-colors whitespace-nowrap tracking-widest">
+            Product deails
+          </span>
+        </button>
+
+        <div
+          className={`overflow-hidden transition-all duration-300 ${
+            isOpen ? " mt-2" : "max-h-0"
+          }`}
+        >
+          <div
+            className="text-black text-sm pl-9 pr-3 leading-relaxed"
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(product.description),
+            }}
+          ></div>
         </div>
       </div>
     </div>

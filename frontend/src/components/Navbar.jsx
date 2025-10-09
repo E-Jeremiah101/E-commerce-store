@@ -18,6 +18,7 @@ import { Link } from "react-router-dom";
 import { useUserStore } from "../stores/useUserStore.js";
 import { useCartStore } from "../stores/useCartStore.js";
 import SearchBar from "./SearchBar.jsx";
+import { ChevronUp, ChevronDown } from "lucide-react";
 
 const Navbar = () => {
   const { user, logout } = useUserStore();
@@ -25,6 +26,7 @@ const Navbar = () => {
   const { cart } = useCartStore();
 
   const [isOpen, setIsOpen] = useState(false);
+   const [isOpenn, setIsOpenn] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Toggle Search
@@ -43,16 +45,18 @@ const Navbar = () => {
     <header className="w-full bg-black bg-opacity-90 backdrop-blur-md shadow-lg border-b border-black fixed lg:static  top-0 left-0 z-40 transition-all duration-300 ">
       {/* Mobile View */}
 
-      <div className="sm:hidden ">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="sm:hidden  ">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between ">
           {/* Left: Logo */}
           <Link to={"/"} className="flex sm:hidden items-center gap-2">
             <img src="/logo-buz.jpg" alt="Logo" className="h-10 w-auto" />
-            <span className="text-emerald-400 font-bold text-xl">Eco~Store</span>
+            <span className="text-emerald-400 font-bold text-xl">
+              Eco~Store
+            </span>
           </Link>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 ">
             {/* Search toggle */}
             <button
               onClick={handleSearchToggle}
@@ -112,19 +116,20 @@ const Navbar = () => {
         )}
         {/* Mobile Dropdown */}
         {isOpen && (
-          <div className="md:hidden bg-black px-4 py-3 space-y-3 text-white">
+          <div className="md:hidden  bg-black px-4 py-3 space-y-5 text-white text-lg overflow-y-auto h-screen ">
             <Link
               to={"/"}
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 tracking-widest"
             >
               <Home /> Home
             </Link>
+
             {user && (
               <Link
                 to={"/personal-info"}
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 tracking-widest"
               >
                 <User /> Profile
               </Link>
@@ -133,7 +138,7 @@ const Navbar = () => {
               <Link
                 to={"/order-history"}
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 tracking-widest"
               >
                 <Package /> Orders
               </Link>
@@ -142,20 +147,110 @@ const Navbar = () => {
               <Link
                 to={"/cart"}
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 tracking-widest"
               >
-                <ShoppingBag /> Cart ({cart.length})
+                <ShoppingCart /> Cart ({cart.length})
               </Link>
             )}
+
             {isAdmin && (
               <Link
                 to={"/secret-dashboard"}
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 tracking-widest"
               >
-                <UserCircle /> Dashboard
+                <UserCircle />
+                Admin Dashboard
               </Link>
             )}
+
+            <div className=" border-gray-700 py-3 lg:pr-80  px-4 sm:px-6 ">
+              <button
+                onClick={() => setIsOpenn(!isOpenn)}
+                className="flex items-center w-full text-left focus:outline-none"
+              >
+                <strong className="text-lg font-bold text-white hover:text-gray-200 transition-colors whitespace-nowrap tracking-widest cursor-pointer">
+                  COLLECTIONS
+                </strong>
+
+                <span className="text-white font-extrabold  ml-2 transition-transform duration-300 h-7 w-7 flex items-center justify-center cursor-pointer">
+                  {isOpenn ? (
+                    <ChevronDown size={22} />
+                  ) : (
+                    <ChevronUp size={22} />
+                  )}
+                </span>
+              </button>
+
+              <div
+                className={`overflow-hidden transition-all duration-300 ${
+                  isOpenn ? " mt-2" : "max-h-0"
+                }`}
+              >
+                <ul className="text-white list-disc list-inside space-y-3 ">
+                  <li>
+                    <Link to={"/category/t-shirts"}>
+                      <span className="hover:text-gray-300">T-SHIRT</span>
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link to={"/category/suits&blazer"}>
+                      <span className="hover:text-gray-300">
+                        SUITS & BLAZERS
+                      </span>
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link to={"/category/underwear&socks"}>
+                      <span className="hover:text-gray-300">
+                        UNDERWEAR & SOCKS
+                      </span>
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link to={"/category/footwears"}>
+                      <span className="hover:text-gray-300">FOOTWEAR</span>
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link to={"/category/sets"}>
+                      <span className="hover:text-gray-300">
+                        SETS & CO-ORDS
+                      </span>
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link to={"/category/accessories"}>
+                      <span className="hover:text-gray-300">ACCESSORIES</span>
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link to={"/category/bottoms"}>
+                      <span className="hover:text-gray-300">BOTTOMS</span>
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link to={"/category/bags"}>
+                      <span className="hover:text-gray-300">BAGS</span>
+                    </Link>
+                  </li>
+
+                  <li>
+                    <Link to={"/category/sportwear"}>
+                      <span className="hover:text-gray-300">SPORTWEAR</span>
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
             {!user && (
               <>
                 <Link
@@ -180,7 +275,7 @@ const Navbar = () => {
                   logout();
                   setIsOpen(false);
                 }}
-                className="w-full bg-gray-700 px-4 py-2 rounded-md flex items-center justify-center"
+                className="w-full bg-gray-700 px-4 py-2 rounded-md flex items-center justify-center mb-15"
               >
                 <LogOut size={18} /> <span className="ml-2">Log Out</span>
               </button>
@@ -277,7 +372,7 @@ const Navbar = () => {
             </div>
           </div>
 
-          <div className="h-50 hidden lg:flex justify-center items-center text-white">
+          <div className="h-50 hidden md:flex justify-center items-center text-white">
             <ul className="flex flex-wrap justify-center gap-x-7 gap-y-7 px-30 max-w-5xl text-gray-100 text-sm  text-center tracking-widest">
               <Link to={"/category/t-shirts"}>
                 <span className="hover:text-gray-300">T-SHIRT</span>
@@ -304,15 +399,18 @@ const Navbar = () => {
               <Link to={"/category/bags"}>
                 <span className="hover:text-gray-300">BAGS</span>
               </Link>
-              <Link>
+              <Link to={"/category/sportwear"}>
+                <span className="hover:text-gray-300">SPORTWEAR</span>
+              </Link>
+              {/* <Link>
                 <span className="hover:text-gray-300">ADDIDAS COLLECTION</span>
-              </Link>
-              <Link>
+              </Link> */}
+              {/* <Link>
                 <span className="hover:text-gray-300">FENDI COLLECTION</span>
-              </Link>
-              <Link>
+              </Link> */}
+              {/* <Link>
                 <span className="hover:text-gray-300">GUCCI COLLECTION</span>
-              </Link>
+              </Link> */}
             </ul>
           </div>
         </div>

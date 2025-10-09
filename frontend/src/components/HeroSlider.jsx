@@ -30,7 +30,7 @@ const HeroSlider = () => {
       return () => clearInterval(timer);
     }, []);
   return (
-    <div className="relative w-full  overflow-hidden">
+    <div className="relative w-full  overflow-hidden md:mt-66">
       {/* Images */}
       <div
         className="flex transition-transform duration-[1000ms] ease-in-out"
@@ -88,7 +88,6 @@ const HeroSlider = () => {
           >
             <ChevronRight size={18} />
           </span>
-          
         </>
       </div>
     </div>

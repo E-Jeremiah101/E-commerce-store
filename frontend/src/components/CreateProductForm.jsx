@@ -2,6 +2,10 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { PlusCircle, Upload, Loader } from "lucide-react";
 import { useProductStore } from "../stores/useProductStore.jsx";
+import ReactQuill from "react-quill-new";
+import DOMPurify from "dompurify";
+import "react-quill-new/dist/quill.snow.css"
+import toast from "react-hot-toast";
 
 const categories = [
   "bottoms",
@@ -13,6 +17,7 @@ const categories = [
   "underwear&socks",
   "suits&blazers",
   "bags",
+  "sportwear"
 ];
 
 const CreateProductForm = () => {
@@ -28,8 +33,13 @@ const CreateProductForm = () => {
 
   const { createProduct, loading } = useProductStore();
 
+  const handleDescriptionChange = (content) => {
+    setNewProduct((prev) => ({ ...prev, description: content }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     try {
       await createProduct(newProduct);
       setNewProduct({
@@ -42,9 +52,31 @@ const CreateProductForm = () => {
         colors: [],
       });
     } catch (error) {
-      console.log("error creating a product");
+      toast.error("error creating a product");
     }
   };
+  
+
+   // Quill toolbar + format configuration
+  const modules = {
+    toolbar: [
+      [{ header: [1, 2, 3, false] }],
+      ["bold", "italic", "underline", "strike"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["link", "clean"],
+    ],
+  };
+
+  const formats = [
+    "header",
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "list",
+    "link",
+  ];
+
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     const readers = files.map(
@@ -100,14 +132,14 @@ const CreateProductForm = () => {
           >
             Description
           </label>
-          <textarea
+          <ReactQuill
             type="description"
             id="description"
             name="description"
+            modules={modules}
+            formats={formats}
             value={newProduct.description}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, description: e.target.value })
-            }
+            onChange={handleDescriptionChange}
             className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-gray-600 focus:border-gray-600"
             required
           />

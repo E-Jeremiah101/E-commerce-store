@@ -1,4 +1,3 @@
-
 import {
   FaFacebook,
   FaXTwitter,
@@ -70,7 +69,7 @@ const Footer = () => {
       </Link>
       <hr className="border-1 my-1" />
       <div className="flex justify-center items-center gap-2 text-sm font-light">
-       <FaRegCopyright /> {new Date().getFullYear()} {" "}
+        <FaRegCopyright /> {new Date().getFullYear()}{" "}
         <span className="">All Right Reserved</span>
       </div>
     </div>

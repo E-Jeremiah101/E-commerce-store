@@ -1,6 +1,6 @@
-import React,{useState} from 'react'
+import {useState} from 'react'
 import { ChevronUp, ChevronDown } from "lucide-react";
-import { span } from 'framer-motion/client';
+
 
 const FAQItem = ({ question, answer }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -18,6 +18,7 @@ const FAQItem = ({ question, answer }) => {
         <span className="text-sm font-light text-black hover:text-black/60 transition-colors">
           {question}
         </span>
+
       </button>
 
       <div
