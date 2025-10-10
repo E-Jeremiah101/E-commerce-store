@@ -10,6 +10,7 @@ import { useUserStore } from "../stores/useUserStore";
 import GoBackButton from "../components/GoBackButton";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import DOMPurify from "dompurify";
+import ProductReviews from "../components/ProductReviews";
 
 const ViewProductPage = () => {
   const { id } = useParams();
@@ -79,19 +80,15 @@ const { cart } = useCartStore();
         <span className="text-lg font-semibold tracking-wider text-gray-900">
           {product.name}
         </span>
-        
-          <Link
-            to={"/cart"}
-            className="relative text-black "
-          >
-            <ShoppingCart size={22} />
-            {cart.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-black text-white rounded-full px-2 text-xs">
-                {cart.length}
-              </span>
-            )}
-          </Link>
-        
+
+        <Link to={"/cart"} className="relative text-black ">
+          <ShoppingCart size={22} />
+          {cart.length > 0 && (
+            <span className="absolute -top-2 -right-2 bg-black text-white rounded-full px-2 text-xs">
+              {cart.length}
+            </span>
+          )}
+        </Link>
       </motion.div>
 
       {/* Content */}
@@ -224,6 +221,8 @@ const { cart } = useCartStore();
           ></div>
         </div>
       </div>
+
+      <ProductReviews productId={product._id} />
     </div>
   );
 };
