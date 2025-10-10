@@ -156,7 +156,7 @@ const AdminOrdersPage = () => {
                       <div className="flex justify-between text-sm text-gray-300">
                         <span>Qty: {item.quantity}</span>
                         {item.quantity > 1 && (
-                          <span className="italic">
+                          <span className="">
                             ₦
                             {item.price.toLocaleString(undefined, {
                               minimumFractionDigits: 0,
@@ -170,27 +170,30 @@ const AdminOrdersPage = () => {
                 ))}
               </ul>
 
-              <p className="font-bold text-yellow-100 p-4 rounded tracking-widest">
-                Total: ₦ {""}
-                {order.totalAmount.toLocaleString(undefined, {
-                  minimumFractionDigits: 0,
-                })}
-              </p>
-              {/*  */}
-              <h2 className="text-xl font-semibold">Order Summary</h2>
+              <div className="bg-gray-700 rounded-lg p-2 text-sm font-bold">
+                <p className="">Subtotal: ₦{order.subtotal.toLocaleString()}</p>
+                {order.discount > 0 && (
+                  <>
+                    <p>
+                      Coupon Applied: <span className="text-red-500">-10%</span>{" "}
+                      <span className="text-green-500">{order.coupon.code}</span>
+                      
+                    </p>{" "}
+                    <p className="text-sm my-1 font-bold">
+                      {" "}
+                      Discount: -₦
+                      {order.discount.toLocaleString()}{" "}
+                    </p>
+                  </>
+                )}
 
-              {order.coupon?.code && (
-                <>
-                  <p className="text-red-600">
-                    Coupon Applied: {order.coupon.code} (-₦
-                    {order.coupon.discount})
-                  </p>
-                  <p className="text-sm">Discount: ₦{order.discount}</p>
-                </>
-              )}
-
-              <p className="font-bold">Subtotal: ₦{order.subtotal}</p>
-              {/*  */}
+                <p className="font-bold text-yellow-100 text-lg ">
+                  Total: ₦ {""}
+                  {order.totalAmount.toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                  })}
+                </p>
+              </div>
             </div>
           ))}
         </div>

@@ -213,12 +213,14 @@ export const createOrder = async (req, res) => {
 
       if (foundCoupon) {
         if (foundCoupon.type === "percentage") {
-          discount = (subtotal * foundCoupon.value) / 100;
+          discount = Math.round((subtotal * foundCoupon.value) / 100);
         } else if (foundCoupon.type === "fixed") {
-          discount = foundCoupon.value;
+          discount = Math.min(foundCoupon.value, subtotal);
         }
 
-        coupon = { code: foundCoupon.code, discount: discount};
+        coupon = { code: foundCoupon.code, discountPercentage: foundCoupon.type === "percentage" ? foundCoupon.value: 0,
+          discountAmount: discount,
+        };
       }
     }
         const totalAmount = Math.max(subtotal - discount, 0);
@@ -229,7 +231,7 @@ export const createOrder = async (req, res) => {
       user: user._id,
       products: orderItems,
       subtotal,
-      discount: discount,
+      discount,
       totalAmount,
       coupon,
       phone: defaultPhone?.number || "",

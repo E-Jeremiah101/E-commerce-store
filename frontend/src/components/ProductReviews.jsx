@@ -113,7 +113,7 @@ const ProductReviews = ({ productId }) => {
           {reviews.map((r) => (
             <div
               key={r._id}
-              className="border-b-1 border-gray-600 p-3 mb-6  space-y-2"
+              className="border-b-1 border-gray-300 p-3 mb-6  space-y-2"
             >
               <div className=" flex justify-between">
                 <span className="font-semibold">{r.name}</span>
@@ -175,7 +175,7 @@ const ProductReviews = ({ productId }) => {
             onChange={(e) => setComment(e.target.value)}
             placeholder="Write your comment"
             required
-            className="border p-2 rounded w-full"
+            className="border p-2 rounded-2xl resize-none border-gray-400 w-full"
           />
           <button
             type="submit"

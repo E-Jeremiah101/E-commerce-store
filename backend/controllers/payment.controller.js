@@ -137,13 +137,19 @@ export const checkoutSuccess = async (req, res) => {
     // use findOneAndUpdate with upsert to prevent duplicates
     let order = await Order.findOne({ stripeSessionId: sessionId });
     let isNew = false;
+    const originalTotal = session.amount_subtotal
+      ? session.amount_subtotal / 100
+      : 0;
+    const finalTotal = session.amount_total ? session.amount_total / 100 : 0;
+    const discountAmount = Math.max(originalTotal - finalTotal, 0);
+    const couponCode = session.metadata.couponCode || null;
     if (!order) {
       order = await Order.create({
         user: session.metadata.userId,
         products: products.map((p) => ({
           product: p.id,
           name: p.name,
-          image:p.image,
+          image: p.image,
           quantity: p.quantity,
           price: p.price,
           selectedSize: p.size || "",
@@ -151,8 +157,14 @@ export const checkoutSuccess = async (req, res) => {
           selectedCategory: p.category || "",
         })),
 
-        totalAmount: session.amount_total / 100,
+        totalAmount: finalTotal,
+        subtotal: originalTotal,
+        coupon: couponCode
+          ? { code: couponCode, discount: discountAmount }
+          : null,
+          couponCode,
         stripeSessionId: sessionId,
+        discount: discountAmount > 0 ? discountAmount : 0,
         orderNumber: generateOrderNumber(),
         deliveryAddress: defaultAddress?.address || "No address provided",
         phone: defaultPhone?.number || "No phone provided",

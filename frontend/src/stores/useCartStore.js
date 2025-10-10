@@ -16,6 +16,7 @@ export const useCartStore = create((set, get) => ({
       set({ coupon: response.data });
     } catch (error) {
       console.error("Error fetching coupon:", error);
+      toast.error("Unable to load coupons at the moment.");
     }
   },
   applyCoupon: async (code) => {
@@ -25,7 +26,10 @@ export const useCartStore = create((set, get) => ({
       get().calculateTotals();
       toast.success("Coupon applied successfully");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to apply coupon");
+      console.error("Error applying coupon:", error);
+      toast.error(
+        error.response?.data?.message || "Invalid or expired coupon code."
+      );
     }
   },
   removeCoupon: () => {
@@ -40,8 +44,9 @@ export const useCartStore = create((set, get) => ({
       set({ cart: res.data });
       get().calculateTotals();
     } catch (error) {
+      console.error("Error fetching cart items:", error);
       set({ cart: [] });
-      toast.error(error.response.data.message || "An error occurred");
+      // toast.error("Unable to load your cart. Please try again later.");
     }
   },
   clearCart: async () => {
@@ -89,13 +94,15 @@ export const useCartStore = create((set, get) => ({
       
       calculateTotals();
     } catch (error) {
-      toast.error(error.response.data.message || "An error occurred");
+      console.error("Error adding product to cart:", error);
+      toast.error("Failed to add product. Please try again.");
     }finally{
       set({isLoading: false})
     }
   },
   removeFromCart: async (productId, size, color) => {
-    await axios.delete(`/cart`, { data: { productId, size, color } });
+    try {
+      await axios.delete(`/cart`, { data: { productId, size, color } });
     set((prevState) => ({
       cart: prevState.cart.filter(
         (item) =>
@@ -103,6 +110,11 @@ export const useCartStore = create((set, get) => ({
       ),
     }));
     get().calculateTotals();
+    } catch (error) {
+      console.error("Error removing from cart:", error);
+      toast.error("Failed to remove item. Please try again.");
+    }
+    
   },
   updateQuantity: async (productId, quantity, size, color) => {
     if (quantity === 0) {
@@ -110,7 +122,8 @@ export const useCartStore = create((set, get) => ({
       return;
     }
 
-    await axios.put(`/cart/${productId}`, { quantity, size, color });
+    try {
+      await axios.put(`/cart/${productId}`, { quantity, size, color });
     set((prevState) => ({
       cart: prevState.cart.map((item) =>
         item._id === productId && item.size === size && item.color === color
@@ -119,6 +132,11 @@ export const useCartStore = create((set, get) => ({
       ),
     }));
     get().calculateTotals();
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+      toast.error("Unable to update item quantity.");
+    }
+    
   },
   calculateTotals: () => {
     const { cart, coupon } = get();

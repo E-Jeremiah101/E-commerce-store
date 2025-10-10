@@ -207,6 +207,27 @@ const OrderHistoryPage = () => {
                           ))}
                         </ul>
                       )}
+
+                      <div className=" rounded-lg p-2">
+                        <p className="text-sm">
+                          Subtotal: ₦{order.subtotal.toLocaleString()}
+                        </p>
+                        {order.discount > 0 && (
+                          <>
+                            <p className="text-sm">
+                              Discount: -₦
+                              {order.discount.toLocaleString()}
+                            </p>
+                            <p>
+                              Coupon Applied:{" "}
+                              <span className="text-red-500">-10%</span>{" "}
+                              <span className="text-green-500">
+                                {order.coupon.code}
+                              </span>
+                            </p>{" "}
+                          </>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
