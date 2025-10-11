@@ -41,7 +41,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className="w-full bg:black lg:bg-gray bg-opacity-90 backdrop-blur-md shadow-lg border-b border-black fixed lg:static text-black top-0 left-0 z-40 transition-all duration-300 ">
+    <header className="w-full bg-black md:bg-white lg:bg-white bg-opacity-90 backdrop-blur-md shadow-lg border-b border-black fixed lg:static text-black top-0 left-0 z-40 transition-all duration-300 ">
       {/* Mobile View */}
 
       <div className="sm:hidden  ">

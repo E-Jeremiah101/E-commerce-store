@@ -92,31 +92,33 @@ const FeaturedProducts = ({ featuredProducts }) => {
                     className="w-1/2 sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 flex-shrink-0 px-2"
                   >
                     <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden h-full transition-all duration-300 hover:shadow-xl ">
-                      <div className="overflow-hidden">
-                        <img
-                          src={product.images?.[0]}
-                          alt={product.name}
-                          className="w-full h-43 sm:h-48 object-cover transition-transform duration-300 ease-in-out hover:scale-110"
-                        />
-                      </div>
-                      <div className="p-3">
-                        <h3 className="text-sm h-13  mb-2 text-black tracking-widest">
-                          {product.name}
-                        </h3>
-                        <p className="text-black font-medium mb-4 text-lg tracking-widest">
-                          ₦{" "}
-                          {product.price.toLocaleString(undefined, {
-                            minimumFractionDigits: 0,
-                          })}
-                        </p>
-{/* 
-                        <Link to={`/product/${product._id}`}>
+                      <Link to={`/product/${product._id}`}>
+                        <div className="overflow-hidden">
+                          <img
+                            src={product.images?.[0]}
+                            alt={product.name}
+                            className="w-full h-43 sm:h-48 object-cover transition-transform duration-300 ease-in-out hover:scale-110"
+                          />
+                        </div>
+                        <div className="p-2">
+                          <h3 className="text-sm h-9   text-black tracking-widest">
+                            {product.name}
+                          </h3>
+                          <p className="text-black font-medium  text-lg tracking-widest">
+                            ₦{" "}
+                            {product.price.toLocaleString(undefined, {
+                              minimumFractionDigits: 0,
+                            })}
+                          </p>
+                          {/* 
+                       
                           <button className="w-full  flex items-center justify-center rounded-lg bg-black px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-900 tracking-widest">
                             {/* <ShoppingCart size={22} className="mr-2" /> */}
-                            {/* View Product
+                          {/* View Product
                           </button>
-                        </Link> */} 
-                      </div>
+                        </Link> */}
+                        </div>
+                      </Link>
                     </div>
                   </div>
                 );

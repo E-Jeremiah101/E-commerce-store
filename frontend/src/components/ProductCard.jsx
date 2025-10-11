@@ -20,8 +20,8 @@ const ProductCard = ({ product }) => {
         </div>
 
         {/* Product Info */}
-        <div className="mt-4 px-5 pb-5 space-y-3">
-          <h3 className="text-sm font-semibold  tracking-widest text-black h-11 mb-0">
+        <div className="mt-2 px-2 pb-4 space-y-2">
+          <h3 className="text-sm font-semibold  tracking-widest text-black h-10 mb-0">
             {product.name}
           </h3>
 
