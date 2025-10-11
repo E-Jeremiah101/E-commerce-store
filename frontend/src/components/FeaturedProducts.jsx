@@ -67,7 +67,12 @@ const FeaturedProducts = ({ featuredProducts }) => {
     <div className="py-12 mt-8">
       <div className="container mx-auto px-4">
         <div className=" flex text-center align-middle text-3xl sm:text-6xl  font-bebas text-black mc-4 tracking-widest justify-center mb-5">
-          <h2 className="rounded mb-1">Just For You</h2>
+          <h2
+            className="rounded mb-1 text-2xl"
+            style={{ textShadow: "2px 2px 6px rgba(0,0,0,0.4)" }}
+          >
+            Just For You
+          </h2>
         </div>
         <div className="relative">
           <div className="overflow-hidden">
@@ -84,7 +89,7 @@ const FeaturedProducts = ({ featuredProducts }) => {
                 return (
                   <div
                     key={product._id}
-                    className="w-1/2 sm:w-1/2 lg:w-1/3 xl:w-1/4 flex-shrink-0 px-2"
+                    className="w-1/2 sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 flex-shrink-0 px-2"
                   >
                     <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden h-full transition-all duration-300 hover:shadow-xl ">
                       <div className="overflow-hidden">
@@ -104,13 +109,13 @@ const FeaturedProducts = ({ featuredProducts }) => {
                             minimumFractionDigits: 0,
                           })}
                         </p>
-
+{/* 
                         <Link to={`/product/${product._id}`}>
                           <button className="w-full  flex items-center justify-center rounded-lg bg-black px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-900 tracking-widest">
                             {/* <ShoppingCart size={22} className="mr-2" /> */}
-                            View Product
+                            {/* View Product
                           </button>
-                        </Link>
+                        </Link> */} 
                       </div>
                     </div>
                   </div>

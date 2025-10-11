@@ -22,51 +22,61 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // 🚫 If no response or not a 401, just reject
+    // 🚫 Ignore if no response or not a 401
     if (!error.response || error.response.status !== 401) {
       return Promise.reject(error);
     }
 
-    // 🚫 If the failed request was /auth/refresh-token itself, don't retry
+    // 🚫 Don't retry the refresh endpoint itself
     if (originalRequest.url.includes("/auth/refresh-token")) {
       return Promise.reject(error);
     }
 
-    // 🚫 Prevent retrying more than once
+    // Prevent infinite loops
     if (originalRequest._retry) {
       return Promise.reject(error);
     }
 
-    // 🚫 If no cookies exist, user is logged out — don't refresh
+    // Check for refresh cookie
     const hasRefreshCookie = document.cookie.includes("refreshToken");
     if (!hasRefreshCookie) {
-      console.warn("No refresh token cookie — user logged out.");
+      console.warn("No refresh token cookie found — user likely logged out.");
       return Promise.reject(error);
     }
 
+    // Handle refresh queue (so multiple requests wait for one refresh)
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
-      }).then(() => axiosInstance(originalRequest));
+      }).then((token) => {
+        originalRequest.headers["Authorization"] = `Bearer ${token}`;
+        return axiosInstance(originalRequest);
+      });
     }
 
     originalRequest._retry = true;
     isRefreshing = true;
 
     try {
-      // attempt refresh
-      await axiosInstance.post("/auth/refresh-token");
+      const { data } = await axiosInstance.post("/auth/refresh-token");
       processQueue(null);
-      return axiosInstance(originalRequest); // retry original
+
+      // ✅ Try the original request again
+      return axiosInstance(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);
-      console.error("Refresh failed, clearing session.");
-      // Optional: you can dispatch a logout action here
+
+      // Optionally log out user if refresh fails
+      console.error("Token refresh failed. Logging out user.");
+      const { logout } = useUserStore.getState();
+      await logout();
+
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
     }
   }
 );
+
 
 export default axiosInstance;

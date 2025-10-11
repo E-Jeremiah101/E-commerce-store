@@ -21,7 +21,13 @@ import ViewProductPage from "./pages/ViewProductPage.jsx";
 
 
 function App() {
-  const { user, checkAuth, checkingAuth } = useUserStore();
+  const {
+    user,
+    checkAuth,
+    checkingAuth,
+    startTokenRefreshTimer,
+    stopTokenRefreshTimer,
+  } = useUserStore();
   const { getCartItems } = useCartStore();
   const location = useLocation();
   useEffect(() => {
@@ -40,6 +46,16 @@ function App() {
   }, [checkAuth, location.pathname]);
 
   useEffect(() => {
+    if (user) {
+      startTokenRefreshTimer();
+    }else{
+      stopTokenRefreshTimer();
+    }
+    
+  }, [ user]);
+
+
+  useEffect(() => {
     if (!user) return;
     getCartItems();
   }, [getCartItems, user]);
@@ -52,6 +68,7 @@ function App() {
     );
   return (
     <>
+
       <div className="min-h-screen bg-white text-black  relative overflow-hidden ">
         {/*Background gradient */}
 

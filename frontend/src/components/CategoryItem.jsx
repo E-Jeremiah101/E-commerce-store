@@ -6,29 +6,32 @@ const CategoryItem = ({ category }) => {
   const [selectedColor, setSelectedColor] = useState("");
 
   return (
-    <div className="relative overflow-hidden h-94 w-full rounded-lg group ">
+    <div className="relative overflow-hidden lg:h-57 h-80 w-full rounded-lg lg:rounded-sm group md:mt-4 ">
       <Link
         to={{
           pathname: "/category" + category.href,
           state: { size: selectedSize, color: selectedColor },
         }}
       >
-        <div className="w-full h-full cursor-pointer">
-          <div className="lg:absolute block inset-0 bg-gradient-to-b from-transparent to-gray-500 z-10">
+        <div className="w-full h-full cursor-pointer ">
+          <div className="lg:absolute block inset-0 bg-gradient-to-b from-transparent to-gray-500  z-10">
             <img
               src={category.imageUrl}
               alt={category.name}
-              className="w-full h-59 lg:h-full object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+              className="w-full h-45 md:h-52 lg:h-57 object-cover transition-transform duration-500 ease-out group-hover:scale-110 "
               loading="lazy"
             />
 
-            <div className="lg:absolute block lg:bottom-0 lg:left-0 lg:right-0 p-2 lg:p-4 z-20">
-              <h3 className="text-orange-200/80 lg:text-black text-base lg:text-2xl lg:font-bold mb-2 tracking-widest h-15 lg:h-fit">
-               Explore {category.name}
-              </h3>
-              <p className="text-white hidden lg:block text-sm mb-1 lg:mb-2 lg:bg-black w-fit tracking-widest rounded-md">
+            <p className="text-blue-700 hidden lg:absolute text-sm mb-1 lg:mb-2 lg:bg-black w-fit tracking-widest rounded-md">
+              Explore {category.name}
+            </p>
+            <div className="lg:absolute block lg:bottom-0 lg:left-0 lg:right-0 p-2 lg:p-0 z-20">
+              <h3 className="text-orange-200/80 block lg:hidden lg:text-black text-base lg:text-2xl lg:font-bold mb-2 tracking-widest h-15 lg:h-fit">
                 Explore {category.name}
-              </p>
+              </h3>
+              {/* <p className="text-white hidden lg:block text-sm mb-1 lg:mb-2 lg:bg-black w-fit tracking-widest rounded-md">
+                Explore {category.name}
+              </p> */}
 
               {/* Sizes */}
               {category.sizes && category.sizes.length > 0 && (

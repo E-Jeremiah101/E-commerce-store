@@ -41,7 +41,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className="w-full bg-black bg-opacity-90 backdrop-blur-md shadow-lg border-b border-black fixed lg:static  top-0 left-0 z-40 transition-all duration-300 ">
+    <header className="w-full bg:black lg:bg-gray bg-opacity-90 backdrop-blur-md shadow-lg border-b border-black fixed lg:static text-black top-0 left-0 z-40 transition-all duration-300 ">
       {/* Mobile View */}
 
       <div className="sm:hidden  ">
@@ -148,7 +148,7 @@ const Navbar = () => {
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-2 tracking-widest"
               >
-                <ShoppingCart /> Cart <span className="border-1 rounded-3xl h-6 w-6 items-center flex justify-center text-sm font-bold">{cart.length}</span>
+                <ShoppingCart /> Cart ({cart.length})
               </Link>
             )}
 
@@ -295,7 +295,7 @@ const Navbar = () => {
               <span className="text-emerald-400 font-bold text-xl">BUZ</span>
             </Link>
 
-            <nav className="hidden md:flex items-center gap-6 text-white tracking-widest">
+            <nav className="hidden md:flex items-center gap-6  tracking-widest">
               <Link to={"/"} className="hover:text-gray-300">
                 Home
               </Link>
@@ -324,7 +324,7 @@ const Navbar = () => {
                 {/* Search toggle */}
                 <button
                   onClick={handleSearchToggle}
-                  className="text-gray-300 hover:text-gray-400"
+                  className="text-black hover:text-gray-400"
                 >
                   {isSearchOpen ? <X size={24} /> : <Search size={24} />}
                 </button>
@@ -333,11 +333,11 @@ const Navbar = () => {
                 {user && (
                   <Link
                     to={"/cart"}
-                    className="relative text-white hover:text-gray-300"
+                    className="relative text-black hover:text-gray-300"
                   >
                     <ShoppingCart size={22} />
                     {cart.length > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-white text-black rounded-full px-2 text-xs">
+                      <span className="absolute -top-2 -right-2 bg-black text-white rounded-full px-2 text-xs">
                         {cart.length}
                       </span>
                     )}
@@ -347,7 +347,7 @@ const Navbar = () => {
                 {user ? (
                   <button
                     onClick={logout}
-                    className="text-white hover:text-gray-300 hidden sm:block"
+                    className="text-black hover:text-gray-300 hidden sm:block"
                   >
                     <LogOut size={22} />
                   </button>
@@ -355,13 +355,13 @@ const Navbar = () => {
                   <>
                     <Link
                       to={"/signup"}
-                      className="text-white hover:text-gray-300"
+                      className="text-black hover:text-gray-300"
                     >
                       <UserPlus size={22} />
                     </Link>
                     <Link
                       to={"/login"}
-                      className="text-white hover:text-gray-300"
+                      className="text-black hover:text-gray-300"
                     >
                       <LogIn size={22} />
                     </Link>
@@ -369,48 +369,6 @@ const Navbar = () => {
                 )}
               </div>
             </div>
-          </div>
-
-          <div className="h-50 hidden md:flex justify-center items-center text-white">
-            <ul className="flex flex-wrap justify-center gap-x-7 gap-y-7 px-30 max-w-5xl text-gray-100 text-sm  text-center tracking-widest">
-              <Link to={"/category/t-shirts"}>
-                <span className="hover:text-gray-300">T-SHIRT</span>
-              </Link>
-              <Link to={"/category/suits&blazer"}>
-                <span className="hover:text-gray-300">SUITS & BLAZERS</span>
-              </Link>
-              <Link to={"/category/underwear&socks"}>
-                <span className="hover:text-gray-300">UNDERWEAR & SOCKS</span>
-              </Link>
-              <Link to={"/category/footwears"}>
-                <span className="hover:text-gray-300">FOOTWEAR</span>
-              </Link>
-              <Link to={"/category/sets"}>
-                <span className="hover:text-gray-300">SETS & CO-ORDS</span>
-              </Link>
-
-              <Link to={"/category/accessories"}>
-                <span className="hover:text-gray-300">ACCESSORIES</span>
-              </Link>
-              <Link to={"/category/bottoms"}>
-                <span className="hover:text-gray-300">BOTTOMS</span>
-              </Link>
-              <Link to={"/category/bags"}>
-                <span className="hover:text-gray-300">BAGS</span>
-              </Link>
-              <Link to={"/category/sportwear"}>
-                <span className="hover:text-gray-300">SPORTWEAR</span>
-              </Link>
-              {/* <Link>
-                <span className="hover:text-gray-300">ADDIDAS COLLECTION</span>
-              </Link> */}
-              {/* <Link>
-                <span className="hover:text-gray-300">FENDI COLLECTION</span>
-              </Link> */}
-              {/* <Link>
-                <span className="hover:text-gray-300">GUCCI COLLECTION</span>
-              </Link> */}
-            </ul>
           </div>
         </div>
         {/* SearchBar */}

@@ -35,3 +35,22 @@ const ScrollReveal = ({ children, delay = 0 }) => {
 };
 
 export default ScrollReveal;
+
+
+
+// export default function AnimatedItem({ children, delay = 0 }) {
+//   return (
+//     <motion.div
+//       initial={{ opacity: 0, y: 40 }}          // Start faded and slightly below
+//       whileInView={{ opacity: 1, y: 0 }}       // Fade in and move up
+//       viewport={{ once: true, amount: 0.2 }}   // Animate once when 20% visible
+//       transition={{
+//         duration: 0.6,
+//         delay,
+//         ease: "easeOut",
+//       }}
+//     >
+//       {children}
+//     </motion.div>
+//   );
+// }

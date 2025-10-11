@@ -30,7 +30,7 @@ const HeroSlider = () => {
       return () => clearInterval(timer);
     }, []);
   return (
-    <div className="relative w-full  overflow-hidden lg:mt-0 md:mt-66">
+    <div className="relative w-full  overflow-hidden lg:mt-0 md:mt-16">
       {/* Images */}
       <div
         className="flex transition-transform duration-[1000ms] ease-in-out"
@@ -69,7 +69,7 @@ const HeroSlider = () => {
       </div>
 
       {/* Optional Dots Indicator */}
-      <div className=" text-black/80 justify-center items-center flex gap-3 border-b-1 h-7 border-gray-300 ">
+      <div className=" text-black/80 justify-center items-center flex gap-3 border-b-1 h-9 border-gray-300 ">
         <>
           <span
             onClick={() => setCurrent((prev) => (prev > 0 ? prev - 1 : prev))}

@@ -6,10 +6,11 @@ export default function GoBackButton() {
   const navigate = useNavigate();
 
   const handleGoBack = () => {
+    
     if (window.history.state && window.history.state.idx > 0) {
       navigate(-1);
     } else {
-      navigate("/"); // fallback to homepage
+      navigate(-1); // fallback to homepage
     }
   };
 

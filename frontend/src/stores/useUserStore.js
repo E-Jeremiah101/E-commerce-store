@@ -2,10 +2,13 @@ import { create } from "zustand";
 import axios from "../lib/axios";
 import { toast } from "react-hot-toast";
 
+ let refreshTimeoutId = null;
+
 export const useUserStore = create((set, get) => ({
   user: null,
   loading: false,
   checkingAuth: true,
+
   setUser: (userData) => set({ user: userData }),
 
   signup: async ({ name, email, password, confirmPassword }) => {
@@ -21,24 +24,24 @@ export const useUserStore = create((set, get) => ({
       set({ user: res.data, loading: false });
     } catch (error) {
       set({ loading: false });
-      return{error: error.response?.data?.message || "An error occurred"};
+      return { error: error.response?.data?.message || "An error occurred" };
     }
-
   },
   login: async (email, password) => {
     set({ loading: true });
 
-      try {
-        const res = await axios.post("/auth/login", { email, password });
-        console.log("user is here", res.data);
-        set({ user: res.data, loading: false });
-        return { success: true, data: res.data };
-      } catch (error) {
-        set({ loading: false });
-        
-         return{error: error.response?.data?.message || "An error occured, try again"}
-       
-      }
+    try {
+      const res = await axios.post("/auth/login", { email, password });
+      console.log("user is here", res.data);
+      set({ user: res.data, loading: false });
+      return { success: true, data: res.data };
+    } catch (error) {
+      set({ loading: false });
+
+      return {
+        error: error.response?.data?.message || "An error occured, try again",
+      };
+    }
   },
 
   logout: async () => {
@@ -58,7 +61,19 @@ export const useUserStore = create((set, get) => ({
       const response = await axios.get("/auth/profile");
       set({ user: response.data, checkingAuth: false });
     } catch (error) {
-      console.log(error.message);
+      // If access token expired, try refreshing
+      if (error.response?.status === 401) {
+        try {
+          await axios.post("/auth/refresh-token");
+          const response = await axios.get("/auth/profile");
+          set({ user: response.data, checkingAuth: false });
+          return;
+        } catch (refreshError) {
+          console.error("Auto refresh failed:", refreshError);
+        }
+      }
+
+      // fallback: logout or clear user
       set({ checkingAuth: false, user: null });
     }
   },
@@ -77,39 +92,40 @@ export const useUserStore = create((set, get) => ({
       throw error;
     }
   },
+
+  startTokenRefreshTimer: async () => {
+    // Clear any previous timer
+    if (refreshTimeoutId) clearTimeout(refreshTimeoutId);
+
+    const refreshEveryMs = 4 * 60 * 1000; // 14 minutes
+
+    const scheduleRefresh = async () => {
+      try {
+        await axios.post("/auth/refresh-token");
+        console.log(
+          "✅ Access token refreshed automatically at",
+          new Date().toLocaleTimeString()
+        );
+
+        // Schedule the next refresh AFTER this one succeeds
+        refreshTimeoutId = setTimeout(scheduleRefresh, refreshEveryMs);
+      } catch (error) {
+        console.error("⚠️ Auto token refresh failed:", error.message);
+        clearTimeout(refreshTimeoutId);
+      }
+    };
+
+    // Start the first scheduled refresh
+    refreshTimeoutId = setTimeout(scheduleRefresh, refreshEveryMs);
+  },
+
+  // Stop the refresh timer (on logout or when user is null)
+  stopTokenRefreshTimer: () => {
+    if (refreshTimeoutId) {
+      clearTimeout(refreshTimeoutId);
+      refreshTimeoutId = null;
+      console.log("🧹 Token refresh timer stopped");
+    }
+  },
 }));
 
-// TODO: Implement the axios interceptors for refreshing access token
-
-// Axios interceptor for token refresh
-let refreshPromise = null;
-
-axios.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        // If a refresh is already in progress, wait for it to complete
-        if (refreshPromise) {
-          await refreshPromise;
-          return axios(originalRequest);
-        }
-
-        // Start a new refresh process
-        refreshPromise = useUserStore.getState().refreshToken();
-        await refreshPromise;
-        refreshPromise = null;
-
-        return axios(originalRequest);
-      } catch (refreshError) {
-        // If refresh fails, redirect to login or handle as needed
-        useUserStore.getState().logout();
-        return Promise.reject(refreshError);
-      }
-    }
-    return Promise.reject(error);
-  }
-);
