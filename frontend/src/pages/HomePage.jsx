@@ -7,7 +7,7 @@ import ScrollReveal from "../components/ScrollReveal.jsx";
 import FAQSection from "../components/FAQSection";
 import Footer from "../components/Footer.jsx";
 import HeroSlider from "../components/HeroSlider";
-import CollectionTab from "../components/collectionTab.jsx";
+import CollectionTab from "../components/CollectionTab.jsx";
 
 const categories = [
   { href: "/bottoms", name: "Bottoms", imageUrl: "/jeans-man.jpg" },
