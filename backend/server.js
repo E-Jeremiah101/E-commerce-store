@@ -16,6 +16,7 @@ import userRoutes from "./routes/user.route.js";
 import cors from "cors";
 import { fileURLToPath } from "url";
 import reviewRoutes from "./routes/review.routes.js"
+import visitorRoutes from "./routes/visitor.route.js"
 dotenv.config();
 const app = express();
 await connectRedis(); //connect once at startup
@@ -28,9 +29,11 @@ app.use(
     credentials: true, // allow cookies/tokens
   })
 );
-
+app.set("trust proxy", true);
 app.use(express.json({ limit: "10mb" })); // allow to parse the body of the request
 app.use(cookieParser());
+
+
 
 //authRoute
 app.use("/api/auth", authRouthes);
@@ -60,6 +63,9 @@ app.use("/api/users", userRoutes);
 
 //reviewRoute
 app.use("/api/reviews", reviewRoutes);
+
+//VisitorRoute
+app.use("/api/visitors", visitorRoutes);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

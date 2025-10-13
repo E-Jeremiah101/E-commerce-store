@@ -107,7 +107,7 @@ const ProductReviews = ({ productId }) => {
       </h3>
 
       {reviews.length === 0 ? (
-        <p className="text-gray-500">No reviews yet. Be the first!</p>
+        <p className="text-gray-500">No reviews yet</p>
       ) : (
         <div className="divide-y divide-gray-200">
           {reviews.map((r) => (

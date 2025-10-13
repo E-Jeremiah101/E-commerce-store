@@ -25,7 +25,7 @@ const Navbar = () => {
   const { cart } = useCartStore();
 
   const [isOpen, setIsOpen] = useState(false);
-   const [isOpenn, setIsOpenn] = useState(false);
+  const [isOpenn, setIsOpenn] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Toggle Search
@@ -382,10 +382,4 @@ const Navbar = () => {
   );
 };
 
-
-
-
-
-
 export default Navbar;
-

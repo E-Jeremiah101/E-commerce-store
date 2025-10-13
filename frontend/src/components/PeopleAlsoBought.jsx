@@ -33,7 +33,7 @@ const PeopleAlsoBought = () => {
       <h3 className="text-1xl font-semibold text-black tracking-wider">
         You may also like
       </h3>
-      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3">
         {recommendations.map((product) => (
           <ProductCard key={product._id} product={product} />
         ))}

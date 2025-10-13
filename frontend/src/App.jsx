@@ -18,9 +18,11 @@ import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import ForgotPasswordPage from "./pages/ForgetPasswordPage.jsx";
 import SearchResultsPage from "./pages/SearchResultsPage.jsx";
 import ViewProductPage from "./pages/ViewProductPage.jsx";
+import useTrackVisitors from "./stores/useTrackVisitors.js";
 
 
 function App() {
+  useTrackVisitors();
   const {
     user,
     checkAuth,
@@ -45,6 +47,8 @@ function App() {
     checkAuth();
   }, [checkAuth, location.pathname]);
 
+  
+
   useEffect(() => {
     if (user) {
       startTokenRefreshTimer();
@@ -53,6 +57,8 @@ function App() {
     }
     
   }, [ user]);
+
+  // localStorage.removeItem("visitorLogged");
 
 
   useEffect(() => {

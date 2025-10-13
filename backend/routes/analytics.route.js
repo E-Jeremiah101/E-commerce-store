@@ -1,32 +1,18 @@
 import express from "express";
-import { adminRoute, protectRoute } from "../middleware/auth.middleware.js";
-import {
-  getAnalyticsData,
-  getDailySalesData,
-} from "../controllers/analytics.controller.js";
+import { getAnalytics } from "../controllers/analytics.controller.js";
 
 const router = express.Router();
 
-router.get("/", protectRoute, adminRoute, async(req, res) => {
-    try {
-       const analyticsData = await getAnalyticsData();
+router.get("/", async (req, res) => {
+  try {
+    const range = req.query.range || "weekly"; // daily, weekly, monthly, yearly
+    const { analyticsData, salesData } = await getAnalytics(range);
 
-       const endDate = new Date();
-       const startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-       const dailySalesDate = await getDailySalesData(startDate, endDate);
-
-       res.json({
-        analyticsData,
-        dailySalesDate
-       })
-
-    } catch (error) {
-        console.log("Error in analytics routes", error.message);
-        res.status(500).json({
-            message: "Server error", error: error.message
-        });
-    }
-})
+    res.json({ analyticsData, salesData });
+  } catch (error) {
+    console.error("Error fetching analytics:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
 
 export default router;

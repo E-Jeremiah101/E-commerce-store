@@ -1,15 +1,46 @@
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
 import User from "../models/user.model.js";
+import Visitor from "../models/visitors.model.js"; // ✅ Capitalized and matches your model file
 
-export const getAnalyticsData = async () => {
+// MAIN FUNCTION: used by your route
+export const getAnalytics = async (range = "weekly") => {
+  const endDate = new Date();
+  const startDate = getStartDate(range, endDate);
+
+  // ✅ Pass startDate and endDate properly
+  const analyticsData = await getAnalyticsData(startDate, endDate);
+  const salesData = await getSalesDataByRange(range, startDate, endDate);
+
+  return { analyticsData, salesData };
+};
+
+// -----------------------------
+// Analytics (users, products, revenue, etc)
+// -----------------------------
+export const getAnalyticsData = async (startDate, endDate) => {
   const totalUsers = await User.countDocuments();
   const totalProducts = await Product.countDocuments();
+  const deliveredOrders = await Order.countDocuments({ status: "Delivered" });
+  const canceledOrders = await Order.countDocuments({ status: "Cancelled" });
+  const allOrders = await Order.countDocuments();
 
+  // ✅ Count visitors properly
+  const visitors = await Visitor.countDocuments({
+    createdAt: { $gte: startDate, $lte: endDate },
+  });
+  
+
+  // ✅ Calculate total sales & revenue
   const salesData = await Order.aggregate([
     {
+      $match: {
+        status: { $nin: ["Cancelled"] }, // ignore cancelled
+      },
+    },
+    {
       $group: {
-        _id: null, // it groups all documents together,
+        _id: null,
         totalSales: { $sum: 1 },
         totalRevenue: { $sum: "$totalAmount" },
       },
@@ -26,64 +57,97 @@ export const getAnalyticsData = async () => {
     products: totalProducts,
     totalSales,
     totalRevenue,
+    deliveredOrders,
+    canceledOrders,
+    allOrders,
+    visitors,
   };
 };
 
-export const getDailySalesData = async (startDate, endDate) => {
-  try {
-    const dailySalesData = await Order.aggregate([
-      {
-        $match: {
-          createdAt: {
-            $gte: startDate,
-            $lte: endDate,
-          },
-        },
-      },
-      {
+// -----------------------------
+// Dynamic Sales Data
+// -----------------------------
+async function getSalesDataByRange(range, startDate, endDate) {
+  const matchStage = {
+    $match: {
+      createdAt: { $gte: startDate, $lte: endDate },
+      status: { $nin: ["Cancelled"] },
+    },
+  };
+
+  let groupStage;
+  switch (range) {
+    case "daily":
+    case "weekly":
+      groupStage = {
         $group: {
           _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
           sales: { $sum: 1 },
           revenue: { $sum: "$totalAmount" },
         },
-      },
-      { $sort: { _id: 1 } },
-    ]);
-
-    // example of dailySalesData
-    // [
-    // 	{
-    // 		_id: "2024-08-18",
-    // 		sales: 12,
-    // 		revenue: 1450.75
-    // 	},
-    // ]
-
-    const dateArray = getDatesInRange(startDate, endDate);
-    // console.log(dateArray) // ['2024-08-18', '2024-08-19', ... ]
-
-    return dateArray.map((date) => {
-      const foundData = dailySalesData.find((item) => item._id === date);
-
-      return {
-        date,
-        sales: foundData?.sales || 0,
-        revenue: foundData?.revenue || 0,
       };
-    });
-  } catch (error) {
-    throw error;
+      break;
+    case "monthly":
+      groupStage = {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
+          sales: { $sum: 1 },
+          revenue: { $sum: "$totalAmount" },
+        },
+      };
+      break;
+    case "yearly":
+      groupStage = {
+        $group: {
+          _id: { $dateToString: { format: "%Y", date: "$createdAt" } },
+          sales: { $sum: 1 },
+          revenue: { $sum: "$totalAmount" },
+        },
+      };
+      break;
+    default:
+      groupStage = {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+          sales: { $sum: 1 },
+          revenue: { $sum: "$totalAmount" },
+        },
+      };
   }
-};
 
-function getDatesInRange(startDate, endDate) {
-  const dates = [];
-  let currentDate = new Date(startDate);
+  const data = await Order.aggregate([
+    matchStage,
+    groupStage,
+    { $sort: { _id: 1 } },
+  ]);
 
-  while (currentDate <= endDate) {
-    dates.push(currentDate.toISOString().split("T")[0]);
-    currentDate.setDate(currentDate.getDate() + 1);
+  return data.map((item) => ({
+    date: item._id,
+    sales: item.sales,
+    revenue: item.revenue,
+  }));
+}
+
+// -----------------------------
+// Helpers
+// -----------------------------
+function getStartDate(range, endDate) {
+  const startDate = new Date(endDate);
+  switch (range) {
+    case "daily":
+      startDate.setDate(endDate.getDate() - 1);
+      break;
+    case "weekly":
+      startDate.setDate(endDate.getDate() - 7);
+      break;
+    case "monthly":
+      startDate.setMonth(endDate.getMonth() - 1);
+      break;
+    case "yearly":
+      startDate.setFullYear(endDate.getFullYear() - 1);
+      break;
+    default:
+      startDate.setDate(endDate.getDate() - 7);
   }
-
-  return dates;
+  return startDate;
 }
