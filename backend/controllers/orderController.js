@@ -61,6 +61,7 @@ export const getAllOrders = async (req, res) => {
           user: order.user,
           status: order.status,
           deliveredAt: order.deliveredAt,
+          updatedAt:order.updatedAt,
           totalAmount: order.totalAmount,
           subtotal: order.subtotal,
           discount: order.discount,

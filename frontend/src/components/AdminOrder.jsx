@@ -18,6 +18,20 @@ const AdminOrdersPage = () => {
       setLoading(false);
     }
   };
+  const formatDateTime = (isoString) => {
+    const date = new Date(isoString);
+
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // months start from 0
+    const year = date.getFullYear();
+
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    const seconds = String(date.getSeconds()).padStart(2, "0");
+
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+  };
+  
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
@@ -95,18 +109,54 @@ const AdminOrdersPage = () => {
                 </span>
               </div>
 
-              <p className="text-sm text-gray-200 mb-2">
-                Customer Name: {order.user.name}
-              </p>
-              <p className="text-sm text-gray-200 mb-2">
-                Customer Email: {order.user.email}
-              </p>
-              <p className="text-sm text-gray-200 mb-2">
-                Customer Phone: {order.phone || "Not provided"}
-              </p>
-              <p className="text-sm text-gray-200 mb-2">
-                Delivery Address: {order.deliveryAddress || "Not provided"}
-              </p>
+              <div className="grid md:grid-cols-3 grid-cols-2 gap-3 md:gap-5 py-4 pr-7 pl-3 bg-gray-700 rounded-lg shadow overflow-x-scroll scrollbar-hide md:overflow-x-hidden mb-2 font-bold">
+                <p className=" text-gray-200 mb-2">
+                  Customer Name:
+                  <p> {order.user.name}</p>
+                </p>
+                <p className=" text-gray-200 mb-2">
+                  Customer Email:
+                  <p> {order.user.email}</p>
+                </p>
+                <p className=" text-gray-200 mb-2">
+                  Customer Phone:
+                  <p>{order.phone || "Not provided"}</p>
+                </p>
+                <p className=" text-gray-200 mb-2">
+                  Order date:
+                  <p>
+                    {" "}
+                    {new Date(order.createdAt).toLocaleString() ||
+                      "Not provided"}
+                  </p>
+                </p>
+                <p className=" text-gray-200 mb-2">
+                  Updated to{" "}
+                  <span
+                    className={`px-2 py-1 rounded text-sm font-medium ${
+                      order.status === "Delivered"
+                        ? "bg-green-600 text-white"
+                        : order.status === "Cancelled"
+                        ? "bg-red-600 text-white"
+                        : "bg-yellow-500 text-white"
+                    }`}
+                  >
+                    {order.status}
+                  </span>
+                  :
+                  <p>
+                    {new Date(order.updatedAt).toLocaleString() ||
+                      "Not provided"}
+                  </p>
+                </p>
+                {order.status === "Delivered" && (
+                  <p className=" text-gray-200 mb-2">
+                    Package delivered:{" "}
+                    {new Date(order.deliveredAt).toLocaleString() ||
+                      "Not provided"}
+                  </p>
+                )}
+              </div>
 
               <ul className="space-y-4 mb-4">
                 {order.products.map((item) => (
@@ -176,8 +226,9 @@ const AdminOrdersPage = () => {
                   <>
                     <p>
                       Coupon Applied: <span className="text-red-500">-10%</span>{" "}
-                      <span className="text-green-500">{order.coupon.code}</span>
-                      
+                      <span className="text-green-500">
+                        {order.coupon.code}
+                      </span>
                     </p>{" "}
                     <p className="text-sm my-1 font-bold">
                       {" "}

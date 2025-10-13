@@ -55,6 +55,8 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    
+    updatedAt:Date,
     subtotal: { type: Number, required: false, default: 0 },
     discount: { type: Number, required: false, default: 0 },
     coupon: {
