@@ -110,27 +110,27 @@ const AdminOrdersPage = () => {
               </div>
 
               <div className="grid md:grid-cols-3 grid-cols-2 gap-3 md:gap-5 py-4 pr-7 pl-3 bg-gray-700 rounded-lg shadow overflow-x-scroll scrollbar-hide md:overflow-x-hidden mb-2 font-bold">
-                <p className=" text-gray-200 mb-2">
+                <div className=" text-gray-200 mb-2">
                   Customer Name:
                   <p> {order.user.name}</p>
-                </p>
-                <p className=" text-gray-200 mb-2">
+                </div>
+                <div className=" text-gray-200 mb-2">
                   Customer Email:
                   <p> {order.user.email}</p>
-                </p>
-                <p className=" text-gray-200 mb-2">
+                </div>
+                <div className=" text-gray-200 mb-2">
                   Customer Phone:
                   <p>{order.phone || "Not provided"}</p>
-                </p>
-                <p className=" text-gray-200 mb-2">
+                </div>
+                <div className=" text-gray-200 mb-2">
                   Order date:
                   <p>
                     {" "}
                     {new Date(order.createdAt).toLocaleString() ||
                       "Not provided"}
                   </p>
-                </p>
-                <p className=" text-gray-200 mb-2">
+                </div>
+                <div className=" text-gray-200 mb-2">
                   Updated to{" "}
                   <span
                     className={`px-2 py-1 rounded text-sm font-medium ${
@@ -143,12 +143,11 @@ const AdminOrdersPage = () => {
                   >
                     {order.status}
                   </span>
-                  :
                   <p>
                     {new Date(order.updatedAt).toLocaleString() ||
                       "Not provided"}
                   </p>
-                </p>
+                </div>
                 {order.status === "Delivered" && (
                   <p className=" text-gray-200 mb-2">
                     Package delivered:{" "}
