@@ -90,10 +90,10 @@ const HomePage = () => {
         <CollectionTab />
         <div className="relative z-10 max-w-7xl mx-auto px-4  lg:px-25">
           <ScrollReveal delay={0.1}>
-            <h1 className="text-black text-lg md:hidden  tracking-widest  mb-4">
-              Collections
+            <h1 className="text-black font-sans text-1xl md:hidden  tracking-widest mb-4">
+              Explore Our Collections
             </h1>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-6 md:gap-6 gap-x-3  lg:space-y-5 ">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5 md:gap-6 gap-5 ">
               {categories.map((category, index) => (
                 <CategoryItem category={category} key={category.name} />
               ))}
@@ -110,7 +110,7 @@ const HomePage = () => {
                   CLASSIC WEARS
                 </h1>
                 <p
-                  className="text-1xl lg:text-xl tracking-widest"
+                  className="text-1xl lg:text-sm tracking-widest"
                   style={{ textShadow: "2px 2px 6px rgba(0,0,0,0.3)" }}
                 >
                   Stay Relaxed, Stay Stylish: Redefine Comfort with the Perfect

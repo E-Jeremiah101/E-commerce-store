@@ -6,11 +6,11 @@ const slides = [
     url: "/hat-shot.webp",
     title: "Discover What's New",
     description:
-      "Discover the latest trends in eco-friendly fashion designed to inspire your look and lifestyle.",
+      "Discover the latest trends in eco-friendly fashion designed.",
   },
   {
     url: "/portrait-happy-young-womans.jpg",
-    title: "Redefine Your Wardrobe",
+    title: "Redefine Wardrobe",
     description:
       "Step into timeless fashion built for confidence and comfort every day.",
   },
@@ -46,8 +46,8 @@ const HeroSlider = () => {
              lg:h-[36rem] object-center"
             />
             {/* Absolute text */}
-            <div className="lg:hidden text-center text-white px-4 py-6 bg-black h-[10rem]">
-              <h1 className="text-3xl font-bold mb-3 tracking-wider">
+            <div className="lg:hidden text-center text-white px-3 py-6 bg-black h-[10rem]">
+              <h1 className="text-2xl font-bold mb-3 tracking-wider">
                 {slide.title}
               </h1>
               <p className="flex flex-wrap justify-center px-15 max-w-5xl text-gray-300 text-sm tracking-wide">
@@ -57,10 +57,10 @@ const HeroSlider = () => {
 
             {/* {Desktop view} */}
             <div className="hidden absolute inset-0 lg:flex flex-col justify-center items-center text-center px-4 bg-black/30">
-              <h2 className="text-white text-3xl md:text-5xl font-extrabold mb-3 drop-shadow-lg">
+              <h2 className="text-white md:text-5xl font-extrabold mb-3 drop-shadow-lg">
                 {slide.title}
               </h2>
-              <p className="text-white text-base md:text-lg max-w-2xl leading-relaxed">
+              <p className="text-white  md:text-lg max-w-2xl leading-relaxed">
                 {slide.description}
               </p>
             </div>
@@ -69,7 +69,7 @@ const HeroSlider = () => {
       </div>
 
       {/* Optional Dots Indicator */}
-      <div className=" text-black/80 justify-center items-center flex gap-3 border-b-1 h-9 border-gray-300 ">
+      <div className=" text-black/80 justify-center items-center flex gap-3 border-b-1 h-10 border-gray-300 ">
         <>
           <span
             onClick={() => setCurrent((prev) => (prev > 0 ? prev - 1 : prev))}

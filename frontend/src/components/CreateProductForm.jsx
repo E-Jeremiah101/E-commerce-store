@@ -16,8 +16,6 @@ const categories = [
   "sets&cords",
   "underwear&socks",
   "suits&blazers",
-  "bags",
-  "sportwear"
 ];
 
 const CreateProductForm = () => {

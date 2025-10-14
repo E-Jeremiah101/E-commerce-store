@@ -22,26 +22,11 @@ const CollectionTab = () => {
         </Link>
 
         <Link to={"/category/accessories"}>
-          <span className="hover:text-gray-300">ACCESSORIES & Essentials</span>
+          <span className="hover:text-gray-300">ACCESSORIES & ESSENTIALS</span>
         </Link>
         <Link to={"/category/bottoms"}>
           <span className="hover:text-gray-300">BOTTOMS</span>
         </Link>
-        {/* <Link to={"/category/bags"}>
-          <span className="hover:text-gray-300">BAGS</span>
-        </Link>
-        <Link to={"/category/sportwear"}>
-          <span className="hover:text-gray-300">SPORTWEAR</span>
-        </Link> */}
-        {/* <Link>
-                <span className="hover:text-gray-300">ADDIDAS COLLECTION</span>
-              </Link> */}
-        {/* <Link>
-                <span className="hover:text-gray-300">FENDI COLLECTION</span>
-              </Link> */}
-        {/* <Link>
-                <span className="hover:text-gray-300">GUCCI COLLECTION</span>
-              </Link> */}
       </ul>
     </div>
   );

@@ -41,7 +41,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className="w-full bg-black md:bg-white lg:bg-white bg-opacity-90 backdrop-blur-md shadow-lg border-b border-black fixed lg:static text-black top-0 left-0 z-40 transition-all duration-300 ">
+    <header className="w-full bg-black md:bg-gradient-to-br from-white via-gray-100 to-gray-300 bg-opacity-90 backdrop-blur-md shadow-lg border-b border-black fixed lg:static text-black top-0 left-0 z-40 transition-all duration-300 ">
       {/* Mobile View */}
 
       <div className="sm:hidden  ">
@@ -225,25 +225,15 @@ const Navbar = () => {
 
                   <li>
                     <Link to={"/category/accessories"}>
-                      <span className="hover:text-gray-300">ACCESSORIES</span>
+                      <span className="hover:text-gray-300">
+                        ACCESSORIES & ESSENTIALS
+                      </span>
                     </Link>
                   </li>
 
                   <li>
                     <Link to={"/category/bottoms"}>
                       <span className="hover:text-gray-300">BOTTOMS</span>
-                    </Link>
-                  </li>
-
-                  <li>
-                    <Link to={"/category/bags"}>
-                      <span className="hover:text-gray-300">BAGS</span>
-                    </Link>
-                  </li>
-
-                  <li>
-                    <Link to={"/category/sportwear"}>
-                      <span className="hover:text-gray-300">SPORTWEAR</span>
                     </Link>
                   </li>
                 </ul>
