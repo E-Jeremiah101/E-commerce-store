@@ -41,25 +41,24 @@ const OrderHistoryPage = () => {
   
     if (loading)
       return (
-        <div className="flex justify-center items-center h-screen">
+        <div className="flex justify-center items-center h-screen ">
           <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
         </div>
       );
   
     return (
       <>
-      <motion.div
-                className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center bg-white  z-40 py-5"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
-              >
-                <div className="absolute left-4 text-black">
-                  <GoBackButton  />
-                </div>
-               
-              </motion.div>
-        
+        <motion.div
+          className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center  bg-gradient-to-br from-white via-gray-100 to-gray-300 z-40 py-5"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <div className="absolute left-4 text-black">
+            <GoBackButton />
+          </div>
+        </motion.div>
+
         <div className="flex flex-col py-12 sm:px-6 lg:px-8">
           <motion.div
             className=" flex justify-center text-white"
@@ -94,9 +93,8 @@ const OrderHistoryPage = () => {
           >
             {orders.length === 0 ? (
               <div className="text-gray-500 tracking-widest items-center flex justify-center">
-                <p >You have no orders yet.</p>
+                <p>You have no orders yet.</p>
               </div>
-              
             ) : (
               <div className="space-y-6">
                 {orders.map((order) => {
@@ -208,12 +206,13 @@ const OrderHistoryPage = () => {
                         </ul>
                       )}
 
-                      <div className=" rounded-lg p-2 font-bold">
+                      <div className=" p-4 rounded-lg text-gray-600">
                         <p className="text-sm">
                           Subtotal: ₦{order.subtotal.toLocaleString()}
                         </p>
                         {order.discount > 0 && (
-                          <><p>
+                          <>
+                            <p>
                               Coupon Applied:{" "}
                               <span className="text-red-500">-10%</span>{" "}
                               <span className="text-green-500">
@@ -224,7 +223,6 @@ const OrderHistoryPage = () => {
                               Discount: -₦
                               {order.discount.toLocaleString()}
                             </p>
-                            
                           </>
                         )}
                       </div>
