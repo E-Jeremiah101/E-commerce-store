@@ -182,6 +182,7 @@ const SignUpPage = () => {
                 <input
                   type="password"
                   id="password"
+                  autoComplete="new-password"
                   value={formData.password}
                   onChange={(e) =>
                     setFormData({ ...formData, password: e.target.value })

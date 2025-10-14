@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { LogIn, Mail, Lock, Loader, ArrowRight } from "lucide-react";
+import { LogIn, Mail, Lock, Loader, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useUserStore } from "../stores/useUserStore";
@@ -7,6 +7,7 @@ import { useUserStore } from "../stores/useUserStore";
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+   const [showPassword, setShowPassword] = useState(false);
   const { login, loading } = useUserStore();
 
   const [backendError, setBackendError] = useState("");
@@ -81,18 +82,32 @@ const LoginPage = () => {
                 Password
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
                   <Lock className="h-5 w-5 text-gray-400" aria-hidden="true" />
                 </div>
+
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   id="password"
-                  autoComplete="new-password"
+                  autoComplete="current-password"
+                  name="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block text-black w-full px-3 py-2 pl-10  border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-black sm:text-2x1  "
+                  className="block text-black w-full py-2 px-10  border border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-black sm:text-1x1  "
                   placeholder="******"
                 />
+                <div className="absolute inset-y-0 right-1 pl-3 flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                  >
+                    {showPassword ? (
+                      <EyeOff size={20} className="cursor-pointer" />
+                    ) : (
+                      <Eye size={20} className="cursor-pointer" />
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
