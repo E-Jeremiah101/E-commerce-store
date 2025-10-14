@@ -64,7 +64,7 @@ const FeaturedProducts = ({ featuredProducts }) => {
   const isEndDisabled = currentIndex >= featuredProducts.length - itemsPerPage;
 
   return (
-    <div className="py-12 mt-8">
+    <div className="py-12 mt-8 look">
       <div className="container mx-auto px-4">
         <div className=" flex text-center align-middle text-3xl sm:text-6xl  font-bebas text-black mc-4 tracking-widest justify-center mb-5">
           <h2

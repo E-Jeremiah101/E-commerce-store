@@ -4,7 +4,7 @@ import "../components/Otherfeatures.css"
 const OtherFeatures = () => {
 return (
   <>
-    <div className="box-head">
+    <div className="box-head my-35 look">
       <div className="box">
         <span style={{ "--i": 1 }}>
           <img src="/hat-fashion.jpg" alt="img1" />

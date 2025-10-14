@@ -16,7 +16,7 @@ const Footer = () => {
               <tr className="">
                 <th className=" ">Links</th>
                 <th className="  ">Support</th>
-                <th className=" ">Follow Us on:</th>
+                <th className=" ">Socials</th>
               </tr>
             </thead>
             <tbody className="text-gray-100">
@@ -56,7 +56,7 @@ const Footer = () => {
             <label htmlFor="" className="block">
               Join our newsletter
             </label>
-            <input type="text" className="border-1 px-2 py-1 rounded-sm" />
+            <input type="text" className="border-1 px-2 py-1 rounded-sm w-fit" />
             <button className="bg-blue-600 px-2 text-sm border-blue-600 rounded-sm border-1 ml-3 py-1.5">
               Subscribe
             </button>

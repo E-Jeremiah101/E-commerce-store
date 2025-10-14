@@ -285,7 +285,7 @@ const Navbar = () => {
               <span className="text-emerald-400 font-bold text-xl">BUZ</span>
             </Link>
 
-            <nav className="hidden md:flex items-center gap-6  tracking-widest">
+            <nav className=" hidden md:flex items-center gap-6  tracking-widest">
               <Link to={"/"} className="hover:text-gray-300">
                 Home
               </Link>

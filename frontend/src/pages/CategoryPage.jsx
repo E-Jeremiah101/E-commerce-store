@@ -81,7 +81,7 @@ const CategoryPage = () => {
       <div className="min-h-screen">
         <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <motion.div
-            className="grid grid-cols-2 sm:grid-cols-2 
+            className="grid grid-cols-2 sm:grid-cols-2 smd:grid-cols-4 smd:bg-yellow-500
            md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-center"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

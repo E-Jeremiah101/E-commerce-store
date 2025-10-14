@@ -6,7 +6,7 @@ const CategoryItem = ({ category }) => {
   const [selectedColor, setSelectedColor] = useState("");
 
   return (
-    <div className="relative overflow-hidden lg:h-57 w-full rounded-lg lg:rounded-sm group md:mt-4 ">
+    <div className="relative overflow-hidden lg:h-57 w-full rounded-lg lg:rounded-sm group md:mt-4 look">
       <Link
         to={{
           pathname: "/category" + category.href,
@@ -27,7 +27,7 @@ const CategoryItem = ({ category }) => {
             </p>
             <div className="lg:absolute block lg:bottom-0 lg:left-0 lg:right-0 p-2 lg:p-0 z-20">
               <h3 className="text-orange-200/80 block lg:hidden lg:text-black text-1xl lg:text-2xl lg:font-bold mb-2 tracking-widest h-12 lg:h-fit">
-                Explore {category.name}
+                 {category.name}
               </h3>
               {/* <p className="text-white hidden lg:block text-sm mb-1 lg:mb-2 lg:bg-black w-fit tracking-widest rounded-md">
                 Explore {category.name}

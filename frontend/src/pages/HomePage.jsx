@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import FeaturedProducts from "../components/FeaturedProducts.jsx";
 import axios from "../lib/axios";
 import { motion } from "framer-motion";
-import ScrollReveal from "../components/ScrollReveal.jsx";
 import ProductCard from "../components/ProductCard.jsx";
 import FAQSection from "../components/FAQSection";
 import Footer from "../components/Footer.jsx";
@@ -86,22 +85,27 @@ const HomePage = () => {
           <div>
             <HeroSlider />
           </div>
+
         </motion.div>
-        <CollectionTab />
+
+        
+          <CollectionTab />
+        
+        
         <div className="relative z-10 max-w-7xl mx-auto px-4  lg:px-25">
-          <ScrollReveal delay={0.1}>
-            <h1 className="text-black font-sans text-1xl md:hidden  tracking-widest mb-4">
+         
+            <h1 className="text-black font-sans text-1xl md:hidden  tracking-widest mb-4 ">
               Explore Our Collections
             </h1>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5 md:gap-6 gap-5 ">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5 md:gap-6 gap-5 look ">
               {categories.map((category, index) => (
                 <CategoryItem category={category} key={category.name} />
               ))}
             </div>
-          </ScrollReveal>
+        
 
-          <ScrollReveal delay={0.3}>
-            <div className="text-black flex justify-center items-center my-17 lg:mt-25">
+         
+            <div className="text-black flex justify-center items-center my-17 lg:mt-25 look">
               <div className="text-center">
                 <h1
                   className="text-3xl tracking-widest  mb-4 text-black drop-shadow-lg"
@@ -117,24 +121,27 @@ const HomePage = () => {
                   style Fit!
                 </p>
               </div>
-
-              
             </div>
-            <div className="my-40">
-                <OtherFeatures />
-              </div>
-          </ScrollReveal>
+            
+
+              <OtherFeatures className="look" />
+          
+            
+              
+           
+          
 
           {!isLoading && products.length > 0 && (
-            <ScrollReveal delay={0.4}>
-              <FeaturedProducts featuredProducts={products} />
-            </ScrollReveal>
-          )}
+           
+              <FeaturedProducts className="look" featuredProducts={products} />
+           
+          )} 
+        
+          <FAQSection className="look"/>
+        
         </div>
 
-        <ScrollReveal delay={0.5}>
-          <FAQSection />
-        </ScrollReveal>
+       
         <Footer />
       </motion.div>
     </>

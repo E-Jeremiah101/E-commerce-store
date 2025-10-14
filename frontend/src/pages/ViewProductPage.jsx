@@ -58,18 +58,18 @@ const { cart } = useCartStore();
 
   if (loading)
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+      <div className="flex justify-center items-center h-screen ">
+        <div className="w-12 h-12 border-4  border-gray-300 border-t-black rounded-full animate-spin"></div>
       </div>
     );
 
   if (!product) return <p className="text-center mt-10">Product not found.</p>;
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen ">
       {/* Header */}
       <motion.div
-        className="flex items-center justify-between bg-white py-5 fixed top-0 left-0 right-0 z-40 shadow-sm px-6"
+        className="flex items-center justify-between  py-5 fixed top-0 left-0 right-0 z-40 shadow-sm px-6  bg-gradient-to-br from-white via-gray-100 to-gray-300"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -121,22 +121,20 @@ const { cart } = useCartStore();
 
           {/* Details */}
           <div className="flex flex-col space-y-5">
-            <h2 className="text-2xl tracking-widest text-gray-900">
+            <span className="text-2xl tracking-widest text-black m-0 mb-2">
               {product.name}
-            </h2>
-            <p className="text-xl font-bold text-black tracking-tight">
+            </span>
+            <span className="text-1xl text-gray-900 tracking-tight">
               ₦{" "}
               {product.price.toLocaleString(undefined, {
                 minimumFractionDigits: 0,
               })}
-            </p>
+            </span>
 
             {/* Color Options */}
             {product.colors?.length > 0 && (
               <div>
-                <h3 className="text-gray-800 font-medium tracking-widest mb-2">
-                  Colors:
-                </h3>
+                <h3 className="text-gray-800 tracking-widest mb-2">Colors:</h3>
                 <div className="flex gap-2 flex-wrap tracking-widest">
                   {product.colors.map((color, i) => (
                     <button
@@ -158,9 +156,7 @@ const { cart } = useCartStore();
             {/* Size Options */}
             {product.sizes?.length > 0 && (
               <div>
-                <h3 className="text-gray-800 font-medium mb-2 tracking-widest">
-                  Sizes:
-                </h3>
+                <h3 className="text-gray-800  mb-2 tracking-widest">Sizes:</h3>
                 <div className="flex gap-2 flex-wrap tracking-widest ">
                   {product.sizes.map((size, i) => (
                     <button
@@ -199,14 +195,15 @@ const { cart } = useCartStore();
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center w-full text-left focus:outline-none"
         >
-          <span className="text-black/70 bg-gray-200 rounded-4xl mr-3 transition-transform duration-300 h-7 w-7 flex items-center justify-center">
-            {isOpen ? <ChevronDown size={22} /> : <ChevronUp size={22} />}
-          </span>
-
-          <span className="text-lg font-bold text-black/80 hover:text-black/60 transition-colors whitespace-nowrap tracking-widest">
+          <span className="text-1xl text-black hover:text-black/60 transition-colors whitespace-nowrap tracking-widest">
             Product deails
           </span>
-        </button>
+          
+
+          <span className="text-gray-600 rounded-4xl mr-3 transition-transform duration-300 h-7 w-7 flex items-center justify-center">
+            {isOpen ? <ChevronDown size={22} /> : <ChevronUp size={20} />}
+          </span>
+        </button><div className="border-b-1 text-gray-400"></div>
 
         <div
           className={`overflow-hidden transition-all duration-300 ${

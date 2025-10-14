@@ -102,12 +102,12 @@ const ProductReviews = ({ productId }) => {
 
   return (
     <div className="mt-10 px-4 sm:px-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4 tracking-widest">
+      <h3 className="text- text-black mb-4 tracking-widest">
         Reviews ({reviews.length})
       </h3>
 
       {reviews.length === 0 ? (
-        <p className="text-gray-500">No reviews yet</p>
+        <p className="text-gray-500 text-sm">No reviews yet</p>
       ) : (
         <div className="divide-y divide-gray-200">
           {reviews.map((r) => (
