@@ -3,6 +3,7 @@ import {
   FaXTwitter,
   FaInstagram,
   FaWhatsapp,
+  FaTiktok,
   FaRegCopyright,
 } from "react-icons/fa6";
 import { Link } from "react-router-dom";
@@ -27,7 +28,7 @@ const Footer = () => {
                 </td>
                 <td>Privacy</td>
                 <td>
-                  <FaFacebook />
+                  <FaWhatsapp />
                 </td>
               </tr>
               <tr>
@@ -36,7 +37,7 @@ const Footer = () => {
                 </td>
                 <td>FAQs</td>
                 <td>
-                  <FaXTwitter />
+                  <FaTiktok />
                 </td>
               </tr>
               <tr>
@@ -56,7 +57,10 @@ const Footer = () => {
             <label htmlFor="" className="block">
               Join our newsletter
             </label>
-            <input type="text" className="border-1 px-2 py-1 rounded-sm w-fit" />
+            <input
+              type="text"
+              className="border-1 border-white px-2 py-1 rounded-sm w-fit"
+            />
             <button className="bg-blue-600 px-2 text-sm border-blue-600 rounded-sm border-1 ml-3 py-1.5">
               Subscribe
             </button>

@@ -63,7 +63,7 @@ const SearchResultsPage = () => {
   return (
     <>
       <motion.div
-        className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center bg-white  z-40 py-4"
+        className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center  bg-gradient-to-br from-white via-gray-100 to-gray-300  z-40 py-5"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
@@ -76,17 +76,16 @@ const SearchResultsPage = () => {
         </span>
       </motion.div>
 
-      <div className="p-6 mt-8">
+      <div className="p-6 mt-9">
         <h1 className="text-center text-xl text-black tracking-widest py-4">
-           {query}
+          {query}
         </h1>
 
         {loading ? (
           <div className="flex justify-center items-center h-40">
-      <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
-    </div>) :
-
-        products.length === 0 ? (
+            <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+          </div>
+        ) : products.length === 0 ? (
           <p>No products found.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -101,14 +100,14 @@ const SearchResultsPage = () => {
                   <img
                     src={product.images?.[0]}
                     alt={product.name}
-                    className="w-full h-48 object-cover transition-transform duration-300 ease-in-out hover:scale-110"
+                    className="w-full h-44 object-cover transition-transform duration-300 ease-in-out hover:scale-110"
                   />
-                  <div className="p-4">
+                  <div className="p-3 pt-2">
                     <h3 className="text-lg h-11 mb-2 font-semibold text-black tracking-widest">
                       {product.name}
                     </h3>
 
-                    <p className="text-black font-medium mb-4 tracking-widest">
+                    <p className="text-black font-medium mb-2 tracking">
                       ₦{" "}
                       {product.price.toLocaleString(undefined, {
                         minimumFractionDigits: 0,

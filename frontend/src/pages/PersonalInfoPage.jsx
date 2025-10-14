@@ -81,7 +81,7 @@ if(loading   || !user) return (
     <>
       <div className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <motion.div
-          className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center  bg-gradient-to-br from-white via-gray-100 to-gray-300  z-40 py-4"
+          className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center  bg-gradient-to-br from-white via-gray-100 to-gray-300  z-40 py-5"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
