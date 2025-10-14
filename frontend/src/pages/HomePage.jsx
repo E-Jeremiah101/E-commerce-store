@@ -10,6 +10,7 @@ import FAQSection from "../components/FAQSection";
 import Footer from "../components/Footer.jsx";
 import HeroSlider from "../components/HeroSlider";
 import CollectionTab from "../components/CollectionTab.jsx";
+import OtherFeatures from "../components/OtherFeatures.jsx";
 
 const categories = [
   { href: "/bottoms", name: "Bottoms", imageUrl: "/jeans-man.jpg" },
@@ -116,7 +117,12 @@ const HomePage = () => {
                   style Fit!
                 </p>
               </div>
+
+              
             </div>
+            <div className="my-40">
+                <OtherFeatures />
+              </div>
           </ScrollReveal>
 
           {!isLoading && products.length > 0 && (
@@ -124,11 +130,8 @@ const HomePage = () => {
               <FeaturedProducts featuredProducts={products} />
             </ScrollReveal>
           )}
-          
-          
         </div>
-        
-        
+
         <ScrollReveal delay={0.5}>
           <FAQSection />
         </ScrollReveal>

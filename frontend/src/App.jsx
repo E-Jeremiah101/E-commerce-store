@@ -74,8 +74,7 @@ function App() {
     );
   return (
     <>
-
-      <div className="min-h-screen bg-white text-black  relative overflow-hidden ">
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-100 to-gray-300  text-black  relative overflow-hidden ">
         {/*Background gradient */}
 
         <div className="absolute inset-0 overflow-hidden">
