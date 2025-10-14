@@ -92,9 +92,9 @@ const HomePage = () => {
           <CollectionTab />
         
         
-        <div className="relative z-10 max-w-7xl mx-auto px-4  lg:px-25">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 root lg:px-25">
          
-            <h1 className="text-black font-sans text-1xl md:hidden  tracking-widest mb-4 ">
+            <h1 className="text-black font-sans text-1xl md:hidden  tracking-widest mb-4 root">
               Explore Our Collections
             </h1>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5 md:gap-6 gap-5 look ">

@@ -116,11 +116,11 @@ const ProductReviews = ({ productId }) => {
               className="border-b-1 border-gray-300 p-3 mb-6  space-y-2"
             >
               <div className=" flex justify-between">
-                <span className="font-semibold">{r.name}</span>
+                <span className="text-black text-sm">{r.name}</span>
                 <span className="text-xs ">{formatDate(r.createdAt)}</span>
               </div>
               <StarDisplay rating={r.rating} />
-              <p className="text-gray-700">{r.comment}</p>
+              <p className="text-gray-600 text-sm">{r.comment}</p>
               <p className="text-green-500 text-sm flex ">
                 <CircleCheck size={20} /> Verified Purchase
               </p>

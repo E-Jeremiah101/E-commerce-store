@@ -198,12 +198,12 @@ const { cart } = useCartStore();
           <span className="text-1xl text-black hover:text-black/60 transition-colors whitespace-nowrap tracking-widest">
             Product deails
           </span>
-          
 
           <span className="text-gray-600 rounded-4xl mr-3 transition-transform duration-300 h-7 w-7 flex items-center justify-center">
             {isOpen ? <ChevronDown size={22} /> : <ChevronUp size={20} />}
           </span>
-        </button><div className="border-b-1 text-gray-400"></div>
+        </button>
+        <div className="border-b-1 text-gray-400"></div>
 
         <div
           className={`overflow-hidden transition-all duration-300 ${

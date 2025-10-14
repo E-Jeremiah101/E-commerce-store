@@ -102,9 +102,12 @@ const LoginPage = () => {
                     onClick={() => setShowPassword((prev) => !prev)}
                   >
                     {showPassword ? (
-                      <EyeOff size={20} className="cursor-pointer" />
+                      <EyeOff
+                        size={20}
+                        className="cursor-pointer text-gray-500"
+                      />
                     ) : (
-                      <Eye size={20} className="cursor-pointer" />
+                      <Eye size={20} className="cursor-pointer text-gray-500" />
                     )}
                   </button>
                 </div>

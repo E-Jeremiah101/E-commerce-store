@@ -26,7 +26,7 @@ const FAQItem = ({ question, answer }) => {
           isOpen ? "max-h-40 mt-2" : "max-h-0"
         }`}
       >
-        <p className="text-black text-sm pl-9 pr-3 leading-relaxed">
+        <p className="text-gray-700 text-sm pl-9 pr-3 leading-relaxed">
           {answer}
         </p>
       </div>
