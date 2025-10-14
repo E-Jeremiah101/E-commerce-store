@@ -81,13 +81,13 @@ if(loading   || !user) return (
     <>
       <div className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
         <motion.div
-          className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center bg-white  z-40 py-4"
+          className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center  bg-gradient-to-br from-white via-gray-100 to-gray-300  z-40 py-4"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
           <div className="absolute left-4 text-black">
-            <GoBackButton  />
+            <GoBackButton />
           </div>
           <span className=" text-center text-xl  text-gray-900 tracking-widest">
             Personal Info
@@ -149,9 +149,31 @@ if(loading   || !user) return (
               {/* Password */}
               {phones.map((p, i) => (
                 <div key={i}>
-                  <label className="block text-sm font-medium text-gray-800 mb-4">
-                    Phone Number
-                  </label>
+                  <div className="flex justify-between align-middle mb-4">
+                    <label className="block text-sm font-medium text-gray-800">
+                      Phone Number
+                    </label>
+
+                    <label className="flex items-center mt-1">
+                      <input
+                        type="radio"
+                        className="hidden peer"
+                        checked={p.isDefault}
+                        onChange={() => {
+                          const updated = phones.map((ph, idx) => ({
+                            ...ph,
+                            isDefault: idx === i,
+                          }));
+                          setUser({ ...user, phones: updated });
+                        }}
+                      />
+                      <span className="ml-2 text-xs w-3 h-3 rounded-full border-2 border-gray-400 peer-checked:border-black peer-checked:bg-black"></span>
+                      <span className="ml-2 text-xs text-gray-700">
+                        Default
+                      </span>
+                    </label>
+                  </div>
+
                   <div className="mt-1 relative rounded-md shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Phone
@@ -173,31 +195,34 @@ if(loading   || !user) return (
 
                     <div></div>
                   </div>
-
-                  <label className="flex items-center mt-1">
-                    <input
-                      type="radio"
-                      className="hidden peer"
-                      checked={p.isDefault}
-                      onChange={() => {
-                        const updated = phones.map((ph, idx) => ({
-                          ...ph,
-                          isDefault: idx === i,
-                        }));
-                        setUser({ ...user, phones: updated });
-                      }}
-                    />
-                    <span className="ml-2 text-xs w-4 h-4 rounded-full border-2 border-gray-400 peer-checked:border-black peer-checked:bg-black"></span>
-                    <span className="ml-2 text-xs">Default</span>
-                  </label>
                 </div>
               ))}
 
               {addresses.map((a, i) => (
                 <div key={i}>
-                  <label className="block text-sm font-medium text-gray-800 mb-4">
-                    Delivery Address
-                  </label>
+                  <div className="flex justify-between align-middle mb-4">
+                    <label className="block text-sm font-medium text-gray-800 ">
+                      Delivery Address
+                    </label>
+
+                    <label className="flex items-center mt-1">
+                      <input
+                        type="radio"
+                        className="hidden peer"
+                        checked={a.isDefault}
+                        onChange={() => {
+                          const updated = addresses.map((ad, idx) => ({
+                            ...ad,
+                            isDefault: idx === i,
+                          }));
+                          setUser({ ...user, addresses: updated });
+                        }}
+                      />
+                      <span className="ml-2 text-xs w-3 h-3 rounded-full border-2 border-gray-400 peer-checked:border-black peer-checked:bg-black"></span>
+                      <span className="ml-2 text-xs text-gray-700">Default</span>
+                    </label>
+                  </div>
+
                   <div className="mt-1 relative rounded-md shadow-sm">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Home
@@ -216,23 +241,6 @@ if(loading   || !user) return (
                       placeholder="Enter your Address "
                     />
                   </div>
-
-                  <label className="flex items-center mt-1">
-                    <input
-                      type="radio"
-                      className="hidden peer"
-                      checked={a.isDefault}
-                      onChange={() => {
-                        const updated = addresses.map((ad, idx) => ({
-                          ...ad,
-                          isDefault: idx === i,
-                        }));
-                        setUser({ ...user, addresses: updated });
-                      }}
-                    />
-                    <span className="ml-2 text-xs w-4 h-4 rounded-full border-2 border-gray-400 peer-checked:border-black peer-checked:bg-black"></span>
-                    <span className="ml-2 text-xs">Default</span>
-                  </label>
                 </div>
               ))}
 
