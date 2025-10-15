@@ -66,23 +66,9 @@ const orderSchema = new mongoose.Schema(
     couponCode: { type: String, default: null },
     stripeSessionId: {
       type: String,
-      unique: true, //i chage it to false, it was true, im juat testing
-      // sparse: true, // ⬅ allows multiple null values if unique is true
-      // default: null,// stil tetsing
+      unique: true,  
     },
 
-    // status: {
-    //   type: String,
-    //   enum: ["pending", "paid", "failed"],
-    //   default: "pending",
-    //   set: (v) => v.toLowerCase(),
-    // },
-    // paymentDetails: {
-    //   id: String,
-    //   amount: Number,
-    //   currency: String,
-    //   paidAt: Date,
-    // },
   },
   { timestamps: true }
 );
