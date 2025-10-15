@@ -93,7 +93,7 @@ small{
   }
 }
 .look{
-  animation: appear 3s linear;
+  animation: appear 2s linear;
   /* animation-timeline: view();
   animation-range: entry 0% cover 40%; */
  

@@ -67,8 +67,8 @@ const orderSchema = new mongoose.Schema(
     stripeSessionId: {
       type: String,
       unique: true, //i chage it to false, it was true, im juat testing
-      sparse: true, // ⬅ allows multiple null values if unique is true
-      default: null,// stil tetsing
+      // sparse: true, // ⬅ allows multiple null values if unique is true
+      // default: null,// stil tetsing
     },
 
     // status: {
