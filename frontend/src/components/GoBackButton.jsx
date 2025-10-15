@@ -10,7 +10,7 @@ export default function GoBackButton() {
     if (window.history.state && window.history.state.idx > 0) {
       navigate(-1);
     } else {
-      navigate(-1); // fallback to homepage
+      navigate("/"); // fallback to homepage
     }
   };
 

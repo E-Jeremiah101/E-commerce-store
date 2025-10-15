@@ -57,8 +57,7 @@ const PersonalInfoPage = () => {
       });
       alert("Profile updated ✅");
     } catch (err) {
-      console.error("Error updating profile:", err);
-      alert("❌ Failed to update profile.");
+      console.error("Error updating profile:", err);;
     }
   };
 

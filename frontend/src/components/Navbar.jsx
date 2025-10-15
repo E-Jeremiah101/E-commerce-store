@@ -89,10 +89,10 @@ const Navbar = () => {
               </button>
             ) : (
               <>
-                <Link to={"/signup"} className="text-white hover:text-gray-300">
+                <Link to={"/signup"} className="text-gray-800 hover:text-gray-300">
                   <UserPlus size={22} />
                 </Link>
-                <Link to={"/login"} className="text-white hover:text-gray-300">
+                <Link to={"/login"} className="text-gray-800 hover:text-gray-300">
                   <LogIn size={22} />
                 </Link>
               </>
