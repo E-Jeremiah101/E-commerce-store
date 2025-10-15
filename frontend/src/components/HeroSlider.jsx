@@ -42,15 +42,18 @@ const HeroSlider = () => {
               src={slide.url}
               alt={slide.title}
               loading="eager"
-              className="w-full h-[22rem] sm:h-[32rem]    
+              className="w-full h-[21rem] sm:h-[32rem]    
              lg:h-[36rem] object-center"
             />
             {/* Absolute text */}
-            <div className="lg:hidden text-center text-white px-3 py-6 bg-black h-[10rem]">
-              <h1 className="text-2xl font-bold mb-3 tracking-wider">
+            <div className="lg:hidden text-center text-black px-3 py-6 bg-gradient-to-br from-white via-gray-100 to-gray-300 h-[10rem]">
+              <h1
+                className="text-2xl font-bold mb-3 tracking-wider"
+                style={{ textShadow: "2px 2px 6px rgba(0,0,0,0.2)" }}
+              >
                 {slide.title}
               </h1>
-              <p className="flex flex-wrap justify-center px-15 max-w-5xl text-gray-300 text-sm tracking-wide">
+              <p className="flex flex-wrap justify-center px-15 max-w-5xl text-gray-900 text-sm tracking-wide">
                 {slide.description}
               </p>
             </div>
@@ -69,7 +72,10 @@ const HeroSlider = () => {
       </div>
 
       {/* Optional Dots Indicator */}
-      <div className=" text-black/80 justify-center items-center flex gap-3 border-b-1 h-10 border-gray-300 ">
+      <div
+        className=" text-black/80 
+       justify-center items-center flex gap-3 border-b-1 h-10 border-gray-300 "
+      >
         <>
           <span
             onClick={() => setCurrent((prev) => (prev > 0 ? prev - 1 : prev))}

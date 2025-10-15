@@ -64,8 +64,8 @@ const FeaturedProducts = ({ featuredProducts }) => {
   const isEndDisabled = currentIndex >= featuredProducts.length - itemsPerPage;
 
   return (
-    <div className="py-12 mt-8 look">
-      <div className="container mx-auto px-4">
+    <div className="py-19 mt-5">
+      <div className="container mx-auto px-1">
         <div className=" flex text-center align-middle text-3xl sm:text-6xl  font-bebas text-black mc-4 tracking-widest justify-center mb-5">
           <h2
             className="rounded mb-1 text-2xl"
@@ -89,9 +89,9 @@ const FeaturedProducts = ({ featuredProducts }) => {
                 return (
                   <div
                     key={product._id}
-                    className="w-1/2 sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 flex-shrink-0 px-2"
+                    className="w-1/3 sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 flex-shrink-0 px-1"
                   >
-                    <div className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden h-full transition-all duration-300 hover:shadow-xl ">
+                    <div className="bg-gradient-to-br from-white via-gray-100 to-gray-300 bg-opacity-10 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden h-full transition-all duration-300 hover:shadow-xl ">
                       <Link to={`/product/${product._id}`}>
                         <div className="overflow-hidden">
                           <img

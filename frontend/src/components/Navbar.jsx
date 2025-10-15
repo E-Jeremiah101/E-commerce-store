@@ -41,15 +41,15 @@ const Navbar = () => {
   };
 
   return (
-    <header className="w-full bg-black md:bg-gradient-to-br from-white via-gray-100 to-gray-300 bg-opacity-90 backdrop-blur-md shadow-lg border-b border-black fixed lg:static text-black top-0 left-0 z-40 transition-all duration-300 ">
+    <header className="w-full  bg-gradient-to-br from-white via-gray-100 to-gray-300 bg-opacity-90 backdrop-blur-md shadow-lg  fixed lg:static text-black top-0 left-0 z-40 transition-all duration-300 ">
       {/* Mobile View */}
 
       <div className="sm:hidden  ">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between ">
           {/* Left: Logo */}
           <Link to={"/"} className="flex sm:hidden items-center gap-2">
-            <img src="/logo-buz.jpg" alt="Logo" className="h-10 w-auto" />
-            <span className="text-emerald-400 font-bold text-xl">
+            <img src="/logo-buz.jpg" alt="Logo" className="h-10 w-auto rounded-2xl" />
+            <span className="font-bold text-xl">
               Eco~Store
             </span>
           </Link>
@@ -59,7 +59,7 @@ const Navbar = () => {
             {/* Search toggle */}
             <button
               onClick={handleSearchToggle}
-              className="text-gray-300 hover:text-gray-400"
+              className="text-gray-800 hover:text-gray-400"
             >
               {isSearchOpen ? <X size={24} /> : <Search size={24} />}
             </button>
@@ -68,11 +68,11 @@ const Navbar = () => {
             {user && (
               <Link
                 to={"/cart"}
-                className="relative text-white hover:text-gray-300"
+                className="relative text-gray-800 hover:text-gray-400"
               >
-                <ShoppingCart size={22} />
+                <ShoppingCart size={23} />
                 {cart.length > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-white text-black rounded-full px-2 text-xs">
+                  <span className="absolute -top-2 -right-2 bg-black text-white rounded-full px-2 text-xs">
                     {cart.length}
                   </span>
                 )}
@@ -101,7 +101,7 @@ const Navbar = () => {
             {/* Mobile Menu Button */}
             <button
               onClick={handleMenuToggle}
-              className="md:hidden text-gray-300 hover:text-gray-400"
+              className="md:hidden text-gray-800 hover:text-gray-400"
             >
               {isOpen ? <X size={28} /> : <Menu size={28} />}
             </button>
