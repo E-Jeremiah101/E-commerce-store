@@ -166,18 +166,50 @@ async function updateFeaturedProductsCache() {
 };
 
 export const searchProducts = async (req, res) => {
-  const query = req.query.q; // <--- define query here
-  if (!query)
+  const query = req.query.q?.trim(); // remove spaces at the ends
+  if (!query) {
     return res.status(400).json({ message: "No search query provided" });
+  }
 
   try {
-    const products = await Product.find({
-      $or: [
-        { name: { $regex: query, $options: "i" } },
-        { description: { $regex: query, $options: "i" } },
-        { category: { $regex: query, $options: "i" } },
-      ],
+    // Split the query into separate words
+    const keywords = query.split(/\s+/).filter(Boolean);
+
+    const textConditions = [];
+    const numberConditions = [];
+
+    // Loop through each keyword to build search conditions
+    keywords.forEach((word, i) => {
+      const lowerWord = word.toLowerCase();
+
+      // Handle "under" and "above" for price filtering
+      if (!isNaN(word)) {
+        const amount = Number(word);
+        const prevWord = keywords[i - 1]?.toLowerCase();
+
+        if (prevWord === "under") {
+          numberConditions.push({ amount: { $lte: amount } }); // price ≤ value
+        } else if (prevWord === "above") {
+          numberConditions.push({ amount: { $gte: amount } }); // price ≥ value
+        } else {
+          numberConditions.push({ amount }); // exact price match
+        }
+      } else if (lowerWord !== "under" && lowerWord !== "above") {
+        // Build regex for text fields
+        textConditions.push(
+          { name: { $regex: word, $options: "i" } },
+          { description: { $regex: word, $options: "i" } },
+          { category: { $regex: word, $options: "i" } },
+          { size: { $regex: word, $options: "i" } }
+        );
+      }
     });
+
+    // Combine all text and number conditions
+    const queryConditions = { $or: [...textConditions, ...numberConditions] };
+
+    // Perform MongoDB search
+    const products = (await Product.find(queryConditions));
 
     res.status(200).json(products);
   } catch (error) {
@@ -185,26 +217,36 @@ export const searchProducts = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 export const getSearchSuggestions = async (req, res) => {
   try {
-    const { q } = req.query;
-    if (!q) return res.json([]);
+    const query = req.query.q?.trim();
+    if (!query) return res.json([]);
 
-    // search in product name and category
+    const keywords = query.split(/\s+/).filter(Boolean);
+    const textKeywords = keywords.filter((word) => isNaN(word));
+    const numberKeywords = keywords.filter((word) => !isNaN(word));
+
+    const textConditions = textKeywords.flatMap((word) => [
+      { name: { $regex: word, $options: "i" } },
+      { category: { $regex: word, $options: "i" } },
+      { size: { $regex: word, $options: "i" } },
+    ]);
+
+    const numberConditions = numberKeywords.map((num) => ({
+      amount: Number(num),
+    }));
+
     const suggestions = await Product.find(
-      {
-        $or: [
-          { name: { $regex: q, $options: "i" } },
-          { category: { $regex: q, $options: "i" } },
-        ],
-      },
-      { name: 1, category: 1 }
+      { $or: [...textConditions, ...numberConditions] },
+      { name: 1, category: 1, size: 1, amount: 1 }
     ).limit(5);
 
-    // return unique values for dropdown
     const uniqueSuggestions = [
       ...new Set(
-        suggestions.flatMap((s) => [s.name, s.category].filter(Boolean))
+        suggestions.flatMap((s) =>
+          [s.name, s.category, s.size, s.amount?.toString()].filter(Boolean)
+        )
       ),
     ];
 
@@ -214,6 +256,7 @@ export const getSearchSuggestions = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 export const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
