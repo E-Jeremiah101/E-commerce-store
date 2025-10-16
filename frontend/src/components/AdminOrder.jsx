@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import axios from "../lib/axios";
 import { motion } from "framer-motion";
@@ -110,7 +109,9 @@ const AdminOrdersPage = () => {
           >
             <option value="date">Sort by Date</option>
             <option value="totalAmount">Sort by Total Amount</option>
+            <option value="status">Sort by Status</option>
           </select>
+
           <select
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
@@ -121,10 +122,15 @@ const AdminOrdersPage = () => {
                 <option value="desc">Most Recent → Least Recent</option>
                 <option value="asc">Least Recent → Most Recent</option>
               </>
-            ) : (
+            ) : sortBy === "totalAmount" ? (
               <>
                 <option value="asc">Lowest → Highest</option>
                 <option value="desc">Highest → Lowest</option>
+              </>
+            ) : (
+              <>
+                <option value="asc">Pending → Cancelled</option>
+                <option value="desc">Cancelled → Pending</option>
               </>
             )}
           </select>
@@ -331,6 +337,3 @@ const AdminOrdersPage = () => {
 };
 
 export default AdminOrdersPage;
-
-
-

@@ -46,9 +46,10 @@ export const getUserOrders = async (req, res) => {
 
 
 // Get all orders (for admin)
+
 export const getAllOrders = async (req, res) => {
   try {
-    const { sortBy, sortOrder, search } = req.query;
+    const { sortBy, sortOrder = "desc", search } = req.query;
 
     // Build search filter
     let searchFilter = {};
@@ -63,27 +64,83 @@ export const getAllOrders = async (req, res) => {
       };
     }
 
-    // Default sorting: unprocessed first, then pending, then by createdAt descending
+    // Default mongo sort (used when not sorting by status)
     let sortOptions = {
       isProcessed: 1, // unprocessed first
-      status: 1, // Pending → Processing → Shipped → Delivered
-      createdAt: -1, // newest first
+      createdAt: -1, // newest first fallback
     };
 
-    // Apply custom sort from query
-    if (sortBy === "date")
-      sortOptions = { ...sortOptions, createdAt: sortOrder === "asc" ? 1 : -1 };
-    if (sortBy === "totalAmount")
+    // If sorting by date or amount, merge into sortOptions
+    if (sortBy === "date") {
+      sortOptions = { isProcessed: 1, createdAt: sortOrder === "asc" ? 1 : -1 };
+    } else if (sortBy === "totalAmount") {
       sortOptions = {
-        ...sortOptions,
+        isProcessed: 1,
         totalAmount: sortOrder === "asc" ? 1 : -1,
+        createdAt: -1,
       };
+    } else {
+      // keep default isProcessed primary sort
+      sortOptions = { ...sortOptions, createdAt: -1 };
+    }
 
-    const orders = await Order.find(searchFilter)
+    // Fetch orders (do NOT ask Mongo to sort by custom status order)
+    let orders = await Order.find(searchFilter)
       .populate("user", "name email phone address")
       .populate("products.product", "name price image")
-      .sort(sortOptions);
+      .lean(); // use lean for faster in-memory sorting and to avoid mongoose docs
 
+    // Handle status sorting manually (custom order)
+    if (sortBy === "status") {
+      const statusOrder = [
+        "Pending",
+        "Processing",
+        "Shipped",
+        "Delivered",
+        "Cancelled",
+      ];
+      // Map status to index (unknown statuses get large index so they appear at end)
+      const statusIndex = (s) => {
+        const idx = statusOrder.indexOf(s);
+        return idx === -1 ? statusOrder.length + 10 : idx;
+      };
+
+      orders.sort((a, b) => {
+        const ai = statusIndex(a.status);
+        const bi = statusIndex(b.status);
+        // asc: Pending -> Cancelled, desc: Cancelled -> Pending
+        return sortOrder === "asc" ? ai - bi : bi - ai;
+      });
+
+      // Still keep isProcessed unprocessed-first inside same status order:
+      // stable sort: reorder so that within each status, isProcessed=false appear first
+      orders = orders.sort((a, b) => {
+        if (a.status === b.status) {
+          // false (unprocessed) first
+          return a.isProcessed === b.isProcessed ? 0 : a.isProcessed ? 1 : -1;
+        }
+        return 0; // keep relative order (status ordering already applied)
+      });
+    } else {
+      // Not status-sorting: use Mongo-like sorting in-memory as fallback
+      // This guarantees isProcessed primary sorting if present in sortOptions
+      const mongoSortKeys = Object.keys(sortOptions);
+      orders.sort((a, b) => {
+        for (const key of mongoSortKeys) {
+          const dir = sortOptions[key] === 1 ? 1 : -1;
+          const va = a[key];
+          const vb = b[key];
+          if (va == null && vb == null) continue;
+          if (va == null) return 1 * dir;
+          if (vb == null) return -1 * dir;
+          if (va < vb) return -1 * dir;
+          if (va > vb) return 1 * dir;
+        }
+        return 0;
+      });
+    }
+
+    // Map response (same shape you use)
     res.status(200).json({
       success: true,
       count: orders.length,
@@ -102,7 +159,7 @@ export const getAllOrders = async (req, res) => {
         deliveryAddress: order.deliveryAddress,
         phone: order.phone,
         createdAt: order.createdAt,
-        products: order.products.map((p) => ({
+        products: (order.products || []).map((p) => ({
           _id: p._id,
           product: p.product || null,
           quantity: p.quantity,
@@ -116,6 +173,7 @@ export const getAllOrders = async (req, res) => {
       })),
     });
   } catch (error) {
+    console.error("getAllOrders error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -286,3 +344,156 @@ export const createOrder = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// export const getAllOrders = async (req, res) => {
+//   try {
+//     const { sortBy, sortOrder = "desc", search } = req.query;
+
+//     // Build search filter
+//     let searchFilter = {};
+//     if (search) {
+//       const isObjectId = /^[0-9a-fA-F]{24}$/.test(search); // check if search is a valid MongoDB ObjectId
+//       searchFilter = {
+//         $or: [
+//           { orderNumber: { $regex: search, $options: "i" } },
+//           ...(isObjectId ? [{ _id: search }] : []),
+//           { "user.name": { $regex: search, $options: "i" } },
+//         ],
+//       };
+//     }
+
+//     // Default mongo sort (used when not sorting by status)
+//     let sortOptions = {
+//       isProcessed: 1, // unprocessed first
+//       createdAt: -1, // newest first fallback
+//     };
+
+//     // If sorting by date or amount, merge into sortOptions
+//     if (sortBy === "date") {
+//       sortOptions = { isProcessed: 1, createdAt: sortOrder === "asc" ? 1 : -1 };
+//     } else if (sortBy === "totalAmount") {
+//       sortOptions = {
+//         isProcessed: 1,
+//         totalAmount: sortOrder === "asc" ? 1 : -1,
+//         createdAt: -1,
+//       };
+//     } else {
+//       // keep default isProcessed primary sort
+//       sortOptions = { ...sortOptions, createdAt: -1 };
+//     }
+
+//     // Fetch orders (do NOT ask Mongo to sort by custom status order)
+//     let orders = await Order.find(searchFilter)
+//       .populate("user", "name email phone address")
+//       .populate("products.product", "name price image")
+//       .lean(); // use lean for faster in-memory sorting and to avoid mongoose docs
+
+//     // Handle status sorting manually (custom order)
+//     if (sortBy === "status") {
+//       const statusOrder = [
+//         "Pending",
+//         "Processing",
+//         "Shipped",
+//         "Delivered",
+//         "Cancelled",
+//       ];
+//       // Map status to index (unknown statuses get large index so they appear at end)
+//       const statusIndex = (s) => {
+//         const idx = statusOrder.indexOf(s);
+//         return idx === -1 ? statusOrder.length + 10 : idx;
+//       };
+
+//       orders.sort((a, b) => {
+//         const ai = statusIndex(a.status);
+//         const bi = statusIndex(b.status);
+//         // asc: Pending -> Cancelled, desc: Cancelled -> Pending
+//         return sortOrder === "asc" ? ai - bi : bi - ai;
+//       });
+
+//       // Still keep isProcessed unprocessed-first inside same status order:
+//       // stable sort: reorder so that within each status, isProcessed=false appear first
+//       orders = orders.sort((a, b) => {
+//         if (a.status === b.status) {
+//           // false (unprocessed) first
+//           return a.isProcessed === b.isProcessed ? 0 : a.isProcessed ? 1 : -1;
+//         }
+//         return 0; // keep relative order (status ordering already applied)
+//       });
+//     } else {
+//       // Not status-sorting: use Mongo-like sorting in-memory as fallback
+//       // This guarantees isProcessed primary sorting if present in sortOptions
+//       const mongoSortKeys = Object.keys(sortOptions);
+//       orders.sort((a, b) => {
+//         for (const key of mongoSortKeys) {
+//           const dir = sortOptions[key] === 1 ? 1 : -1;
+//           const va = a[key];
+//           const vb = b[key];
+//           if (va == null && vb == null) continue;
+//           if (va == null) return 1 * dir;
+//           if (vb == null) return -1 * dir;
+//           if (va < vb) return -1 * dir;
+//           if (va > vb) return 1 * dir;
+//         }
+//         return 0;
+//       });
+//     }
+
+//     // Map response (same shape you use)
+//     res.status(200).json({
+//       success: true,
+//       count: orders.length,
+//       orders: orders.map((order) => ({
+//         _id: order._id,
+//         orderNumber: order.orderNumber,
+//         user: order.user,
+//         status: order.status,
+//         isProcessed: order.isProcessed,
+//         deliveredAt: order.deliveredAt,
+//         updatedAt: order.updatedAt,
+//         totalAmount: order.totalAmount,
+//         subtotal: order.subtotal,
+//         discount: order.discount,
+//         coupon: order.coupon,
+//         deliveryAddress: order.deliveryAddress,
+//         phone: order.phone,
+//         createdAt: order.createdAt,
+//         products: (order.products || []).map((p) => ({
+//           _id: p._id,
+//           product: p.product || null,
+//           quantity: p.quantity,
+//           price: p.price,
+//           size: p.selectedSize || null,
+//           color: p.selectedColor || null,
+//           selectedCategory: p.selectedCategory || null,
+//           name: p.name || p.product?.name || "Unknown Product",
+//           image: p.image || p.product?.image || "/placeholder.png",
+//         })),
+//       })),
+//     });
+//   } catch (error) {
+//     console.error("getAllOrders error:", error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
