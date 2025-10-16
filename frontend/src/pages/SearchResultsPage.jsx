@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import {useParams, useSearchParams, Link } from "react-router-dom";
 import axios from "../lib/axios";
 import { useCartStore } from "../stores/useCartStore";
 import { toast } from "react-hot-toast";
@@ -17,11 +17,31 @@ const SearchResultsPage = () => {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(15);
+
+  // Adjust items per page based on screen size
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setItemsPerPage(8); // md and above
+      } else {
+        setItemsPerPage(10); // mobile
+      }
+    };
+
+    handleResize(); // Run on load
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   useEffect(() => {
     const fetchResults = async () => {
       if (!query) return;
       setLoading(true);
       setSearched(true);
+      setCurrentPage(1);
       try {
         const res = await axios.get(`/products/search?q=${query}`);
         setProducts(res.data);
@@ -37,7 +57,7 @@ const SearchResultsPage = () => {
         setSelectedOptions(defaults);
       } catch (error) {
         console.error("Error fetching search results:", error);
-      }finally{
+      } finally {
         setLoading(false);
       }
     };
@@ -57,8 +77,20 @@ const SearchResultsPage = () => {
     }
 
     addToCart(product, size || null, color || null);
- 
   };
+
+  // Pagination logic
+  const totalProducts = products?.length || 0;
+  const totalPages = Math.ceil(totalProducts / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const displayedProducts = products?.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
+
+  const handlePrev = () => setCurrentPage((p) => Math.max(p - 1, 1));
+  const handleNext = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
+  const handlePageClick = (pageNum) => setCurrentPage(pageNum);
 
   return (
     <>
@@ -89,7 +121,7 @@ const SearchResultsPage = () => {
           <p>No products found.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {products.map((product) => {
+            {displayedProducts?.map((product) => {
               const { size, color } = selectedOptions[product._id] || {};
 
               return (
@@ -122,6 +154,43 @@ const SearchResultsPage = () => {
                 </div>
               );
             })}
+          </div>
+        )}
+        {/* ✅ Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center space-x-2 mt-10">
+            <button
+              onClick={handlePrev}
+              disabled={currentPage === 1}
+              className="px-3 py-1 text-sm bg-gray-800 text-white rounded disabled:opacity-40"
+            >
+              Prev
+            </button>
+
+            {[...Array(totalPages).keys()].map((num) => {
+              const page = num + 1;
+              return (
+                <button
+                  key={page}
+                  onClick={() => handlePageClick(page)}
+                  className={`px-3 py-1 text-sm rounded ${
+                    currentPage === page
+                      ? "bg-yellow-700 text-white"
+                      : "bg-gray-700 text-white hover:bg-gray-600"
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={handleNext}
+              disabled={currentPage === totalPages}
+              className="px-3 py-1 text-sm bg-gray-800 text-white rounded disabled:opacity-40"
+            >
+              Next
+            </button>
           </div>
         )}
       </div>

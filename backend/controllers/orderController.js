@@ -48,40 +48,62 @@ export const getUserOrders = async (req, res) => {
 // Get all orders (for admin)
 export const getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find()
-      .populate("user", "name email phone address") // show user info
-      .populate("products.product", "name price image ")
-      .sort({ createdAt: -1 });
-      res.status(200).json({
-        success: true,
-        count: orders.length,
-        orders: orders.map((order) => ({
-          _id: order._id,
-          orderNumber: order.orderNumber,
-          user: order.user,
-          status: order.status,
-          deliveredAt: order.deliveredAt,
-          updatedAt:order.updatedAt,
-          totalAmount: order.totalAmount,
-          subtotal: order.subtotal,
-          discount: order.discount,
-          coupon: order.coupon,
-          deliveryAddress: order.deliveryAddress,
-          phone: order.phone,
-          createdAt: order.createdAt,
-          products: order.products.map((p) => ({
-            _id: p._id,
-            product: p.product || null,
-            quantity: p.quantity,
-            price: p.price,
-            size: p.selectedSize || null,
-            color: p.selectedColor || null,
-            selectedCategory: p.selectedCategory || null,
-            name: p.name || p.product?.name || "Unknown Product",
-            image: p.image || p.product?.image || "/placeholder.png",
-          })),
+    const { sortBy, search, sortOrder } = req.query;
+
+    // ✅ Build search filter
+    let searchFilter = {};
+
+    if (search) {
+      searchFilter = {
+        $or: [
+          { orderNumber: { $regex: search, $options: "i" } }, //case sensitive
+          { "user.name": { $regex: search, $options: "i" } }, // client name
+        ],
+      };
+    }
+
+    // Determine sorting
+   let sortOptions = { createdAt: -1 }; // default: newest first
+   if (sortBy === "date")
+     sortOptions = { createdAt: sortOrder === "asc" ? 1 : -1 };
+   if (sortBy === "totalAmount")
+     sortOptions = { totalAmount: sortOrder === "asc" ? 1 : -1 };
+    //  Fetch orders with filters and sorting
+      const orders = await Order.find(searchFilter)
+        .populate("user", "name email phone address")
+        .populate("products.product", "name price image")
+        .sort(sortOptions);
+
+    res.status(200).json({
+      success: true,
+      count: orders.length,
+      orders: orders.map((order) => ({
+        _id: order._id,
+        orderNumber: order.orderNumber,
+        user: order.user,
+        status: order.status,
+        deliveredAt: order.deliveredAt,
+        updatedAt: order.updatedAt,
+        totalAmount: order.totalAmount,
+        subtotal: order.subtotal,
+        discount: order.discount,
+        coupon: order.coupon,
+        deliveryAddress: order.deliveryAddress,
+        phone: order.phone,
+        createdAt: order.createdAt,
+        products: order.products.map((p) => ({
+          _id: p._id,
+          product: p.product || null,
+          quantity: p.quantity,
+          price: p.price,
+          size: p.selectedSize || null,
+          color: p.selectedColor || null,
+          selectedCategory: p.selectedCategory || null,
+          name: p.name || p.product?.name || "Unknown Product",
+          image: p.image || p.product?.image || "/placeholder.png",
         })),
-      });
+      })),
+    });
     // res.status(200).json({ success: true, orders });
   } catch (error) {
     res.status(500).json({ message: error.message });

@@ -10,11 +10,11 @@ const CategoryPage = () => {
   const { category } = useParams();
   const [isLoading, setIsLoading] = useState(true);
 
-  // ✅ Pagination state
+  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // ✅ Adjust items per page based on screen size
+  // Adjust items per page based on screen size
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 768) {
@@ -47,7 +47,7 @@ const CategoryPage = () => {
       </div>
     );
 
-  // ✅ Pagination logic
+  //  Pagination logic
   const totalProducts = products?.length || 0;
   const totalPages = Math.ceil(totalProducts / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;

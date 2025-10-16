@@ -80,8 +80,8 @@ const AnalyticsTab = () => {
 
   if (isLoading)
     return (
-      <div className="flex justify-center items-center h-[80vh]">
-        <Loader2 className="animate-spin w-10 h-10 text-gray-400" />
+      <div className="flex justify-center items-center h-screen">
+        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
       </div>
     );
 
