@@ -48,31 +48,41 @@ export const getUserOrders = async (req, res) => {
 // Get all orders (for admin)
 export const getAllOrders = async (req, res) => {
   try {
-    const { sortBy, search, sortOrder } = req.query;
+    const { sortBy, sortOrder, search } = req.query;
 
-    // ✅ Build search filter
+    // Build search filter
     let searchFilter = {};
-
     if (search) {
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(search); // check if search is a valid MongoDB ObjectId
       searchFilter = {
         $or: [
-          { orderNumber: { $regex: search, $options: "i" } }, //case sensitive
-          { "user.name": { $regex: search, $options: "i" } }, // client name
+          { orderNumber: { $regex: search, $options: "i" } },
+          ...(isObjectId ? [{ _id: search }] : []),
+          { "user.name": { $regex: search, $options: "i" } },
         ],
       };
     }
 
-    // Determine sorting
-   let sortOptions = { createdAt: -1 }; // default: newest first
-   if (sortBy === "date")
-     sortOptions = { createdAt: sortOrder === "asc" ? 1 : -1 };
-   if (sortBy === "totalAmount")
-     sortOptions = { totalAmount: sortOrder === "asc" ? 1 : -1 };
-    //  Fetch orders with filters and sorting
-      const orders = await Order.find(searchFilter)
-        .populate("user", "name email phone address")
-        .populate("products.product", "name price image")
-        .sort(sortOptions);
+    // Default sorting: unprocessed first, then pending, then by createdAt descending
+    let sortOptions = {
+      isProcessed: 1, // unprocessed first
+      status: 1, // Pending → Processing → Shipped → Delivered
+      createdAt: -1, // newest first
+    };
+
+    // Apply custom sort from query
+    if (sortBy === "date")
+      sortOptions = { ...sortOptions, createdAt: sortOrder === "asc" ? 1 : -1 };
+    if (sortBy === "totalAmount")
+      sortOptions = {
+        ...sortOptions,
+        totalAmount: sortOrder === "asc" ? 1 : -1,
+      };
+
+    const orders = await Order.find(searchFilter)
+      .populate("user", "name email phone address")
+      .populate("products.product", "name price image")
+      .sort(sortOptions);
 
     res.status(200).json({
       success: true,
@@ -82,6 +92,7 @@ export const getAllOrders = async (req, res) => {
         orderNumber: order.orderNumber,
         user: order.user,
         status: order.status,
+        isProcessed: order.isProcessed,
         deliveredAt: order.deliveredAt,
         updatedAt: order.updatedAt,
         totalAmount: order.totalAmount,
@@ -104,11 +115,11 @@ export const getAllOrders = async (req, res) => {
         })),
       })),
     });
-    // res.status(200).json({ success: true, orders });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // Update order status
 export const updateOrderStatus = async (req, res) => {
@@ -120,6 +131,7 @@ export const updateOrderStatus = async (req, res) => {
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     order.status = status;
+    order.isProcessed = true;
 
     if (status === "Delivered") order.deliveredAt = Date.now();
 
