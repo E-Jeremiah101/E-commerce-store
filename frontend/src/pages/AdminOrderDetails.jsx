@@ -40,7 +40,7 @@ const AdminOrderDetails = () => {
 
   return (
     <motion.div
-      className="px-4 lg:px-28 py-8"
+      className="px-4 lg:px-28 py-8 bg-white "
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
@@ -55,11 +55,22 @@ const AdminOrderDetails = () => {
           <GoBackButton />
         </div>
         <span className="text-lg font-semibold tracking-wider text-gray-900">
-          {order.orderNumber}
+          {order._id}
+        </span>
+        <span
+          className={`px-1 py-1 rounded text-xs font-medium ${
+            order.status === "Delivered"
+              ? "bg-green-600 text-white"
+              : order.status === "Cancelled"
+              ? "bg-red-600 text-white"
+              : "bg-yellow-500 text-white"
+          }`}
+        >
+          {order.status}
         </span>
       </motion.div>
       {/* Order Info */}
-      <div className=" grid grid-cols-2 text-black gap-5 my-12 ">
+      <div className=" bg-gradient-to-br from-white via-gray-100 to-gray-300 grid grid-cols-2 text-black gap-5 mt-12 py-6 px-2  ">
         <div>
           <h1 className="text-gray-600">Order ID</h1>
           <p className="font-semibold">{order.orderNumber}</p>
@@ -74,10 +85,10 @@ const AdminOrderDetails = () => {
 
         <div>
           <h1 className="text-gray-600">Order ID</h1>
-          <p className="font-semibold">{order.orderNumber}</p>
+          <p className="font-semibold">{}</p>
         </div>
 
-        <div>
+        {/* <div>
           {order.deliveredAt && (
             <>
               <h1 className="text-gray-600">Order Delivered:</h1>{" "}
@@ -86,31 +97,37 @@ const AdminOrderDetails = () => {
               </p>
             </>
           )}
+        </div> */}
+        <div>
+          <h1 className="text-gray-600">Order Updated:</h1>{" "}
+          <p className="font-semibold">
+            {new Date(order.updatedAt).toLocaleString()}
+          </p>
         </div>
       </div>
-      <div className="t text-3xl border-t-1 font-bold my-5"></div>
+      <div className="py-5 text-3xl border-t-1 border-gray-300  "></div>
 
       {/* Customer Info */}
-      <div className=" text-black rounded-lg  mb-6">
+      <div className=" text-black rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 py-6 px-2">
         <h2 className="text-lg font-semibold mb-4  border-gray-600 pb-2">
           RECEIVER INFO
         </h2>
-        <div className="grid md:grid-cols-2 gap-4 text-sm">
-          <div className="flex">
+        <div className="grid grid-cols-1 gap-4 text-sm">
+          <div className="grid grid-cols-2">
             <span className="text-gray-600">Name:</span>{" "}
             <span className="font-semibold ">{order.user?.name}</span>
           </div>
-          <div className="flex ">
+          <div className="grid grid-cols-2 ">
             <span className="text-gray-600">Email:</span>{" "}
             <span className="font-semibold"> {order.user?.email}</span>
           </div>
-          <p className="flex ">
+          <p className="grid grid-cols-2 ">
             <span className="text-gray-600">Phone:</span>{" "}
             <span className="font-semibold">
               {order.phone || "Not provided"}
             </span>
           </p>
-          <div className="flex">
+          <div className="grid grid-cols-2">
             <span className="text-gray-600">Address:</span>{" "}
             <span className="font-semibold">
               {" "}
@@ -120,9 +137,9 @@ const AdminOrderDetails = () => {
         </div>
       </div>
 
-      <div className="t text-3xl border-t-1 font-bold my-5"></div>
+      <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
 
-      <div className=" text-black rounded-lg  mb-6">
+      <div className=" text-black rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 py-6 px-2">
         <h2 className="text-lg font-semibold mb-4  border-gray-600 pb-2">
           PAYMENT METHOD
         </h2>
@@ -133,54 +150,70 @@ const AdminOrderDetails = () => {
         </div>
       </div>
 
-      <div className="t text-3xl border-t-1 font-bold my-5"></div>
+      <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
       {/* Products */}
-      <div className=" text-black rounded-lg  mb-6">
+      <div className=" text-black rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 py-6 px-2 ">
         <h2 className="text-lg font-semibold mb-4  pb-2">PRODUCTS</h2>
         <div className="space-y-4">
           {order.products.map((item) => (
-            <div key={item._id} className="flex gap-4  p-4 rounded-lg">
-              <img
-                src={item.image}
-                alt={item.name}
-                className="w-20 h-20 object-cover rounded"
-              />
-              <div className="flex-1 space-y-2">
-                <h3 className="text-white font-medium">{item.name}</h3>
-                <div className="text-sm text-gray-700">
-                  <p>Qty: {item.quantity}</p>
-                  <p>Price: ₦{item.price.toLocaleString()}</p>
-                  <p>Total: ₦{(item.price * item.quantity).toLocaleString()}</p>
-                </div>
-                <div className="flex gap-2 text-xs">
-                  <span className="bg-gray-600 px-2 py-1 rounded">
-                    Size: {item.selectedSize || "N/A"}
-                  </span>
-                  <span className="bg-gray-600 px-2 py-1 rounded">
-                    Color: {item.selectedColor || "N/A"}
-                  </span>
-                  <span className="bg-gray-600 px-2 py-1 rounded">
-                    Category: {item.selectedCategory || "N/A"}
-                  </span>
-                </div>
+            <div key={item._id} className="grid grid-cols-3   rounded-lg">
+              <div>
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  className="w-20 h-20 object-cover rounded"
+                />
+              </div>
+
+              <div className="text-sm text-gray-900">
+                <h3 className="text-bblack font-medium py-1">{item.name}</h3>
+                <p className="py-1">Qty: {item.quantity}</p>
+                <p className="py-1">₦{item.price.toLocaleString()}</p>
+                {/* <p>Total: ₦{(item.price * item.quantity).toLocaleString()}</p> */}
+              </div>
+
+              <div className=" gap-2 text-xs">
+                <span className=" block rounded py-1">
+                  Size: {item.selectedSize || "N/A"}
+                </span>
+                <span className=" block py-1 rounded">
+                  Color: {item.selectedColor || "N/A"}
+                </span>
+                <span className=" py-1 block rounded">
+                  Category: {item.selectedCategory || "N/A"}
+                </span>
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
       {/* Totals */}
-      <div className="bg-gray-800 text-gray-100 rounded-lg p-5">
-        <h2 className="text-lg font-semibold mb-4 border-b border-gray-600 pb-2">
-          Payment Summary
-        </h2>
-        <p>Subtotal: ₦{order.subtotal.toLocaleString()}</p>
+      <div className=" bg-gradient-to-br from-white via-gray-100 to-gray-300 text-gray-600 rounded-lg py-6 px-2">
+        <h2 className="text-lg font-semibold mb-4  pb-2">Payment Summary</h2>
+        <p>
+          Subtotal:{" "}
+          <span className="text-black">
+            {" "}
+            ₦{order.subtotal.toLocaleString()}
+          </span>
+        </p>
         {order.discount > 0 && (
           <>
-            <p>Coupon: {order.coupon?.code}</p>
-            <p>Discount: -₦{order.discount.toLocaleString()}</p>
+            <p>
+              Coupon:{" "}
+              <span className="text-green-600 ">{order.coupon?.code}</span>
+            </p>
+            <p>
+              Discount:{" "}
+              <span className="text-red-500">
+                -₦{order.discount.toLocaleString()}
+              </span>
+            </p>
           </>
         )}
-        <p className="text-yellow-400 font-bold text-lg mt-2">
+        <p className="text-black tracking-wider font-bold text-lg mt-2">
           Total: ₦{order.totalAmount.toLocaleString()}
         </p>
       </div>
