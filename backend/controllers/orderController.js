@@ -344,6 +344,22 @@ export const createOrder = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+export const getOrderById = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate("user", "name email phone address")
+      .populate("products.product", "name price image").lean();
+
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    res.json({ success: true, order });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
 
 

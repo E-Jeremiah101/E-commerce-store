@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "../lib/axios";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const AdminOrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -10,6 +11,7 @@ const AdminOrdersPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
+  const navigate = useNavigate();
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -181,20 +183,7 @@ const AdminOrdersPage = () => {
 
               {/* Order details */}
               <div className="grid md:grid-cols-3 grid-cols-2 gap-3 md:gap-5 py-4 pr-7 pl-3 bg-gray-700 rounded-lg shadow mb-2">
-                <div className="text-gray-200 mb-2">
-                  Customer Name:{" "}
-                  <p className="text-sm font-semibold">{order.user.name}</p>
-                </div>
-                <div className="text-gray-200 mb-2  overflow-auto ">
-                  Customer Email:{" "}
-                  <p className="text-sm font-semibold">{order.user.email}</p>
-                </div>
-                <div className="text-gray-200 mb-2 ">
-                  Customer Phone:{" "}
-                  <p className="text-sm font-semibold">
-                    {order.phone || "Not provided"}
-                  </p>
-                </div>
+               
                 <div className="text-gray-200 mb-2">
                   Order date:{" "}
                   <p className="text-sm font-semibold">
@@ -218,7 +207,7 @@ const AdminOrdersPage = () => {
                     {new Date(order.updatedAt).toLocaleString()}
                   </p>
                 </div>
-                {order.status === "Delivered" && (
+                {/* {order.status === "Delivered" && (
                   <div className="text-gray-200 mb-2">
                     Package delivered:{" "}
                     <p className="text-sm font-semibold">
@@ -226,7 +215,7 @@ const AdminOrdersPage = () => {
                         "Not provided"}
                     </p>
                   </div>
-                )}
+                )} */}
               </div>
 
               {/* Product list */}
@@ -291,6 +280,14 @@ const AdminOrdersPage = () => {
                 <p className="font-bold text-yellow-100 text-lg">
                   Total: ₦{order.totalAmount.toLocaleString()}
                 </p>
+              </div>
+              <div className="flex justify-end mt-3">
+                <button
+                  onClick={() => navigate(`/admin/orders/${order._id}`)}
+                  className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-md text-sm tracking-widest"
+                >
+                  View Details
+                </button>
               </div>
             </div>
           ))}

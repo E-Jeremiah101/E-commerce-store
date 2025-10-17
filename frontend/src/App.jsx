@@ -3,6 +3,7 @@ import HomePage from "./pages/HomePage.jsx";
 import SignUpPage from "./pages/SignUpPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import AdminPage from "./pages/AdminPage.jsx";
+import AdminOrderDetails from "./pages/AdminOrderDetails.jsx";
 import OrderHistoryPage from "./pages/OrderHistoryPage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
 import Navbar from "./components/Navbar.jsx";
@@ -117,6 +118,10 @@ function App() {
             <Route
               path="/order-history"
               element={user ? <OrderHistoryPage /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/admin/orders/:id"
+              element={ <AdminOrderDetails /> }
             />
 
             <Route

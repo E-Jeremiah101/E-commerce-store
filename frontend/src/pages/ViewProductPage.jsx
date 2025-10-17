@@ -48,8 +48,8 @@ const { cart } = useCartStore();
     }
     addToCart(
       product,
-      selectedColor,
       selectedSize,
+      selectedColor,
     
     );
     
