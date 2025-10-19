@@ -273,7 +273,7 @@ const AdminOrdersPage = () => {
                       </span>
                     </p>
                     <p className="text-sm my-1 font-bold">
-                      Discount: -₦{order.discount.toLocaleString()}
+                      Discount: <span className="text-red-500">-₦{order.discount.toLocaleString()}</span>
                     </p>
                   </>
                 )}

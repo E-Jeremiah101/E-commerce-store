@@ -38,7 +38,14 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+      enum: [
+        "Pending",
+        "Paid",
+        "Processing",
+        "Shipped",
+        "Delivered",
+        "Cancelled",
+      ],
       default: "Pending",
     },
     isProcessed: { type: Boolean, default: false },
@@ -56,6 +63,22 @@ const orderSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    paymentMethod: {
+      method: {
+        type: String,
+        enum: ["card", "bank_transfer", "ussd", "mobile_money", "qr", "barter"],
+        required: true,
+      },
+      status:{type: String},
+      card: {
+        brand: { type: String },
+        last4: { type: String },
+        exp_month: { type: String },
+        exp_year: { type: String },
+        type: { type: String },
+        issuer: { type: String },
+      },
+    },
 
     updatedAt: Date,
     subtotal: { type: Number, required: false, default: 0 },
@@ -67,9 +90,18 @@ const orderSchema = new mongoose.Schema(
     couponCode: { type: String, default: null },
     stripeSessionId: {
       type: String,
-      unique: true,  
+      unique: true,
     },
-
+    flutterwaveRef: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    flutterwaveTransactionId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
   },
   { timestamps: true }
 );

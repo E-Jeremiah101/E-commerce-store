@@ -9,7 +9,7 @@ import {
 import { Link } from "react-router-dom";
 const Footer = () => {
   return (
-    <div className="bg-black text-white ">
+    <div className=" text-black ">
       <div className="grid grid-cols-1 md:grid-cols-2 m-0  py-16 lg:px-16    overflow-hidden whitespace-nowrap">
         <div>
           <table className="border-separate lg:border-spacing-x-15 border-spacing-x-11  border-spacing-y-4">
@@ -20,7 +20,7 @@ const Footer = () => {
                 <th className=" ">Socials</th>
               </tr>
             </thead>
-            <tbody className="text-gray-100">
+            <tbody className="text-black">
               <tr>
                 <td>
                   {" "}
@@ -59,9 +59,9 @@ const Footer = () => {
             </label>
             <input
               type="text"
-              className="border-1 border-white px-2 py-1 rounded-sm w-fit"
+              className="border-1 border-gray-500 px-2 py-1 rounded-sm w-fit"
             />
-            <button className="bg-blue-600 px-2 text-sm border-blue-600 rounded-sm border-1 ml-3 py-1.5">
+            <button className="bg-gray-500 px-2 text-sm border-gray-500 rounded-lg border-1 ml-2 py-1.5">
               Subscribe
             </button>
           </form>

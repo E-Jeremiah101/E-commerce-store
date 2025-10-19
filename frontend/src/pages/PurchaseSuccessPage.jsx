@@ -1,6 +1,6 @@
 import { ArrowRight, CheckCircle, HandHeart } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useCartStore } from "../stores/useCartStore";
 import axios from "../lib/axios";
 import Confetti from "react-confetti";
@@ -10,39 +10,49 @@ const PurchaseSuccessPage = () => {
   const [orderNumber, setOrderNumber] = useState("");
   const [error, setError] = useState(null);
   const { clearCart } = useCartStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const handleCheckoutSuccess = async (sessionId) => {
+    const params = new URLSearchParams(window.location.search);
+    const transaction_id = params.get("transaction_id");
+    const tx_ref = params.get("tx_ref");
+    const status = params.get("status");
+
+    // 🚨 Redirect if failed or missing details
+    if (status !== "successful" || !transaction_id) {
+      navigate("/purchase-cancel");
+      return;
+    }
+
+    // ✅ Proceed with verification
+    const handleCheckoutSuccess = async (transaction_id, tx_ref) => {
       try {
         const response = await axios.post("/payments/checkout-success", {
-          sessionId,
+          transaction_id,
+          tx_ref,
         });
 
         clearCart();
         setOrderNumber(response.data.orderNumber);
 
+        // Clean up URL
         const url = new URL(window.location);
-        url.searchParams.delete("session_id");
+        url.searchParams.delete("transaction_id");
+        url.searchParams.delete("tx_ref");
+        url.searchParams.delete("status");
         window.history.replaceState({}, document.title, url);
       } catch (error) {
-        console.log(error);
+        console.error("Verification failed:", error);
+        setError("Could not verify payment. Please contact support.");
       } finally {
         setIsProcessing(false);
       }
     };
 
-    const sessionId = new URLSearchParams(window.location.search).get(
-      "session_id"
-    );
+    handleCheckoutSuccess(transaction_id, tx_ref);
+  }, [navigate, clearCart]);
 
-    if (sessionId) {
-      handleCheckoutSuccess(sessionId);
-    } else {
-      setIsProcessing(false);
-      setError("No session ID found in the URL");
-    }
-  }, [clearCart]);
-
+  // 🌀 Loading state
   if (isProcessing)
     return (
       <div className="flex justify-center items-center h-screen w-screen bg-gray-700">
@@ -50,8 +60,21 @@ const PurchaseSuccessPage = () => {
       </div>
     );
 
-  if (error) return `Error: ${error}`;
+  // ❌ Error state
+  if (error)
+    return (
+      <div className="flex flex-col items-center justify-center h-screen text-red-400 text-lg">
+        <p>{error}</p>
+        <Link
+          to="/purchase-cancel"
+          className="mt-4 underline text-emerald-400 hover:text-emerald-300"
+        >
+          Go to Cancel Page
+        </Link>
+      </div>
+    );
 
+  // ✅ Success state
   return (
     <div className="h-screen w-screen bg-gray-700 flex items-center justify-center px-4 relative">
       <Confetti
@@ -79,15 +102,15 @@ const PurchaseSuccessPage = () => {
 
           <p className="text-emerald-400 text-center text-sm mb-6">
             Congratulations! Your order was successfully submitted. You will
-            receive a confirmation email or SMS about your order. Please do well
-            to always check your email or SMS for more updates on your order.
+            receive a confirmation email or SMS about your order. Please check
+            your inbox for updates.
           </p>
 
           <div className="bg-gray-700 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-400">Order number</span>
               <span className="text-sm font-semibold text-emerald-400">
-                {orderNumber}
+                {orderNumber || "Processing..."}
               </span>
             </div>
             <div className="flex items-center justify-between">

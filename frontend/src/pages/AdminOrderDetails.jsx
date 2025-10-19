@@ -55,7 +55,7 @@ const AdminOrderDetails = () => {
           <GoBackButton />
         </div>
         <span className="text-lg font-semibold tracking-wider text-gray-900">
-          {order._id}
+          {order.flutterwaveRef}
         </span>
         <span
           className={`px-1 py-1 rounded text-xs font-medium ${
@@ -84,8 +84,8 @@ const AdminOrderDetails = () => {
         </div>
 
         <div>
-          <h1 className="text-gray-600">Order ID</h1>
-          <p className="font-semibold">{}</p>
+          <h1 className="text-gray-600">Transaction ID</h1>
+          <p className="font-semibold">{order.flutterwaveTransactionId}</p>
         </div>
 
         {/* <div>
@@ -106,7 +106,6 @@ const AdminOrderDetails = () => {
         </div>
       </div>
       <div className="py-5 text-3xl border-t-1 border-gray-300  "></div>
-
       {/* Customer Info */}
       <div className=" text-black rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 py-6 px-2">
         <h2 className="text-lg font-semibold mb-4  border-gray-600 pb-2">
@@ -136,17 +135,61 @@ const AdminOrderDetails = () => {
           </div>
         </div>
       </div>
-
       <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
-
       <div className=" text-black rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 py-6 px-2">
         <h2 className="text-lg font-semibold mb-4  border-gray-600 pb-2">
           PAYMENT METHOD
         </h2>
 
         <div>
-          <h1 className="text-gray-600">Debit/Credit</h1>
-          <p className="font-semibold">Payment on Order</p>
+          <h1 className="text-gray-600">
+            Status:{" "}
+            <span className="text-gray-800">
+              " {order.paymentMethod.status} "
+            </span>
+          </h1>
+          <h1 className="text-gray-600">
+            Method:{" "}
+            <span className="text-gray-800">
+              " {order.paymentMethod.card.issuer} "
+            </span>
+          </h1>
+          <h1 className="text-gray-600">
+            Brand:{" "}
+            <span className="text-gray-800">
+              " {order.paymentMethod.card.brand} "
+            </span>
+          </h1>
+          <h1 className="text-gray-600">
+            Card Num:************
+            <span className="text-gray-800">
+              {order.paymentMethod.card.last4}
+            </span>
+          </h1>
+          <h1 className="text-gray-600">
+            Exp_Month:{" "}
+            <span className="text-gray-800">
+              " {order.paymentMethod.card.exp_month} "
+            </span>
+          </h1>
+          <h1 className="text-gray-600">
+            Exp_Year:{" "}
+            <span className="text-gray-800">
+              " {order.paymentMethod.card.exp_year} "
+            </span>
+          </h1>
+          <h1 className="text-gray-600">
+            Card Type:{" "}
+            <span className="text-gray-800">
+              " {order.paymentMethod.card.type} "
+            </span>
+          </h1>
+          <h1 className="text-gray-600">
+            Card Issuer:{" "}
+            <span className="text-gray-800">
+              " {order.paymentMethod.card.issuer} "
+            </span>
+          </h1>
         </div>
       </div>
 
@@ -187,7 +230,6 @@ const AdminOrderDetails = () => {
           ))}
         </div>
       </div>
-
       <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
       {/* Totals */}
       <div className=" bg-gradient-to-br from-white via-gray-100 to-gray-300 text-gray-600 rounded-lg py-6 px-2">
