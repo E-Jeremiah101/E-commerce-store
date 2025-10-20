@@ -213,8 +213,15 @@ const OrderSummary = () => {
   }, [setUser]);
 
   const defaultPhone = user?.phones?.find((p) => p.isDefault)?.number || "";
-  const defaultAddress =
-    user?.addresses?.find((a) => a.isDefault)?.address || "";
+ const defaultAddressObj = user?.addresses?.find((a) => a.isDefault);
+
+ const defaultAddress = defaultAddressObj
+   ? `${defaultAddressObj.landmark ? defaultAddressObj.landmark + ", " : ""}${
+       defaultAddressObj.lga ? defaultAddressObj.lga + ", " : ""
+     }${defaultAddressObj.city ? defaultAddressObj.city + ", " : ""}${
+       defaultAddressObj.state || ""
+     }`
+   : "";
 
   const handlePayment = async () => {
     if (!defaultPhone || !defaultAddress) {

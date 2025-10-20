@@ -1,6 +1,7 @@
 import redis  from "../lib/redis.js";
 import cloudinary from "../lib/cloudinary.js";
 import Product from "../models/product.model.js";
+import {optimizeCloudinaryUrl} from "../lib/optimizeCloudinaryUrl.js"
 export const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find({}); // find all products
@@ -54,7 +55,7 @@ export const createProduct = async (req, res) => {
         cloudinary.uploader.upload(img, { folder: "products" })
       );
       const results = await Promise.all(uploadPromises);
-      uploadedImages = results.map((r) => r.secure_url);
+      uploadedImages = results.map((r) => optimizeCloudinaryUrl(r.secure_url, 800, "auto"))
     }
 
     const product = await Product.create({

@@ -3,6 +3,13 @@
 body::-webkit-scrollbar {
   display: none;
 }
+.no-scroll::-webkit-scrollbar {
+  display: none;
+}
+.no-scroll {
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none; /* Firefox */
+}
 @font-face{
   font-family: Jeremy;
   font-weight: normal;

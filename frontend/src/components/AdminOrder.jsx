@@ -89,9 +89,9 @@ const AdminOrdersPage = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
     >
-      <div className="text-2xl font-bold flex justify-center mb-6">
+      {/* <div className="text-2xl font-bold flex justify-center mb-6">
         All Orders
-      </div>
+      </div> */}
 
       {/* Search & Sort */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">

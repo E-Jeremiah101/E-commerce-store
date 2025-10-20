@@ -87,7 +87,7 @@ const AnalyticsTab = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 text-gray-700">
-      <div className="text-center my-6">
+      <div className="text-center mb-6">
         <h1 className="text-3xl font-bold">
           Welcome, {user?.name || "Admin"} 👋
         </h1>

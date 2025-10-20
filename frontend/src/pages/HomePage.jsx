@@ -16,7 +16,7 @@ const categories = [
   { href: "/t-shirts", name: "T-Shirt", imageUrl: "/man-tshirt.jpg" },
   { href: "/footwears", name: "Footwear", imageUrl: "/shoe-brown.jpg" },
   {
-    href: "/accessories",
+    href: "/accessories&essentials",
     name: "Accessories & Essentials",
     imageUrl: "/watchgold.jpg",
   },

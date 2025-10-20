@@ -48,10 +48,12 @@ const Navbar = () => {
         <div className="container mx-auto px-4 py-3 flex items-center justify-between ">
           {/* Left: Logo */}
           <Link to={"/"} className="flex sm:hidden items-center gap-2">
-            <img src="/logo-buz.jpg" alt="Logo" className="h-10 w-auto rounded-2xl" />
-            <span className="font-bold text-xl">
-              Eco~Store
-            </span>
+            <img
+              src="/logo-buz.jpg"
+              alt="Logo"
+              className="h-10 w-auto rounded-2xl"
+            />
+            <span className="font-bold text-xl">Eco~Store</span>
           </Link>
 
           {/* Right: Actions */}
@@ -89,10 +91,16 @@ const Navbar = () => {
               </button>
             ) : (
               <>
-                <Link to={"/signup"} className="text-gray-800 hover:text-gray-300">
+                <Link
+                  to={"/signup"}
+                  className="text-gray-800 hover:text-gray-300"
+                >
                   <UserPlus size={22} />
                 </Link>
-                <Link to={"/login"} className="text-gray-800 hover:text-gray-300">
+                <Link
+                  to={"/login"}
+                  className="text-gray-800 hover:text-gray-300"
+                >
                   <LogIn size={22} />
                 </Link>
               </>
@@ -202,6 +210,14 @@ const Navbar = () => {
                   </li>
 
                   <li>
+                    <Link to={"/category/suits&blazer"}>
+                      <span className="hover:text-gray-300">
+                        JACKETS & OUTERWEARS
+                      </span>
+                    </Link>
+                  </li>
+
+                  <li>
                     <Link to={"/category/underwear&socks"}>
                       <span className="hover:text-gray-300">
                         UNDERWEAR & SOCKS
@@ -211,7 +227,7 @@ const Navbar = () => {
 
                   <li>
                     <Link to={"/category/footwears"}>
-                      <span className="hover:text-gray-300">FOOTWEAR</span>
+                      <span className="hover:text-gray-300">FOOTWEARS</span>
                     </Link>
                   </li>
 
@@ -224,7 +240,7 @@ const Navbar = () => {
                   </li>
 
                   <li>
-                    <Link to={"/category/accessories"}>
+                    <Link to={"/category/accessories&essentials"}>
                       <span className="hover:text-gray-300">
                         ACCESSORIES & ESSENTIALS
                       </span>

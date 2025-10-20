@@ -11,7 +11,7 @@ const categories = [
   "bottoms",
   "t-shirts",
   "footwears",
-  "accessories",
+  "accessories&essentials",
   "jackets&Outerwear",
   "sets&cords",
   "underwear&socks",

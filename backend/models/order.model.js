@@ -66,10 +66,18 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: {
       method: {
         type: String,
-        enum: ["card", "bank_transfer", "ussd", "mobile_money", "qr", "barter"],
+        enum: [
+          "card",
+          "bank_transfer",
+          "ussd",
+          "mobile_money",
+          "qr",
+          "barter",
+          "account",
+        ],
         required: true,
       },
-      status:{type: String},
+      status: { type: String },
       card: {
         brand: { type: String },
         last4: { type: String },
@@ -80,7 +88,6 @@ const orderSchema = new mongoose.Schema(
       },
     },
 
-    updatedAt: Date,
     subtotal: { type: Number, required: false, default: 0 },
     discount: { type: Number, required: false, default: 0 },
     coupon: {
@@ -101,6 +108,33 @@ const orderSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
+    },
+
+    refunds: [
+      {
+        product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" }, // refunded product
+        quantity: Number, // how many were refunded
+        amount: Number, // total refunded for this item
+        reason: String, // user reason for refund
+        status: {
+          type: String,
+          enum: ["Pending", "Approved", "Rejected", "Completed"],
+          default: "Pending",
+        },
+        requestedAt: { type: Date, default: Date.now },
+        processedAt: Date,
+      },
+    ],
+    refundStatus: {
+      type: String,
+      enum: [
+        "No Refund",
+        "Partial Refund Requested",
+        "Partial Refunded",
+        "Full Refund Requested",
+        "Fully Refunded",
+      ],
+      default: "No Refund",
     },
   },
   { timestamps: true }

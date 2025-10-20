@@ -140,57 +140,75 @@ const AdminOrderDetails = () => {
         <h2 className="text-lg font-semibold mb-4  border-gray-600 pb-2">
           PAYMENT METHOD
         </h2>
-
-        <div>
-          <h1 className="text-gray-600">
-            Status:{" "}
-            <span className="text-gray-800">
-              " {order.paymentMethod.status} "
-            </span>
-          </h1>
-          <h1 className="text-gray-600">
-            Method:{" "}
-            <span className="text-gray-800">
-              " {order.paymentMethod.card.issuer} "
-            </span>
-          </h1>
-          <h1 className="text-gray-600">
-            Brand:{" "}
-            <span className="text-gray-800">
-              " {order.paymentMethod.card.brand} "
-            </span>
-          </h1>
-          <h1 className="text-gray-600">
-            Card Num:************
-            <span className="text-gray-800">
-              {order.paymentMethod.card.last4}
-            </span>
-          </h1>
-          <h1 className="text-gray-600">
-            Exp_Month:{" "}
-            <span className="text-gray-800">
-              " {order.paymentMethod.card.exp_month} "
-            </span>
-          </h1>
-          <h1 className="text-gray-600">
-            Exp_Year:{" "}
-            <span className="text-gray-800">
-              " {order.paymentMethod.card.exp_year} "
-            </span>
-          </h1>
-          <h1 className="text-gray-600">
-            Card Type:{" "}
-            <span className="text-gray-800">
-              " {order.paymentMethod.card.type} "
-            </span>
-          </h1>
-          <h1 className="text-gray-600">
-            Card Issuer:{" "}
-            <span className="text-gray-800">
-              " {order.paymentMethod.card.issuer} "
-            </span>
-          </h1>
-        </div>
+        {order.paymentMethod.method === "account" && (
+          <div>
+            <h1 className="text-gray-600">
+              Status:{" "}
+              <span className="text-gray-800">
+                " {order.paymentMethod.status} "
+              </span>
+            </h1>
+            <h1 className="text-gray-600">
+              Method:{" "}
+              <span className="text-gray-800">
+                " {order.paymentMethod.method} "
+              </span>
+            </h1>
+            
+          </div>
+        )}
+        {order.paymentMethod.method === "card" && (
+          <div>
+            <h1 className="text-gray-600">
+              Status:{" "}
+              <span className="text-gray-800">
+                " {order.paymentMethod.status} "
+              </span>
+            </h1>
+            <h1 className="text-gray-600">
+              Method:{" "}
+              <span className="text-gray-800">
+                " {order.paymentMethod.card.issuer} "
+              </span>
+            </h1>
+            <h1 className="text-gray-600">
+              Brand:{" "}
+              <span className="text-gray-800">
+                " {order.paymentMethod.card.brand} "
+              </span>
+            </h1>
+            <h1 className="text-gray-600">
+              Card Num:************
+              <span className="text-gray-800">
+                {order.paymentMethod.card.last4}
+              </span>
+            </h1>
+            <h1 className="text-gray-600">
+              Exp_Month:{" "}
+              <span className="text-gray-800">
+                " {order.paymentMethod.card.exp_month} "
+              </span>
+            </h1>
+            <h1 className="text-gray-600">
+              Exp_Year:{" "}
+              <span className="text-gray-800">
+                " {order.paymentMethod.card.exp_year} "
+              </span>
+            </h1>
+            <h1 className="text-gray-600">
+              Card Type:{" "}
+              <span className="text-gray-800">
+                " {order.paymentMethod.card.type} "
+              </span>
+            </h1>
+            <h1 className="text-gray-600">
+              Card Issuer:{" "}
+              <span className="text-gray-800">
+                " {order.paymentMethod.card.issuer} "
+              </span>
+            </h1>
+          </div>
+        )}
       </div>
 
       <div className="py-5 text-3xl border-t-1 border-gray-300"></div>

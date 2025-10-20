@@ -1,5 +1,27 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import { nigeriaLocations } from "../../frontend/src/utils/nigeriaLocation.js";
+
+const addressSchema = new mongoose.Schema({
+  label: { type: String, default: "Home" },
+  state: { type: String, required: true },
+  city: { type: String, required: true },
+  lga: { type: String, required: true },
+  landmark: { type: String },
+  address: { type: String },
+  isDefault: { type: Boolean, default: false },
+});
+
+addressSchema.pre("validate", function (next) {
+  const { state, city, lga } = this;
+  const validState = nigeriaLocations[state];
+  if (!validState) return next(new Error("Invalid state"));
+  const validCity = validState.cities[city];
+  if (!validCity) return next(new Error("Invalid city for selected state"));
+  if (!validCity.includes(lga))
+    return next(new Error("Invalid LGA for selected city"));
+  next();
+});
 
 const userSchema = new mongoose.Schema(
   {
@@ -24,10 +46,12 @@ const userSchema = new mongoose.Schema(
     addresses: [
       {
         label: { type: String, default: "Home" },
-        address: { type: String, required: true },
+
         isDefault: { type: Boolean, default: false },
       },
     ],
+    addresses: [addressSchema],
+
     phones: [
       {
         number: { type: String, required: true },
