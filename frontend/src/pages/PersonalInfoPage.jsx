@@ -365,6 +365,7 @@ import { useUserStore } from "../stores/useUserStore";
 import { nigeriaLocations } from "../utils/nigeriaLocation";
 import { Check, User, Phone, Mail, Lock, Loader, Home } from "lucide-react";
 import GoBackButton from "../components/GoBackButton";
+import { toast, ToastContainer } from "react-toastify";
 
 const PersonalInfoPage = () => {
   const { user, setUser } = useUserStore();
@@ -424,9 +425,7 @@ const PersonalInfoPage = () => {
       !defaultAddress?.city ||
       !defaultAddress?.lga
     ) {
-      alert(
-        "⚠️ Please fill in a valid default phone and full address before saving."
-      );
+      toast.error("Please add a valid phone and full address.");
       return;
     }
 
@@ -435,7 +434,7 @@ const PersonalInfoPage = () => {
         phones: user.phones,
         addresses: user.addresses,
       });
-      alert("✅ Profile updated successfully!");
+      toast.success("Profile updated successfully!");
     } catch (err) {
       console.error("Error updating profile:", err);
     }
@@ -472,7 +471,7 @@ const PersonalInfoPage = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.2 }}
-      >
+      ><ToastContainer position="top-center" autoClose={3000} />
         <div className="py-8 px-4 md:shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6">
             {/* Full Name */}

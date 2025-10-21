@@ -60,7 +60,7 @@ const AdminRefundsTab = () => {
   const handleAction = async (orderId, refundId, action) => {
     try {
       setProcessing((prev) => ({ ...prev, [refundId]: true }));
-      await API.put(`/refunds/${orderId}/${refundId}/${action}`, null, {
+      await axios.put(`/refunds/${orderId}/${refundId}/${action}`, null, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       toast.success(`Refund ${action}ed successfully`);

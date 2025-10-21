@@ -15,11 +15,11 @@ const CartItem = ({ item }) => {
       transition={{ duration: 0.8 }}
     >
       <div className="space-y-6">
-        <div className="border rounded-lg p-4 bg-gray-800 text-gray-100">
+        <div className="border rounded-lg p-4 bg-black text-gray-100">
           <div className="flex justify-between mb-2"></div>
 
           <ul className="space-y-4 mb-4">
-            <li className="flex gap-4 p-4 bg-gray-700 rounded-lg shadow">
+            <li className="flex gap-4 p-4  bg-gradient-to-br from-white via-gray-100 to-gray-300 rounded-lg shadow">
               {/* Product Image */}
               <img
                 src={item.images?.[0]}
@@ -31,21 +31,21 @@ const CartItem = ({ item }) => {
               <div className="flex-1 space-y-3">
                 {/* Product Name & Total Price */}
                 <div className="flex justify-between items-center">
-                  <h3 className="text-white font-medium tracking-widest">
+                  <h3 className="text-black text-sm font-medium tracking-widest">
                     {item.name}
                   </h3>
                 </div>
 
                 {/* Extra Details (size, color, category) */}
-                <div className="flex flex-wrap gap-2 text-xs text-gray-200">
+                <div className="flex flex-wrap gap-2 text-xs text-gray-100">
                   {item.size && (
-                    <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
+                    <span className="bg-black px-2 py-1 rounded tracking-widest">
                       Size: {item.size}
                     </span>
                   )}
 
                   {item.color && (
-                    <span className="bg-gray-600 px-2 py-1 rounded  tracking-widest">
+                    <span className="bg-black px-2 py-1 rounded  tracking-widest">
                       Color: {item.color}
                     </span>
                   )}
@@ -55,9 +55,9 @@ const CartItem = ({ item }) => {
                 <div className="flex justify-between text-sm text-gray-300">
                   {/* quantity */}
 
-                  <div className="bg-gray-600 px-2 py-1 rounded tracking-widest text-lg flex justify-between items-center gap-3">
+                  <div className="bg-black px-2 py-1 rounded tracking-widest text-lg flex justify-between items-center gap-3">
                     <button
-                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-gray-600 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 "
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-gray-400  hover:bg-black/900 focus:outline-none focus:ring-2 "
                       onClick={() =>
                         updateQuantity(
                           item._id,
@@ -71,7 +71,7 @@ const CartItem = ({ item }) => {
                     </button>
                     <span> {item.quantity}</span>
                     <button
-                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-gray-600 bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 "
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-gray-400  hover:bg-black/900 focus:outline-none focus:ring-2 "
                       onClick={() =>
                         updateQuantity(
                           item._id,

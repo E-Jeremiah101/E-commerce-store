@@ -28,7 +28,7 @@ const GiftCouponCard = () => {
   };
   return (
     <motion.div
-      className="space-y-4 rounded-lg border border-gray-800 bg-gray-800 p-4 shadow-sm sm:p-6"
+      className="space-y-4 rounded-lg border border-gray-800 bg-black p-4 shadow-sm sm:p-6"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
@@ -44,7 +44,7 @@ const GiftCouponCard = () => {
           <input
             type="text"
             id="voucher"
-            className="block w-full rounded-lg border border-gray-600 bg-gray-700 p-2.5 text-sm text-white placeholder-gray-400 focus:border-gray-300 focus:ring-gray-300 "
+            className="block w-full rounded-lg border border-gray-300  p-2.5 text-sm text-white placeholder-gray-300 focus:border-gray-300 focus:ring-gray-300 "
             placeholder="Enter code here"
             value={userInputCode}
             onChange={(e) => setUserInputCode(e.target.value)}
@@ -53,7 +53,7 @@ const GiftCouponCard = () => {
         </div>
 
         <motion.button
-          className="flex w-full items-center justify-center rounded-lg bg-white px-5 py-2.5 text-sm font-medium text-black hover:bg-gray-300 focus:outline-none focus:ring-4 focus:ring-gray-300"
+          className="flex w-full items-center justify-center rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 px-5 py-2.5 text-sm font-medium text-black hover:bg-gray-300 focus:outline-none focus:ring-4 focus:ring-gray-300"
           type="button"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
