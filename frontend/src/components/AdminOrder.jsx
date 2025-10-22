@@ -183,7 +183,6 @@ const AdminOrdersPage = () => {
 
               {/* Order details */}
               <div className="grid md:grid-cols-3 grid-cols-2 gap-3 md:gap-5 py-4 pr-7 pl-3 bg-gray-700 rounded-lg shadow mb-2">
-               
                 <div className="text-gray-200 mb-2">
                   Order date:{" "}
                   <p className="text-sm font-semibold">
@@ -273,7 +272,10 @@ const AdminOrdersPage = () => {
                       </span>
                     </p>
                     <p className="text-sm my-1 font-bold">
-                      Discount: <span className="text-red-500">-₦{order.discount.toLocaleString()}</span>
+                      Discount:{" "}
+                      <span className="text-red-500">
+                        -₦{order.discount.toLocaleString()}
+                      </span>
                     </p>
                   </>
                 )}
@@ -296,21 +298,22 @@ const AdminOrdersPage = () => {
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center space-x-2 mt-10">
+        <div className="flex justify-center items-center space-x-3 py-8">
           <button
             onClick={handlePrev}
             disabled={currentPage === 1}
-            className="px-3 py-1 text-sm bg-gray-800 text-white rounded disabled:opacity-40"
+            className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
           >
             Prev
           </button>
+
           {[...Array(totalPages).keys()].map((num) => {
             const page = num + 1;
             return (
               <button
                 key={page}
                 onClick={() => handlePageClick(page)}
-                className={`px-3 py-1 text-sm rounded ${
+                className={`px-4 py-2 text-sm rounded ${
                   currentPage === page
                     ? "bg-yellow-700 text-white"
                     : "bg-gray-700 text-white hover:bg-gray-600"
@@ -320,10 +323,11 @@ const AdminOrdersPage = () => {
               </button>
             );
           })}
+
           <button
             onClick={handleNext}
             disabled={currentPage === totalPages}
-            className="px-3 py-1 text-sm bg-gray-800 text-white rounded disabled:opacity-40"
+            className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
           >
             Next
           </button>

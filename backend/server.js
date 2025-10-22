@@ -17,7 +17,8 @@ import cors from "cors";
 import { fileURLToPath } from "url";
 import reviewRoutes from "./routes/review.routes.js"
 import visitorRoutes from "./routes/visitor.route.js"
-import refundRoutes from "./routes/refund.routes.js"
+import refundRoutes from "./routes/refund.routes.js";
+import categoryRoutes from "./routes/categoryRoutes.js"
 dotenv.config();
 const app = express();
 await connectRedis(); //connect once at startup
@@ -71,6 +72,9 @@ app.use("/api/visitors", visitorRoutes);
 
 //RefundRoute
 app.use("/api/refunds", refundRoutes);
+
+//categoryRoute
+app.use("/api", categoryRoutes)
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

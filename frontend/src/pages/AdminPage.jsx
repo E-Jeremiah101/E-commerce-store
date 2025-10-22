@@ -98,7 +98,7 @@ const tabs = [
 ];
 
 const AdminPage = () => {
-  const [activeTab, setActiveTab] = useState("analytics");
+  const [activeTab, setActiveTab] = useState("products");
   const { fetchAllProducts } = useProductStore();
 
   useEffect(() => {
@@ -107,19 +107,23 @@ const AdminPage = () => {
   return (
     <>
       <motion.div
-        className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0   z-90  "
+        className="sm:mx-auto  fixed top-0 left-0 right-0   z-90  "
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <div className="absolute left-4 text-black">
-          <GoBackButton />
-        </div>
-        <span className="md:hidden  text-center text-xl  text-gray-900 tracking-widest">
+        <div className=" flex justify-center align-middle text-black py-5 bg-gradient-to-br from-white via-gray-100 to-gray-300 ">
+          <div className="absolute left-5">
+            <GoBackButton />
+          </div>
+          <span className=" flex  text-center text-xl  text-gray-900 tracking-widest">
           Admin Dashboard
         </span>
+        </div>
+        
       </motion.div>
-      <div className="  bg-gradient-to-br from-white via-gray-100 to-gray-300  flex-2 md:flex md:h-[100vh] md:w-full px-2 md:mx-auto   md:overflow-hidden -10          min-h-screen  ">
+      <div className="  bg-gradient-to-br from-white via-gray-100 to-gray-300  flex-2 md:flex md:h-[100vh] md:w-full px-2 md:mx-auto   md:overflow-hidden -10          min-h-screen  mt-19">
+        
         <div className="hidden md:flex  w-1/6 bg-gray-100  flex-shrink-0 ">
           <ul className="hidden space-y-5 md:flex flex-col">
             {tabs.map((tab) => (

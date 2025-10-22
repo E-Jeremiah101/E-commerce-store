@@ -93,16 +93,16 @@ const AdminRefundsTab = () => {
       <div className="flex flex-wrap gap-3 mb-4 bg-gradient-to-br from-white via-gray-100 to-gray-300  p-4 rounded-lg">
         <input
           type="text"
-          placeholder="OrderNumber / ID"
+          placeholder="ORD / ID"
           value={filters.search}
           onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-          className="px-3 py-2 rounded text-black bg-white placeholder-gray-600 border border-gray-600"
+          className="px-2 py-2 w-30 rounded text-black bg-white placeholder-gray-600 border border-gray-600"
         />
 
         <select
           value={filters.status}
           onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-          className="px-3 py-2 rounded bg-white text-gray-700 border border-gray-600"
+          className="px-2 py-2 rounded bg-white text-gray-700 border border-gray-600"
         >
           <option value="">All Status</option>
           <option value="Pending">Pending</option>
@@ -116,19 +116,20 @@ const AdminRefundsTab = () => {
           onChange={(e) =>
             setFilters({ ...filters, startDate: e.target.value })
           }
-          className="px-3 py-2 rounded bg-white text-gray-700 border border-gray-600"
+          className="px-3 py-2 w-30 rounded  text-gray-700 border border-gray-600"
         />
 
         <input
           type="date"
           value={filters.endDate}
           onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-          className="px-3 py-2 rounded bg-white text-gray-700 border border-gray-600"
+          
+          className="px-3 py-2 w-30 rounded  text-gray-700 border border-gray-600"
         />
 
         <button
           onClick={handleFilter}
-          className="bg-gwhite border px-2  rounded text-gray-700 hover:bg-gray-300 text-sm"
+          className=" text-gray-700  "
         >
           <Search size={20} />
         </button>
@@ -138,7 +139,7 @@ const AdminRefundsTab = () => {
         <table className="min-w-full border border-gray-600 text-left text-sm">
           <thead className="bg-gradient-to-br from-white via-gray-100 to-gray-300 ">
             <tr>
-              <th className="px-4 py-2 border-b border-gray-600">Order ID</th>
+              <th className="px-4 py-2 border-b border-gray-600">Order-Num</th>
               <th className="px-4 py-2 border-b border-gray-600">Name</th>
               <th className="px-4 py-2 border-b border-gray-600">Product</th>
               <th className="px-4 py-2 border-b border-gray-600">Amount</th>
@@ -254,21 +255,22 @@ const AdminRefundsTab = () => {
       )}
 
       {totalPages > 1 && (
-        <div className="flex justify-center items-center space-x-2 mt-10">
+        <div className="flex justify-center items-center space-x-3 py-8">
           <button
             onClick={handlePrev}
             disabled={currentPage === 1}
-            className="px-3 py-1 text-sm bg-gray-800 text-white rounded disabled:opacity-40"
+            className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
           >
             Prev
           </button>
+
           {[...Array(totalPages).keys()].map((num) => {
             const page = num + 1;
             return (
               <button
                 key={page}
                 onClick={() => handlePageClick(page)}
-                className={`px-3 py-1 text-sm rounded ${
+                className={`px-4 py-2 text-sm rounded ${
                   currentPage === page
                     ? "bg-yellow-700 text-white"
                     : "bg-gray-700 text-white hover:bg-gray-600"
@@ -278,10 +280,11 @@ const AdminRefundsTab = () => {
               </button>
             );
           })}
+
           <button
             onClick={handleNext}
             disabled={currentPage === totalPages}
-            className="px-3 py-1 text-sm bg-gray-800 text-white rounded disabled:opacity-40"
+            className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
           >
             Next
           </button>

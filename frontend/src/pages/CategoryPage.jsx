@@ -40,6 +40,11 @@ const CategoryPage = () => {
     fetchData();
   }, [fetchProductsByCategory, category]);
 
+  useEffect(() => {
+    console.log("Category:", category);
+    console.log("Products:", products);
+  }, [products, category]);
+
   if (isLoading)
     return (
       <div className="flex justify-center items-center h-screen">
@@ -64,7 +69,7 @@ const CategoryPage = () => {
     <>
       {/* Header */}
       <motion.div
-        className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0 flex z-40 items-center justify-center bg-gradient-to-br from-white via-gray-100 to-gray-300 py-5"
+        className=" fixed top-0 left-0 right-0 flex z-40 items-center justify-center bg-gradient-to-br from-white via-gray-100 to-gray-300 py-5"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
@@ -78,7 +83,7 @@ const CategoryPage = () => {
       </motion.div>
 
       {/* Products Grid */}
-      <div className="min-h-screen">
+      <div className="min-h-screen mt-3">
         <div className="relative z-10 max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <motion.div
             className="grid grid-cols-2 sm:grid-cols-2 smd:grid-cols-4 smd:bg-yellow-500

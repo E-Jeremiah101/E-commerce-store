@@ -124,11 +124,11 @@ const ProductsList = () => {
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center space-x-2 py-6">
+        <div className="flex justify-center items-center space-x-3 py-8">
           <button
             onClick={handlePrev}
             disabled={currentPage === 1}
-            className="px-3 py-1 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
+            className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
           >
             Prev
           </button>
@@ -139,7 +139,7 @@ const ProductsList = () => {
               <button
                 key={page}
                 onClick={() => handlePageClick(page)}
-                className={`px-3 py-1 text-sm rounded ${
+                className={`px-4 py-2 text-sm rounded ${
                   currentPage === page
                     ? "bg-yellow-700 text-white"
                     : "bg-gray-700 text-white hover:bg-gray-600"
@@ -153,7 +153,7 @@ const ProductsList = () => {
           <button
             onClick={handleNext}
             disabled={currentPage === totalPages}
-            className="px-3 py-1 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
+            className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
           >
             Next
           </button>

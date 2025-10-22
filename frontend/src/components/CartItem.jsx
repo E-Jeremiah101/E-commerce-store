@@ -86,7 +86,7 @@ const CartItem = ({ item }) => {
                   </div>
 
                   {item.quantity > 1 && (
-                    <span className=" text-xs mt-2">
+                    <span className=" text-xs mt-2 text-gray-800">
                       ₦
                       {item.price.toLocaleString(undefined, {
                         minimumFractionDigits: 0,
