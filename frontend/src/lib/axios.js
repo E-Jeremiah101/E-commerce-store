@@ -22,12 +22,12 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // 🚫 Ignore if no response or not a 401
+    //  Ignore if no response or not a 401
     if (!error.response || error.response.status !== 401) {
       return Promise.reject(error);
     }
 
-    // 🚫 Don't retry the refresh endpoint itself
+    //  Don't retry the refresh endpoint itself
     if (originalRequest.url.includes("/auth/refresh-token")) {
       return Promise.reject(error);
     }
@@ -61,7 +61,7 @@ axiosInstance.interceptors.response.use(
       const { data } = await axiosInstance.post("/auth/refresh-token");
       processQueue(null);
 
-      // ✅ Try the original request again
+      // Try the original request again
       return axiosInstance(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);

@@ -1,11 +1,3 @@
-// import Stripe from "stripe";
-// import dotenv from "dotenv";
-// import Stripe from "stripe";
-
-// dotenv.config();
-
-// export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";

@@ -23,41 +23,41 @@ const ProductReviews = ({ productId }) => {
       const data = await getProductReviews(productId);
       setReviews(data.reviews || []);
     } catch (err) {
-      console.error("❌ Error fetching reviews:", err);
+      console.error(" Error fetching reviews:", err);
     }
   };
 
   // Check if user can review
   const checkCanReview = async () => {
     try {
-      console.log("🔍 Checking canReview for:", productId);
+      console.log(" Checking canReview for:", productId);
       const res = await canReviewProduct(productId);
-      console.log("✅ canReview response:", res);
+      console.log(" canReview response:", res);
       setCanReview(res.canReview);
     } catch (err) {
-      console.error("❌ Error checking canReview:", err);
+      console.error(" Error checking canReview:", err);
     }
   };
 
   // Load reviews always
   useEffect(() => {
-    console.log("🟡 Product ID:", productId);
+    console.log("Product ID:", productId);
     fetchReviews();
   }, [productId]);
 
   // Ensure user is loaded from store or backend
   useEffect(() => {
     if (!user && fetchUser) {
-      console.log("👤 No user yet → fetching user...");
+      console.log(" No user yet → fetching user...");
       fetchUser();
     }
   }, []);
 
   // Run eligibility check only when user becomes available
   useEffect(() => {
-    console.log("👤 User in ProductReviews:", user);
+    console.log(" User in ProductReviews:", user);
     if (user) {
-      console.log("✅ User available → Checking canReview...");
+      console.log(" User available → Checking canReview...");
       checkCanReview();
     }
   }, [user, productId]);
@@ -71,9 +71,9 @@ const ProductReviews = ({ productId }) => {
       setRating(0);
       setCanReview(false);
       fetchReviews();
-      console.log("✅ Review added:", res);
+      console.log(" Review added:", res);
     } catch (err) {
-      console.error("❌ Error adding review:", err);
+      console.error(" Error adding review:", err);
       toast.error("Failed to submit review");
     }
   };

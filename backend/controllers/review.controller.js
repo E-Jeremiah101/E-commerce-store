@@ -7,11 +7,11 @@ export const addReview = async (req, res) => {
     const { productId, rating, comment } = req.body;
     const userId = req.user._id;
 
-    // 1️⃣ Check if product exists
+    //  Check if product exists
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    // 2️⃣ Check if user has purchased and received the product
+    //  Check if user has purchased and received the product
     const hasPurchased = await Order.findOne({
       user: userId,
       "products.product": productId,
@@ -25,7 +25,7 @@ export const addReview = async (req, res) => {
       });
     }
 
-    // 3️⃣ Check if user has already reviewed
+    // Check if user has already reviewed
     const existingReviewIndex = product.reviews.findIndex(
       (r) => r.user.toString() === userId.toString()
     );
@@ -45,7 +45,7 @@ export const addReview = async (req, res) => {
       });
     }
 
-    // 4️⃣ Recalculate average rating and number of reviews
+    //  Recalculate average rating and number of reviews
     product.numReviews = product.reviews.length;
     product.averageRating =
       product.reviews.reduce((sum, r) => sum + r.rating, 0) /

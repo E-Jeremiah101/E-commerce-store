@@ -20,8 +20,8 @@ dotenv.config() //Load .env variables
   },
 });
 
-redis.on("connect", () => console.log("✅ Redis connected"));
-redis.on("error", (err) => console.log("❌ Redis Client Error", err));
+redis.on("connect", () => console.log("Redis connected"));
+redis.on("error", (err) => console.log(" Redis Client Error", err));
 redis.on("reconnecting", () => console.log("♻️ Redis reconnecting..."));
 redis.on("end", () => console.error("🔌 Redis connection closed"));
 
@@ -30,7 +30,7 @@ redis.on("end", () => console.error("🔌 Redis connection closed"));
 export const connectRedis = async() =>{
   if (!redis.isOpen){
     await redis.connect();
-    console.log("✅ Connected to Redis");
+    console.log("Connected to Redis");
   }
 };
 

@@ -24,7 +24,7 @@ export const deleteReview = async (productId, userId) => {
   return data;
 };
 
-// ✅ FIXED: Use axiosInstance + correct route order
+//  Use axiosInstance + correct route order
 export const canReviewProduct = async (productId) => {
   const { data } = await axiosInstance.get(`/reviews/${productId}/can-review`);
   return data;

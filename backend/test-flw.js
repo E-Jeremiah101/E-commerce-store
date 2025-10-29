@@ -9,5 +9,5 @@ const flw = new Flutterwave(
   process.env.FLW_SECRET_KEY
 );
 
-console.log("✅ Flutterwave initialized!");
+console.log(" Flutterwave initialized!");
 console.log("Available sections:", Object.keys(flw));

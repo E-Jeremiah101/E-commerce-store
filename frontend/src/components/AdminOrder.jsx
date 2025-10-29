@@ -184,13 +184,13 @@ const AdminOrdersPage = () => {
               {/* Order details */}
               <div className="grid md:grid-cols-3 grid-cols-2 gap-3 md:gap-5 py-4 pr-7 pl-3 bg-gray-700 rounded-lg shadow mb-2">
                 <div className="text-gray-200 mb-2">
-                  Order date:{" "}
+                  Created:{" "}
                   <p className="text-sm font-semibold">
                     {new Date(order.createdAt).toLocaleString()}
                   </p>
                 </div>
                 <div className="text-gray-200 mb-2">
-                  Updated to{" "}
+                 
                   <span
                     className={`px-1 py-1 rounded text-xs font-medium ${
                       order.status === "Delivered"
@@ -206,15 +206,7 @@ const AdminOrdersPage = () => {
                     {new Date(order.updatedAt).toLocaleString()}
                   </p>
                 </div>
-                {/* {order.status === "Delivered" && (
-                  <div className="text-gray-200 mb-2">
-                    Package delivered:{" "}
-                    <p className="text-sm font-semibold">
-                      {new Date(order.deliveredAt).toLocaleString() ||
-                        "Not provided"}
-                    </p>
-                  </div>
-                )} */}
+              
               </div>
 
               {/* Product list */}

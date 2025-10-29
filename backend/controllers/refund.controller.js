@@ -1,9 +1,8 @@
-// controllers/refund.controller.js
 import Order from "../models/order.model.js";
 import axios from "axios";
 
 
-// 🟢 User: Request Refund
+//  User: Request Refund
 export const requestRefund = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -73,7 +72,7 @@ export const requestRefund = async (req, res) => {
 
 
 /**
- * 🧑 ADMIN: View all refund requests
+ *  ADMIN: View all refund requests
  */
 export const getAllRefundRequests = async (req, res) => {
   try {
@@ -128,7 +127,7 @@ export const getAllRefundRequests = async (req, res) => {
 };
 
 /**
- * ✅ ADMIN: Approve Refund (Flutterwave API)
+ *  ADMIN: Approve Refund (Flutterwave API)
  */
 export const approveRefund = async (req, res) => {
   try {
@@ -147,7 +146,7 @@ export const approveRefund = async (req, res) => {
     refund.status = "Approved";
     refund.processedAt = Date.now();
 
-    // 🔁 Flutterwave refund API
+    //  Flutterwave refund API
     const FLW_SECRET_KEY = process.env.FLW_SECRET_KEY;
     const transactionId = order.flutterwaveTransactionId;
 

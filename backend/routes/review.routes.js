@@ -1,4 +1,4 @@
-// backend/routes/review.routes.js
+
 import express from "express";
 import {
   addReview,
@@ -10,7 +10,7 @@ import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// ✅ Keep this order
+
 router.get("/:productId/can-review", protectRoute, canReviewProduct);
 router.get("/:productId", getProductReviews);
 router.post("/", protectRoute, addReview);

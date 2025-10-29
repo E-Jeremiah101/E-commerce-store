@@ -103,14 +103,14 @@ export const useUserStore = create((set, get) => ({
       try {
         await axios.post("/auth/refresh-token");
         console.log(
-          "✅ Access token refreshed automatically at",
+          " Access token refreshed automatically at",
           new Date().toLocaleTimeString()
         );
 
         // Schedule the next refresh AFTER this one succeeds
         refreshTimeoutId = setTimeout(scheduleRefresh, refreshEveryMs);
       } catch (error) {
-        console.error("⚠️ Auto token refresh failed:", error.message);
+        console.error("Auto token refresh failed:", error.message);
         clearTimeout(refreshTimeoutId);
       }
     };
@@ -124,7 +124,7 @@ export const useUserStore = create((set, get) => ({
     if (refreshTimeoutId) {
       clearTimeout(refreshTimeoutId);
       refreshTimeoutId = null;
-      console.log("🧹 Token refresh timer stopped");
+      console.log("Token refresh timer stopped");
     }
   },
 }));

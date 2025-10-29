@@ -1,7 +1,8 @@
 import redis  from "../lib/redis.js";
 import cloudinary from "../lib/cloudinary.js";
 import Product from "../models/product.model.js";
-import {optimizeCloudinaryUrl} from "../lib/optimizeCloudinaryUrl.js"
+import {optimizeCloudinaryUrl} from "../lib/optimizeCloudinaryUrl.js";
+import Category from "../models/categoy.model.js"
 export const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find({}); // find all products
@@ -55,7 +56,9 @@ export const createProduct = async (req, res) => {
         cloudinary.uploader.upload(img, { folder: "products" })
       );
       const results = await Promise.all(uploadPromises);
-      uploadedImages = results.map((r) => optimizeCloudinaryUrl(r.secure_url, 800, "auto"))
+      uploadedImages = results.map((r) =>
+        optimizeCloudinaryUrl(r.secure_url, 800, "auto")
+      );
     }
 
     const product = await Product.create({
@@ -67,6 +70,17 @@ export const createProduct = async (req, res) => {
       sizes: sizes || [],
       colors: colors || [],
     });
+
+    //  Automatically create category if it doesn’t exist
+    if (category) {
+      const existingCategory = await Category.findOne({ name: category });
+      if (!existingCategory) {
+        await Category.create({
+          name: category,
+          imageUrl: uploadedImages[0] || "",
+        });
+      }
+    }
 
     res.status(201).json(product);
   } catch (error) {
@@ -110,7 +124,7 @@ export const getRecommendedProducts = async (req, res) => {
           description: 1,
           images: 1,
           price: 1,
-          sizes: 1, // 👈 include sizes
+          sizes: 1, 
           colors: 1,
         },
       },

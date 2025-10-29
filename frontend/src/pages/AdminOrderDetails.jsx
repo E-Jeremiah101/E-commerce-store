@@ -88,16 +88,6 @@ const AdminOrderDetails = () => {
           <p className="font-semibold">{order.flutterwaveTransactionId}</p>
         </div>
 
-        {/* <div>
-          {order.deliveredAt && (
-            <>
-              <h1 className="text-gray-600">Order Delivered:</h1>{" "}
-              <p className="font-semibold">
-                {new Date(order.deliveredAt).toLocaleString()}
-              </p>
-            </>
-          )}
-        </div> */}
         <div>
           <h1 className="text-gray-600">Order Updated:</h1>{" "}
           <p className="font-semibold">

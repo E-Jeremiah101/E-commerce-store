@@ -42,8 +42,12 @@ const { cart } = useCartStore();
       toast.error("Please login to add products to cart", { id: "login" });
       return;
     }
-    if (!selectedColor || !selectedSize) {
-      toast.error("Please select a color and size");
+    if (product.colors?.length > 0  && !selectedColor ) {
+      toast.error("Please select a color ");
+      return;
+    }
+    if (product.sizes?.length > 0 && !selectedSize) {
+      toast.error("Please select a size");
       return;
     }
     addToCart(

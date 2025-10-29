@@ -145,7 +145,7 @@ export const refreshToken = async (req, res) => {
         .json({ message: "Invalid or expired refresh token" });
     }
 
-    // ✅ Generate new tokens
+    //  Generate new tokens
     const newAccessToken = jwt.sign(
       { userId: decoded.userId },
       process.env.ACCESS_TOKEN_SECRET,
@@ -158,10 +158,10 @@ export const refreshToken = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    // ✅ Store the new refresh token in Redis (and overwrite the old one)
+    //  Store the new refresh token in Redis (and overwrite the old one)
     await storeRefreshToken(decoded.userId, newRefreshToken);
 
-    // ✅ Reset cookies (renew expiration)
+    //  Reset cookies (renew expiration)
     setCookies(res, newAccessToken, newRefreshToken);
 
     res.json({ message: "Tokens refreshed successfully" });

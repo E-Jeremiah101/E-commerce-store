@@ -18,13 +18,13 @@ const PurchaseSuccessPage = () => {
     const tx_ref = params.get("tx_ref");
     const status = params.get("status");
 
-    // 🚨 Redirect if failed or missing details
+    // Redirect if failed or missing details
     if (status !== "successful" || !transaction_id) {
       navigate("/purchase-cancel");
       return;
     }
 
-    // ✅ Proceed with verification
+    // Proceed with verification
     const handleCheckoutSuccess = async (transaction_id, tx_ref) => {
       try {
         const response = await axios.post("/payments/checkout-success", {
@@ -74,7 +74,7 @@ const PurchaseSuccessPage = () => {
       </div>
     );
 
-  // ✅ Success state
+  //  Success state
   return (
     <div className="h-screen w-screen bg-gray-700 flex items-center justify-center px-4 relative">
       <Confetti

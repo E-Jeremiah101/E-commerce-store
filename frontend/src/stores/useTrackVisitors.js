@@ -13,13 +13,13 @@ export default function useTrackVisitors() {
       try {
         const res = await fetch("/api/visitors", { method: "POST" });
         if (!res.ok) {
-          console.warn("⚠️ Failed to record visitor:", res.status);
+          console.warn("Failed to record visitor:", res.status);
           localStorage.removeItem("visitorLogged"); // allow retry
         } else {
-          console.log("✅ Visitor recorded successfully");
+          console.log(" Visitor recorded successfully");
         }
       } catch (err) {
-        console.error("❌ Visitor logging error:", err);
+        console.error("Visitor logging error:", err);
         localStorage.removeItem("visitorLogged");
       }
     };

@@ -29,7 +29,7 @@ const CategoryPage = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // ✅ Fetch category products
+  //  Fetch category products
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -78,7 +78,12 @@ const CategoryPage = () => {
           <GoBackButton />
         </div>
         <span className="text-center text-xl text-gray-900 tracking-widest">
-          {category.charAt(0).toUpperCase() + category.slice(1)}
+          {category.charAt(0).toUpperCase() +
+            category
+              .slice(1)
+              .toUpperCase()
+              .replace(/\s+/g, "-")
+              .replace(/&/g, " & ")}
         </span>
       </motion.div>
 
@@ -102,7 +107,7 @@ const CategoryPage = () => {
             ))}
           </motion.div>
 
-          {/* ✅ Pagination Controls */}
+          {/*  Pagination Controls */}
           {totalPages > 1 && (
             <div className="flex justify-center items-center space-x-2 mt-10">
               <button

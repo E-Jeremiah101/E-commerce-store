@@ -76,6 +76,18 @@ app.use("/api/refunds", refundRoutes);
 //categoryRoute
 app.use("/api", categoryRoutes)
 
+app.use("/api/categories", categoryRoutes);
+// POST /api/categories
+app.post("/api/categories", async (req, res) => {
+  try {
+    const { name } = req.body;
+    const category = await Category.create({ name });
+    res.status(201).json(category);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to create category" });
+  }
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
