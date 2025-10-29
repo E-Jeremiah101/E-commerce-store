@@ -19,6 +19,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import ForgotPasswordPage from "./pages/ForgetPasswordPage.jsx";
 import SearchResultsPage from "./pages/SearchResultsPage.jsx";
 import ViewProductPage from "./pages/ViewProductPage.jsx";
+import Welcome from "./pages/WelcomePage.jsx";
 import useTrackVisitors from "./stores/useTrackVisitors.js";
 
 
@@ -99,6 +100,10 @@ function App() {
               element={!user ? <LoginPage /> : <Navigate to="/" />}
             />
             <Route
+              path="/welcome"
+              element={!user ? <Welcome /> : <Navigate to="/" />}
+            />
+            <Route
               path="/secret-dashboard"
               element={
                 user?.role === "admin" ? (
@@ -119,10 +124,7 @@ function App() {
               path="/order-history"
               element={user ? <OrderHistoryPage /> : <Navigate to="/login" />}
             />
-            <Route
-              path="/admin/orders/:id"
-              element={ <AdminOrderDetails /> }
-            />
+            <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
 
             <Route
               path="Personal-info"

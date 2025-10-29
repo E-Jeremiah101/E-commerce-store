@@ -92,17 +92,17 @@ const Navbar = () => {
             ) : (
               <>
                 <Link
-                  to={"/signup"}
+                  to={"/welcome"}
                   className="text-gray-800 hover:text-gray-300"
                 >
                   <UserPlus size={22} />
                 </Link>
-                <Link
+                {/* <Link
                   to={"/login"}
                   className="text-gray-800 hover:text-gray-300"
                 >
                   <LogIn size={22} />
-                </Link>
+                </Link> */}
               </>
             )}
 
