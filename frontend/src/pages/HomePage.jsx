@@ -12,6 +12,7 @@ import Footer from "../components/Footer.jsx";
 import HeroSlider from "../components/HeroSlider.jsx";
 import CollectionTab from "../components/CollectionTab.jsx";
 import OtherFeatures from "../components/OtherFeatures.jsx";
+import LandingProducts from "../components/LandingProducts.jsx";
 const HomePage = () => {
   const [categories, setCategories] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
@@ -80,16 +81,9 @@ const HomePage = () => {
       <CollectionTab />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 root lg:px-25 bg-gradient-to-br from-white via-gray-100 to-gray-300">
-        <h1
-          className="text-black/90 font-bold text-2xl md:hidden tracking-widest mb-4 root"
-          style={{ textShadow: "2px 2px 6px rgba(0,0,0,0.2)" }}
-        >
-          Featured Categories
-        </h1>
-
-        {/* CATEGORY GRID */}
+        
         {isLoadingCategories ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-5">
             {[...Array(8)].map((_, i) => (
               <div
                 key={i}
@@ -98,11 +92,7 @@ const HomePage = () => {
             ))}
           </div>
         ) : categories.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5 md:gap-6 gap-5 look">
-            {categories.map((category) => (
-              <CategoryItem category={category} key={category.name} />
-            ))}
-          </div>
+          <div className="">{<LandingProducts />}</div>
         ) : (
           <p className="text-center text-gray-600">No categories found.</p>
         )}
@@ -112,13 +102,13 @@ const HomePage = () => {
           <div className="text-center">
             <h1
               className="text-3xl tracking-widest mb-4 text-black drop-shadow-lg"
-              style={{ textShadow: "2px 2px 6px rgba(0,0,0,0.4)" }}
+              
             >
               CLASSIC WEARS
             </h1>
             <p
               className="text-1xl lg:text-sm tracking-widest"
-              style={{ textShadow: "2px 2px 6px rgba(0,0,0,0.3)" }}
+              
             >
               Stay Relaxed, Stay Stylish: Redefine Comfort with the Perfect
               style Fit!
@@ -127,6 +117,33 @@ const HomePage = () => {
         </div>
 
         <OtherFeatures className="look" />
+
+        <div>
+          <h1
+            className="text-2xl tracking-widest mb-4 text-black drop-shadow-lg text-center"
+          >
+            EXPLORE  CATEGORY
+          </h1>
+          {/* CATEGORY GRID */}
+          {isLoadingCategories ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-48 bg-gray-300 rounded-lg animate-pulse"
+                ></div>
+              ))}
+            </div>
+          ) : categories.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5 md:gap-6 gap-5 look">
+              {categories.map((category) => (
+                <CategoryItem category={category} key={category.name} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-gray-600">No categories found.</p>
+          )}
+        </div>
 
         {/* FEATURED PRODUCTS */}
         {!isLoadingProducts && products.length > 0 && (

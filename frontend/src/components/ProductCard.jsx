@@ -6,10 +6,10 @@ const ProductCard = ({ product }) => {
   
 
   return (
-    <div className="flex-w-full relative flex-col h-full overflow-hidden rounded-lg  border-gray-700 shadow-lg">
+    <div className="flex-w-full relative flex-col h-full overflow-hidden rounded-lg  border-gray-700 ">
       {/* Product Image */}
-      
-        <div className="relative rounded-1xl mt-3 flex overflow-hidden h-44 ">
+      <Link to={`/product/${product._id}`}>
+        <div className="relative rounded-1xl mt-3 flex overflow-hidden h-50 ">
           <img
             className="object-cover w-full  "
             src={product.images?.[0]}
@@ -20,29 +20,20 @@ const ProductCard = ({ product }) => {
         </div>
 
         {/* Product Info */}
-        <div className="mt-2 px-2 pb-4 space-y-2">
-          <h3 className="text-sm font-semibold  tracking-widest text-black h-10 mb-0">
+        <div className="mt-2 px-2 pb-2 space-y-2 flex flex-col justify-center align-middle items-center">
+          <h3 className="text-lg text-gray-900 mb-1 text-center tracking-wider">
             {product.name}
           </h3>
 
-          <p className="text-lg  text-black font-medium">
+          <span className="text-lg  text-gray-700 ">
             ₦{" "}
             {product.price.toLocaleString(undefined, {
               minimumFractionDigits: 0,
             })}
-          </p>
+          </span>
           {/* Add to Cart Button */}
-          <Link to={`/product/${product._id}`}>
-          <button
-            className="w-full mt-3 flex items-center justify-center rounded-lg bg-black px-1 lg:px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-gray-800 focus:outline-none focus:ring-4 focus:ring-gray-900 tracking-widest"
-            
-          >
-            {/* <ShoppingCart size={22} className="mr-2" /> */}
-           View Product
-          </button>
-          </Link>
         </div>
-      
+      </Link>
     </div>
   );
 };

@@ -3,19 +3,16 @@ import { Link } from "react-router-dom";
 const CategoryItem = ({ category }) => {
   return (
     <Link
-      to={`/category/${category.name
-        }`}
-      className="relative group block rounded-lg overflow-hidden shadow-lg hover:scale-105 transition-transform duration-300"
+      to={`/category/${category.name}`}
+      className="relative group block  overflow-hidden shadow-lgtransition-transform duration-300"
     >
       <img
         src={category.imageUrl}
         alt={category.name}
-        className="w-full h-48 object-cover group-hover:opacity-90 transition-opacity duration-300"
+        className="w-full h-43 sm:h-48 object-cover transition-transform group-hover:opacity-90 duration-300 ease-in-out hover:scale-110"
       />
-      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-        <h2 className="text-white text-lg font-semibold tracking-widest uppercase">
-          {category.name}
-        </h2>
+      <div className=" flex items-center justify-center">
+        <h2 className="text-gray-900 uppercase py-2">{category.name}</h2>
       </div>
     </Link>
   );
