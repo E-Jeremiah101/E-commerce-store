@@ -21,11 +21,11 @@ const ProductCard = ({ product }) => {
 
         {/* Product Info */}
         <div className="mt-2 px-2 pb-2 space-y-2 flex flex-col justify-center align-middle items-center">
-          <h3 className="text-lg text-gray-900 mb-1 text-center tracking-wider">
+          <h3 className="text-md text-gray-800 mb-1 text-center tracking-wider">
             {product.name}
           </h3>
 
-          <span className="text-lg  text-gray-700 ">
+          <span className="text-md font-light  text-gray-900 ">
             ₦{" "}
             {product.price.toLocaleString(undefined, {
               minimumFractionDigits: 0,

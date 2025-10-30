@@ -12,7 +12,7 @@ const CategoryItem = ({ category }) => {
         className="w-full h-43 sm:h-48 object-cover transition-transform group-hover:opacity-90 duration-300 ease-in-out hover:scale-110"
       />
       <div className=" flex items-center justify-center">
-        <h2 className="text-gray-900 uppercase py-2">{category.name}</h2>
+        <h2 className="text-gray-800 uppercase py-2 text-md">{category.name}</h2>
       </div>
     </Link>
   );
