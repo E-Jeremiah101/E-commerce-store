@@ -83,7 +83,7 @@ const HomePage = () => {
       <div className="relative z-10 max-w-7xl mx-auto px-4 root lg:px-25 bg-gradient-to-br from-white via-gray-100 to-gray-300">
         
         {isLoadingCategories ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {[...Array(8)].map((_, i) => (
               <div
                 key={i}

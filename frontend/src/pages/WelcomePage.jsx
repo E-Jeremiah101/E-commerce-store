@@ -6,17 +6,14 @@ const WelcomePage = () => {
   return (
     <>
       <div className="bg-white  px-7 h-screen md:flex md:px-0 md:justify-evenly">
-        <div className="md:w-full">
+        <div className="md:w-full md:flex md:flex-col md:justify-center md:px-7">
           <div className="py-4">
             <GoBackButton size={20} />
           </div>
           <div className="md:text-4xl flex justify-center items-center text-4xl bg-white pb-7 md:pb-0 md:tracking-widest">
             <div>
-              WELCOME TO  <span
-             className="font-bold">ECO~STORE</span>
+              WELCOME TO <span className="font-bold">ECO~STORE</span>
             </div>
-            
-            
           </div>
           <div>
             <img src="/shopping-landing.jpg" alt="" className="md:w-130" />
