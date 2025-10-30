@@ -97,12 +97,6 @@ const Navbar = () => {
                 >
                   <UserPlus size={22} />
                 </Link>
-                {/* <Link
-                  to={"/login"}
-                  className="text-gray-800 hover:text-gray-300"
-                >
-                  <LogIn size={22} />
-                </Link> */}
               </>
             )}
 
@@ -298,7 +292,7 @@ const Navbar = () => {
             {/* Left: Logo */}
             <Link to={"/"} className="flex items-center gap-2">
               <img src="/logo-buz.jpg" alt="Logo" className="h-10 w-auto" />
-              <span className="text-emerald-400 font-bold text-xl">BUZ</span>
+              <span className=" font-bold text-xl">ECO~STORE</span>
             </Link>
 
             <nav className=" hidden md:flex items-center gap-6  tracking-widest">
@@ -360,16 +354,10 @@ const Navbar = () => {
                 ) : (
                   <>
                     <Link
-                      to={"/signup"}
-                      className="text-black hover:text-gray-300"
+                      to={"/welcome"}
+                      className="text-black "
                     >
                       <UserPlus size={22} />
-                    </Link>
-                    <Link
-                      to={"/login"}
-                      className="text-black hover:text-gray-300"
-                    >
-                      <LogIn size={22} />
                     </Link>
                   </>
                 )}

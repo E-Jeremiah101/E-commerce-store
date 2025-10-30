@@ -5,40 +5,42 @@ import GoBackButton from "../components/GoBackButton";
 const WelcomePage = () => {
   return (
     <>
-      <div className="bg-white  px-7 h-screen">
-        <div className='py-4'><GoBackButton size={20} /></div>
-         
-        <div className=" justify-center items-center text-4xl bg-white pb-7">
-          Welcome to <span className='font-bold'>Eco~Store</span>
-        </div>
-        <img src="/shopping-landing.jpg" alt="" />
-
-        <div>
-          <button
-            type="submit"
-            className="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black transition hover:bg-gray-800 focus:outline-none    duration-150 ease-in-out disabled:opacity-50 mt-20"
-          >
-           
-            <Link
-                          to="/login"
-                         
-                        > LOGIN</Link>
-          </button>
+      <div className="bg-white  px-7 h-screen md:flex md:px-0 md:justify-evenly">
+        <div className="md:w-full">
+          <div className="py-4">
+            <GoBackButton size={20} />
+          </div>
+          <div className="md:text-4xl flex justify-center items-center text-4xl bg-white pb-7 md:pb-0 md:tracking-widest">
+            <div>
+              WELCOME TO  <span
+             className="font-bold">ECO~STORE</span>
+            </div>
+            
+            
+          </div>
+          <div>
+            <img src="/shopping-landing.jpg" alt="" className="md:w-130" />
+          </div>
         </div>
 
-        <div>
-          <button
-            type="submit"
-            className="w-full flex justify-center py-4 px-4  text-sm font-medium text-black duration-150 ease-in-out disabled:opacity-50 mt-10"
-          >
-           
-            <Link
-                          to="/signup"
-    
-                        >
-                           SIGNUP
-                        </Link>
-          </button>
+        <div className="md:bg-gradient-to-br from-white via-gray-100 to-gray-300  md:w-full md:flex md:flex-col md:justify-center md:px-7">
+          <div>
+            <button
+              type="submit"
+              className="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black transition hover:bg-gray-800 focus:outline-none    duration-150 ease-in-out disabled:opacity-50 mt-20"
+            >
+              <Link to="/login"> LOGIN</Link>
+            </button>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              className="w-full flex justify-center py-4 px-4  text-sm font-medium text-black duration-150 ease-in-out disabled:opacity-50 mt-10"
+            >
+              <Link to="/signup">SIGNUP</Link>
+            </button>
+          </div>
         </div>
       </div>
     </>
