@@ -125,6 +125,11 @@ const orderSchema = new mongoose.Schema(
         processedAt: Date,
       },
     ],
+    productSnapshot: {
+      name: String,
+      image: String,
+      price: Number,
+    },
     refundStatus: {
       type: String,
       enum: [

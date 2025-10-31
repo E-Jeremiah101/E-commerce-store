@@ -17,10 +17,15 @@ export const requestRefund = async (req, res) => {
         .json({ message: "Refunds are only allowed for delivered orders" });
 
     const product = order.products.find(
-      (p) => p.product.toString() === productId
+      (p) => p.product?.toString() === productId
     );
     if (!product)
-      return res.status(400).json({ message: "Product not found in order" });
+      return res
+        .status(400)
+        .json({
+          message:
+            "Product not found in order. It may have been deleted, but refunds can only apply to items originally in your order.",
+        });
     if (quantity > product.quantity)
       return res.status(400).json({ message: "Invalid quantity" });
 
@@ -50,6 +55,11 @@ export const requestRefund = async (req, res) => {
       quantity,
       amount: refundAmount,
       reason,
+      productSnapshot: {
+        name: product.name,
+        image: product.image,
+        price: product.price,
+      },
       status: "Pending",
     });
 
@@ -76,55 +86,45 @@ export const requestRefund = async (req, res) => {
  */
 export const getAllRefundRequests = async (req, res) => {
   try {
-    
+    const orders = await Order.find({ "refunds.0": { $exists: true } })
+      .populate("user", "name email")
+      .populate("refunds.product", "name images price") // still try to populate existing products
+      .sort({ createdAt: -1 });
 
-      const { status, startDate, endDate, search } = req.query;
+    // Flatten refund requests across all orders
+    const refunds = orders.flatMap((order) =>
+      order.refunds.map((refund) => {
+        // Use snapshot if product is deleted
+        const productData = refund.product || {};
+        const snapshot = refund.productSnapshot || {};
 
-      const filter = { "refunds.0": { $exists: true } };
-      if (startDate || endDate) {
-        filter["refunds.requestedAt"] = {};
-        if (startDate) filter["refunds.requestedAt"].$gte = new Date(startDate);
-        if (endDate) filter["refunds.requestedAt"].$lte = new Date(endDate);
-      }
-      const orders = await Order.find(filter)
-        .populate("user", "name email")
-        .populate("refunds.product", "name images price");
-
-    let refundRequests = [];
-
-    orders.forEach((order) => {
-      order.refunds.forEach((ref) => {
-        if (status && ref.status !== status) return;
-        refundRequests.push({
+        return {
           orderId: order._id,
-          refundId: ref._id,
-          orderNumber: order.orderNumber,
-          product: ref.product,
           user: order.user,
-          amount: ref.amount,
-          reason: ref.reason,
-          status: ref.status,
-          requestedAt: ref.requestedAt,
-          processedAt: ref.processedAt,
-        });
-      });
-    });
+          orderNumber: order.orderNumber,
+          refundId: refund._id,
+          productId: refund.product?._id || refund.product,
+          productName: productData.name || snapshot.name || "Deleted Product",
+          productImage:
+            productData.images?.[0] || snapshot.image || "/images/deleted.png", // optional fallback image
+          productPrice: productData.price || snapshot.price || 0,
+          quantity: refund.quantity,
+          amount: refund.amount,
+          reason: refund.reason,
+          status: refund.status,
+          requestedAt: refund.requestedAt,
+          processedAt: refund.processedAt,
+        };
+      })
+    );
 
-    if (search) {
-      const lower = search.toLowerCase();
-      refundRequests = refundRequests.filter(
-        (r) =>
-          r.orderNumber?.toLowerCase().includes(lower) ||
-          r.orderId?.toString().includes(lower)
-      );
-    }
-
-    res.status(200).json({ success: true, refundRequests });
+    res.status(200).json(refunds);
   } catch (err) {
-    console.error("Fetch refund requests error:", err);
+    console.error("Error fetching refund requests:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 /**
  *  ADMIN: Approve Refund (Flutterwave API)

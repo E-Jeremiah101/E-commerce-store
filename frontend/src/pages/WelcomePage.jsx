@@ -22,21 +22,25 @@ const WelcomePage = () => {
 
         <div className="md:bg-gradient-to-br from-white via-gray-100 to-gray-300  md:w-full md:flex md:flex-col md:justify-center md:px-7">
           <div>
+            <Link to="/login">
             <button
               type="submit"
               className="w-full flex justify-center py-4 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black transition hover:bg-gray-800 focus:outline-none    duration-150 ease-in-out disabled:opacity-50 mt-20"
             >
-              <Link to="/login"> LOGIN</Link>
+               LOGIN
             </button>
+            </Link>
           </div>
 
           <div>
+            <Link to="/signup">
             <button
               type="submit"
               className="w-full flex justify-center py-4 px-4  text-sm font-medium text-black duration-150 ease-in-out disabled:opacity-50 mt-10"
             >
-              <Link to="/signup">SIGNUP</Link>
+              SIGNUP
             </button>
+            </Link>
           </div>
         </div>
       </div>
