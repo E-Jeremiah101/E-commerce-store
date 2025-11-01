@@ -194,7 +194,7 @@ export const approveRefund = async (req, res) => {
   try {
     const { orderId, refundId } = req.params;
 
-    const order = await Order.findById(orderId).populate("user", "name email");;
+    const order = await Order.findById(orderId).populate("user", "name email");
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     const refund = order.refunds.id(refundId);
@@ -254,6 +254,13 @@ export const approveRefund = async (req, res) => {
         ? "Fully Refunded"
         : "Partial Refunded";
 
+    //  Reflect in main order status for admin display
+    if (order.refundStatus === "Fully Refunded") {
+      order.status = "Refunded";
+    } else if (order.refundStatus === "Partial Refunded") {
+      order.status = "Partially Refunded";
+    }
+
     await order.save({ validateBeforeSave: false });
 
     await sendEmail({
@@ -275,7 +282,6 @@ export const approveRefund = async (req, res) => {
     </div>
   `,
     });
-
 
     res.status(200).json({
       success: true,
