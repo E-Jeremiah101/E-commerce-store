@@ -49,6 +49,7 @@ const AdminRefundsTab = () => {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (r) =>
+          r.orderNumber?.toLowerCase().includes(term) ||
           r.user?.name?.toLowerCase().includes(term) ||
           r.user?.email?.toLowerCase().includes(term) ||
           r.user?._id?.toLowerCase().includes(term) ||

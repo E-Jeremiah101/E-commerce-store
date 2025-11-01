@@ -9,35 +9,67 @@ export const getUserOrders = async (req, res) => {
 
         const orders = await Order.find({user: userId}).populate("products.product", "name image price").sort({createdAt: -1}).lean();
 
-        // res.status(200).json({ success: true, orders });
-        res.status(200).json({
-          success: true,
+        const formattedOrders = orders.map((order) => {
+      // 🔍 If any refund for this order has status "Approved"
+      const hasApprovedRefund = order.refunds?.some(
+        (refund) => refund.status === "Approved"
+      );
+
+      let displayStatus = order.status;
+     const totalProducts = order.products.length;
+     const approvedCount =
+       order.refunds?.filter((r) => r.status === "Approved").length || 0;
+
+     if (approvedCount > 0 && approvedCount < totalProducts) {
+       displayStatus = "Partially Refunded";
+     } else if (approvedCount === totalProducts) {
+       displayStatus = "Refunded";
+     }
+
+       const products = order.products.map((p) => {
+         // Check if this product has a refund request
+         const refund = order.refunds?.find(
+           (r) => r.product?.toString() === p.product?._id?.toString()
+         );
+
+         return {
+           _id: p._id,
+           product: p.product || null,
+           quantity: p.quantity,
+           price: p.price,
+           size: p.selectedSize || null,
+           color: p.selectedColor || null,
+           selectedCategory: p.selectedCategory || null,
+           name: p.name || p.product?.name || "Unknown Product",
+           image: p.image || p.product?.image || "/placeholder.png",
+           refundStatus: refund?.status || null, // 👈 Add this
+         };
+       });
+        
+
+        return {
           count: orders.length,
-          orders: orders.map((order) => ({
-            _id: order._id,
-            orderNumber: order.orderNumber,
-            status: order.status,
-            deliveredAt: order.deliveredAt,
-            totalAmount: order.totalAmount,
-            subtotal: order.subtotal,
-            discount: order.discount,
-            coupon: order.coupon,
-            deliveryAddress: order.deliveryAddress,
-            phone: order.phone,
-            createdAt: order.createdAt,
-            products: order.products.map((p) => ({
-              _id: p._id,
-              product: p.product || null,
-              quantity: p.quantity,
-              price: p.price,
-              size: p.selectedSize || null,
-              color: p.selectedColor || null,
-              selectedCategory: p.selectedCategory || null,
-              name: p.name || p.product?.name || "Unknown Product",
-              image: p.image || p.product?.image || "/placeholder.png",
-            })),
-          })),
-        });
+          displayStatus,
+          _id: order._id,
+          orderNumber: order.orderNumber,
+          status: order.status,
+          deliveredAt: order.deliveredAt,
+          totalAmount: order.totalAmount,
+          subtotal: order.subtotal,
+          discount: order.discount,
+          coupon: order.coupon,
+          deliveryAddress: order.deliveryAddress,
+          phone: order.phone,
+          createdAt: order.createdAt,
+          products,
+        };
+
+      });
+      res.status(200).json({
+        success: true,
+        count: formattedOrders.length,
+        orders: formattedOrders,
+      });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

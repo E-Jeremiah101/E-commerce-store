@@ -110,7 +110,7 @@ const OrderHistoryPage = () => {
                       : "bg-yellow-100 text-yellow-700"
                   }`}
                 >
-                  {order.status}
+                  {order.displayStatus || order.status}
                 </span>
               </div>
               <p className="text-xs md:text-sm text-gray-500">
@@ -160,6 +160,23 @@ const OrderHistoryPage = () => {
                         {item.quantity > 1 && (
                           <span className="text-gray-700 text-xs">
                             ₦{item.price.toLocaleString()} each
+                          </span>
+                        )}
+                        {item.refundStatus && (
+                          <span
+                            className={`inline-block mt-1 px-2 py-1 text-xs rounded ${
+                              item.refundStatus === "Approved"
+                                ? "bg-green-100 text-green-700"
+                                : item.refundStatus === "Pending"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {item.refundStatus === "Approved"
+                              ? "Refunded"
+                              : item.refundStatus === "Pending"
+                              ? "Refund Pending"
+                              : "Refund Rejected"}
                           </span>
                         )}
                       </div>
