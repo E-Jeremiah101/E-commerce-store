@@ -5,6 +5,7 @@ import { MoveRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import axios from "../lib/axios";
 import { useUserStore } from "../stores/useUserStore";
+import toast from "react-hot-toast";
 
 const OrderSummary = () => {
   const { user, setUser } = useUserStore();
@@ -65,7 +66,7 @@ const OrderSummary = () => {
         // Redirect user to Flutterwave payment page
         window.location.href = link;
       } else {
-        alert("Unable to initialize payment. Please try again.");
+        toast.error("Unable to initialize payment. Please try again.");
       }
     } catch (error) {
       console.error("Payment initialization failed:", error);

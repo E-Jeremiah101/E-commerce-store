@@ -265,14 +265,14 @@ const Navbar = () => {
                 <Link
                   to={"/signup"}
                   onClick={() => setIsOpen(false)}
-                  className="block bg-emerald-600 px-4 py-2 rounded-md text-center"
+                  className="block bg-gray-500 px-4 py-2 rounded-md text-center"
                 >
                   Sign Up
                 </Link>
                 <Link
                   to={"/login"}
                   onClick={() => setIsOpen(false)}
-                  className="block bg-gray-700 px-4 py-2 rounded-md text-center"
+                  className="block bg-gray-500 px-4 py-2 rounded-md text-center"
                 >
                   Login
                 </Link>
