@@ -37,8 +37,8 @@ const SearchBar = () => {
 
   return (
     <div className=" w-full max-w-md mx-auto text-white bg-black ">
-      <form onSubmit={handleSubmit} className=" gap-2 items-center px-2">
-        <div className="text-white flex items-center justify-between border-none outline-2 outline-solid  p-2 rounded w-full outline-gray-200 border-gray-00 ">
+      <form onSubmit={handleSubmit} className=" gap-2 items-center ">
+        <div className="text-black flex items-center justify-between border-none outline-solid  p-2 rounded w-full outline-gray-200 border-gray-00 ">
           <input
             type="text"
             placeholder="Search products..."
@@ -53,10 +53,12 @@ const SearchBar = () => {
       </form>
 
       {suggestions.length > 0 && (
-        <div className="   bg-black top-9 rounded mt-1 shadow-lg z-50  ">
+        <div className="    bg-gradient-to-br from-white via-gray-100 to-gray-300 top-9 rounded mt-1 shadow-lg z-50 text-black ">
           <ul>
-            <h2 className="px-3 pt-5 pb-2 tracking-widest text-gray-300 ">SUGGESTIONS</h2>
-            <hr className="ml-3 text-white"/>
+            <h2 className="px-3 pt-5 pb-2 tracking-widest text-black ">
+              SUGGESTIONS
+            </h2>
+            <hr className="ml-3 text-black" />
             {suggestions.map((s, i) => (
               <li
                 key={i}

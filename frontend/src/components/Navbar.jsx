@@ -111,46 +111,46 @@ const Navbar = () => {
         </div>
         {/* SearchBar */}
         {isSearchOpen && (
-          <div className="px-4 py-6 bg-black">
+          <div className="px-4 py-6  bg-gradient-to-br from-white via-gray-100 to-gray-300">
             <SearchBar />
           </div>
         )}
         {/* Mobile Dropdown */}
         {isOpen && (
-          <div className="md:hidden  bg-black px-4 py-3 space-y-5 text-white text-lg overflow-y-auto h-screen ">
+          <div className="md:hidden   bg-gradient-to-br from-white via-gray-100 to-gray-300 px-4 mt-5 py-3 space-y-9 text-black font-serif text-lg overflow-y-auto h-screen ">
             <Link
               to={"/"}
               onClick={() => setIsOpen(false)}
-              className="flex items-center gap-2 tracking-widest"
+              className="flex items-center gap-5 tracking-widest"
             >
-              <Home /> Home
+              <Home size={19} /> Home
             </Link>
 
             {user && (
               <Link
                 to={"/personal-info"}
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 tracking-widest"
+                className="flex items-center gap-5 tracking-widest"
               >
-                <User /> Profile
+                <User size={19} /> Profile
               </Link>
             )}
             {user && (
               <Link
                 to={"/order-history"}
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 tracking-widest"
+                className="flex items-center gap-5 tracking-widest"
               >
-                <Package /> Orders
+                <Package size={19} /> Orders
               </Link>
             )}
             {user && (
               <Link
                 to={"/cart"}
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 tracking-widest"
+                className="flex items-center gap-5 tracking-widest"
               >
-                <ShoppingCart /> Cart ({cart.length})
+                <ShoppingCart size={19} /> Cart ({cart.length})
               </Link>
             )}
 
@@ -158,9 +158,9 @@ const Navbar = () => {
               <Link
                 to={"/secret-dashboard"}
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-2 tracking-widest"
+                className="flex items-center gap-5 tracking-widest"
               >
-                <UserCircle />
+                <UserCircle size={19} />
                 Admin Dashboard
               </Link>
             )}
@@ -170,11 +170,11 @@ const Navbar = () => {
                 onClick={() => setIsOpenn(!isOpenn)}
                 className="flex items-center w-full text-left focus:outline-none"
               >
-                <strong className="text-lg font-bold text-white hover:text-gray-200 transition-colors whitespace-nowrap tracking-widest cursor-pointer">
+                <strong className="text-lg font-bold text-black hover:text-gray-800 transition-colors whitespace-nowrap tracking-widest cursor-pointer">
                   COLLECTIONS
                 </strong>
 
-                <span className="text-white font-extrabold  ml-2 transition-transform duration-300 h-7 w-7 flex items-center justify-center cursor-pointer">
+                <span className="text-black font-extrabold  ml-2 transition-transform duration-300 h-7 w-7 flex items-center justify-center cursor-pointer">
                   {isOpenn ? (
                     <ChevronDown size={22} />
                   ) : (
@@ -188,21 +188,21 @@ const Navbar = () => {
                   isOpenn ? " mt-2" : "max-h-0"
                 }`}
               >
-                <ul className="text-white list-disc list-inside space-y-3 ">
+                <ul className="text-black list-disc list-inside space-y-3 ">
                   <li>
                     <Link to={"/category/Fragrance"}>
-                      <span className="hover:text-gray-300">FRAGRANCE</span>
+                      <span className="hover:text-gray-700">FRAGRANCE</span>
                     </Link>
                   </li>
                   <li>
                     <Link to={"/category/t-shirts"}>
-                      <span className="hover:text-gray-300">T-SHIRT</span>
+                      <span className="hover:text-gray-700">T-SHIRT</span>
                     </Link>
                   </li>
 
                   <li>
                     <Link to={"/category/suits&blazer"}>
-                      <span className="hover:text-gray-300">
+                      <span className="hover:text-gray-700">
                         SUITS & BLAZERS
                       </span>
                     </Link>
@@ -210,7 +210,7 @@ const Navbar = () => {
 
                   <li>
                     <Link to={"/category/jackets&Outerwear"}>
-                      <span className="hover:text-gray-300">
+                      <span className="hover:text-gray-700">
                         JACKETS & OUTERWEARS
                       </span>
                     </Link>
@@ -218,7 +218,7 @@ const Navbar = () => {
 
                   <li>
                     <Link to={"/category/underwear&socks"}>
-                      <span className="hover:text-gray-300">
+                      <span className="hover:text-gray-700">
                         UNDERWEAR & SOCKS
                       </span>
                     </Link>
@@ -226,24 +226,26 @@ const Navbar = () => {
 
                   <li>
                     <Link to={"/category/footwears"}>
-                      <span className="hover:text-gray-300">FOOTWEARS</span>
+                      <span className="hover:text-gray-700">FOOTWEARS</span>
                     </Link>
                   </li>
                   <li>
                     <Link to={"/category/bags"}>
-                      <span className="hover:text-gray-300">BAGS</span>
+                      <span className="hover:text-gray-700">BAGS</span>
                     </Link>
                   </li>
 
                   <li>
                     <Link to={"/category/sets&cords"}>
-                      <span className="hover:text-gray-300">SETS & CO-ORDS</span>
+                      <span className="hover:text-gray-700">
+                        SETS & CO-ORDS
+                      </span>
                     </Link>
                   </li>
 
                   <li>
                     <Link to={"/category/accessories&essentials"}>
-                      <span className="hover:text-gray-300">
+                      <span className="hover:text-gray-700">
                         ACCESSORIES & ESSENTIALS
                       </span>
                     </Link>
@@ -251,7 +253,7 @@ const Navbar = () => {
 
                   <li>
                     <Link to={"/category/bottoms"}>
-                      <span className="hover:text-gray-300">BOTTOMS</span>
+                      <span className="hover:text-gray-700">BOTTOMS</span>
                     </Link>
                   </li>
                 </ul>
@@ -282,7 +284,7 @@ const Navbar = () => {
                   logout();
                   setIsOpen(false);
                 }}
-                className="w-full bg-gray-700 px-4 py-2 rounded-md flex items-center justify-center mb-15"
+                className="w-full bg-gray-700 px-4 py-2 rounded-md flex items-center justify-center mb-17"
               >
                 <LogOut size={18} /> <span className="ml-2">Log Out</span>
               </button>

@@ -17,6 +17,8 @@ const HomePage = () => {
   const [categories, setCategories] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const {
     fetchFeaturedProducts,
@@ -31,8 +33,9 @@ const HomePage = () => {
         const res = await axios.get("/categories-with-images");
         setCategories(res.data);
       } catch (error) {
+        setCategories([]);
         console.error("Error fetching categories:", error);
-        toast.error("Failed to load categories.");
+        
       } finally {
         setIsLoadingCategories(false);
       }
@@ -52,10 +55,8 @@ const HomePage = () => {
         const res = await axios.get("/products/recommendations");
         setRecommendations(res.data);
       } catch (error) {
-        toast.error(
-          error.response?.data?.message ||
-            "An error occurred while fetching recommendations"
-        );
+        setRecommendations([]); 
+        console.error(err)
       }
     };
     fetchRecommendations();

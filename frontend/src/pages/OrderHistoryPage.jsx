@@ -83,7 +83,7 @@ const OrderHistoryPage = () => {
         </div>
       </motion.div>
       <motion.div
-        className="p-6 max-w-4xl mx-auto mt-5"
+        className="p-6 max-w-4xl mx-auto mt-5 no-scroll"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.2 }}
@@ -227,7 +227,7 @@ const OrderHistoryPage = () => {
 
         {/* Refund Modal */}
         {showRefundModal && selectedOrder && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/80 bg-opacity-700 z-50">
+          <div className="fixed inset-0 flex no-scroll items-center justify-center bg-black/90 bg-opacity-700 z-50">
             <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
               <h3 className="text-lg font-semibold mb-4">Request Refund </h3>
               <form onSubmit={handleRefundSubmit}>
@@ -239,7 +239,7 @@ const OrderHistoryPage = () => {
                   onChange={(e) =>
                     setRefundData({ ...refundData, productId: e.target.value })
                   }
-                  className="w-full border rounded-lg p-2 mb-3"
+                  className="w-full border border-gray-500 focus:outline-none rounded-lg p-2 mb-3"
                 >
                   <option value="" disabled>
                     Select product
@@ -278,7 +278,7 @@ const OrderHistoryPage = () => {
                   onChange={(e) =>
                     setRefundData({ ...refundData, quantity: e.target.value })
                   }
-                  className="w-full border rounded-lg p-2 mb-3"
+                  className="w-full border border-gray-500 focus:outline-none rounded-lg p-2 mb-3"
                 />
 
                 <label className="block text-sm font-medium mb-2">
@@ -291,7 +291,7 @@ const OrderHistoryPage = () => {
                     setRefundData({ ...refundData, reason: e.target.value })
                   }
                   placeholder="Describe the issue..."
-                  className="w-full border rounded-lg p-2 mb-3"
+                  className="w-full resize-none border-1 rounded-lg p-2 mb-3 focus:outline-none   border-gray-500"
                 ></textarea>
 
                 <div className="flex justify-end gap-2">
@@ -308,6 +308,67 @@ const OrderHistoryPage = () => {
                   >
                     Submit
                   </button>
+                </div>
+
+                <div className="mt-4 max-h-54 overflow-y-auto border border-gray-200 p-3 rounded-md text-gray-700 whitespace-pre-wrap no-scroll">
+                  <h1 className="text-lg font-bold mb-2">Refund Policy</h1>
+                  <span>
+                    At <span className="text-gray-900">Eco~Store</span>, we want
+                    you to be completely satisfied with your purchase. If you
+                    are not happy with your order, please review our refund
+                    policy below:
+                  </span>
+
+                  <ul className="list-disc list-inside mt-2 text-sm text-gray-700">
+                    <li>
+                      Refund requests must be made within 48 hours of receiving
+                      your order.
+                    </li>
+                    <li>
+                      Items must be unworn, unwashed, and returned in their
+                      original packaging with all tags attached.
+                    </li>
+                    <li>
+                      Certain items such as custom-made, personalized, or sale
+                      items may not be eligible for a refund.
+                    </li>
+                    <li>
+                      Refunds will be processed to your original payment method
+                      within 5–10 business days after approval.
+                    </li>
+                    <li>
+                      For defective or damaged items, please provide a photo as
+                      proof.
+                    </li>
+                  </ul>
+
+                  <ol className="list-decimal list-inside mt-2 text-sm text-gray-700">
+                    <li>
+                      Submit a refund request through this form selecting the
+                      product and quantity.
+                    </li>
+                    <li>
+                      You will receive an email confirmation upon request.
+                    </li>
+                    <li>Wait for confirmation from our support team.</li>
+                    <li>
+                      Ship the product back if required, using the instructions
+                      provided.
+                    </li>
+                    <li>
+                      Receive your refund once the returned item is received and
+                      approved.
+                    </li>
+                    <li>
+                      Receive your refund once the returned item is received and
+                      approved.
+                    </li>
+                  </ol>
+
+                  <p className="text-sm text-gray-900 mt-2">
+                    Note: Shipping fees are non-refundable unless the item is
+                    incorrect.
+                  </p>
                 </div>
               </form>
             </div>

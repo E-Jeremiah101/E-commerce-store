@@ -219,7 +219,7 @@ export const getAllOrders = async (req, res) => {
         //      })),
         //    })),
         //  });
-
+        
         return {
           _id: order._id,
           orderNumber: order.orderNumber,
