@@ -21,8 +21,16 @@ import refundRoutes from "./routes/refund.routes.js";
 import categoryRoutes from "./routes/categoryRoutes.js"
 dotenv.config();
 const app = express();
-await connectRedis(); //connect once at startup
 const PORT = process.env.PORT || 5000;
+await connectRedis(); //connect once at startup
+
+try {
+  await connectDB();
+  console.log(" MongoDB connection established.");
+} catch (err) {
+  console.error(" MongoDB connection failed:", err.message);
+  process.exit(1);
+}
 
 // const __dirname = path.resolve();
 app.use(
@@ -73,20 +81,11 @@ app.use("/api/visitors", visitorRoutes);
 //RefundRoute
 app.use("/api/refunds", refundRoutes);
 
-//categoryRoute
+// categoryRoute
 app.use("/api", categoryRoutes)
 
 app.use("/api/categories", categoryRoutes);
-// POST /api/categories
-app.post("/api/categories", async (req, res) => {
-  try {
-    const { name } = req.body;
-    const category = await Category.create({ name });
-    res.status(201).json(category);
-  } catch (err) {
-    res.status(500).json({ message: "Failed to create category" });
-  }
-});
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -105,8 +104,13 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: "Internal server error" });
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 
-  connectDB();
+ 
 });

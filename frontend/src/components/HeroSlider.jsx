@@ -42,8 +42,8 @@ const HeroSlider = () => {
               src={slide.url}
               alt={slide.title}
               loading="eager"
-              className="w-full h-[21rem] sm:h-[32rem]    
-             lg:h-[36rem] object-center"
+              className="w-full h-[23rem] sm:h-[32rem]    
+             lg:h-[36rem]  object-cover"
             />
             {/* Absolute text */}
             <div className="lg:hidden text-center text-black px-3 py-6 bg-gradient-to-br from-white via-gray-100 to-gray-300 h-[10rem]">

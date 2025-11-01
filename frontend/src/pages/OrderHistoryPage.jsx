@@ -16,6 +16,13 @@ const OrderHistoryPage = () => {
     quantity: 1,
     reason: "",
   });
+  const getDeletedProductId = (p, orderId) => {
+    const safeName = (p.name || p.product?.name || "")
+      .trim()
+      .replace(/\s+/g, "_");
+    const price = p.price || p.product?.price || 0;
+    return `deleted-${orderId}-${safeName}-${price}`;
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -24,7 +31,6 @@ const OrderHistoryPage = () => {
         setOrders(data.orders || []);
       } catch (err) {
         console.error(err);
-        toast.error("Failed to fetch orders");
       } finally {
         setLoading(false);
       }
@@ -110,8 +116,6 @@ const OrderHistoryPage = () => {
               <p className="text-xs md:text-sm text-gray-500">
                 Placed on {new Date(order.createdAt).toLocaleDateString()}
               </p>
-            
-             
 
               {order.status === "Delivered" && (
                 <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
@@ -220,14 +224,26 @@ const OrderHistoryPage = () => {
                   }
                   className="w-full border rounded-lg p-2 mb-3"
                 >
-                  <option value="" className="text-sm ">
-                   
+                  <option value="" disabled>
+                    Select product
                   </option>
-                  {selectedOrder.products.map((p) => (
-                    <option key={p.product._id} value={p.product._id}>
-                      {p.product.name}
-                    </option>
-                  ))}
+                  {selectedOrder.products.map((p) => {
+                    //  Generate the same ID format as backend
+                    const productId =
+                      p.product?._id ||
+                      getDeletedProductId(p, selectedOrder._id);
+
+                    const productName =
+                      p.product?.name || p.name || "Deleted Product";
+
+                    const productPrice = p.product?.price || p.price || 0;
+
+                    return (
+                      <option key={productId} value={productId}>
+                        {`${productName} — ₦${productPrice.toLocaleString()}`}
+                      </option>
+                    );
+                  })}
                 </select>
 
                 <label className="block text-sm font-medium mb-2">
@@ -238,7 +254,7 @@ const OrderHistoryPage = () => {
                   min="1"
                   max={
                     selectedOrder.products.find(
-                      (p) => p.product._id === refundData.productId
+                      (p) => p.product?._id === refundData.productId
                     )?.quantity || 1
                   }
                   value={refundData.quantity}

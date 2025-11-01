@@ -1,69 +1,98 @@
 import Order from "../models/order.model.js";
 import axios from "axios";
 
+//  Generate a consistent fallback ID for deleted products
+const getDeletedProductId = (p, orderId) => {
+  return `deleted-${orderId}-${p.name?.replace(/\s+/g, "_")?.trim()}-${
+    p.price
+  }`;
+};
 
-//  User: Request Refund
 export const requestRefund = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { productId, quantity, reason } = req.body;
 
-    const order = await Order.findById(orderId);
+    if (!reason?.trim()) {
+      return res.status(400).json({ message: "Refund reason is required." });
+    }
+
+    const order = await Order.findById(orderId).populate("products.product");
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    if (order.status !== "Delivered")
+    if (order.status !== "Delivered") {
       return res
         .status(400)
         .json({ message: "Refunds are only allowed for delivered orders" });
-
-    const product = order.products.find(
-      (p) => p.product?.toString() === productId
-    );
-    if (!product)
-      return res
-        .status(400)
-        .json({
-          message:
-            "Product not found in order. It may have been deleted, but refunds can only apply to items originally in your order.",
-        });
-    if (quantity > product.quantity)
-      return res.status(400).json({ message: "Invalid quantity" });
-
-    // Check if refund already exists for this product
-    const existingRefund = order.refunds.find(
-      (r) => r.product.toString() === productId
-    );
-    if (existingRefund) {
-      if (existingRefund.status === "Approved")
-        return res
-          .status(400)
-          .json({ message: "Refund already approved for this product" });
-      if (existingRefund.status === "Rejected")
-        return res
-          .status(400)
-          .json({ message: "Refund request was rejected for this product" });
-      return res
-        .status(400)
-        .json({ message: "Refund already pending for this product" });
     }
 
-    const refundAmount = product.price * quantity;
+    // Consistent helper for deleted product IDs
+    const getDeletedProductId = (p) => {
+      const safeName = (p.name || p.product?.name || "")
+        .trim()
+        .replace(/\s+/g, "_");
+      const price = p.price || p.product?.price || 0;
+      return `deleted-${orderId}-${safeName}-${price}`;
+    };
 
-    // Add new refund request
+    // Find product (even if deleted)
+    const product = order.products.find(
+      (p) =>
+        p.product?._id?.toString() === productId ||
+        getDeletedProductId(p) === productId
+    );
+
+    if (!product) {
+      return res
+        .status(400)
+        .json({ message: "This item was not part of your original order." });
+    }
+
+    if (quantity > product.quantity || quantity <= 0) {
+      return res.status(400).json({ message: "Invalid refund quantity." });
+    }
+
+    // Create consistent refundKey
+    const refundKey =
+      product.product?._id?.toString() || getDeletedProductId(product);
+
+    //  STRONG duplicate check
+    const duplicateRefund = order.refunds.some((r) => {
+      const existingKey =
+        r.product?.toString() ||
+        r.productSnapshot?._id ||
+        getDeletedProductId(r.productSnapshot || {});
+      return existingKey === refundKey;
+    });
+
+    if (duplicateRefund) {
+      return res
+        .status(400)
+        .json({ message: "Refund already requested for this product." });
+    }
+
+    // Create product snapshot
+    const snapshot = {
+      _id: refundKey,
+      name: product.product?.name || product.name || "Deleted Product",
+      image:
+        product.product?.images?.[0] || product.image || "/images/deleted.png",
+      price: product.product?.price || product.price || 0,
+    };
+
+    // Calculate refund amount
+    const refundAmount = snapshot.price * quantity;
+
+    // Push refund
     order.refunds.push({
-      product: productId,
+      product: product.product?._id || null,
       quantity,
       amount: refundAmount,
       reason,
-      productSnapshot: {
-        name: product.name,
-        image: product.image,
-        price: product.price,
-      },
+      productSnapshot: snapshot,
       status: "Pending",
     });
 
-    // Update order refund status
     order.refundStatus =
       order.refunds.length === order.products.length
         ? "Full Refund Requested"
@@ -71,30 +100,30 @@ export const requestRefund = async (req, res) => {
 
     await order.save({ validateBeforeSave: false });
 
-    res
-      .status(200)
-      .json({ success: true, message: "Refund requested successfully", order });
+    return res.status(200).json({
+      success: true,
+      message: "Refund requested successfully",
+      order,
+    });
   } catch (err) {
     console.error("Refund request error:", err);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
-
 
 /**
  *  ADMIN: View all refund requests
  */
+
 export const getAllRefundRequests = async (req, res) => {
   try {
     const orders = await Order.find({ "refunds.0": { $exists: true } })
       .populate("user", "name email")
-      .populate("refunds.product", "name images price") // still try to populate existing products
+      .populate("refunds.product", "name images price")
       .sort({ createdAt: -1 });
 
-    // Flatten refund requests across all orders
     const refunds = orders.flatMap((order) =>
       order.refunds.map((refund) => {
-        // Use snapshot if product is deleted
         const productData = refund.product || {};
         const snapshot = refund.productSnapshot || {};
 
@@ -103,10 +132,10 @@ export const getAllRefundRequests = async (req, res) => {
           user: order.user,
           orderNumber: order.orderNumber,
           refundId: refund._id,
-          productId: refund.product?._id || refund.product,
+          productId: refund.product?._id || snapshot._id,
           productName: productData.name || snapshot.name || "Deleted Product",
           productImage:
-            productData.images?.[0] || snapshot.image || "/images/deleted.png", // optional fallback image
+            productData.images?.[0] || snapshot.image || "/images/deleted.png",
           productPrice: productData.price || snapshot.price || 0,
           quantity: refund.quantity,
           amount: refund.amount,
@@ -209,7 +238,7 @@ export const approveRefund = async (req, res) => {
 };
 
 /**
- * ❌ ADMIN: Reject Refund
+ *  ADMIN: Reject Refund
  */
 export const rejectRefund = async (req, res) => {
   try {

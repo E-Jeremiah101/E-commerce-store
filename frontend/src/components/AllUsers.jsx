@@ -70,12 +70,12 @@ const AllUsers = () => {
         <table className="min-w-full border-collapse">
           <thead className="bg-gradient-to-br from-white via-gray-100 to-gray-300">
             <tr>
-              <th className="p-3 text-left">Id</th>
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Email</th>
-              <th className="p-3 text-left">Phone</th>
-              <th className="p-3 text-left">Role</th>
-              <th className="p-3 text-center">Actions</th>
+              <th className="text-left px-4 py-2 border">Id</th>
+              <th className="px-4 py-2 border text-left">Name</th>
+              <th className="px-4 py-2 border text-left">Email</th>
+              <th className="px-4 py-2 border text-left">Phone</th>
+              <th className="px-4 py-2 border text-left">Role</th>
+              <th className="px-4 py-2 border text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -91,22 +91,16 @@ const AllUsers = () => {
                   key={user._id}
                   className="border-b even:bg-white  odd:bg-gray-200 hover:bg-gray-300 transition "
                 >
-                  <td className="px-4 py-2 border-b border-gray-700">
-                    {user._id}
-                  </td>
-                  <td className="px-4 py-2 border-b border-gray-700">
-                    {user.name}
-                  </td>
-                  <td className="px-4 py-2 border-b border-gray-700">
-                    {user.email}
-                  </td>
-                  <td className="px-4 py-2 border-b border-gray-700">
+                  <td className="px-2 py-2 border">{user._id}</td>
+                  <td className="px-2 py-2 border">{user.name}</td>
+                  <td className="px-2 py-2 border">{user.email}</td>
+                  <td className="px-2 py-2 border">
                     {user.phones?.find((p) => p.isDefault)?.number ||
                       user.phones?.[0]?.number ||
                       "N/A"}
                   </td>
-                  <td className="p-3 capitalize">{user.role}</td>
-                  <td className="p-3 text-center space-x-2">
+                  <td className="px-2 py-2 border capitalize">{user.role}</td>
+                  <td className="px-2 py-2 border text-center space-x-2">
                     <button
                       onClick={() => toggleAdminRole(user._id)}
                       className={`px-3 py-1 rounded-md text-white ${

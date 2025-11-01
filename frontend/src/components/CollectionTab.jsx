@@ -17,11 +17,11 @@ const CollectionTab = () => {
         <Link to={"/category/footwears"}>
           <span className="hover:text-gray-300">FOOTWEAR</span>
         </Link>
-        <Link to={"/category/sets"}>
+        <Link to={"/category/sets&cords"}>
           <span className="hover:text-gray-300">SETS & CO-ORDS</span>
         </Link>
 
-        <Link to={"/category/accessories"}>
+        <Link to={"/category/accessories&essentials"}>
           <span className="hover:text-gray-300">ACCESSORIES & ESSENTIALS</span>
         </Link>
         <Link to={"/category/bottoms"}>

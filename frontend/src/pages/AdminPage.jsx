@@ -39,20 +39,18 @@ const AdminPage = () => {
             <GoBackButton />
           </div>
           <span className=" flex  text-center text-xl  text-gray-900 tracking-widest">
-          Admin Dashboard
-        </span>
+            Admin Dashboard
+          </span>
         </div>
-        
       </motion.div>
       <div className="  bg-gradient-to-br from-white via-gray-100 to-gray-300  flex-2 md:flex md:h-[100vh] md:w-full px-2 md:mx-auto   md:overflow-hidden -10          min-h-screen  mt-19">
-        
         <div className="hidden md:flex  w-1/6 bg-gray-100  flex-shrink-0 ">
           <ul className="hidden space-y-5 md:flex flex-col">
             {tabs.map((tab) => (
               <li
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center px-2 py-2 mx-2 rounded-md transition-colors duration-200 ${
+                className={`flex items-center px-2 py-2 mx-2 rounded-md transition-colors duration-200 cursor-pointer ${
                   activeTab === tab.id
                     ? "bg-yellow-700 text-white"
                     : "bg-gray-700 text-white hover:bg-gray-600"
@@ -72,7 +70,7 @@ const AdminPage = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center px-4 py-2 mx-2 rounded-md transition-colors duration-200 ${
+                className={`flex items-center px-4 py-2 mx-2 rounded-md transition-colors duration-200 cursor-pointer ${
                   activeTab === tab.id
                     ? "bg-yellow-700 text-white"
                     : "bg-gray-700 text-white hover:bg-gray-600"

@@ -123,13 +123,14 @@ const orderSchema = new mongoose.Schema(
         },
         requestedAt: { type: Date, default: Date.now },
         processedAt: Date,
+        productSnapshot: {
+          name: String,
+          image: String,
+          price: Number,
+        },
       },
     ],
-    productSnapshot: {
-      name: String,
-      image: String,
-      price: Number,
-    },
+
     refundStatus: {
       type: String,
       enum: [

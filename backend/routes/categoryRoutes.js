@@ -38,31 +38,31 @@ router.get("/categories-with-images", async (req, res) => {
 
 
 
-router.get("/categories-with-images", async (req, res) => {
-  try {
-    const categories = await Category.find();
+// router.get("/categories-with-images", async (req, res) => {
+//   try {
+//     const categories = await Category.find();
 
-    const result = await Promise.all(
-      categories.map(async (cat) => {
-        const products = await Product.find({ category: cat.name });
-        let imageUrl = cat.imageUrl;
+//     const result = await Promise.all(
+//       categories.map(async (cat) => {
+//         const products = await Product.find({ category: cat.name });
+//         let imageUrl = cat.imageUrl;
 
-        if (products.length > 0) {
-          const randomProduct =
-            products[Math.floor(Math.random() * products.length)];
-          imageUrl = randomProduct.images?.[0] || cat.imageUrl;
-        }
+//         if (products.length > 0) {
+//           const randomProduct =
+//             products[Math.floor(Math.random() * products.length)];
+//           imageUrl = randomProduct.images?.[0] || cat.imageUrl;
+//         }
 
-        return { name: cat.name, imageUrl };
-      })
-    );
+//         return { name: cat.name, imageUrl };
+//       })
+//     );
 
-    res.json(result);
-  } catch (error) {
-    console.error("Error in /categories-with-images:", error);
-    res.status(500).json({ message: "Failed to fetch categories" });
-  }
-});
+//     res.json(result);
+//   } catch (error) {
+//     console.error("Error in /categories-with-images:", error);
+//     res.status(500).json({ message: "Failed to fetch categories" });
+//   }
+// });
 
 router.post("/", async (req, res) => {
   try {
@@ -75,10 +75,24 @@ router.post("/", async (req, res) => {
 });
 
 router.get("/", async (req, res) => {
-  const categories = await Category.find();
-  res.json(categories);
+  try {
+    const categories = await Category.find();
+    res.status(200).json(categories);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch categories" });
+  }
 });
 
+// POST /api/categories
+router.post("/", async (req, res) => {
+  try {
+    const { name } = req.body;
+    const category = await Category.create({ name });
+    res.status(201).json(category);
+  } catch (err) {
+    res.status(500).json({ message: "Failed to create category" });
+  }
+});
 
 
 

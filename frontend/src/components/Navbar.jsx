@@ -190,6 +190,11 @@ const Navbar = () => {
               >
                 <ul className="text-white list-disc list-inside space-y-3 ">
                   <li>
+                    <Link to={"/category/Fragrance"}>
+                      <span className="hover:text-gray-300">FRAGRANCE</span>
+                    </Link>
+                  </li>
+                  <li>
                     <Link to={"/category/t-shirts"}>
                       <span className="hover:text-gray-300">T-SHIRT</span>
                     </Link>
@@ -204,7 +209,7 @@ const Navbar = () => {
                   </li>
 
                   <li>
-                    <Link to={"/category/suits&blazer"}>
+                    <Link to={"/category/jackets&Outerwear"}>
                       <span className="hover:text-gray-300">
                         JACKETS & OUTERWEARS
                       </span>
@@ -224,12 +229,15 @@ const Navbar = () => {
                       <span className="hover:text-gray-300">FOOTWEARS</span>
                     </Link>
                   </li>
+                  <li>
+                    <Link to={"/category/bags"}>
+                      <span className="hover:text-gray-300">BAGS</span>
+                    </Link>
+                  </li>
 
                   <li>
-                    <Link to={"/category/sets"}>
-                      <span className="hover:text-gray-300">
-                        SETS & CO-ORDS
-                      </span>
+                    <Link to={"/category/sets&cords"}>
+                      <span className="hover:text-gray-300">SETS & CO-ORDS</span>
                     </Link>
                   </li>
 
@@ -353,10 +361,7 @@ const Navbar = () => {
                   </button>
                 ) : (
                   <>
-                    <Link
-                      to={"/welcome"}
-                      className="text-black "
-                    >
+                    <Link to={"/welcome"} className="text-black ">
                       <UserPlus size={22} />
                     </Link>
                   </>
