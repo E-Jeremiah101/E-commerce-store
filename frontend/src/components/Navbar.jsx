@@ -174,7 +174,7 @@ const Navbar = () => {
                   COLLECTIONS
                 </strong>
 
-                <span className="text-black font-extrabold  ml-2 transition-transform duration-300 h-7 w-7 flex items-center justify-center cursor-pointer">
+                <span className="text-black font-extrabold  ml-2 transition-transform duration-300 h-7 w-7 flex items-center justify-center  cursor-pointer">
                   {isOpenn ? (
                     <ChevronDown size={22} />
                   ) : (
@@ -188,7 +188,7 @@ const Navbar = () => {
                   isOpenn ? " mt-2" : "max-h-0"
                 }`}
               >
-                <ul className="text-black list-disc list-inside space-y-3 ">
+                <ul className="text-black list-disc list-inside space-y-4 font-serif">
                   <li>
                     <Link to={"/category/Fragrance"}>
                       <span className="hover:text-gray-700">FRAGRANCE</span>
@@ -284,7 +284,7 @@ const Navbar = () => {
                   logout();
                   setIsOpen(false);
                 }}
-                className="w-full bg-gray-700 px-4 py-2 rounded-md flex items-center justify-center mb-17"
+                className="w-full bg-gray-500 px-4 py-2 rounded-md flex items-center justify-center mb-19 text-white"
               >
                 <LogOut size={18} /> <span className="ml-2">Log Out</span>
               </button>
