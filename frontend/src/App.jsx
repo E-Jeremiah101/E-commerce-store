@@ -8,6 +8,8 @@ import OrderHistoryPage from "./pages/OrderHistoryPage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
 import Navbar from "./components/Navbar.jsx";
 import { Toaster } from "react-hot-toast";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { useUserStore } from "./stores/useUserStore.js";
 import { useEffect } from "react";
 import CartPage from "./pages/CartPage.jsx";
@@ -148,6 +150,8 @@ function App() {
             />
             <Route path="/search" element={<SearchResultsPage />} />
           </Routes>
+
+          <ToastContainer position="top-center" autoClose={3000} />
         </div>
         <Toaster />
       </div>

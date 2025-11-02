@@ -1,6 +1,8 @@
 
+
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { Eye, Search } from "lucide-react";
 
@@ -72,26 +74,35 @@ const AdminRefundsTab = () => {
   }, [searchTerm, statusFilter, dateFilter, refunds]);
 
   // Approve refund
-  const handleApprove = async (orderId, refundId, action) => {
-    try {
-      await axios.put(
-        `/api/refunds/${orderId}/${refundId}/approve`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
-      toast.success("Refund approved successfully");
-      setRefunds((prev) =>
-        prev.map((r) =>
-          r.refundId === refundId ? { ...r, status: "Approved" } : r
-        )
-      );
-    } catch (err) {
-      console.error("Approve refund failed:", err);
-      alert("Failed to approve refund");
-    }
-  };
+ const handleApprove = async (orderId, refundId) => {
+   try {
+     const res = await axios.put(
+       `/api/refunds/${orderId}/${refundId}/approve`,
+       {},
+       {
+         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+       }
+     );
+
+     toast.success("Refund approved successfully");
+
+     // Update status and processed date instantly
+     const updatedRefund = res.data.order.refunds.find(
+       (r) => r._id === refundId
+     );
+     const processedAt = updatedRefund?.processedAt || new Date().toISOString();
+
+     setRefunds((prev) =>
+       prev.map((r) =>
+         r.refundId === refundId ? { ...r, status: "Approved", processedAt } : r
+       )
+     );
+   } catch (err) {
+     console.error("Approve refund failed:", err);
+     toast.error("Failed to approve refund ❌");
+   }
+ };
+
 
    // Pagination logic
   const totalRequest = filteredRefunds.length;
@@ -106,24 +117,36 @@ const AdminRefundsTab = () => {
   // Reject refund
   const handleReject = async (orderId, refundId) => {
     try {
-      await axios.put(
+      const res = await axios.put(
         `/api/refunds/${orderId}/${refundId}/reject`,
         {},
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-      toast.error("Refund rejected ❌");
+
+      toast.warn("Refund rejected successfully ");
+
+      // Update status and processed date instantly
+      const updatedRefund = res.data.order.refunds.find(
+        (r) => r._id === refundId
+      );
+      const processedAt =
+        updatedRefund?.processedAt || new Date().toISOString();
+
       setRefunds((prev) =>
         prev.map((r) =>
-          r.refundId === refundId ? { ...r, status: "Rejected" } : r
+          r.refundId === refundId
+            ? { ...r, status: "Rejected", processedAt }
+            : r
         )
       );
     } catch (err) {
       console.error("Reject refund failed:", err);
-      alert("Failed to reject refund");
+      toast.error("Failed to reject refund ❌");
     }
   };
+
 if (loading)
     return (
       <div className="flex justify-center items-center h-screen">
@@ -132,6 +155,7 @@ if (loading)
     );
   return (
     <div className="p bg-white shadow rounded-xl">
+      {/* <ToastContainer position="top-center" autoClose={3000} /> */}
       <h2 className="text-lg font-semibold mb-4">Refund Requests</h2>
 
       {/* Filters */}

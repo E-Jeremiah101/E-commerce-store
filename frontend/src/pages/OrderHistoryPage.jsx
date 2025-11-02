@@ -81,7 +81,7 @@ const OrderHistoryPage = () => {
         <div className="absolute left-4 text-black">
           <GoBackButton />
         </div>
-      </motion.div>
+      </motion.div> 
       <motion.div
         className="p-6 max-w-4xl mx-auto mt-5 no-scroll"
         initial={{ opacity: 0, y: 20 }}

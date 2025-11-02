@@ -183,14 +183,16 @@ export const checkoutSuccess = async (req, res) => {
     if (!transaction_id)
       return res.status(400).json({ error: "transaction_id is required" });
 
-    // 1️⃣ Verify transaction directly from Flutterwave
+    console.log("🟢 checkoutSuccess called with:", req.body);
+
+    // 1️⃣ Verify transaction from Flutterwave
     const verifyResp = await flw.Transaction.verify({ id: transaction_id });
     const data = verifyResp?.data;
 
     if (!data || data.status !== "successful")
       return res.status(400).json({ message: "Payment not successful" });
 
-    // 2️⃣ Ensure we have a valid user
+    // 2️⃣ Validate user
     const user = await User.findById(data.meta?.userId);
     if (!user)
       return res
@@ -204,8 +206,9 @@ export const checkoutSuccess = async (req, res) => {
         { flutterwaveTransactionId: transaction_id },
       ],
     });
+
     if (existingOrder) {
-      console.log("Duplicate order detected — skipping creation.");
+      console.log("⚠️ Duplicate order detected — skipping creation.");
       return res.status(200).json({
         success: true,
         message: "Order already exists",
@@ -231,7 +234,7 @@ export const checkoutSuccess = async (req, res) => {
     const orderNumber =
       "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
 
-    // 5️⃣ Create the order record quickly
+    // 5️⃣ Safe Order Creation (handles duplicates gracefully)
     let order;
 
     try {
@@ -275,28 +278,33 @@ export const checkoutSuccess = async (req, res) => {
         console.log(
           "⚠️ Duplicate order insert caught — returning existing order."
         );
-        order = await Order.findOne({
+        const existingOrder = await Order.findOne({
           flutterwaveRef: tx_ref || data.tx_ref || transaction_id,
+        });
+        return res.status(200).json({
+          success: true,
+          message: "Order already exists",
+          orderNumber: existingOrder?.orderNumber || "UNKNOWN",
         });
       } else {
         throw err;
       }
     }
 
-    // 6️⃣ Respond immediately — no more long wait!
+    // 6️⃣ Respond immediately to user (frontend)
     res.status(200).json({
       success: true,
       message: "Payment verified and order created",
       orderNumber: order.orderNumber,
     });
 
-    // 7️⃣ Continue heavy tasks in background
+    // 7️⃣ Background tasks (email, coupon, etc.)
     setImmediate(async () => {
       try {
-        // Clear user cart
+        // 🧹 Clear cart
         await User.findByIdAndUpdate(userId, { cartItems: [] });
 
-        // Deactivate used coupon
+        // ❌ Deactivate used coupon
         if (couponCode) {
           await Coupon.findOneAndUpdate(
             { code: couponCode, userId },
@@ -304,31 +312,120 @@ export const checkoutSuccess = async (req, res) => {
           );
         }
 
-        // Send order confirmation email
-       if (typeof buildOrderEmailHTML === "function") {
-         await sendEmail({
-           to: user.email,
-           subject: `Your EcoStore Order Confirmation - ${order.orderNumber}`,
-           html: buildOrderEmailHTML(user, order, parsedProducts),
-         });
-       } else {
-         console.warn(
-           "⚠️ buildOrderEmailHTML function missing — email skipped."
-         );
-       }
+        // 📧 Send order confirmation email
+        const productRows = parsedProducts
+          .map((p) => {
+            let details = "";
+            if (p.size) details += `Size: ${p.size} `;
+            if (p.color) details += `| Color: ${p.color}`;
+            return `
+              <tr>
+                <td style="padding:8px;border:1px solid #ddd;">
+                  ${p.name}${
+              details ? `<br><small>${details.trim()}</small>` : ""
+            }
+                </td>
+                <td style="padding:8px;border:1px solid #ddd;text-align:center;">
+                  ${p.quantity || 1}
+                </td>
+                <td style="padding:8px;border:1px solid #ddd;text-align:right;">
+                  ₦${Number(p.price || 0).toLocaleString()}
+                </td>
+              </tr>`;
+          })
+          .join("");
 
+        const totalsHTML = `
+          <p><strong>Subtotal:</strong> ₦${Number(
+            order.subtotal || 0
+          ).toLocaleString()}</p>
+          <p><strong>Discount:</strong> ₦${Number(
+            order.discount || 0
+          ).toLocaleString()}</p>
+          <p><strong>Total:</strong> ₦${Number(
+            order.totalAmount || 0
+          ).toLocaleString()}</p>`;
 
-        // Reward coupon logic
-        if (order.totalAmount >= 150000) {
-          const rewardCoupon = await createNewCoupon(user._id);
-          await sendEmail({
-            to: user.email,
-            subject: "🎁 You earned a special coupon from EcoStore!",
-            html: buildRewardCouponEmailHTML(user, rewardCoupon),
-          });
+        let paymentDetailsHTML = "";
+        if (order.paymentMethod) {
+          const pm = order.paymentMethod;
+          if (pm.method === "card" && pm.card) {
+            paymentDetailsHTML = `
+              <p><strong>Payment Method:</strong> ${
+                pm.card.type || "Card"
+              } ************ ${pm.card.last4 || "****"}<br>
+              <small>Expires ${pm.card.exp_month || "MM"}/${
+              pm.card.exp_year || "YY"
+            }</small></p>`;
+          } else {
+            paymentDetailsHTML = `<p><strong>Payment Method:</strong> ${
+              pm.method || "Unknown"
+            }</p>`;
+          }
         }
 
-        console.log("✅ Background post-payment tasks completed successfully.");
+        await sendEmail({
+          to: user.email,
+          subject: `Your EcoStore Order Confirmation - ${order.orderNumber}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; background:#f4f4f4; padding:20px;">
+              <div style="max-width:600px;margin:auto;background:#fff;border-radius:8px;padding:20px;">
+                <h2 style="color:#2ecc71;text-align:center;">Thank you for your order!</h2>
+                <p>Hi <strong>${user.name}</strong>,</p>
+                <p>Your order <strong>${order.orderNumber}</strong> has been received.</p>
+                <table style="width:100%;border-collapse:collapse;margin-top:10px;">
+                  <thead>
+                    <tr>
+                      <th style="padding:8px;border:1px solid #ddd;text-align:left;">Product</th>
+                      <th style="padding:8px;border:1px solid #ddd;text-align:center;">Qty</th>
+                      <th style="padding:8px;border:1px solid #ddd;text-align:right;">Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>${productRows}</tbody>
+                </table>
+                ${paymentDetailsHTML}
+                ${totalsHTML}
+                <p><strong>Delivery Address:</strong> ${order.deliveryAddress}</p>
+                <p><strong>Phone:</strong> ${order.phone}</p>
+                <p>You’ll get another email once your items are shipped 🚚</p>
+                <p>Best regards,<br><strong>The Eco~Store Team 🌱</strong></p>
+              </div>
+            </div>`,
+        });
+
+        console.log(`✅ Confirmation email sent to ${user.email}`);
+
+        // 🎁 Reward coupon logic
+        if (order.totalAmount >= 150000) {
+          const rewardCoupon = await createNewCoupon(user._id);
+          if (rewardCoupon) {
+            await sendEmail({
+              to: user.email,
+              subject: "🎁 You earned a special coupon from EcoStore!",
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width:600px;margin:auto;padding:20px;background:#fff;border-radius:8px;">
+                  <h2 style="color:#2ecc71;text-align:center;">Congratulations, ${
+                    user.name
+                  }!</h2>
+                  <p>You've earned a <strong>special reward coupon</strong> for spending over ₦150,000.</p>
+                  <h3 style="text-align:center; background:#2ecc71; color:#fff; padding:10px; border-radius:5px;">
+                    ${rewardCoupon.code}
+                  </h3>
+                  <p style="text-align:center;">Discount: ${
+                    rewardCoupon.discountPercentage
+                  }% OFF</p>
+                  <p>Valid until: ${new Date(
+                    rewardCoupon.expirationDate
+                  ).toLocaleDateString()}</p>
+                  <p>Apply this coupon at checkout on your next order </p>
+                  <p style="margin-top:20px;">Thank you for shopping with Eco~Store 🌱</p>
+                </div>`,
+            });
+            console.log(`🎉 Reward coupon email sent to ${user.email}`);
+          }  
+        } 
+
+        console.log("✅ Background post-payment tasks completed.");
       } catch (err) {
         console.error("⚠️ Post-payment background tasks failed:", err);
       }
@@ -336,9 +433,10 @@ export const checkoutSuccess = async (req, res) => {
   } catch (error) {
     console.error("❌ checkoutSuccess error:", error);
     return res.status(500).json({ error: "Server error verifying payment" });
-  }
+  } 
 };
-
+  
+  
 
 // export const checkoutSuccess = async (req, res) => {
 //   try {
@@ -346,8 +444,8 @@ export const checkoutSuccess = async (req, res) => {
 
 //     if (!transaction_id) {
 //       return res.status(400).json({ error: "transaction_id is required" });
-//     }
-
+//     }  
+ 
 //     //  Verify transaction from Flutterwave
 //     const verifyResp = await flw.Transaction.verify({ id: transaction_id });
 //     const data = verifyResp?.data;
@@ -579,31 +677,31 @@ export const checkoutSuccess = async (req, res) => {
 //     }
 
 //     //  Optional: reward coupon
-//     if (order.totalAmount >= 150000) {
-//       try {
-//         const rewardCoupon = await createNewCoupon(user._id);
-//         await sendEmail({
-//           to: user.email,
-//           subject: "🎁 You earned a special coupon from EcoStore!",
-//           text: `Hi ${user.name}, congratulations! Use code: ${rewardCoupon.code} to enjoy ${rewardCoupon.discountPercentage}% off your next purchase.`,
-//           html: `
-//             <div style="font-family: Arial, sans-serif; max-width: 600px; margin:auto; padding:20px; background:#fff; border-radius:8px;">
-//               <h2 style="color:#2ecc71;">🎉 Congratulations!</h2>
-//               <p>Hi <strong>${user.name}</strong>,</p>
-//               <p>Since your purchase was above <strong>₦150,000</strong>, you’ve earned a special reward coupon:</p>
-//               <p style="font-size:18px; background:#f4f4f4; padding:10px; border-radius:5px; text-align:center;">
-//                 <strong>Coupon Code:</strong> <span style="color:#e74c3c;">${rewardCoupon.code}</span><br>
-//                 <strong>Discount:</strong> ${rewardCoupon.discountPercentage}% OFF
-//               </p>
-//               <p>Apply this coupon at checkout on your next order 🚀</p>
-//               <p style="margin-top:20px;">Thank you for shopping with EcoStore 🌱</p>
-//             </div>
-//           `,
-//         });
-//       } catch (err) {
-//         console.error(" Reward coupon creation/email failed:", err);
-//       }
-//     }
+    // if (order.totalAmount >= 150000) {
+    //   try {
+    //     const rewardCoupon = await createNewCoupon(user._id);
+    //     await sendEmail({
+    //       to: user.email,
+    //       subject: "🎁 You earned a special coupon from EcoStore!",
+    //       text: `Hi ${user.name}, congratulations! Use code: ${rewardCoupon.code} to enjoy ${rewardCoupon.discountPercentage}% off your next purchase.`,
+    //       html: `
+    //         <div style="font-family: Arial, sans-serif; max-width: 600px; margin:auto; padding:20px; background:#fff; border-radius:8px;">
+    //           <h2 style="color:#2ecc71;">🎉 Congratulations!</h2>
+    //           <p>Hi <strong>${user.name}</strong>,</p>
+    //           <p>Since your purchase was above <strong>₦150,000</strong>, you’ve earned a special reward coupon:</p>
+    //           <p style="font-size:18px; background:#f4f4f4; padding:10px; border-radius:5px; text-align:center;">
+    //             <strong>Coupon Code:</strong> <span style="color:#e74c3c;">${rewardCoupon.code}</span><br>
+    //             <strong>Discount:</strong> ${rewardCoupon.discountPercentage}% OFF
+    //           </p>
+    //           <p>Apply this coupon at checkout on your next order 🚀</p>
+    //           <p style="margin-top:20px;">Thank you for shopping with EcoStore 🌱</p>
+    //         </div>
+    //       `,
+    //     });
+    //   } catch (err) {
+    //     console.error(" Reward coupon creation/email failed:", err);
+    //   }
+    // }
 
 //     return res.status(200).json({
 //       success: true,
