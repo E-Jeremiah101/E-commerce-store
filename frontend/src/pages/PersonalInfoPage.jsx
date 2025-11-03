@@ -10,6 +10,7 @@ import { toast, ToastContainer } from "react-toastify";
 const PersonalInfoPage = () => {
   const { user, setUser } = useUserStore();
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -54,10 +55,15 @@ const PersonalInfoPage = () => {
   }, [setUser]);
 
   const handleSave = async () => {
+
+   
     if (!user) return;
+
+     
 
     const defaultPhone = user.phones?.find((p) => p.isDefault);
     const defaultAddress = user.addresses?.find((a) => a.isDefault);
+    
 
     if (
       !defaultPhone?.number?.trim() ||
@@ -66,17 +72,22 @@ const PersonalInfoPage = () => {
       !defaultAddress?.lga
     ) {
       toast.error("Please add a valid phone and full address.");
+
       return;
     }
 
     try {
+      setSaving(true);
       await axios.put("/api/users/me", {
         phones: user.phones,
         addresses: user.addresses,
       });
+      
       toast.success("Profile updated successfully!");
     } catch (err) {
       console.error("Error updating profile:", err);
+    }finally{
+      setSaving(false);
     }
   };
 
@@ -312,15 +323,15 @@ const PersonalInfoPage = () => {
               onClick={handleSave}
               type="button"
               className="w-full flex mt-10 justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 transition disabled:opacity-50"
-              disabled={loading}
+              disabled={saving}
             >
-              {loading ? (
+              {saving ? (
                 <>
                   <Loader
                     className="mr-2 w-5 animate-spin"
                     aria-hidden="true"
                   />
-                  Loading...
+                  Saving...
                 </>
               ) : (
                 <>

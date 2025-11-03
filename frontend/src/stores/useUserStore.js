@@ -2,7 +2,7 @@ import { create } from "zustand";
 import axios from "../lib/axios";
 import { toast } from "react-hot-toast";
 
- let refreshTimeoutId = null;
+let refreshTimeoutId = null;
 
 export const useUserStore = create((set, get) => ({
   user: null,
@@ -32,8 +32,17 @@ export const useUserStore = create((set, get) => ({
 
     try {
       const res = await axios.post("/auth/login", { email, password });
-      console.log("user is here", res.data);
+      // set user first so guest-cart sync sees an authenticated user
       set({ user: res.data, loading: false });
+      // after successful login, attempt to merge any guest cart into the user's server cart
+      try {
+        const { useCartStore } = await import("./useCartStore");
+        await useCartStore.getState().syncGuestCart();
+      } catch (e) {
+        // non-fatal: log and continue
+        console.debug("No guest cart to sync or sync failed:", e);
+      }
+      console.log("user is here", res.data);
       return { success: true, data: res.data };
     } catch (error) {
       set({ loading: false });
@@ -128,4 +137,3 @@ export const useUserStore = create((set, get) => ({
     }
   },
 }));
-

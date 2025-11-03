@@ -18,7 +18,9 @@ import { fileURLToPath } from "url";
 import reviewRoutes from "./routes/review.routes.js"
 import visitorRoutes from "./routes/visitor.route.js"
 import refundRoutes from "./routes/refund.routes.js";
-import categoryRoutes from "./routes/categoryRoutes.js"
+import categoryRoutes from "./routes/categoryRoutes.js";
+
+
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;

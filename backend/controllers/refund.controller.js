@@ -13,7 +13,7 @@ export const requestRefund = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { productId, quantity, reason } = req.body;
-     const user = req.user;
+    const user = req.user;
 
     if (!reason?.trim()) {
       return res.status(400).json({ message: "Refund reason is required." });
@@ -24,10 +24,13 @@ export const requestRefund = async (req, res) => {
       .populate("user", "name email");
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    if (order.status !== "Delivered") {
+    const allowedStatuses = ["Delivered", "Partially Refunded", "Refunded"];
+    if (!allowedStatuses.includes(order.status)) {
       return res
         .status(400)
-        .json({ message: "Refunds are only allowed for delivered orders" });
+        .json({
+          message: "Refunds are only allowed for delivered or refunded orders",
+        });
     }
 
     // Consistent helper for deleted product IDs
@@ -126,7 +129,7 @@ export const requestRefund = async (req, res) => {
       <br />
       <p>Thank you for shopping with us!</p>
     `;
-   
+
     await sendEmail({
       to: order.user.email, //  Now defined
       subject: "Refund Request Received",
@@ -286,8 +289,9 @@ export const approveRefund = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Refund approved successfully",
-      order,
+      refund,
     });
+
   } catch (err) {
     console.error("Approve refund error:", err.response?.data || err);
     res.status(500).json({ message: "Failed to approve refund" });
@@ -301,38 +305,73 @@ export const rejectRefund = async (req, res) => {
   try {
     const { orderId, refundId } = req.params;
 
-    const order = await Order.findById(orderId).populate("user", "name email");;
-    const refund = order?.refunds.id(refundId);
-    if (!refund) return res.status(404).json({ message: "Refund not found" });
+    // Find order with user populated
+    const order = await Order.findById(orderId).populate("user", "name email");
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
 
+    const refund = order.refunds.id(refundId);
+    if (!refund) {
+      return res.status(404).json({ message: "Refund not found" });
+    }
+
+    if (refund.status !== "Pending") {
+      return res
+        .status(400)
+        .json({ message: "Refund has already been processed" });
+    }
+
+    // Update refund fields
     refund.status = "Rejected";
-    refund.processedAt = Date.now();
+    refund.processedAt = new Date();
 
-    await order.save();
+    // Optionally update order refund status
+    const rejectedCount = order.refunds.filter(
+      (r) => r.status === "Rejected"
+    ).length;
+    order.refundStatus =
+      rejectedCount === order.refunds.length
+        ? "Fully Rejected"
+        : "Partially Rejected";
 
-    await sendEmail({
-      to: order.user?.email,
-      subject: `Refund Request Denied — Order #${order.orderNumber}`,
-      html: `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <h2 style="color: #e74c3c;">Refund Request Rejected</h2>
-      <p>Dear ${order.user?.name || "Customer"},</p>
-      <p>We regret to inform you that your refund request for the following item has been <strong>rejected</strong> after review:</p>
-      <div style="border: 1px solid #eee; padding: 10px; margin: 10px 0; border-radius: 8px;">
-        <p><strong>Refund ID:</strong> ${refund._id}</p>
-        <p><strong>Quantity:</strong> ${refund.quantity}</p>
-        <p><strong>Refund Amount:</strong> ₦${refund.amount.toLocaleString()}</p>
-      </div>
-      <p>Reason for rejection may include product not being in original condition or policy violation. If you believe this was a mistake, please contact our support team.</p>
-      <p>Best regards,<br/><strong>Eco Store Support Team</strong></p>
-    </div>
-  `,
+    await order.save({ validateBeforeSave: false });
+
+    // Try sending the rejection email — but don't fail the response if it errors
+    try {
+      await sendEmail({
+        to: order.user?.email,
+        subject: `Refund Request Denied — Order #${order.orderNumber}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2 style="color: #e74c3c;">Refund Request Rejected</h2>
+            <p>Dear ${order.user?.name || "Customer"},</p>
+            <p>We regret to inform you that your refund request for the following item has been <strong>rejected</strong> after review:</p>
+            <div style="border: 1px solid #eee; padding: 10px; margin: 10px 0; border-radius: 8px;">
+              <p><strong>Refund ID:</strong> ${refund._id}</p>
+              <p><strong>Quantity:</strong> ${refund.quantity}</p>
+              <p><strong>Refund Amount:</strong> ₦${refund.amount.toLocaleString()}</p>
+            </div>
+            <p>Reason for rejection may include product not being in original condition or policy violation. If you believe this was a mistake, please contact our support team.</p>
+            <p>Best regards,<br/><strong>Eco Store Support Team</strong></p>
+          </div>
+        `,
+      });
+    } catch (emailErr) {
+      console.error("Email sending failed (rejection notice):", emailErr);
+    }
+
+    console.log(`✅ Refund ${refund._id} rejected successfully.`);
+    return res.status(200).json({
+      success: true,
+      message: "Refund rejected successfully",
+      refund,
     });
 
-
-    res.status(200).json({ success: true, message: "Refund rejected", order });
   } catch (err) {
     console.error("Reject refund error:", err);
-    res.status(500).json({ message: "Server error" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error rejecting refund" });
   }
 };

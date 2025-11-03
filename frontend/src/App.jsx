@@ -8,6 +8,8 @@ import OrderHistoryPage from "./pages/OrderHistoryPage.jsx";
 import CategoryPage from "./pages/CategoryPage.jsx";
 import Navbar from "./components/Navbar.jsx";
 import { Toaster } from "react-hot-toast";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { useUserStore } from "./stores/useUserStore.js";
 import { useEffect } from "react";
 import CartPage from "./pages/CartPage.jsx";
@@ -115,10 +117,7 @@ function App() {
             />
             <Route path="/category/:category" element={<CategoryPage />} />
             <Route path="/product/:id" element={<ViewProductPage />} />
-            <Route
-              path="/cart"
-              element={user ? <CartPage /> : <Navigate to="/login" />}
-            />
+            <Route path="/cart" element={<CartPage />} />
 
             <Route
               path="/order-history"
@@ -148,6 +147,8 @@ function App() {
             />
             <Route path="/search" element={<SearchResultsPage />} />
           </Routes>
+
+          <ToastContainer position="top-center" autoClose={3000} />
         </div>
         <Toaster />
       </div>
