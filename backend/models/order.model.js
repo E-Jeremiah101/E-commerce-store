@@ -95,14 +95,13 @@ const orderSchema = new mongoose.Schema(
       discount: Number,
     },
     couponCode: { type: String, default: null },
-    stripeSessionId: {
-      type: String,
-      unique: true,
-    },
+    
+
     flutterwaveRef: {
       type: String,
       unique: true,
       sparse: true,
+      index: true,
     },
     flutterwaveTransactionId: {
       type: String,

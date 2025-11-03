@@ -5,6 +5,7 @@ import axios from "../lib/axios";
 import { requestRefund } from "../stores/refundRequestStore.js";
 import GoBackButton from "../components/GoBackButton";
 import { motion } from "framer-motion";
+import { Check, Loader } from "lucide-react";
 
 const OrderHistoryPage = () => {
   const [orders, setOrders] = useState([]);
@@ -16,6 +17,7 @@ const OrderHistoryPage = () => {
     quantity: 1,
     reason: "",
   });
+  const [saving, setSaving] = useState(false);
   const getDeletedProductId = (p, orderId) => {
     const safeName = (p.name || p.product?.name || "")
       .trim()
@@ -45,30 +47,41 @@ const OrderHistoryPage = () => {
 
   const handleRefundSubmit = async (e) => {
     e.preventDefault();
+
+    if (!refundData.productId || !refundData.reason.trim()) {
+      toast.error("Please select product and provide a reason");
+      return;
+    }
+
     try {
-      if (!refundData.productId || !refundData.reason.trim()) {
-        toast.error("Please select product and provide a reason");
-        return;
-      }
+      setSaving(true);
 
       await requestRefund(selectedOrder._id, refundData);
+
       toast.success("Refund request submitted successfully!");
-      setShowRefundModal(false);
       setRefundData({ productId: "", quantity: 1, reason: "" });
+      setShowRefundModal(false);
+
+      // ✅ Re-fetch updated orders right after success
+      const { data } = await axios.get("/orders/my-orders");
+      setOrders(data.orders || []);
     } catch (err) {
       console.error(err);
       toast.error(
         err.response?.data?.message || "Failed to submit refund request"
       );
+    } finally {
+      // Always stop loading, even if modal closes early
+      setSaving(false);
     }
   };
 
-      if (loading)
-        return (
-          <div className="flex justify-center items-center h-screen ">
-            <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
-          </div>
-        );
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-screen ">
+        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+      </div>
+    );
 
   return (
     <>
@@ -211,7 +224,9 @@ const OrderHistoryPage = () => {
                 </div>
 
                 <div className="flex">
-                  {order.status === "Delivered" && (
+                  {order.products.some(
+                    (p) => !p.refundStatus || p.refundStatus === "Rejected"
+                  ) && (
                     <button
                       onClick={() => handleRefundClick(order)}
                       className="hover:text-red-600 text-red-500 px-2 py-2 rounded-lg text-xs"
@@ -304,9 +319,17 @@ const OrderHistoryPage = () => {
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-60"
+                    disabled={saving}
                   >
-                    Submit
+                    {saving ? (
+                      <span className="flex items-center gap-2">
+                        <Loader className="animate-spin" size={15} />
+                        Submitting...
+                      </span>
+                    ) : (
+                      "Submit"
+                    )}
                   </button>
                 </div>
 
@@ -354,10 +377,6 @@ const OrderHistoryPage = () => {
                     <li>
                       Ship the product back if required, using the instructions
                       provided.
-                    </li>
-                    <li>
-                      Receive your refund once the returned item is received and
-                      approved.
                     </li>
                     <li>
                       Receive your refund once the returned item is received and

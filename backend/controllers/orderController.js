@@ -185,7 +185,7 @@ export const getAllOrders = async (req, res) => {
         if (approvedCount > 0 && approvedCount < totalProducts) {
           refundStatus = "Partially Refunded";
         } else if (approvedCount === totalProducts) {
-          refundStatus = "Fully Refunded";
+          refundStatus = "Refunded";
         }
 
         //  res.status(200).json({

@@ -67,7 +67,7 @@ const Navbar = () => {
             </button>
 
             {/* Cart */}
-            {user && (
+            
               <Link
                 to={"/cart"}
                 className="relative text-gray-800 hover:text-gray-400"
@@ -79,7 +79,7 @@ const Navbar = () => {
                   </span>
                 )}
               </Link>
-            )}
+            
 
             {/* Auth buttons */}
             {user ? (
@@ -144,7 +144,7 @@ const Navbar = () => {
                 <Package size={19} /> Orders
               </Link>
             )}
-            {user && (
+           
               <Link
                 to={"/cart"}
                 onClick={() => setIsOpen(false)}
@@ -152,7 +152,7 @@ const Navbar = () => {
               >
                 <ShoppingCart size={19} /> Cart ({cart.length})
               </Link>
-            )}
+           
 
             {isAdmin && (
               <Link

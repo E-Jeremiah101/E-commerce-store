@@ -13,7 +13,7 @@ export const requestRefund = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { productId, quantity, reason } = req.body;
-     const user = req.user;
+    const user = req.user;
 
     if (!reason?.trim()) {
       return res.status(400).json({ message: "Refund reason is required." });
@@ -24,10 +24,13 @@ export const requestRefund = async (req, res) => {
       .populate("user", "name email");
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    if (order.status !== "Delivered") {
+    const allowedStatuses = ["Delivered", "Partially Refunded", "Refunded"];
+    if (!allowedStatuses.includes(order.status)) {
       return res
         .status(400)
-        .json({ message: "Refunds are only allowed for delivered orders" });
+        .json({
+          message: "Refunds are only allowed for delivered or refunded orders",
+        });
     }
 
     // Consistent helper for deleted product IDs
@@ -126,7 +129,7 @@ export const requestRefund = async (req, res) => {
       <br />
       <p>Thank you for shopping with us!</p>
     `;
-   
+
     await sendEmail({
       to: order.user.email, //  Now defined
       subject: "Refund Request Received",
@@ -286,8 +289,9 @@ export const approveRefund = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Refund approved successfully",
-      order,
+      refund,
     });
+
   } catch (err) {
     console.error("Approve refund error:", err.response?.data || err);
     res.status(500).json({ message: "Failed to approve refund" });
@@ -333,7 +337,7 @@ export const rejectRefund = async (req, res) => {
 
     await order.save({ validateBeforeSave: false });
 
-    // Try sending the rejection email — but don't fail the response if it errors  
+    // Try sending the rejection email — but don't fail the response if it errors
     try {
       await sendEmail({
         to: order.user?.email,
@@ -358,9 +362,12 @@ export const rejectRefund = async (req, res) => {
     }
 
     console.log(`✅ Refund ${refund._id} rejected successfully.`);
-    return res
-      .status(200)
-      .json({ success: true, message: "Refund rejected successfully", order });
+    return res.status(200).json({
+      success: true,
+      message: "Refund rejected successfully",
+      refund,
+    });
+
   } catch (err) {
     console.error("Reject refund error:", err);
     return res

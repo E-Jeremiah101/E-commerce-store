@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { Eye, Search } from "lucide-react";
+import { Loader } from "lucide-react";
 
 const AdminRefundsTab = () => {
   const [refunds, setRefunds] = useState([]);
@@ -15,6 +16,7 @@ const AdminRefundsTab = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
    const [selectedReason, setSelectedReason] = useState(null);
+   const [loadingStates, setLoadingStates] = useState({});
 
    // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -74,35 +76,29 @@ const AdminRefundsTab = () => {
   }, [searchTerm, statusFilter, dateFilter, refunds]);
 
   // Approve refund
- const handleApprove = async (orderId, refundId) => {
-   try {
-     const res = await axios.put(
-       `/api/refunds/${orderId}/${refundId}/approve`,
-       {},
-       {
-         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-       }
-     );
-
-     toast.success("Refund approved successfully");
-
-     // Update status and processed date instantly
-     const updatedRefund = res.data.order.refunds.find(
-       (r) => r._id === refundId
-     );
-     const processedAt = updatedRefund?.processedAt || new Date().toISOString();
-
-     setRefunds((prev) =>
-       prev.map((r) =>
-         r.refundId === refundId ? { ...r, status: "Approved", processedAt } : r
-       )
-     );
-   } catch (err) {
-     console.error("Approve refund failed:", err);
-     toast.error("Failed to approve refund ❌");
-   }
- };
-
+  const handleApprove = async (orderId, refundId, action) => {
+    try {
+      setLoadingStates((prev) => ({ ...prev, [refundId]: "approving" }));
+      await axios.put(
+        `/api/refunds/${orderId}/${refundId}/approve`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      toast.success("Refund approved successfully");
+      setRefunds((prev) =>
+        prev.map((r) =>
+          r.refundId === refundId ? { ...r, status: "Approved" } : r
+        )
+      );
+    } catch (err) {
+      console.error("Approve refund failed:", err);
+      alert("Failed to approve refund");
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, [refundId]: null }));
+    }
+  };
 
    // Pagination logic
   const totalRequest = filteredRefunds.length;
@@ -117,23 +113,15 @@ const AdminRefundsTab = () => {
   // Reject refund
   const handleReject = async (orderId, refundId) => {
     try {
-      const res = await axios.put(
+      setLoadingStates((prev) => ({ ...prev, [refundId]: "rejecting" }));
+      await axios.put(
         `/api/refunds/${orderId}/${refundId}/reject`,
         {},
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-
-      toast.warn("Refund rejected successfully ");
-
-      // Update status and processed date instantly
-      const updatedRefund = res.data.order.refunds.find(
-        (r) => r._id === refundId
-      );
-      const processedAt =
-        updatedRefund?.processedAt || new Date().toISOString();
-
+      toast.success("Refund rejected ");
       setRefunds((prev) =>
         prev.map((r) =>
           r.refundId === refundId
@@ -143,7 +131,9 @@ const AdminRefundsTab = () => {
       );
     } catch (err) {
       console.error("Reject refund failed:", err);
-      toast.error("Failed to reject refund ❌");
+      alert("Failed to reject refund");
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, [refundId]: null }));
     }
   };
 
@@ -268,15 +258,27 @@ if (loading)
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleApprove(r.orderId, r.refundId)}
-                            className="px-2 py-1  bg-green-500 text-white rounded hover:bg-green-600"
+                            className="px-2 py-1  bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
+                            disabled={
+                              loadingStates[r.refundId] === "approving" ||
+                              loadingStates[r.refundId] === "rejecting"
+                            }
                           >
-                            Approve
+                            {loadingStates[r.refundId] === "approving"
+                              ? "Approving..."
+                              : "Approve"}
                           </button>
                           <button
                             onClick={() => handleReject(r.orderId, r.refundId)}
-                            className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
+                            className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
+                            disabled={
+                              loadingStates[r.refundId] === "rejecting" ||
+                              loadingStates[r.refundId] === "approving"
+                            }
                           >
-                            Reject
+                            {loadingStates[r.refundId] === "rejecting"
+                              ? "Rejecting..."
+                              : "Reject"}
                           </button>
                         </div>
                       </>
@@ -327,7 +329,7 @@ if (loading)
             <p className="text-sm text-gray-600 mb-1">
               <strong>Quantity:</strong> {selectedProduct.quantity}
             </p>
-            
+
             <p className="text-xs text-gray-500 mb-2">
               Requested on:{" "}
               {selectedProduct.requestedAt

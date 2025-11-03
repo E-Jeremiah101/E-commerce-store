@@ -117,10 +117,7 @@ function App() {
             />
             <Route path="/category/:category" element={<CategoryPage />} />
             <Route path="/product/:id" element={<ViewProductPage />} />
-            <Route
-              path="/cart"
-              element={user ? <CartPage /> : <Navigate to="/login" />}
-            />
+            <Route path="/cart" element={<CartPage />} />
 
             <Route
               path="/order-history"

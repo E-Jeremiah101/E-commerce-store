@@ -176,26 +176,29 @@ const AdminOrdersPage = () => {
                     <option value="Processing">Processing</option>
                     <option value="Shipped">Shipped</option>
                     <option value="Delivered">Delivered</option>
+                    <option value="Partially Refunded">
+                      Partially Refunded
+                    </option>
+                    <option value="Refunded">Refunded</option>
                     <option value="Cancelled">Cancelled</option>
                   </select>
                 </span>
               </div>
-              {/* Refund Status */}
-{order.refundStatus && order.refundStatus !== "No Refund" && (
-  <p className="text-sm font-semibold mt-1">
-    Refund Status:{" "}
-    <span
-      className={`px-2 py-1 rounded text-xs font-medium ${
-        order.refundStatus === "Fully Refunded"
-          ? "bg-green-700 text-white"
-          : "bg-yellow-700 text-white"
-      }`}
-    >
-      {order.refundStatus}
-    </span>
-  </p>
-)}
-
+              {/* Refund Status
+              {order.refundStatus && order.refundStatus !== "No Refund" && (
+                <p className="text-sm font-semibold mt-1">
+                  Refund Status:{" "}
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${
+                      order.refundStatus === "Fully Refunded"
+                        ? "bg-green-700 text-white"
+                        : "bg-yellow-700 text-white"
+                    }`}
+                  >
+                    {order.refundStatus}
+                  </span>
+                </p>
+              )} */}
 
               {/* Order details */}
               <div className="grid md:grid-cols-3 grid-cols-2 gap-3 md:gap-5 py-4 pr-7 pl-3 bg-gray-700 rounded-lg shadow mb-2">
@@ -206,7 +209,6 @@ const AdminOrdersPage = () => {
                   </p>
                 </div>
                 <div className="text-gray-200 mb-2">
-                 
                   <span
                     className={`px-1 py-1 rounded text-xs font-medium ${
                       order.status === "Delivered"
@@ -222,7 +224,6 @@ const AdminOrdersPage = () => {
                     {new Date(order.updatedAt).toLocaleString()}
                   </p>
                 </div>
-              
               </div>
 
               {/* Product list */}

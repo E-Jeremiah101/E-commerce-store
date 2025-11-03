@@ -38,10 +38,7 @@ const { cart } = useCartStore();
   }, [id, fetchProductById]);
 
   const handleAddToCart = () => {
-    if (!user) {
-      toast.error("Please login to add products to cart", { id: "login" });
-      return;
-    }
+    // allow guests to add items to cart (guest cart persisted to localStorage)
     if (product.colors?.length > 0  && !selectedColor ) {
       toast.error("Please select a color ");
       return;
@@ -50,14 +47,7 @@ const { cart } = useCartStore();
       toast.error("Please select a size");
       return;
     }
-    addToCart(
-      product,
-      selectedSize,
-      selectedColor,
-    
-    );
-    
-
+    addToCart(product, selectedSize, selectedColor);
   };
 
   if (loading)
