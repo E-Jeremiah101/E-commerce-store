@@ -14,7 +14,7 @@ const CartPage = () => {
   return (
     <>
       <motion.div
-        className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center  bg-gradient-to-br from-white via-gray-100 to-gray-300  z-40 py-5"
+        className=" fixed top-0 left-0 right-0 flex z-40 items-center justify-center bg-gradient-to-br from-white via-gray-100 to-gray-300 py-5"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
@@ -22,12 +22,13 @@ const CartPage = () => {
         <div className="absolute left-4 text-black">
           <GoBackButton />
         </div>
+        <h2 className="text-2xl font-semibold text-center">Cart</h2>
       </motion.div>
       <div className="py-8 md:py-16 ">
         <div className="mx-auto max-w-screen-xl px-4 2xl:px-0">
           <div className="mt-6 sm:mt-8 md:gap-6 lg:flex lg:items-start xl:gap-8">
             <motion.div
-              className="mx-auto w-full flex-none lg:max-w-2xl xl:max-w-4xl"
+              className="mx-auto w-full mt-20 flex-none lg:max-w-2xl xl:max-w-4xl"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}

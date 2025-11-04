@@ -104,18 +104,16 @@ const PersonalInfoPage = () => {
   return (
     <div className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <motion.div
-        className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0 flex items-center justify-center bg-gradient-to-br from-white via-gray-100 to-gray-300 z-40 py-5"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className="absolute left-4 text-black">
-          <GoBackButton />
-        </div>
-        <span className="text-center text-xl text-gray-900 tracking-widest">
-          Personal Info
-        </span>
-      </motion.div>
+              className=" fixed top-0 left-0 right-0 flex z-40 items-center justify-center bg-gradient-to-br from-white via-gray-100 to-gray-300 py-5"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <div className="absolute left-4 text-black">
+                <GoBackButton />
+              </div>
+              <h2 className="text-2xl font-semibold text-center">Personal Information</h2>
+            </motion.div>
 
       <motion.div
         className="w-full mt-8 md:mx-auto md:w-full md:max-w-md"

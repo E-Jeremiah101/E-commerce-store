@@ -3,8 +3,7 @@ import { useParams, Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useProductStore } from "../stores/useProductStore";
 import toast from "react-hot-toast";
-import {
-  ShoppingCart} from "lucide-react"
+import { ShoppingCart } from "lucide-react";
 import { useCartStore } from "../stores/useCartStore";
 import { useUserStore } from "../stores/useUserStore";
 import GoBackButton from "../components/GoBackButton";
@@ -22,11 +21,11 @@ const ViewProductPage = () => {
   const [selectedImage, setSelectedImage] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const location = useLocation();
- 
-const { cart } = useCartStore();
+
+  const { cart } = useCartStore();
   useEffect(() => {
     const loadProduct = async () => {
       setLoading(true);
@@ -53,7 +52,7 @@ const { cart } = useCartStore();
 
   const handleAddToCart = () => {
     // allow guests to add items to cart (guest cart persisted to localStorage)
-    if (product.colors?.length > 0  && !selectedColor ) {
+    if (product.colors?.length > 0 && !selectedColor) {
       toast.error("Please select a color ");
       return;
     }

@@ -5,7 +5,7 @@ import GoBackButton from "../components/GoBackButton";
 const WelcomePage = () => {
   return (
     <>
-      <div className="bg-white  px-7 h-screen md:flex md:px-0 md:justify-evenly">
+      <div className="bg-white  px-7 sm:h-screen md:flex md:px-0 md:justify-evenly">
         <div className="md:w-full md:flex md:flex-col md:justify-center md:px-7">
           <div className="py-4">
             <GoBackButton size={20} />
