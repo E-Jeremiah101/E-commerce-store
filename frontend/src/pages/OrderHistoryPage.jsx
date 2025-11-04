@@ -6,6 +6,7 @@ import { requestRefund } from "../stores/refundRequestStore.js";
 import GoBackButton from "../components/GoBackButton";
 import { motion } from "framer-motion";
 import { Check, Loader } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const OrderHistoryPage = () => {
   const [orders, setOrders] = useState([]);
@@ -94,7 +95,7 @@ const OrderHistoryPage = () => {
         <div className="absolute left-4 text-black">
           <GoBackButton />
         </div>
-      </motion.div> 
+      </motion.div>
       <motion.div
         className="p-6 max-w-4xl mx-auto mt-5 no-scroll"
         initial={{ opacity: 0, y: 20 }}
@@ -162,9 +163,6 @@ const OrderHistoryPage = () => {
                         <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
                           Color: {item.color || "N/A"}
                         </span>
-                        <span className="bg-gray-200  px-2 py-1 rounded tracking-widest">
-                          Category: {item.selectedCategory || "N/A"}
-                        </span>
                       </div>
                       <div className="flex  justify-between text-sm text-gray-900">
                         <span className="bg-gray-200 px-2 py-1 rounded text-xs ">
@@ -191,6 +189,47 @@ const OrderHistoryPage = () => {
                               ? "Refund Pending"
                               : "Refund Rejected"}
                           </span>
+                        )}
+                        {/* Rate button for delivered orders */}
+                        {/* {order.status === "Delivered" && (
+                          <Link
+                            to={`/product/${
+                              item.product?._id || item._id
+                            }?rate=true&order=${order._id}`}
+                            className="ml-3 inline-block px-3 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700"
+                          >
+                            Rate
+                          </Link>
+                        )} */}
+                        {order.status === "Delivered" && (
+                          <div className="flex-col items-center gap-2 mt-2">
+                            {/* Rating stars preview (greyed out before rating) */}
+                            
+
+                            {/* Rate button */}
+                            <Link
+                              to={`/product/${
+                                item.product?._id || item._id
+                              }?rate=true&order=${order._id}`}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-500 text-white rounded-full hover:bg-yellow-600 transition duration-200"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="w-3.5 h-3.5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.967a1 1 0 00.95.69h4.174c.969 0 1.371 1.24.588 1.81l-3.379 2.455a1 1 0 00-.364 1.118l1.287 3.967c.3.921-.755 1.688-1.54 1.118L12 13.347l-3.374 2.455c-.785.57-1.84-.197-1.54-1.118l1.287-3.967a1 1 0 00-.364-1.118L4.63 9.394c-.783-.57-.38-1.81.588-1.81h4.174a1 1 0 00.95-.69l1.286-3.967z"
+                                />
+                              </svg>
+                              Rate 
+                            </Link>
+                          </div>
                         )}
                       </div>
                     </div>

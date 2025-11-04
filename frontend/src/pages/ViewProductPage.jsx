@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams,Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useProductStore } from "../stores/useProductStore";
 import toast from "react-hot-toast";
@@ -24,6 +24,7 @@ const ViewProductPage = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
  
 const { cart } = useCartStore();
   useEffect(() => {
@@ -36,6 +37,19 @@ const { cart } = useCartStore();
     };
     loadProduct();
   }, [id, fetchProductById]);
+
+  // If user was redirected to rate the product (query param ?rate=true), scroll to reviews after product loads
+  useEffect(() => {
+    if (!product) return;
+    const params = new URLSearchParams(location.search);
+    if (params.get("rate") === "true") {
+      // give time for DOM to render
+      setTimeout(() => {
+        const el = document.getElementById("product-reviews");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 300);
+    }
+  }, [product, location.search]);
 
   const handleAddToCart = () => {
     // allow guests to add items to cart (guest cart persisted to localStorage)
@@ -213,7 +227,9 @@ const { cart } = useCartStore();
         </div>
       </div>
 
-      <ProductReviews productId={product._id} />
+      <div id="product-reviews">
+        <ProductReviews productId={product._id} />
+      </div>
     </div>
   );
 };
