@@ -82,7 +82,6 @@ const HomePage = () => {
       <CollectionTab />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 root lg:px-25 bg-gradient-to-br from-white via-gray-100 to-gray-300">
-        
         {isLoadingCategories ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {[...Array(8)].map((_, i) => (
@@ -95,22 +94,25 @@ const HomePage = () => {
         ) : categories.length > 0 ? (
           <div className="">{<LandingProducts />}</div>
         ) : (
-          <p className="text-center text-gray-600">No categories found.</p>
+          
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-48 bg-gray-300 rounded-lg animate-pulse"
+                ></div>
+              ))}
+            </div>
+          
         )}
 
         {/* TITLE SECTION */}
         <div className="text-black flex justify-center items-center my-17 lg:mt-25 look">
           <div className="text-center">
-            <h1
-              className="text-3xl tracking-widest mb-4 text-black drop-shadow-lg"
-              
-            >
+            <h1 className="text-3xl tracking-widest mb-4 text-black drop-shadow-lg">
               CLASSIC WEARS
             </h1>
-            <p
-              className="text-1xl lg:text-sm tracking-widest"
-              
-            >
+            <p className="text-1xl lg:text-sm tracking-widest">
               Stay Relaxed, Stay Stylish: Redefine Comfort with the Perfect
               style Fit!
             </p>
@@ -120,10 +122,8 @@ const HomePage = () => {
         <OtherFeatures className="look" />
 
         <div>
-          <h1
-            className="text-2xl tracking-widest mb-4 text-black drop-shadow-lg text-center"
-          >
-            EXPLORE  CATEGORY
+          <h1 className="text-2xl tracking-widest mb-4 text-black drop-shadow-lg text-center">
+            EXPLORE CATEGORY
           </h1>
           {/* CATEGORY GRID */}
           {isLoadingCategories ? (
@@ -142,7 +142,16 @@ const HomePage = () => {
               ))}
             </div>
           ) : (
-            <p className="text-center text-gray-600">No categories found.</p>
+            
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+                {[...Array(8)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-48 bg-gray-300 rounded-lg animate-pulse"
+                  ></div>
+                ))}
+              </div>
+           
           )}
         </div>
 
