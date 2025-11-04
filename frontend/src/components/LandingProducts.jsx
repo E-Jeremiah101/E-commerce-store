@@ -13,7 +13,7 @@ const LandingProducts= () => {
         const res = await axios.get("/products/recommendations");
         setRecommendations(res.data);
       } catch (error) {
-        toast.error(
+        console.log(
           error.response?.data?.message ||
             "An error occured while fetching recommendations"
         );

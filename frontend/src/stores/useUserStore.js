@@ -79,11 +79,24 @@ export const useUserStore = create((set, get) => ({
           return;
         } catch (refreshError) {
           console.error("Auto refresh failed:", refreshError);
+          // Refresh failed with an auth error -> clear user
+          if (refreshError.response?.status === 401) {
+            set({ checkingAuth: false, user: null });
+            return;
+          }
+          // If refresh failed due to network or server error, don't log the user out here
+          set({ checkingAuth: false });
+          return;
         }
       }
 
-      // fallback: logout or clear user
-      set({ checkingAuth: false, user: null });
+      // For network errors or 5xx server errors we keep the current user in memory
+      // and only stop the checking state. This avoids logging out users on transient failures.
+      console.debug(
+        "checkAuth: non-auth error, keeping user in state:",
+        error?.message || error
+      );
+      set({ checkingAuth: false });
     }
   },
 
@@ -97,7 +110,13 @@ export const useUserStore = create((set, get) => ({
       set({ checkingAuth: false });
       return response.data;
     } catch (error) {
-      set({ user: null, checkingAuth: false });
+      // Only clear user if refresh token is invalid/unauthorized (401).
+      if (error.response?.status === 401) {
+        set({ user: null, checkingAuth: false });
+      } else {
+        // Network or server error: keep user in memory but stop checking
+        set({ checkingAuth: false });
+      }
       throw error;
     }
   },
