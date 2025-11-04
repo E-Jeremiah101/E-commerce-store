@@ -22,7 +22,7 @@ export const useProductStore = create((set) => ({
         "Error creating product:",
         error.response?.data || error.message
       );
-      toast.error( "Failed to create product. Please try again.");
+      toast.error("Failed to create product. Please try again.");
       set({ loading: false });
     }
   },
@@ -32,8 +32,9 @@ export const useProductStore = create((set) => ({
       const response = await axios.get("/products");
       set({ products: response.data.products, loading: false });
     } catch (error) {
-      console.error("Error fetching products:", error);   
-      toast.error( "Unable to load products. Please try again");
+      console.error("Error fetching products:", error);
+      // Suppress noisy toast for background product fetch failures.
+      console.debug("Unable to load products.", error?.message || error);
       set({ loading: false });
     }
   },
@@ -44,7 +45,11 @@ export const useProductStore = create((set) => ({
       set({ products: response.data.products, loading: false });
     } catch (error) {
       console.error("Error fetching category products:", error);
-      toast.error( "Failed to loaad category products.");
+      // Suppress noisy toast for category fetch failures.
+      console.debug(
+        "Failed to load category products.",
+        error?.message || error
+      );
       set({ loading: false });
     }
   },
@@ -97,7 +102,6 @@ export const useProductStore = create((set) => ({
     }
   },
   fetchProductById: async (id) => {
-    
     try {
       const res = await axios.get(`/products/${id}`);
       const product = res.data.product || res.data;
