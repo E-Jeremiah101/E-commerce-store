@@ -2,30 +2,14 @@ import React, { useEffect, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "../lib/axios.js";
-import { requestRefund } from "../stores/refundRequestStore.js";
 import GoBackButton from "./GoBackButton.jsx";
 import { motion } from "framer-motion";
-import { Check, Loader } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const CanceledTab = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showRefundModal, setShowRefundModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [refundData, setRefundData] = useState({
-    productId: "",
-    quantity: 1,
-    reason: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const getDeletedProductId = (p, orderId) => {
-    const safeName = (p.name || p.product?.name || "")
-      .trim()
-      .replace(/\s+/g, "_");
-    const price = p.price || p.product?.price || 0;
-    return `deleted-${orderId}-${safeName}-${price}`;
-  };
+   const navigate = useNavigate()
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -71,11 +55,11 @@ const CanceledTab = () => {
       >
         <ToastContainer position="top-center" autoClose={3000} />
 
-        {orders.filter((order) => order.status === "Canceled").length === 0 ? (
-          <p className="text-center text-gray-500">No Canceled ordered yet</p>
+        {orders.filter((order) => order.status === "Cancelled").length === 0 ? (
+          <p className="text-center text-gray-500">No Canceled orders</p>
         ) : (
           orders
-            .filter((order) => order.status === "Canceled")
+            .filter((order) => order.status === "Cancelled")
             .map((order) => (
               <div
                 key={order._id}
@@ -99,72 +83,52 @@ const CanceledTab = () => {
                   Placed on {new Date(order.createdAt).toLocaleDateString()}
                 </p>
 
-                {order.status === "Delivered" && (
-                  <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
-                    {order.status} on{" "}
-                    {new Date(order.deliveredAt).toLocaleDateString()}
-                  </p>
-                )}
-
                 <ul className="space-y-4 mb-4">
                   {order.products.map((item) => (
-                    <li
-                      key={item._id}
-                      className="flex gap-4 p-4 bg-gray-100 rounded-lg shadow"
+                    <span
+                      onClick={() => navigate(`/vieworders/${order._id}`)}
+                      className="cursor-pointer"
                     >
-                      <Link to={`/product/${item.product?._id || item._id}`}>
+                      <li
+                        key={item._id}
+                        className="flex gap-4 p-4 bg-gray-100 rounded-lg shadow"
+                      >
+                        {" "}
                         <img
                           src={item.image}
                           alt={item.name}
                           className="w-20 h-20 object-cover rounded"
                         />
-                      </Link>
-                      <div className="flex-1 space-y-3">
-                        <div className="flex justify-between items-center">
-                          <h3 className="text-gray-900 text-sm">{item.name}</h3>
-                          <p className="text-gray-800 font-semibold ">
-                            ₦{(item.price * item.quantity).toLocaleString()}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2 text-xs text-gray-900">
-                          <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
-                            Size: {item.size || "N/A"}
-                          </span>
-                          <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
-                            Color: {item.color || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex  justify-between text-sm text-gray-900">
-                          <span className="bg-gray-200 px-2 py-1 rounded text-xs ">
-                            Qty: {item.quantity}
-                          </span>
-                          {item.quantity > 1 && (
-                            <span className="text-gray-700 text-xs">
-                              ₦{item.price.toLocaleString()} each
+                        <div className="flex-1 space-y-3">
+                          <div className="flex justify-between items-center">
+                            <h3 className="text-gray-900 text-sm">
+                              {item.name}
+                            </h3>
+                            <p className="text-gray-800 font-semibold ">
+                              ₦{(item.price * item.quantity).toLocaleString()}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2 text-xs text-gray-900">
+                            <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
+                              Size: {item.size || "N/A"}
                             </span>
-                          )}
-                          {item.refundStatus && (
-                            <span
-                              className={`inline-block mt-1 px-2 py-1 text-xs rounded ${
-                                item.refundStatus === "Approved"
-                                  ? "bg-green-100 text-green-700"
-                                  : item.refundStatus === "Pending"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-red-100 text-red-700"
-                              }`}
-                            >
-                              {item.refundStatus === "Approved"
-                                ? "Refunded"
-                                : item.refundStatus === "Pending"
-                                ? "Refund Pending"
-                                : "Refund Rejected"}
+                            <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
+                              Color: {item.color || "N/A"}
                             </span>
-                          )}
-
-                          
+                          </div>
+                          <div className="flex  justify-between text-sm text-gray-900">
+                            <span className="bg-gray-200 px-2 py-1 rounded text-xs ">
+                              Qty: {item.quantity}
+                            </span>
+                            {item.quantity > 1 && (
+                              <span className="text-gray-700 text-xs">
+                                ₦{item.price.toLocaleString()} each
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </li>
+                      </li>
+                    </span>
                   ))}
                 </ul>
 
@@ -192,14 +156,10 @@ const CanceledTab = () => {
                       Total: ₦{order.totalAmount.toLocaleString()}
                     </p>
                   </div>
-
-                
                 </div>
               </div>
             ))
         )}
-
-       
       </motion.div>
     </>
   );

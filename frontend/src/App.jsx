@@ -23,6 +23,7 @@ import SearchResultsPage from "./pages/SearchResultsPage.jsx";
 import ViewProductPage from "./pages/ViewProductPage.jsx";
 import Welcome from "./pages/WelcomePage.jsx";
 import useTrackVisitors from "./stores/useTrackVisitors.js";
+import ViewOrderPage from "./pages/ViewOrderPage.jsx";
 
 
 function App() {
@@ -124,6 +125,8 @@ function App() {
               element={user ? <OrderHistoryPage /> : <Navigate to="/login" />}
             />
             <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
+
+            <Route path="/vieworders/:id" element={<ViewOrderPage />} />
 
             <Route
               path="Personal-info"

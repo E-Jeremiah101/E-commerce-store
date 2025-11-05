@@ -42,7 +42,7 @@ export const getUserOrders = async (req, res) => {
            selectedCategory: p.selectedCategory || null,
            name: p.name || p.product?.name || "Unknown Product",
            image: p.image || p.product?.image || "/placeholder.png",
-           refundStatus: refund?.status || null, // 👈 Add this
+           refundStatus: refund?.status || null, 
          };
        });
         
@@ -422,11 +422,21 @@ export const createOrder = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+import mongoose from "mongoose";
+
 export const getOrderById = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id)
+    const { id } = req.params;
+
+    // ✅ Prevent CastError if "id" is not a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid order ID" });
+    }
+
+    const order = await Order.findById(id)
       .populate("user", "name email phone address")
-      .populate("products.product", "name price image").lean();
+      .populate("products.product", "name price image")
+      .lean();
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -434,10 +444,11 @@ export const getOrderById = async (req, res) => {
 
     res.json({ success: true, order });
   } catch (error) {
-    console.error(error);
+    console.error("getOrderById error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 
 
