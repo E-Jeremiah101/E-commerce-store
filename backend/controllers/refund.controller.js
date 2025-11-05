@@ -26,11 +26,9 @@ export const requestRefund = async (req, res) => {
 
     const allowedStatuses = ["Delivered", "Partially Refunded", "Refunded"];
     if (!allowedStatuses.includes(order.status)) {
-      return res
-        .status(400)
-        .json({
-          message: "Refunds are only allowed for delivered or refunded orders",
-        });
+      return res.status(400).json({
+        message: "Refunds are only allowed for delivered or refunded orders",
+      });
     }
 
     // Consistent helper for deleted product IDs
@@ -107,40 +105,48 @@ export const requestRefund = async (req, res) => {
 
     await order.save({ validateBeforeSave: false });
 
-    const emailContent = `
-      <h2>Refund Request Received</h2>
-      <p>Hi ${order.user?.name || "Customer"},</p>
-      <p>We’ve received your refund request for the following item:</p>
-      <div style="border: 1px solid #eee; padding: 10px; margin: 10px 0; border-radius: 8px;">
-        <img src="${snapshot.image}" alt="${
-      snapshot.name
-    }" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;"/>
-        <p><strong>Product:</strong> ${snapshot.name}</p>
-        <p><strong>Refund ID:</strong> ${
-          order.refunds[order.refunds.length - 1]._id
-        }</p>
-        <p><strong>Quantity:</strong> ${quantity}</p>
-        <p><strong>Refund Amount:</strong> ₦${refundAmount.toLocaleString()}</p>
-      </div>
-      <p>Our team will review your request and an agent will visit to inspect the item.</p>
-      <p><strong>Important:</strong> Please make sure the item is in its original condition and packaging.</p>
-      <p>This process usually takes up to <b>7 working days</b>.</p>
-      <p>We’ll notify you once your request is approved or rejected.</p>
-      <br />
-      <p>Thank you for shopping with us!</p>
-    `;
-
-    await sendEmail({
-      to: order.user.email, //  Now defined
-      subject: "Refund Request Received",
-      html: emailContent,
-    });
-
-    return res.status(200).json({
+    // Respond immediately so the client isn't blocked by email delivery
+    res.status(200).json({
       success: true,
       message: "Refund requested successfully",
       order,
     });
+
+    // Send notification email in background (fire-and-forget)
+    (async () => {
+      try {
+        const emailContent = `
+          <h2>Refund Request Received</h2>
+          <p>Hi ${order.user?.name || "Customer"},</p>
+          <p>We’ve received your refund request for the following item:</p>
+          <div style="border: 1px solid #eee; padding: 10px; margin: 10px 0; border-radius: 8px;">
+            <img src="${snapshot.image}" alt="${
+          snapshot.name
+        }" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;"/>
+            <p><strong>Product:</strong> ${snapshot.name}</p>
+            <p><strong>Refund ID:</strong> ${
+              order.refunds[order.refunds.length - 1]._id
+            }</p>
+            <p><strong>Quantity:</strong> ${quantity}</p>
+            <p><strong>Refund Amount:</strong> ₦${refundAmount.toLocaleString()}</p>
+          </div>
+          <p>Our team will review your request and an agent will visit to inspect the item.</p>
+          <p><strong>Important:</strong> Please make sure the item is in its original condition and packaging.</p>
+          <p>This process usually takes up to <b>7 working days</b>.</p>
+          <p>We’ll notify you once your request is approved or rejected.</p>
+          <br />
+          <p>Thank you for shopping with us!</p>
+        `;
+
+        await sendEmail({
+          to: order.user.email,
+          subject: "Refund Request Received",
+          html: emailContent,
+        });
+      } catch (emailErr) {
+        console.error("Background refund request email failed:", emailErr);
+      }
+    })();
   } catch (err) {
     console.error("Refund request error:", err);
     return res.status(500).json({ message: "Server error" });
@@ -291,7 +297,6 @@ export const approveRefund = async (req, res) => {
       message: "Refund approved successfully",
       refund,
     });
-
   } catch (err) {
     console.error("Approve refund error:", err.response?.data || err);
     res.status(500).json({ message: "Failed to approve refund" });
@@ -367,7 +372,6 @@ export const rejectRefund = async (req, res) => {
       message: "Refund rejected successfully",
       refund,
     });
-
   } catch (err) {
     console.error("Reject refund error:", err);
     return res
@@ -375,4 +379,3 @@ export const rejectRefund = async (req, res) => {
       .json({ success: false, message: "Server error rejecting refund" });
   }
 };
-

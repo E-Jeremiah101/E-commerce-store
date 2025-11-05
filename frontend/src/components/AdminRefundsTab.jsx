@@ -1,9 +1,7 @@
-
-
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import axios from "axios";
+import axios from "../lib/axios";
 import { Eye, Search } from "lucide-react";
 import { Loader } from "lucide-react";
 
@@ -15,31 +13,28 @@ const AdminRefundsTab = () => {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
-   const [selectedReason, setSelectedReason] = useState(null);
-   const [loadingStates, setLoadingStates] = useState({});
+  const [selectedReason, setSelectedReason] = useState(null);
+  const [loadingStates, setLoadingStates] = useState({});
 
-   // Pagination state
+  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-
- 
 
   // Fetch all refund requests
   useEffect(() => {
     const fetchRefunds = async () => {
       try {
         setLoading(true);
-        const res = await axios.get("/api/refunds", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        });
-        setRefunds(res.data);
-        setFilteredRefunds(res.data);
+        // Use shared axios instance (baseURL already set to /api in production)
+        const res = await axios.get("/refunds");
+        setRefunds(res.data || []);
+        setFilteredRefunds(res.data || []);
         setCurrentPage(1);
       } catch (err) {
         console.error("Error fetching refunds:", err);
-      }finally {
-      setLoading(false);
-    }
+      } finally {
+        setLoading(false);
+      }
     };
     fetchRefunds();
   }, []);
@@ -79,13 +74,7 @@ const AdminRefundsTab = () => {
   const handleApprove = async (orderId, refundId, action) => {
     try {
       setLoadingStates((prev) => ({ ...prev, [refundId]: "approving" }));
-      await axios.put(
-        `/api/refunds/${orderId}/${refundId}/approve`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
+      await axios.put(`/refunds/${orderId}/${refundId}/approve`);
       toast.success("Refund approved successfully");
       const processedAt = new Date().toISOString();
       setRefunds((prev) =>
@@ -95,17 +84,20 @@ const AdminRefundsTab = () => {
       );
     } catch (err) {
       console.error("Approve refund failed:", err);
-      alert("Failed to approve refund");
+      toast.error(err.response?.data?.message || "Failed to approve refund");
     } finally {
       setLoadingStates((prev) => ({ ...prev, [refundId]: null }));
     }
   };
 
-   // Pagination logic
+  // Pagination logic
   const totalRequest = filteredRefunds.length;
   const totalPages = Math.ceil(totalRequest / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayeRequest = filteredRefunds.slice(startIndex, startIndex + itemsPerPage);
+  const displayeRequest = filteredRefunds.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   const handlePrev = () => setCurrentPage((p) => Math.max(p - 1, 1));
   const handleNext = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
@@ -115,13 +107,7 @@ const AdminRefundsTab = () => {
   const handleReject = async (orderId, refundId) => {
     try {
       setLoadingStates((prev) => ({ ...prev, [refundId]: "rejecting" }));
-      await axios.put(
-        `/api/refunds/${orderId}/${refundId}/reject`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
+      await axios.put(`/refunds/${orderId}/${refundId}/reject`);
       toast.success("Refund rejected ");
       const processedAt = new Date().toISOString();
       setRefunds((prev) =>
@@ -133,13 +119,13 @@ const AdminRefundsTab = () => {
       );
     } catch (err) {
       console.error("Reject refund failed:", err);
-      alert("Failed to reject refund");
+      toast.error(err.response?.data?.message || "Failed to reject refund");
     } finally {
       setLoadingStates((prev) => ({ ...prev, [refundId]: null }));
     }
   };
 
-if (loading)
+  if (loading)
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>

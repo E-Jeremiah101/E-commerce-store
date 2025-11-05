@@ -6,6 +6,9 @@ const axiosInstance = axios.create({
   withCredentials: true, // send cookies
 });
 
+// Default request timeout to avoid hanging requests in production
+axiosInstance.defaults.timeout = 15000; // 15 seconds
+
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -52,7 +55,7 @@ axiosInstance.interceptors.response.use(
         originalRequest.headers["Authorization"] = `Bearer ${token}`;
         return axiosInstance(originalRequest);
       });
-    } 
+    }
 
     originalRequest._retry = true;
     isRefreshing = true;
@@ -66,17 +69,18 @@ axiosInstance.interceptors.response.use(
     } catch (refreshError) {
       processQueue(refreshError, null);
 
-      // Optionally log out user if refresh fails
-      console.error("Token refresh failed. Logging out user.");
-      const { logout } = useUserStore.getState();
-      await logout();
-
+      // Token refresh failed. Don't call store/logout here to avoid circular imports
+      // or triggering axios again from inside the interceptor. Bubble the error
+      // back to the original callers so UI code can handle logout or show messages.
+      console.error(
+        "Token refresh failed:",
+        refreshError?.message || refreshError
+      );
       return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
     }
   }
 );
-
 
 export default axiosInstance;

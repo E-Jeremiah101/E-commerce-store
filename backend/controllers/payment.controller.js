@@ -9,7 +9,6 @@ import Product from "../models/product.model.js";
 import { sendEmail } from "../lib/mailer.js";
 import { flw } from "../lib/flutterwave.js";
 
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../../.env") });
@@ -47,7 +46,6 @@ export const createCheckoutSession = async (req, res) => {
       });
     }
 
-  
     let total = 0;
     //  Compute raw subtotal (without coupon)
     const originalTotal = products.reduce((acc, p) => {
@@ -72,22 +70,21 @@ export const createCheckoutSession = async (req, res) => {
         );
       }
     }
-        const lineItems = products.map((product) => {
-          const amount = Math.round(product.price * 100); // stripe wants u to send in the format of cents
-         
+    const lineItems = products.map((product) => {
+      const amount = Math.round(product.price * 100); // stripe wants u to send in the format of cents
 
-          return {
-            price_data: {
-              currency: "ngn",
-              product_data: {
-                name: product.name,
-                images: [product.images?.[0]],
-              },
-              unit_amount: amount,
-            },
-            quantity: product.quantity || 1,
-          };
-        });
+      return {
+        price_data: {
+          currency: "ngn",
+          product_data: {
+            name: product.name,
+            images: [product.images?.[0]],
+          },
+          unit_amount: amount,
+        },
+        quantity: product.quantity || 1,
+      };
+    });
 
     //  Compute final total (amount to charge)
     const finalTotal = Math.max(0, originalTotal - discountAmount);
@@ -98,7 +95,7 @@ export const createCheckoutSession = async (req, res) => {
     // Build payload for Flutterwave hosted payment (/v3/payments)
     const payload = {
       tx_ref,
-      lineItems:lineItems,
+      lineItems: lineItems,
       amount: finalTotal,
       currency: "NGN",
       redirect_url: `${process.env.CLIENT_URL}/purchase-success`,
@@ -176,7 +173,6 @@ export const createCheckoutSession = async (req, res) => {
   }
 };
 
-
 export const checkoutSuccess = async (req, res) => {
   try {
     const { tx_ref, transaction_id } = req.body;
@@ -214,32 +210,29 @@ export const checkoutSuccess = async (req, res) => {
     }
 
     // Extract card/payment method info
-   const paymentData = {
-     method: data.payment_type || "card",
-     status: "PAID",
-     card: {
-       brand: data.card?.brand || "Unknown",
-       last4: data.card?.last_4digits || null,
-       exp_month: data.card?.exp_month || null,
-       exp_year: data.card?.exp_year || null,
-       type: data.card?.type || null,
-       issuer: data.card?.issuer || null,
-     },
-   };
-
+    const paymentData = {
+      method: data.payment_type || "card",
+      status: "PAID",
+      card: {
+        brand: data.card?.brand || "Unknown",
+        last4: data.card?.last_4digits || null,
+        exp_month: data.card?.exp_month || null,
+        exp_year: data.card?.exp_year || null,
+        type: data.card?.type || null,
+        issuer: data.card?.issuer || null,
+      },
+    };
 
     //  Check for duplicate orders
     const existingOrder = await Order.findOne({
       $or: [
-        { flutterwaveRef:  tx_ref || data.tx_ref || transaction_id, },
+        { flutterwaveRef: tx_ref || data.tx_ref || transaction_id },
         { flutterwaveTransactionId: transaction_id },
       ],
     });
 
     if (existingOrder) {
-      console.log(
-        " Duplicate payment callback ignored — order already exists"
-      );
+      console.log(" Duplicate payment callback ignored — order already exists");
       return res.status(200).json({
         success: true,
         message: "Order already exists",
@@ -294,7 +287,6 @@ export const checkoutSuccess = async (req, res) => {
       status: "Pending",
       isProcessed: false,
       paymentMethod: paymentData,
-     
     });
 
     //  Deactivate used coupon
@@ -308,54 +300,63 @@ export const checkoutSuccess = async (req, res) => {
     //  Clear user’s cart
     await User.findByIdAndUpdate(userId, { cartItems: [] });
 
-    //  Send confirmation email
-    try {
-      //  Build payment details text for email
-      let paymentDetailsHTML = "";
+    // Respond to client immediately after order creation and cart clear so UI isn't blocked
+    res.status(200).json({
+      success: true,
+      message: "Payment verified and order created",
+      orderId: order._id,
+      orderNumber: order.orderNumber,
+    });
 
-      if (order.paymentMethod) {
-        const pm = order.paymentMethod;
+    // Execute post-order tasks in background: send confirmation email and optional reward coupon
+    (async () => {
+      try {
+        //  Build payment details text for email
+        let paymentDetailsHTML = "";
 
-        if (pm.method === "card" && pm.card) {
-          paymentDetailsHTML = `
+        if (order.paymentMethod) {
+          const pm = order.paymentMethod;
+
+          if (pm.method === "card" && pm.card) {
+            paymentDetailsHTML = `
       <p style="margin-top: 15px; font-size: 16px;">
-        <strong>Payment Method:</strong> ${pm.card.type || "Card"} ************ ${
-            pm.card.last4 || "****"
-          }<br>
+        <strong>Payment Method:</strong> ${
+          pm.card.type || "Card"
+        } ************ ${pm.card.last4 || "****"}<br>
         <small>Expires ${pm.card.exp_month || "MM"}/${
-            pm.card.exp_year || "YY"
-          }</small>
+              pm.card.exp_year || "YY"
+            }</small>
       </p>
     `;
-        } else {
-          paymentDetailsHTML = `
+          } else {
+            paymentDetailsHTML = `
       <p style="margin-top: 15px; font-size: 16px;">
         <strong>Payment Method:</strong> ${pm.method || "Unknown"}
       </p>
     `;
+          }
         }
-      }
 
-      const totalsSection = couponCode
-        ? `
+        const totalsSection = couponCode
+          ? `
     <p style="margin-top: 20px; font-size: 16px;">
       <strong>Original Total:</strong> ₦${originalTotal.toLocaleString()} <br>
       <strong>Coupon Discount:</strong> -₦${discountAmount.toLocaleString()} <br>
       <strong>Final Total:</strong> ₦${finalTotal.toLocaleString()}
     </p>
   `
-        : `
+          : `
     <p style="margin-top: 20px; font-size: 16px;">
       <strong>Total:</strong> ₦${finalTotal.toLocaleString()}
     </p>
   `;
 
-      const productRows = parsedProducts
-        .map((p) => {
-          let details = "";
-          if (p.size) details += `Size: ${p.size} `;
-          if (p.color) details += `| Color: ${p.color}`;
-          return `
+        const productRows = parsedProducts
+          .map((p) => {
+            let details = "";
+            if (p.size) details += `Size: ${p.size} `;
+            if (p.color) details += `| Color: ${p.color}`;
+            return `
       <tr>
         <td style="padding:8px;border:1px solid #ddd;">
           ${p.name}${details ? `<br><small>${details.trim()}</small>` : ""}
@@ -365,14 +366,15 @@ export const checkoutSuccess = async (req, res) => {
         }</td>
         <td style="padding:8px;border:1px solid #ddd;text-align:right;">₦${p.price.toLocaleString()}</td>
       </tr>`;
-        })
-        .join("");
+          })
+          .join("");
 
-      await sendEmail({
-        to: user.email,
-        subject: `Your EcoStore Order Confirmation - ${order.orderNumber}`,
-        text: `Hi ${user.name}, thank you for your order! Your order number is ${order.orderNumber}.`,
-        html: `
+        try {
+          await sendEmail({
+            to: user.email,
+            subject: `Your EcoStore Order Confirmation - ${order.orderNumber}`,
+            text: `Hi ${user.name}, thank you for your order! Your order number is ${order.orderNumber}.`,
+            html: `
               <!DOCTYPE html>
               <html>
                 <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
@@ -410,20 +412,21 @@ export const checkoutSuccess = async (req, res) => {
                 </body>
               </html>
         `,
-      });
-    } catch (emailErr) {
-      console.error(" Email send failed:", emailErr);
-    }
+          });
+        } catch (emailErr) {
+          console.error(" Email send failed (background):", emailErr);
+        }
 
-    //  Optional: reward coupon
-    if (order.totalAmount >= 150000) {
-      try {
-        const rewardCoupon = await createNewCoupon(user._id);
-        await sendEmail({
-          to: user.email,
-          subject: "🎁 You earned a special coupon from EcoStore!",
-          text: `Hi ${user.name}, congratulations! Use code: ${rewardCoupon.code} to enjoy ${rewardCoupon.discountPercentage}% off your next purchase.`,
-          html: `
+        //  Optional: reward coupon (background)
+        if (order.totalAmount >= 150000) {
+          try {
+            const rewardCoupon = await createNewCoupon(user._id);
+            try {
+              await sendEmail({
+                to: user.email,
+                subject: "🎁 You earned a special coupon from EcoStore!",
+                text: `Hi ${user.name}, congratulations! Use code: ${rewardCoupon.code} to enjoy ${rewardCoupon.discountPercentage}% off your next purchase.`,
+                html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin:auto; padding:20px; background:#fff; border-radius:8px;">
               <h2 style="color:#2ecc71;">🎉 Congratulations!</h2>
               <p>Hi <strong>${user.name}</strong>,</p>
@@ -436,18 +439,24 @@ export const checkoutSuccess = async (req, res) => {
               <p style="margin-top:20px;">Thank you for shopping with EcoStore 🌱</p>
             </div>
           `,
-        });
-      } catch (err) {
-        console.error(" Reward coupon creation/email failed:", err);
+              });
+            } catch (emailErr) {
+              console.error(
+                "Reward coupon email failed (background):",
+                emailErr
+              );
+            }
+          } catch (err) {
+            console.error(
+              " Reward coupon creation/email failed (background):",
+              err
+            );
+          }
+        }
+      } catch (bgErr) {
+        console.error("Background post-order tasks failed:", bgErr);
       }
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Payment verified and order created",
-      orderId: order._id,
-      orderNumber: order.orderNumber,
-    });
+    })();
   } catch (error) {
     if (error.code === 11000) {
       console.warn(" Duplicate order prevented:", error.keyValue);
@@ -469,11 +478,8 @@ export const checkoutSuccess = async (req, res) => {
 
     console.error(" checkoutSuccess error:", error);
     return res.status(500).json({ error: "Server error verifying payment" });
-  } 
+  }
 };
-  
-  
-
 
 /**
  * Create a new reward coupon in the DB for a user (deletes any old one)
