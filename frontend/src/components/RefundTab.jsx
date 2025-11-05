@@ -101,7 +101,7 @@ const RefundTab = () => {
       </motion.div>
 
       <motion.div
-        className="p-6 max-w-4xl mx-auto mt-7 no-scroll"
+        className=" max-w-4xl mx-auto mt-7 no-scroll"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.2 }}
@@ -190,7 +190,7 @@ const RefundTab = () => {
                             </span>
                             {item.quantity > 1 && (
                               <span className="text-gray-700 text-xs">
-                                ₦{item.price.toLocaleString()} each
+                                ₦{item.price.toLocaleString()} 
                               </span>
                             )}
                             {item.refundStatus && (
@@ -210,17 +210,7 @@ const RefundTab = () => {
                                   : "Refund Rejected"}
                               </span>
                             )}
-                            {/* Rate button for delivered orders */}
-                            {/* {order.status === "Delivered" && (
-                          <Link
-                            to={`/product/${
-                              item.product?._id || item._id
-                            }?rate=true&order=${order._id}`}
-                            className="ml-3 inline-block px-3 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700"
-                          >
-                            Rate
-                          </Link>
-                        )} */}
+                            
                             {order.status === "Delivered" && (
                               <div className="flex-col items-center gap-2 mt-2">
                                 {/* Rating stars preview (greyed out before rating) */}

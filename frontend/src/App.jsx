@@ -151,7 +151,11 @@ function App() {
             <Route path="/search" element={<SearchResultsPage />} />
           </Routes>
 
-          <ToastContainer position="top-center" autoClose={3000} />
+          <ToastContainer
+                    position="top-center"
+                    autoClose={4000}
+                    style={{ marginTop: "75px" }}
+                  />
         </div>
         <Toaster />
       </div>

@@ -101,12 +101,16 @@ const Delivered = () => {
       </motion.div>
 
       <motion.div
-        className="p-6 max-w-4xl mx-auto mt-7 no-scroll"
+        className=" max-w-4xl mx-auto mt-7 no-scroll"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.2 }}
       >
-        <ToastContainer position="top-center" autoClose={3000} />
+        <ToastContainer
+          position="top-center"
+          autoClose={4000}
+          style={{ marginTop: "75px" }}
+        />
 
         {orders.filter((order) => order.status === "Delivered").length === 0 ? (
           <p className="text-center text-gray-500">You have no orders yet.</p>
@@ -169,7 +173,6 @@ const Delivered = () => {
                               </p>
                             </div>
                             <div className="flex flex-wrap gap-2 text-xs text-gray-900">
-                              <div></div>
                               <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
                                 Size: {item.size || "N/A"}
                               </span>
@@ -187,12 +190,24 @@ const Delivered = () => {
                                 )}
                               </div>
                             </div>
+                            {item.refundStatus && (
+                              <span
+                                className={`inline-block mt-1 px-2 py-1 text-xs rounded ${
+                                  item.refundStatus === "Pending"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-red-100 text-red-700"
+                                }`}
+                              >
+                                {item.refundStatus === "Pending"
+                                  ? "Refund Pending"
+                                  : "Refund Rejected"}
+                              </span>
+                            )}
                           </div>
                         </li>
                       </span>
 
-                      
-                      <div>
+                      <div className="mt-2">
                         {order.status === "Delivered" && (
                           <div className=" text-end">
                             {/* Rating stars preview (greyed out before rating) */}
@@ -202,7 +217,7 @@ const Delivered = () => {
                               to={`/product/${
                                 item.product?._id || item._id
                               }?rate=true&order=${order._id}`}
-                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium  text-black rounded-full border-1 border-black hover:bg-gray-300 transition duration-200"
+                              className="inline-flex items-center gap-1   text-xs font-medium  text-black border-b-1 border-black hover:bg-gray-300 transition duration-200"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"

@@ -58,7 +58,7 @@ const AdminOrderDetails = () => {
           {order.flutterwaveRef}
         </span>
         <span
-          className={`px-1 py-1 rounded text-xs font-medium ${
+          className={`px-1 py-1 rounded text-xs ml-2 font-medium ${
             order.status === "Delivered"
               ? "bg-green-600 text-white"
               : order.status === "Cancelled"
@@ -104,21 +104,26 @@ const AdminOrderDetails = () => {
         <div className="grid grid-cols-1 gap-4 text-sm">
           <div className="grid grid-cols-2">
             <span className="text-gray-600">Name:</span>{" "}
-            <span className="font-semibold ">{order.user?.name}</span>
+            <span className="font-semibold break-words">
+              {order.user?.name}
+            </span>
           </div>
           <div className="grid grid-cols-2 ">
             <span className="text-gray-600">Email:</span>{" "}
-            <span className="font-semibold"> {order.user?.email}</span>
+            <span className="font-semibold break-words">
+              {" "}
+              {order.user?.email}
+            </span>
           </div>
           <p className="grid grid-cols-2 ">
-            <span className="text-gray-600">Phone:</span>{" "}
+            <span className="text-gray-600 break-words">Phone:</span>{" "}
             <span className="font-semibold">
               {order.phone || "Not provided"}
             </span>
           </p>
           <div className="grid grid-cols-2">
             <span className="text-gray-600">Address:</span>{" "}
-            <span className="font-semibold">
+            <span className="font-semibold break-words">
               {" "}
               {order.deliveryAddress || "Not provided"}
             </span>
@@ -144,7 +149,6 @@ const AdminOrderDetails = () => {
                 " {order.paymentMethod.method} "
               </span>
             </h1>
-            
           </div>
         )}
         {order.paymentMethod.method === "card" && (
@@ -203,54 +207,73 @@ const AdminOrderDetails = () => {
 
       <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
       {/* Products */}
-      <div className=" text-black rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 py-6 px-2 ">
+      <div className=" text-black rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 pt-6  ">
         <h2 className="text-lg font-semibold mb-4  pb-2">PRODUCTS</h2>
         <div className="space-y-4">
-          {order.products.map((item) => (
-            <div key={item._id} className="grid grid-cols-3   rounded-lg">
-              <div>
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-20 h-20 object-cover rounded"
-                />
-              </div>
-
-              <div className="text-sm text-gray-900">
-                <h3 className="text-bblack font-medium py-1">{item.name}</h3>
-                <p className="py-1">Qty: {item.quantity}</p>
-                <p className="py-1">₦{item.price.toLocaleString()}</p>
-                {/* <p>Total: ₦{(item.price * item.quantity).toLocaleString()}</p> */}
-              </div>
-
-              <div className=" gap-2 text-xs">
-                <span className=" block rounded py-1">
-                  Size: {item.selectedSize || "N/A"}
-                </span>
-                <span className=" block py-1 rounded">
-                  Color: {item.selectedColor || "N/A"}
-                </span>
-                <span className=" py-1 block rounded">
-                  Category: {item.selectedCategory || "N/A"}
-                </span>
-              </div>
-            </div>
-          ))}
+          <ul>
+            {order.products.map((item) => (
+              <span
+                onClick={() => navigate(`/vieworders/${order._id}`)}
+                className="cursor-pointer"
+              >
+                <li
+                  key={item._id}
+                  className="flex gap-4 p-4 bg-gray-100 rounded-lg shadow mt-1"
+                >
+                  {" "}
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-20 h-20 object-cover rounded"
+                  />
+                  <div className="flex-1 space-y-3">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-gray-900 text-sm break-words w-40 md:w-fit">
+                        {item.name}
+                      </h3>
+                      <p className="text-gray-800 font-semibold ">
+                        ₦{(item.price * item.quantity).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs text-gray-900">
+                      <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
+                        Size: {item.size || "N/A"}
+                      </span>
+                      <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
+                        Color: {item.color || "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex  justify-between text-sm text-gray-900">
+                      <span className="bg-gray-200 px-2 py-1 rounded text-xs ">
+                        Qty: {item.quantity}
+                      </span>
+                      {item.quantity > 1 && (
+                        <span className="text-gray-700 text-xs">
+                          ₦{item.price.toLocaleString()} each
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              </span>
+            ))}
+          </ul>
         </div>
       </div>
       <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
       {/* Totals */}
       <div className=" bg-gradient-to-br from-white via-gray-100 to-gray-300 text-gray-600 rounded-lg py-6 px-2">
         <h2 className="text-lg font-semibold mb-4  pb-2">Payment Summary</h2>
-        <p>
-          Subtotal:{" "}
-          <span className="text-black">
-            {" "}
-            ₦{order.subtotal.toLocaleString()}
-          </span>
-        </p>
+
         {order.discount > 0 && (
           <>
+            <p>
+              Subtotal:{" "}
+              <span className="text-black">
+                {" "}
+                ₦{order.subtotal.toLocaleString()}
+              </span>
+            </p>
             <p>
               Coupon:{" "}
               <span className="text-green-600 ">{order.coupon?.code}</span>

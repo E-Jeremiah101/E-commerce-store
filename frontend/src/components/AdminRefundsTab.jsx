@@ -87,6 +87,7 @@ const AdminRefundsTab = () => {
         }
       );
       toast.success("Refund approved successfully");
+      const processedAt = new Date().toISOString();
       setRefunds((prev) =>
         prev.map((r) =>
           r.refundId === refundId ? { ...r, status: "Approved" } : r
@@ -122,6 +123,7 @@ const AdminRefundsTab = () => {
         }
       );
       toast.success("Refund rejected ");
+      const processedAt = new Date().toISOString();
       setRefunds((prev) =>
         prev.map((r) =>
           r.refundId === refundId

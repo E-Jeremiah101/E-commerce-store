@@ -30,14 +30,14 @@ const OrderHistoryPage = () => {
         <h2 className="text-2xl font-semibold  text-center">My Orders</h2>
       </motion.div>
 
-      <div className="min-h-screen relative overflow-hidden">
+      <div className="min-h-screen relative overflow-hidden ">
         <div className="relative z-10 container mx-auto px-4 py-16">
           <div className="flex justify-center cursor-pointer  mt-6">
             {tabs.map((tab) => (
               <span
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center px-4 py-2 mx-2  transition-colors duration-200 ${
+                className={`flex items-center px-3 py-2 mx-2  transition-colors duration-200 ${
                   activeTab === tab.id
                     ? " text-black border-b-2"
                     : " text-black "
@@ -46,7 +46,7 @@ const OrderHistoryPage = () => {
                 {tab.label}
               </span>
             ))}
-          </div>
+          </div >
           {activeTab === "ongoing" && <Ongoing />}
           {activeTab === "delivered" && <Delivered />}
           {activeTab === "refunded" && <RefundTab />}

@@ -48,7 +48,7 @@ const CanceledTab = () => {
       </motion.div>
 
       <motion.div
-        className="p-6 max-w-4xl mx-auto mt-7 no-scroll"
+        className=" max-w-4xl mx-auto mt-7 no-scroll"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.2 }}

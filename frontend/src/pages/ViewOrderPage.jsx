@@ -105,21 +105,26 @@ const ViewOrderPage = () => {
         <div className="grid grid-cols-1 gap-4 text-sm">
           <div className="grid grid-cols-2">
             <span className="text-gray-600">Name:</span>{" "}
-            <span className="font-semibold ">{order.user?.name}</span>
+            <span className="font-semibold break-words">
+              {order.user?.name}
+            </span>
           </div>
           <div className="grid grid-cols-2 ">
             <span className="text-gray-600">Email:</span>{" "}
-            <span className="font-semibold"> {order.user?.email}</span>
+            <span className="font-semibold break-words">
+              {" "}
+              {order.user?.email}
+            </span>
           </div>
           <p className="grid grid-cols-2 ">
             <span className="text-gray-600">Phone:</span>{" "}
-            <span className="font-semibold">
+            <span className="font-semibold break-words">
               {order.phone || "Not provided"}
             </span>
           </p>
           <div className="grid grid-cols-2">
             <span className="text-gray-600">Address:</span>{" "}
-            <span className="font-semibold">
+            <span className="font-semibold break-words">
               {" "}
               {order.deliveryAddress || "Not provided"}
             </span>
@@ -206,7 +211,9 @@ const ViewOrderPage = () => {
                   />
                   <div className="flex-1 space-y-3">
                     <div className="flex justify-between items-center">
-                      <h3 className="text-gray-900 text-sm">{item.name}</h3>
+                      <h3 className="text-gray-900 text-sm break-words w-40 md:w-fit">
+                        {item.name}
+                      </h3>
                       <p className="text-gray-800 font-semibold ">
                         ₦{(item.price * item.quantity).toLocaleString()}
                       </p>

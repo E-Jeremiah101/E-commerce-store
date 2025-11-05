@@ -100,7 +100,7 @@ const Ongoing = () => {
       </motion.div>
 
       <motion.div
-        className="p-6 max-w-4xl mx-auto mt-7 no-scroll"
+        className=" max-w-4xl mx-auto mt-7 no-scroll"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.2 }}
@@ -128,7 +128,10 @@ const Ongoing = () => {
                 key={order._id}
                 className="border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm"
               >
-                <span onClick={() => navigate(`/vieworders/${order._id}`)} className="cursor-pointer">
+                <span
+                  onClick={() => navigate(`/vieworders/${order._id}`)}
+                  className="cursor-pointer"
+                >
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="font-semibold"> {order.orderNumber}</h3>
                     <span
@@ -183,7 +186,7 @@ const Ongoing = () => {
                               Color: {item.color || "N/A"}
                             </span>
                           </div>
-                          
+
                           <div className="flex  justify-between text-sm text-gray-900">
                             <span className="bg-gray-200 px-2 py-1 rounded text-xs ">
                               Qty: {item.quantity}
@@ -242,16 +245,18 @@ const Ongoing = () => {
                     </div>
 
                     <div className="flex">
-                      {order.products.some(
-                        (p) => !p.refundStatus || p.refundStatus === "Rejected"
-                      ) && (
-                        <button
-                          onClick={() => handleRefundClick(order)}
-                          className="hover:text-red-600 text-red-500 px-2 py-2 rounded-lg text-xs"
-                        >
-                          Request Refund?
-                        </button>
-                      )}
+                      {order.status === "Delivered" &&
+                        order.products.some(
+                          (p) =>
+                            !p.refundStatus || p.refundStatus === "Rejected"
+                        ) && (
+                          <button
+                            onClick={() => handleRefundClick(order)}
+                            className="hover:text-red-600 text-red-500 px-2 py-2 rounded-lg text-xs"
+                          >
+                            Request Refund?
+                          </button>
+                        )}
                     </div>
                   </div>
                 </span>
