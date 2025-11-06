@@ -38,13 +38,7 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: [
-        "Pending",
-        "Processing",
-        "Shipped",
-        "Delivered",
-        "Cancelled",
-      ],
+      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
       default: "Pending",
     },
     isProcessed: { type: Boolean, default: false },
@@ -94,7 +88,6 @@ const orderSchema = new mongoose.Schema(
       discount: Number,
     },
     couponCode: { type: String, default: null },
-    
 
     flutterwaveRef: {
       type: String,
@@ -107,7 +100,7 @@ const orderSchema = new mongoose.Schema(
       unique: true,
       sparse: true,
     },
-
+    totalRefunded: { type: Number, default: 0 },
     refunds: [
       {
         product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" }, // refunded product

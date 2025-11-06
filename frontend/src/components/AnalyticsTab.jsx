@@ -88,9 +88,7 @@ const AnalyticsTab = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 text-gray-700">
       <div className="text-center mb-6">
-        <h1 className="text-3xl font-bold">
-          Welcome, {user?.name || "Admin"} 
-        </h1>
+        <h1 className="text-3xl font-bold">Welcome, {user?.name || "Admin"}</h1>
         <p className="text-gray-500 mb-3">
           Analytics overview for this {selectedRange}.
         </p>
@@ -159,24 +157,87 @@ const AnalyticsTab = () => {
           color="#10B981"
         />
         <AnalyticsCard
+          title="Approved Refunds"
+          value={analyticsData.refundsApproved}
+          icon={CheckCircle}
+          color="#10B981"
+        />
+
+        <AnalyticsCard
+          title="Pending Refunds"
+          value={analyticsData.refundsPending}
+          icon={Hourglass}
+          color="#FACC15"
+        />
+
+        <AnalyticsCard
+          title="Rejected Refunds"
+          value={analyticsData.refundsRejected}
+          icon={XCircle}
+          color="#EF4444"
+        />
+
+        <AnalyticsCard
           title="Cancelled Orders"
           value={analyticsData.canceledOrders}
           icon={XCircle}
           chartData={statusCharts?.Cancelled}
           color="#EF4444"
         />
-        <AnalyticsCard
-          title="Total Revenue"
-          value={`₦${analyticsData.totalRevenue?.toLocaleString()}`}
-          icon={DollarSign}
-          chartData={salesData}
-          color="#6366F1"
-          dataKey="revenue"
-        />
+        {/*  Revenue Summary */}
+        <div className="bg-gray-800 rounded-lg p-6 shadow-lg col-span-1 sm:col-span-2 lg:col-span-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {/* Gross Revenue */}
+            <div className="flex flex-col items-center justify-center bg-gray-900/40 rounded-lg p-4">
+              <p className="text-gray-400 text-sm mb-1">Gross Revenue</p>
+              <h3 className="text-2xl font-bold text-indigo-400">
+                ₦{analyticsData.grossRevenue?.toLocaleString() || 0}
+              </h3>
+            </div>
+
+            {/* Refunded Amount */}
+            <div className="flex flex-col items-center justify-center bg-gray-900/40 rounded-lg p-4">
+              <p className="text-gray-400 text-sm mb-1">Refunded Amount</p>
+              <h3 className="text-2xl font-bold text-red-400">
+                ₦{analyticsData.totalRefunded?.toLocaleString() || 0}
+              </h3>
+            </div>
+
+            {/* Net Revenue */}
+            <div className="flex flex-col items-center justify-center bg-gray-900/40 rounded-lg p-4">
+              <p className="text-gray-400 text-sm mb-1">Net Revenue</p>
+              <h3 className="text-2xl font-bold text-emerald-400">
+                ₦{analyticsData.netRevenue?.toLocaleString() || 0}
+              </h3>
+            </div>
+          </div>
+
+          {/* Optional: Revenue Chart */}
+          <div className="mt-6">
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={salesData}>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#374151"
+                  opacity={0.3}
+                />
+                <XAxis dataKey="name" stroke="#9CA3AF" />
+                <YAxis stroke="#9CA3AF" />
+                <Tooltip content={<CustomTooltip />} />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#6366F1"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
       {/* Main Chart */}
-      <motion.div
+      {/* <motion.div
         className="bg-gray-800 rounded-lg p-6 shadow-lg"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -192,6 +253,7 @@ const AnalyticsTab = () => {
             <XAxis dataKey="name" stroke="#9CA3AF" />
             <YAxis stroke="#9CA3AF" />
             <Tooltip content={<CustomTooltip />} />
+
             <Line
               type="monotone"
               dataKey="sales"
@@ -204,9 +266,21 @@ const AnalyticsTab = () => {
               stroke="#3B82F6"
               strokeWidth={2}
             />
+            <Line
+              type="monotone"
+              dataKey="refunded"
+              stroke="#EF4444"
+              strokeWidth={2}
+            />
+            <Line
+              type="monotone"
+              dataKey="netRevenue"
+              stroke="#FACC15"
+              strokeWidth={2}
+            />
           </LineChart>
         </ResponsiveContainer>
-      </motion.div>
+      </motion.div> */}
     </div>
   );
 };
