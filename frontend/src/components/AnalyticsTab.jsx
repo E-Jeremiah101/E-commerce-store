@@ -236,51 +236,6 @@ const AnalyticsTab = () => {
         </div>
       </div>
 
-      {/* Main Chart */}
-      {/* <motion.div
-        className="bg-gray-800 rounded-lg p-6 shadow-lg"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={salesData}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#374151"
-              opacity={0.3}
-            />
-            <XAxis dataKey="name" stroke="#9CA3AF" />
-            <YAxis stroke="#9CA3AF" />
-            <Tooltip content={<CustomTooltip />} />
-
-            <Line
-              type="monotone"
-              dataKey="sales"
-              stroke="#10B981"
-              strokeWidth={2}
-            />
-            <Line
-              type="monotone"
-              dataKey="revenue"
-              stroke="#3B82F6"
-              strokeWidth={2}
-            />
-            <Line
-              type="monotone"
-              dataKey="refunded"
-              stroke="#EF4444"
-              strokeWidth={2}
-            />
-            <Line
-              type="monotone"
-              dataKey="netRevenue"
-              stroke="#FACC15"
-              strokeWidth={2}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </motion.div> */}
     </div>
   );
 };

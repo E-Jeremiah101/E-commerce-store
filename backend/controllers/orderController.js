@@ -187,38 +187,6 @@ export const getAllOrders = async (req, res) => {
         } else if (approvedCount === totalProducts) {
           refundStatus = "Refunded";
         }
-
-        //  res.status(200).json({
-        //    success: true,
-        //    count: orders.length,
-        //    orders: orders.map((order) => ({
-        //      _id: order._id,
-        //      orderNumber: order.orderNumber,
-        //      user: order.user,
-        //      status: order.status,
-        //      isProcessed: order.isProcessed,
-        //      deliveredAt: order.deliveredAt,
-        //      updatedAt: order.updatedAt,
-        //      totalAmount: order.totalAmount,
-        //      subtotal: order.subtotal,
-        //      discount: order.discount,
-        //      coupon: order.coupon,
-        //      deliveryAddress: order.deliveryAddress,
-        //      phone: order.phone,
-        //      createdAt: order.createdAt,
-        //      products: (order.products || []).map((p) => ({
-        //        _id: p._id,
-        //        product: p.product || null,
-        //        quantity: p.quantity,
-        //        price: p.price,
-        //        size: p.selectedSize || null,
-        //        color: p.selectedColor || null,
-        //        selectedCategory: p.selectedCategory || null,
-        //        name: p.name || p.product?.name || "Unknown Product",
-        //        image: p.image || p.product?.image || "/placeholder.png",
-        //      })),
-        //    })),
-        //  });
         
         return {
           _id: order._id,
