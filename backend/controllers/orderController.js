@@ -1,81 +1,80 @@
 import Order from "../models/order.model.js";
-import {sendEmail} from "../lib/mailer.js";
+import { sendEmail } from "../lib/mailer.js";
 import User from "../models/user.model.js";
 import Coupon from "../models/coupon.model.js";
 
 export const getUserOrders = async (req, res) => {
-    try {
-        const userId =  req.user._id;
+  try {
+    const userId = req.user._id;
 
-        const orders = await Order.find({user: userId}).populate("products.product", "name image price").sort({createdAt: -1}).lean();
+    const orders = await Order.find({ user: userId })
+      .populate("products.product", "name image price")
+      .sort({ createdAt: -1 })
+      .lean();
 
-        const formattedOrders = orders.map((order) => {
+    const formattedOrders = orders.map((order) => {
       // 🔍 If any refund for this order has status "Approved"
       const hasApprovedRefund = order.refunds?.some(
         (refund) => refund.status === "Approved"
       );
 
       let displayStatus = order.status;
-     const totalProducts = order.products.length;
-     const approvedCount =
-       order.refunds?.filter((r) => r.status === "Approved").length || 0;
+      const totalProducts = order.products.length;
+      const approvedCount =
+        order.refunds?.filter((r) => r.status === "Approved").length || 0;
 
-     if (approvedCount > 0 && approvedCount < totalProducts) {
-       displayStatus = "Partially Refunded";
-     } else if (approvedCount === totalProducts) {
-       displayStatus = "Refunded";
-     }
+      if (approvedCount > 0 && approvedCount < totalProducts) {
+        displayStatus = "Partially Refunded";
+      } else if (approvedCount === totalProducts) {
+        displayStatus = "Refunded";
+      }
 
-       const products = order.products.map((p) => {
-         // Check if this product has a refund request
-         const refund = order.refunds?.find(
-           (r) => r.product?.toString() === p.product?._id?.toString()
-         );
-
-         return {
-           _id: p._id,
-           product: p.product || null,
-           quantity: p.quantity,
-           price: p.price,
-           size: p.selectedSize || null,
-           color: p.selectedColor || null,
-           selectedCategory: p.selectedCategory || null,
-           name: p.name || p.product?.name || "Unknown Product",
-           image: p.image || p.product?.image || "/placeholder.png",
-           refundStatus: refund?.status || null, 
-         };
-       });
-        
+      const products = order.products.map((p) => {
+        // Check if this product has a refund request
+        const refund = order.refunds?.find(
+          (r) => r.product?.toString() === p.product?._id?.toString()
+        );
 
         return {
-          count: orders.length,
-          displayStatus,
-          _id: order._id,
-          orderNumber: order.orderNumber,
-          status: order.status,
-          deliveredAt: order.deliveredAt,
-          totalAmount: order.totalAmount,
-          subtotal: order.subtotal,
-          discount: order.discount,
-          coupon: order.coupon,
-          deliveryAddress: order.deliveryAddress,
-          phone: order.phone,
-          createdAt: order.createdAt,
-          products,
+          _id: p._id,
+          product: p.product || null,
+          quantity: p.quantity,
+          price: p.price,
+          size: p.selectedSize || null,
+          color: p.selectedColor || null,
+          selectedCategory: p.selectedCategory || null,
+          name: p.name || p.product?.name || "Unknown Product",
+          image: p.image || p.product?.image || "/placeholder.png",
+          refundStatus: refund?.status || null,
         };
+      });
 
-      });
-      res.status(200).json({
-        success: true,
-        count: formattedOrders.length,
-        orders: formattedOrders,
-      });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
+      return {
+        count: orders.length,
+        displayStatus,
+        _id: order._id,
+        orderNumber: order.orderNumber,
+        status: order.status,
+        deliveredAt: order.deliveredAt,
+        totalAmount: order.totalAmount,
+        subtotal: order.subtotal,
+        discount: order.discount,
+        coupon: order.coupon,
+        deliveryAddress: order.deliveryAddress,
+        phone: order.phone,
+        createdAt: order.createdAt,
+        products,
+      };
+    });
+    res.status(200).json({
+      success: true,
+      count: formattedOrders.length,
+      orders: formattedOrders,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
-
-
 
 export const getAllOrders = async (req, res) => {
   try {
@@ -188,13 +187,13 @@ export const getAllOrders = async (req, res) => {
         } else if (approvedCount === totalProducts) {
           refundStatus = "Refunded";
         }
-        
+
         return {
           _id: order._id,
           orderNumber: order.orderNumber,
           user: order.user,
           status: order.status,
-          refundStatus, 
+          refundStatus,
           isProcessed: order.isProcessed,
           deliveredAt: order.deliveredAt,
           updatedAt: order.updatedAt,
@@ -224,7 +223,6 @@ export const getAllOrders = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 
 // Update order status
 export const updateOrderStatus = async (req, res) => {
@@ -289,33 +287,41 @@ export const updateOrderStatus = async (req, res) => {
       </html>
     `;
 
-    // Send email
+    // Respond immediately so the client receives the update without waiting for email delivery
     console.log(" Order updated:", order);
-   try {
-     await sendEmail({
-       to: order.user?.email,
-       subject: `Update on your order ${order.orderNumber}`,
-       html: emailHtml,
-     });
-   } catch (emailError) {
-    console.error("Fail to send email:", emailError.message);
-   }
-
     res.status(200).json({
       success: true,
       message: `Order status updated to ${status}`,
       order,
     });
+
+    // Send notification email in background (fire-and-forget)
+    (async () => {
+      try {
+        await sendEmail({
+          to: order.user?.email,
+          subject: `Update on your order ${order.orderNumber}`,
+          html: emailHtml,
+        });
+      } catch (emailError) {
+        console.error(
+          "Background order update email failed:",
+          emailError?.message || emailError
+        );
+      }
+    })();
   } catch (error) {
     console.error(" Error updating order status:", error.message);
-    res.status(500).json({ message: error.message });;
+    res.status(500).json({ message: error.message });
   }
 };
 
 // Create new order
 export const createOrder = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate("cartItems.product");
+    const user = await User.findById(req.user._id).populate(
+      "cartItems.product"
+    );
 
     if (!user || !user.cartItems.length) {
       return res.status(400).json({ message: "Cart is empty" });
@@ -323,7 +329,8 @@ export const createOrder = async (req, res) => {
 
     // Get default phone & address
     const defaultPhone = user.phones.find((p) => p.isDefault) || user.phones[0];
-    const defaultAddress = user.addresses.find((a) => a.isDefault) || user.addresses[0];
+    const defaultAddress =
+      user.addresses.find((a) => a.isDefault) || user.addresses[0];
 
     // Build order items
     const orderItems = user.cartItems.map((item) => ({
@@ -358,13 +365,15 @@ export const createOrder = async (req, res) => {
           discount = Math.min(foundCoupon.value, subtotal);
         }
 
-        coupon = { code: foundCoupon.code, discountPercentage: foundCoupon.type === "percentage" ? foundCoupon.value: 0,
+        coupon = {
+          code: foundCoupon.code,
+          discountPercentage:
+            foundCoupon.type === "percentage" ? foundCoupon.value : 0,
           discountAmount: discount,
         };
       }
     }
-        const totalAmount = Math.max(subtotal - discount, 0);
-
+    const totalAmount = Math.max(subtotal - discount, 0);
 
     // Create order snapshot
     const order = new Order({
@@ -417,27 +426,3 @@ export const getOrderById = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
