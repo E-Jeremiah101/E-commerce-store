@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 const reviewSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    name: { type: String, required: true }, // store author name for convenience
+    firstname: { type: String, required: true }, // store author name for convenience
+    lastname: { type: String, required: true }, // store author name for convenience
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String },
   },

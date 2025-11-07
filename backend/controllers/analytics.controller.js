@@ -1,12 +1,3 @@
-
-
-
-
-
-
-
-
-
 import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
 import User from "../models/user.model.js";
@@ -262,62 +253,71 @@ function getStartDate(range, endDate) {
 
 
 
-
-
-
-
-
-
-
-
-
-
 // import Order from "../models/order.model.js";
 // import Product from "../models/product.model.js";
 // import User from "../models/user.model.js";
 // import Visitor from "../models/visitors.model.js";
 
+// // ===========================================
 // // MAIN FUNCTION
+// // ===========================================
 // export const getAnalytics = async (range = "weekly") => {
 //   const endDate = new Date();
-//   const startDate = getStartDate(range, endDate);
+//   const startDate = range === "all" ? null : getStartDate(range, endDate);
 
 //   const analyticsData = await getAnalyticsData(startDate, endDate);
 //   const salesData = await getSalesDataByRange(range, startDate, endDate);
 //   const statusCharts = await getStatusTrendsByRange(range, startDate, endDate);
-//   const visitorsTrend = await Visitor.aggregate([
+
+//   const visitorsTrend = await getVisitorsTrend(range, startDate, endDate);
+//   const ordersTrend = await getOrdersTrend(range, startDate, endDate);
+
+//   const refundTrend = await Order.aggregate([
+//     { $unwind: "$refunds" },
+//     ...(startDate
+//       ? [
+//           {
+//             $match: {
+//               "refunds.processedAt": { $gte: startDate, $lte: endDate },
+//             },
+//           },
+//         ]
+//       : []),
 //     {
 //       $group: {
-//         _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+//         _id: {
+//           $dateToString: { format: "%Y-%m-%d", date: "$refunds.processedAt" },
+//         },
+//         totalRefunds: { $sum: "$refunds.amount" },
 //         count: { $sum: 1 },
 //       },
 //     },
 //     { $sort: { _id: 1 } },
 //   ]);
 
-//   const ordersTrend = await Order.aggregate([
-//     {
-//       $group: {
-//         _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-//         count: { $sum: 1 },
-//       },
-//     },
-//     { $sort: { _id: 1 } },
-//   ]);
-
-
-//   return { analyticsData, salesData, statusCharts, visitorsTrend, ordersTrend };
+//   return {
+//     analyticsData,
+//     salesData,
+//     statusCharts,
+//     visitorsTrend,
+//     ordersTrend,
+//     refundTrend,
+//   };
 // };
 
-// // -----------------------------
+// // ===========================================
 // // MAIN ANALYTIC STATS
-// // -----------------------------
+// // ===========================================
 // async function getAnalyticsData(startDate, endDate) {
+//   const dateFilter = startDate
+//     ? { createdAt: { $gte: startDate, $lte: endDate } }
+//     : {};
+
 //   const [totalUsers, totalProducts, allOrders, visitors] = await Promise.all([
 //     User.countDocuments(),
 //     Product.countDocuments(),
-//     Order.countDocuments(),
-//     Visitor.countDocuments({ createdAt: { $gte: startDate, $lte: endDate } }),
+//     Order.countDocuments({ status: { $nin: ["Cancelled"] } }),
+//     Visitor.countDocuments(dateFilter),
 //   ]);
 
 //   const pendingOrders = await Order.countDocuments({ status: "Pending" });
@@ -331,10 +331,34 @@ function getStartDate(range, endDate) {
 //     {
 //       $group: {
 //         _id: null,
-//         totalRevenue: { $sum: "$totalAmount" },
+//         grossRevenue: { $sum: "$totalAmount" },
+//         totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
 //       },
 //     },
 //   ]);
+
+//   const refundStats = await Order.aggregate([
+//     { $unwind: { path: "$refunds", preserveNullAndEmptyArrays: false } },
+//     {
+//       $group: {
+//         _id: "$refunds.status",
+//         count: { $sum: 1 },
+//       },
+//     },
+//   ]);
+
+//   const refundSummary = {
+//     Approved: 0,
+//     Pending: 0,
+//     Rejected: 0,
+//   };
+//   refundStats.forEach((r) => {
+//     if (refundSummary[r._id] !== undefined) refundSummary[r._id] = r.count;
+//   });
+
+//   const grossRevenue = revenue[0]?.grossRevenue || 0;
+//   const totalRefunded = revenue[0]?.totalRefunded || 0;
+//   const netRevenue = grossRevenue - totalRefunded;
 
 //   return {
 //     users: totalUsers,
@@ -346,55 +370,99 @@ function getStartDate(range, endDate) {
 //     shippedOrders,
 //     deliveredOrders,
 //     canceledOrders,
-//     totalRevenue: revenue[0]?.totalRevenue || 0,
+//     grossRevenue,
+//     totalRefunded,
+//     netRevenue,
+//     refundsApproved: refundSummary.Approved,
+//     refundsPending: refundSummary.Pending,
+//     refundsRejected: refundSummary.Rejected,
 //   };
 // }
 
-// // -----------------------------
+// // ===========================================
 // // SALES DATA (Main Chart)
-// // -----------------------------
+// // ===========================================
 // async function getSalesDataByRange(range, startDate, endDate) {
 //   const matchStage = {
 //     $match: {
-//       createdAt: { $gte: startDate, $lte: endDate },
+//       ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {}),
 //       status: { $nin: ["Cancelled"] },
 //     },
 //   };
 
-//   const groupStage = {
-//     $group: {
-//       _id: {
-//         $dateToString: {
-//           format:
-//             range === "yearly"
-//               ? "%Y"
-//               : range === "monthly"
-//               ? "%Y-%m"
-//               : "%Y-%m-%d",
-//           date: "$createdAt",
+//   let pipeline;
+
+//   if (range === "weekly") {
+//     // --- Weekly (Monday–Sunday ISO weeks) ---
+//     pipeline = [
+//       matchStage,
+//       {
+//         $group: {
+//           _id: {
+//             $dateToString: { format: "%G-%V", date: "$createdAt" }, // ISO week
+//           },
+//           sales: { $sum: 1 },
+//           revenue: { $sum: "$totalAmount" },
 //         },
 //       },
-//       sales: { $sum: 1 },
-//       revenue: { $sum: "$totalAmount" },
-//     },
-//   };
+//       {
+//         $addFields: {
+//           weekStart: {
+//             $dateFromParts: {
+//               isoWeekYear: {
+//                 $toInt: { $arrayElemAt: [{ $split: ["$_id", "-"] }, 0] },
+//               },
+//               isoWeek: {
+//                 $toInt: { $arrayElemAt: [{ $split: ["$_id", "-"] }, 1] },
+//               },
+//             },
+//           },
+//         },
+//       },
+//       {
+//         $addFields: {
+//           label: {
+//             $dateToString: { format: "%b %d", date: "$weekStart" },
+//           },
+//         },
+//       },
+//       { $sort: { weekStart: 1 } },
+//     ];
+//   } else {
+//     const format =
+//       range === "daily"
+//         ? "%Y-%m-%d"
+//         : range === "monthly"
+//         ? "%Y-%m"
+//         : range === "yearly"
+//         ? "%Y"
+//         : "%Y-%m-%d";
 
-//   const data = await Order.aggregate([
-//     matchStage,
-//     groupStage,
-//     { $sort: { _id: 1 } },
-//   ]);
+//     pipeline = [
+//       matchStage,
+//       {
+//         $group: {
+//           _id: { $dateToString: { format, date: "$createdAt" } },
+//           sales: { $sum: 1 },
+//           revenue: { $sum: "$totalAmount" },
+//         },
+//       },
+//       { $sort: { _id: 1 } },
+//     ];
+//   }
+
+//   const data = await Order.aggregate(pipeline);
 
 //   return data.map((item) => ({
-//     date: item._id,
+//     date: item.label || item._id,
 //     sales: item.sales,
 //     revenue: item.revenue,
 //   }));
 // }
 
-// // -----------------------------
-// // STATUS CHARTS FOR EACH TYPE
-// // -----------------------------
+// // ===========================================
+// // STATUS CHARTS (Weekly Monday–Sunday)
+// // ===========================================
 // async function getStatusTrendsByRange(range, startDate, endDate) {
 //   const statuses = [
 //     "Pending",
@@ -402,32 +470,76 @@ function getStartDate(range, endDate) {
 //     "Shipped",
 //     "Delivered",
 //     "Cancelled",
-//     "visitors"
 //   ];
-//   const format =
-//     range === "yearly" ? "%Y" : range === "monthly" ? "%Y-%m" : "%Y-%m-%d";
 
 //   const charts = {};
 
 //   for (const status of statuses) {
-//     const data = await Order.aggregate([
-//       {
-//         $match: {
-//           status,
-//           createdAt: { $gte: startDate, $lte: endDate },
-//         },
-//       },
-//       {
-//         $group: {
-//           _id: { $dateToString: { format, date: "$createdAt" } },
-//           count: { $sum: 1 },
-//         },
-//       },
-//       { $sort: { _id: 1 } },
-//     ]);
+//     let pipeline = [];
 
+//     if (range === "weekly") {
+//       pipeline = [
+//         {
+//           $match: {
+//             status,
+//             createdAt: { $gte: startDate, $lte: endDate },
+//           },
+//         },
+//         {
+//           $group: {
+//             _id: { $dateToString: { format: "%G-%V", date: "$createdAt" } },
+//             count: { $sum: 1 },
+//           },
+//         },
+//         {
+//           $addFields: {
+//             weekStart: {
+//               $dateFromParts: {
+//                 isoWeekYear: {
+//                   $toInt: { $arrayElemAt: [{ $split: ["$_id", "-"] }, 0] },
+//                 },
+//                 isoWeek: {
+//                   $toInt: { $arrayElemAt: [{ $split: ["$_id", "-"] }, 1] },
+//                 },
+//               },
+//             },
+//           },
+//         },
+//         {
+//           $addFields: {
+//             label: {
+//               $dateToString: { format: "%b %d", date: "$weekStart" },
+//             },
+//           },
+//         },
+//         { $sort: { weekStart: 1 } },
+//       ];
+//     } else {
+//       const format =
+//         range === "yearly" ? "%Y" : range === "monthly" ? "%Y-%m" : "%Y-%m-%d";
+
+//       pipeline = [
+//         {
+//           $match: {
+//             status,
+//             ...(startDate
+//               ? { createdAt: { $gte: startDate, $lte: endDate } }
+//               : {}),
+//           },
+//         },
+//         {
+//           $group: {
+//             _id: { $dateToString: { format, date: "$createdAt" } },
+//             count: { $sum: 1 },
+//           },
+//         },
+//         { $sort: { _id: 1 } },
+//       ];
+//     }
+
+//     const data = await Order.aggregate(pipeline);
 //     charts[status] = data.map((item) => ({
-//       date: item._id,
+//       date: item.label || item._id,
 //       count: item.count,
 //     }));
 //   }
@@ -435,14 +547,124 @@ function getStartDate(range, endDate) {
 //   return charts;
 // }
 
-// // -----------------------------
+// // ===========================================
+// // VISITORS TREND (Weekly Monday–Sunday)
+// // ===========================================
+// async function getVisitorsTrend(range, startDate, endDate) {
+//   if (range === "weekly") {
+//     return await Visitor.aggregate([
+//       { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
+//       {
+//         $group: {
+//           _id: { $dateToString: { format: "%G-%V", date: "$createdAt" } },
+//           count: { $sum: 1 },
+//         },
+//       },
+//       {
+//         $addFields: {
+//           weekStart: {
+//             $dateFromParts: {
+//               isoWeekYear: {
+//                 $toInt: { $arrayElemAt: [{ $split: ["$_id", "-"] }, 0] },
+//               },
+//               isoWeek: {
+//                 $toInt: { $arrayElemAt: [{ $split: ["$_id", "-"] }, 1] },
+//               },
+//             },
+//           },
+//         },
+//       },
+//       {
+//         $addFields: {
+//           label: { $dateToString: { format: "%b %d", date: "$weekStart" } },
+//         },
+//       },
+//       { $sort: { weekStart: 1 } },
+//     ]);
+//   }
+
+//   const format =
+//     range === "yearly" ? "%Y" : range === "monthly" ? "%Y-%m" : "%Y-%m-%d";
+
+//   return await Visitor.aggregate([
+//     {
+//       $match: startDate
+//         ? { createdAt: { $gte: startDate, $lte: endDate } }
+//         : {},
+//     },
+//     {
+//       $group: {
+//         _id: { $dateToString: { format, date: "$createdAt" } },
+//         count: { $sum: 1 },
+//       },
+//     },
+//     { $sort: { _id: 1 } },
+//   ]);
+// }
+
+// // ===========================================
+// // ORDERS TREND (Weekly Monday–Sunday)
+// // ===========================================
+// async function getOrdersTrend(range, startDate, endDate) {
+//   if (range === "weekly") {
+//     return await Order.aggregate([
+//       { $match: { createdAt: { $gte: startDate, $lte: endDate } } },
+//       {
+//         $group: {
+//           _id: { $dateToString: { format: "%G-%V", date: "$createdAt" } },
+//           count: { $sum: 1 },
+//         },
+//       },
+//       {
+//         $addFields: {
+//           weekStart: {
+//             $dateFromParts: {
+//               isoWeekYear: {
+//                 $toInt: { $arrayElemAt: [{ $split: ["$_id", "-"] }, 0] },
+//               },
+//               isoWeek: {
+//                 $toInt: { $arrayElemAt: [{ $split: ["$_id", "-"] }, 1] },
+//               },
+//             },
+//           },
+//         },
+//       },
+//       {
+//         $addFields: {
+//           label: { $dateToString: { format: "%b %d", date: "$weekStart" } },
+//         },
+//       },
+//       { $sort: { weekStart: 1 } },
+//     ]);
+//   }
+
+//   const format =
+//     range === "yearly" ? "%Y" : range === "monthly" ? "%Y-%m" : "%Y-%m-%d";
+
+//   return await Order.aggregate([
+//     {
+//       $match: startDate
+//         ? { createdAt: { $gte: startDate, $lte: endDate } }
+//         : {},
+//     },
+//     {
+//       $group: {
+//         _id: { $dateToString: { format, date: "$createdAt" } },
+//         count: { $sum: 1 },
+//       },
+//     },
+//     { $sort: { _id: 1 } },
+//   ]);
+// }
+
+// // ===========================================
 // // RANGE HELPER
-// // -----------------------------
+// // ===========================================
 // function getStartDate(range, endDate) {
 //   const start = new Date(endDate);
 //   switch (range) {
 //     case "daily":
-//       start.setDate(endDate.getDate() - 1);
+//       start.setHours(endDate.getHours() - 24);
 //       break;
 //     case "weekly":
 //       start.setDate(endDate.getDate() - 7);

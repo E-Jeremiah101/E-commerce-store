@@ -25,9 +25,13 @@ addressSchema.pre("validate", function (next) {
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
+    firstname: {
       type: String,
-      required: [true, "Name is required"],
+      required: [true, "firstname is required"],
+    },
+    lastname: {
+      type: String,
+      required: [true, "lastname is required"],
     },
     email: {
       type: String,

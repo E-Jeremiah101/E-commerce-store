@@ -89,7 +89,8 @@ export const getAllOrders = async (req, res) => {
         $or: [
           { orderNumber: { $regex: search, $options: "i" } },
           ...(isObjectId ? [{ _id: search }] : []),
-          { "user.name": { $regex: search, $options: "i" } },
+          { "user.fistname": { $regex: search, $options: "i" } },
+          { "user.lastname": { $regex: search, $options: "i" } },
         ],
       };
     }
@@ -116,7 +117,7 @@ export const getAllOrders = async (req, res) => {
 
     // Fetch orders (do NOT ask Mongo to sort by custom status order)
     let orders = await Order.find(searchFilter)
-      .populate("user", "name email phone address")
+      .populate("user", "firstname lastname email phone address")
       .populate("products.product", "name price image")
       .lean(); // use lean for faster in-memory sorting and to avoid mongoose docs
 
@@ -176,7 +177,7 @@ export const getAllOrders = async (req, res) => {
       success: true,
       count: orders.length,
       orders: orders.map((order) => {
-        // 🔍 Compute refund status dynamically
+        //  Compute refund status dynamically
         const totalProducts = order.products.length;
         const approvedCount =
           order.refunds?.filter((r) => r.status === "Approved").length || 0;
@@ -247,7 +248,7 @@ export const updateOrderStatus = async (req, res) => {
         <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
           <div style="max-width: 600px; margin: auto; background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #eee;">
             <h2 style="color: #2c3e50; text-align: center;">📢 Order Status Update</h2>
-            <p>Hi <strong>${order.user?.name || "Customer"}</strong>,</p>
+            <p>Hi <strong>${order.user?.firstname || "Customer"}</strong>,</p>
             <p>Your order <strong>${
               order.orderNumber
             }</strong> has been updated.</p>
@@ -402,7 +403,7 @@ export const getOrderById = async (req, res) => {
     }
 
     const order = await Order.findById(id)
-      .populate("user", "name email phone address")
+      .populate("user", "firstname lastname email phone address")
       .populate("products.product", "name price image")
       .lean();
 

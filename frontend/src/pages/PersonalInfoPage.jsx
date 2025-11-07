@@ -104,29 +104,32 @@ const PersonalInfoPage = () => {
   return (
     <div className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <motion.div
-              className=" fixed top-0 left-0 right-0 flex z-40 items-center justify-center bg-gradient-to-br from-white via-gray-100 to-gray-300 py-5"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <div className="absolute left-4 text-black">
-                <GoBackButton />
-              </div>
-              <h2 className="text-2xl font-semibold text-center">Personal Information</h2>
-            </motion.div>
+        className=" fixed top-0 left-0 right-0 flex z-40 items-center justify-center bg-gradient-to-br from-white via-gray-100 to-gray-300 py-5"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+      >
+        <div className="absolute left-4 text-black">
+          <GoBackButton />
+        </div>
+        <h2 className="text-2xl font-semibold text-center">
+          Personal Information
+        </h2>
+      </motion.div>
 
       <motion.div
         className="w-full mt-8 md:mx-auto md:w-full md:max-w-md"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.2 }}
-      ><ToastContainer position="top-center" autoClose={3000} />
+      >
+        <ToastContainer position="top-center" autoClose={3000} />
         <div className="py-8 px-4 md:shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6">
             {/* Full Name */}
             <div>
               <label className="block text-sm font-medium text-gray-800 mb-4">
-                Full Name
+                First name
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -134,7 +137,28 @@ const PersonalInfoPage = () => {
                 </div>
                 <input
                   readOnly
-                  value={user.name}
+                  value={user.firstname}
+                  className="block w-full px-4 py-4 pl-10 rounded-md shadow-lg focus:outline-none text-gray-800"
+                />
+                <div className="absolute inset-y-0 right-3 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-red-400" aria-hidden="true" />
+                </div>
+              </div>
+            </div>
+
+            {/* Email */}
+            {/* Full Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-800 mb-4">
+                Last name
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </div>
+                <input
+                  readOnly
+                  value={user.lastname}
                   className="block w-full px-4 py-4 pl-10 rounded-md shadow-lg focus:outline-none text-gray-800"
                 />
                 <div className="absolute inset-y-0 right-3 pl-3 flex items-center pointer-events-none">

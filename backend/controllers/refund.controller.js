@@ -21,7 +21,7 @@ export const requestRefund = async (req, res) => {
 
     const order = await Order.findById(orderId)
       .populate("products.product")
-      .populate("user", "name email");
+      .populate("user", "firstname lastname email");
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     const allowedStatuses = ["Delivered", "Partially Refunded", "Refunded"];
@@ -38,7 +38,7 @@ export const requestRefund = async (req, res) => {
         .replace(/\s+/g, "_");
       const price = p.price || p.product?.price || 0;
       return `deleted-${orderId}-${safeName}-${price}`;
-    };
+    }; 
 
     // Find product (even if deleted)
     const product = order.products.find(
@@ -117,7 +117,7 @@ export const requestRefund = async (req, res) => {
       try {
         const emailContent = `
           <h2>Refund Request Received</h2>
-          <p>Hi ${order.user?.name || "Customer"},</p>
+          <p>Hi ${order.user?.firstname || "Customer"},</p>
           <p>We’ve received your refund request for the following item:</p>
           <div style="border: 1px solid #eee; padding: 10px; margin: 10px 0; border-radius: 8px;">
             <img src="${snapshot.image}" alt="${
@@ -160,7 +160,7 @@ export const requestRefund = async (req, res) => {
 export const getAllRefundRequests = async (req, res) => {
   try {
     const orders = await Order.find({ "refunds.0": { $exists: true } })
-      .populate("user", "name email")
+      .populate("user", "firstname lastname email")
       .populate("refunds.product", "name images price")
       .sort({ createdAt: -1 });
 
@@ -203,7 +203,7 @@ export const approveRefund = async (req, res) => {
   try {
     const { orderId, refundId } = req.params;
 
-    const order = await Order.findById(orderId).populate("user", "name email");
+    const order = await Order.findById(orderId).populate("user", "firstname lastname email");
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     const refund = order.refunds.id(refundId);
@@ -279,7 +279,7 @@ export const approveRefund = async (req, res) => {
             html: `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
       <h2 style="color: #2c3e50;">Refund Approved</h2>
-      <p>Dear ${order.user?.name || "Customer"},</p>
+      <p>Dear ${order.user?.firstname || "Customer"},</p>
       <p>Your refund request has been <strong>approved</strong> for the following item:</p>
       <div style="border: 1px solid #eee; padding: 10px; margin: 10px 0; border-radius: 8px;">
         <p><strong>Refund ID:</strong> ${refund._id}</p>
@@ -313,7 +313,7 @@ export const rejectRefund = async (req, res) => {
     const { orderId, refundId } = req.params;
 
     // Find order with user populated
-    const order = await Order.findById(orderId).populate("user", "name email");
+    const order = await Order.findById(orderId).populate("user", "firstname lastname email");
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
@@ -360,7 +360,7 @@ export const rejectRefund = async (req, res) => {
           html: `
             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
               <h2 style="color: #e74c3c;">Refund Request Rejected</h2>
-              <p>Dear ${order.user?.name || "Customer"},</p>
+              <p>Dear ${order.user?.firstname || "Customer"},</p>
               <p>We regret to inform you that your refund request for the following item has been <strong>rejected</strong> after review:</p>
               <div style="border: 1px solid #eee; padding: 10px; margin: 10px 0; border-radius: 8px;">
                 <p><strong>Refund ID:</strong> ${refund._id}</p>

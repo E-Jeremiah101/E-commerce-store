@@ -40,7 +40,19 @@ export const createCheckoutSession = async (req, res) => {
     const defaultAddress =
       user.addresses?.find((a) => a.isDefault) || user.addresses?.[0];
 
-    if (!defaultPhone?.number?.trim() || !defaultAddress?.address?.trim()) {
+    // Build full name and address string from possibly-split fields
+    const fullName =
+      (user.name && user.name.trim()) ||
+      `${user.firstname || ""}${user.lastname ? " " + user.lastname : ""}`.trim();
+
+    const addressString = defaultAddress
+      ? (defaultAddress.address && defaultAddress.address.trim()) ||
+        `${defaultAddress.landmark ? defaultAddress.landmark + ", " : ""}${defaultAddress.lga ? defaultAddress.lga + ", " : ""}${defaultAddress.city ? defaultAddress.city + ", " : ""}${defaultAddress.state || ""}`.trim()
+      : "";
+
+    // Build a usable address string from saved address fields.
+
+    if (!defaultPhone?.number?.trim() || !addressString) {
       return res.status(400).json({
         error: "You must add a phone number and address before checkout.",
       });
@@ -102,7 +114,10 @@ export const createCheckoutSession = async (req, res) => {
       customer: {
         email: user.email,
         phonenumber: defaultPhone.number,
-        name: user.name,
+        firstname: user.firstname || "",
+        lastname: user.lastname || "",
+        name:
+          (user.firstname || "") + (user.lastname ? ` ${user.lastname}` : ""),
       },
       payment_options: "card",
       meta: {
@@ -295,6 +310,17 @@ export const checkoutSuccess = async (req, res) => {
     const defaultAddress =
       user.addresses?.find((a) => a.isDefault) || user.addresses?.[0];
 
+      const addressString = defaultAddress
+        ? (defaultAddress.address && defaultAddress.address.trim()) ||
+          `${defaultAddress.landmark ? defaultAddress.landmark + ", " : ""}${
+            defaultAddress.lga ? defaultAddress.lga + ", " : ""
+          }${defaultAddress.city ? defaultAddress.city + ", " : ""}${
+            defaultAddress.state || ""
+          }`.trim()
+        : "";
+
+    
+
     const originalTotal =
       Number(meta.originalTotal) || Number(data.amount) || 0;
     const discountAmount = Number(meta.discountAmount) || 0;
@@ -320,7 +346,6 @@ export const checkoutSuccess = async (req, res) => {
         .json({ message: "Payment failed, order cancelled." });
     }
 
-
     //  Create Order
     const order = await Order.create({
       user: user._id,
@@ -342,7 +367,7 @@ export const checkoutSuccess = async (req, res) => {
         ? { code: couponCode, discount: discountAmount }
         : null,
       couponCode: couponCode || null,
-      deliveryAddress: defaultAddress?.address || "No address provided",
+      deliveryAddress: addressString || "No address provided",
       phone: defaultPhone?.number || "No phone provided",
       flutterwaveRef: tx_ref || data.tx_ref || transaction_id,
       flutterwaveTransactionId: transaction_id,
@@ -435,14 +460,14 @@ export const checkoutSuccess = async (req, res) => {
           await sendEmail({
             to: user.email,
             subject: `Your EcoStore Order Confirmation - ${order.orderNumber}`,
-            text: `Hi ${user.name}, thank you for your order! Your order number is ${order.orderNumber}.`,
+            text: `Hi ${user.firstname}, thank you for your order! Your order number is ${order.orderNumber}.`,
             html: `
               <!DOCTYPE html>
               <html>
                 <body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
                   <div style="max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px;">
                     <h2 style="color: #2ecc71; text-align: center;"> Thank you for your order!</h2>
-                    <p>Hi <strong>${user.name}</strong>,</p>
+                    <p>Hi <strong>${user.firstname}</strong>,</p>
                     <p>We’ve received your order <strong>${order.orderNumber}</strong>.</p>
                     <p><strong>Current Status:</strong> <span style="color: orange;">Pending</span></p>
 
@@ -487,11 +512,11 @@ export const checkoutSuccess = async (req, res) => {
               await sendEmail({
                 to: user.email,
                 subject: "🎁 You earned a special coupon from EcoStore!",
-                text: `Hi ${user.name}, congratulations! Use code: ${rewardCoupon.code} to enjoy ${rewardCoupon.discountPercentage}% off your next purchase.`,
+                text: `Hi ${user.firstname}, congratulations! Use code: ${rewardCoupon.code} to enjoy ${rewardCoupon.discountPercentage}% off your next purchase.`,
                 html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin:auto; padding:20px; background:#fff; border-radius:8px;">
               <h2 style="color:#2ecc71;">🎉 Congratulations!</h2>
-              <p>Hi <strong>${user.name}</strong>,</p>
+              <p>Hi <strong>${user.firstname}</strong>,</p>
               <p>Since your purchase was above <strong>₦150,000</strong>, you’ve earned a special reward coupon:</p>
               <p style="font-size:18px; background:#f4f4f4; padding:10px; border-radius:5px; text-align:center;">
                 <strong>Coupon Code:</strong> <span style="color:#e74c3c;">${rewardCoupon.code}</span><br>
@@ -557,9 +582,6 @@ async function createNewCoupon(userId) {
   await newCoupon.save();
   return newCoupon;
 }
-
-
-
 
 //THE OLD CODE BEFORE THE CANCELLED UPDATE
 

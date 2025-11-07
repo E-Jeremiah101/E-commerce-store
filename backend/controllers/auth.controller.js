@@ -43,7 +43,7 @@ const setCookies = (res, accessToken, refreshToken) => {
 };
 
 export const signup = async (req, res) => {
-  const { name, email, password } = req.body;
+  const { firstname, lastname, email, password } = req.body;
   try {
     const userExists = await User.findOne({ email });
 
@@ -52,7 +52,7 @@ export const signup = async (req, res) => {
         message: "User email already exists",
       });
     } else {
-      const user = await User.create({ name, email, password });
+      const user = await User.create({ firstname, lastname, email, password });
 
       //authenticate users
 
@@ -64,7 +64,8 @@ export const signup = async (req, res) => {
       res.status(201).json({
         user: {
           _id: user._id,
-          name: user.name,
+          firstname: user.firstname,
+          lastname: user.lastname,
           email: user.email,
           role: user.role,
         },
@@ -90,7 +91,8 @@ export const login = async (req, res) => {
 
       res.json({
         _id: user._id,
-        name: user.name,
+        firstname: user.firstname,
+        lastname: user.lastname,
         email: user.email,
         role: user.role,
       });

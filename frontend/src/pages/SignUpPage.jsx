@@ -11,7 +11,8 @@ import { useUserStore } from "../stores/useUserStore";
 
 const SignUpPage = () => {
   const [formData, setFormData] = useState({
-    name: "",
+    firstname: "",
+    lastname: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -31,10 +32,14 @@ const SignUpPage = () => {
 
     setBackendError("");
 
-    let nameRequired = checkRequired(formData.name, "Full name");
+    let firstnameRequired = checkRequired(formData.firstname, "First name");
+    let lastnameRequired = checkRequired(formData.lastname, "Last name");
 
-    if (nameRequired) {
-      newErrors.name = nameRequired;
+    if (firstnameRequired) {
+      newErrors.firstname = firstnameRequired;
+    }
+    if (lastnameRequired) {
+      newErrors.lastname = lastnameRequired;
     }
 
     let emailRequired = checkRequired(formData.email, "Email");
@@ -72,7 +77,8 @@ const SignUpPage = () => {
 
     setErrors(newErrors);
     setSuccess({
-      name: !newErrors.name,
+      firstname: !newErrors.firstname,
+      lastname: !newErrors.lastname,
       email: !newErrors.email,
       password: !newErrors.password,
     });
@@ -80,7 +86,7 @@ const SignUpPage = () => {
     // signup(formData);
   };
   return (
-    <div className="h-screen overflow-hidden flex-col py-12  sm:px-6 lg:px-8 ">
+    <div className="h-[] overflow-hidden flex-col py-12  sm:px-6 lg:px-8 ">
       <motion.div
         className="sm:mx-auto sm:w-full sm:max-w-md"
         initial={{ opacity: 0, y: -20 }}
@@ -100,17 +106,17 @@ const SignUpPage = () => {
       >
         <div className=" py-8 px-4 no-scroll">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* name */}
+            {/* firstname */}
             <div
               className={`form-control ${
-                success.name ? "success" : errors.name ? "error" : ""
+                success.firstname ? "success" : errors.firstname ? "error" : ""
               }`}
             >
               <label
-                htmlFor="name"
+                htmlFor="firstname"
                 className="block text-sm font-medium text-gray-700"
               >
-                Full name
+                First name
               </label>
               <div className="mt-1 relative rounded-md shadow-sm mb-0">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -118,17 +124,48 @@ const SignUpPage = () => {
                 </div>
                 <input
                   type="text"
-                  id="name"
-                  value={formData.name}
+                  id="firstname"
+                  value={formData.firstname}
                   onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
+                    setFormData({ ...formData, firstname: e.target.value })
                   }
                   className="block text-black w-full px-3 py-4 pl-10  border-b-2 border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none sm:text-2x1  "
                   placeholder="John Doe"
                 />
               </div>
 
-              <small>{errors.name}</small>
+              <small>{errors.firstname}</small>
+            </div>
+
+            {/* lastname */}
+            <div
+              className={`form-control ${
+                success.lastname ? "success" : errors.lastname ? "error" : ""
+              }`}
+            >
+              <label
+                htmlFor="lastname"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Last name
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm mb-0">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                </div>
+                <input
+                  type="text"
+                  id="lastname"
+                  value={formData.lastname}
+                  onChange={(e) =>
+                    setFormData({ ...formData, lastname: e.target.value })
+                  }
+                  className="block text-black w-full px-3 py-4 pl-10  border-b-2 border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none sm:text-2x1  "
+                  placeholder="John Doe"
+                />
+              </div>
+
+              <small>{errors.lastname}</small>
             </div>
 
             {/* email */}

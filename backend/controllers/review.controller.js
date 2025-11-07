@@ -39,7 +39,8 @@ export const addReview = async (req, res) => {
       // Add new review
       product.reviews.push({
         user: userId,
-        name: req.user.name,
+        firstname: req.user.firstname,
+        lastname: req.user.lastname,
         rating,
         comment,
       });
@@ -89,7 +90,7 @@ export const getProductReviews = async (req, res) => {
     const { productId } = req.params;
     const product = await Product.findById(productId).populate(
       "reviews.user",
-      "name email"
+      "firstname lastname email"
     );
     if (!product) return res.status(404).json({ message: "Product not found" });
 

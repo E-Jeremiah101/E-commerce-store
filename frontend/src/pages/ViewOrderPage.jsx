@@ -106,7 +106,7 @@ const ViewOrderPage = () => {
           <div className="grid grid-cols-2">
             <span className="text-gray-600">Name:</span>{" "}
             <span className="font-semibold break-words">
-              {order.user?.name}
+              {order.user?.firstname + " "+ order.user?.lastname}
             </span>
           </div>
           <div className="grid grid-cols-2 ">
@@ -155,18 +155,6 @@ const ViewOrderPage = () => {
         {order.paymentMethod.method === "card" && (
           <div>
             <h1 className="text-gray-600">
-              Status:{" "}
-              <span className="text-gray-800">
-                " {order.paymentMethod.status} "
-              </span>
-            </h1>
-            <h1 className="text-gray-600">
-              Method:{" "}
-              <span className="text-gray-800">
-                " {order.paymentMethod.card.issuer} "
-              </span>
-            </h1>
-            <h1 className="text-gray-600">
               Card Num:************
               <span className="text-gray-800">
                 {order.paymentMethod.card.last4}
@@ -175,13 +163,13 @@ const ViewOrderPage = () => {
             <h1 className="text-gray-600">
               Card Type:{" "}
               <span className="text-gray-800">
-                " {order.paymentMethod.card.type} "
+                {order.paymentMethod.card.type} 
               </span>
             </h1>
             <h1 className="text-gray-600">
               Card Issuer:{" "}
               <span className="text-gray-800">
-                " {order.paymentMethod.card.issuer} "
+                 {order.paymentMethod.card.issuer} 
               </span>
             </h1>
           </div>
@@ -220,10 +208,10 @@ const ViewOrderPage = () => {
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs text-gray-900">
                       <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
-                        Size: {item.size || "N/A"}
+                        Size: {item.selectedSize || "NA"}
                       </span>
                       <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
-                        Color: {item.color || "N/A"}
+                        Color: {item.selectedColor || "N/A"}
                       </span>
                     </div>
                     <div className="flex  justify-between text-sm text-gray-900">

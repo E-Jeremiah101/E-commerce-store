@@ -92,7 +92,7 @@ const AllUsers = () => {
                   className="border-b even:bg-white  odd:bg-gray-200 hover:bg-gray-300 transition "
                 >
                   <td className="px-2 py-2 border">{user._id}</td>
-                  <td className="px-2 py-2 border">{user.name}</td>
+                  <td className="px-2 py-2 border">{user.name || user.firstname + " " + user.lastname}</td>
                   <td className="px-2 py-2 border">{user.email}</td>
                   <td className="px-2 py-2 border">
                     {user.phones?.find((p) => p.isDefault)?.number ||

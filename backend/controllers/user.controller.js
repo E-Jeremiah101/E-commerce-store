@@ -28,9 +28,10 @@ export const getAllUsers = async (req, res) => {
      if (role) query.role = role;
      if (search){
        query.$or = [
-         { name: new RegExp(search, "i") },
+         { firstname: new RegExp(search, "i") },
+         { lastname: new RegExp(search, "i") },
          { email: new RegExp(search, "i") },
-        //  { _id: new RegExp(search, "i") },
+         //  { _id: new RegExp(search, "i") },
        ];
         // If search looks like a MongoDB ObjectId (24 hex characters), add it directly
       if (/^[0-9a-fA-F]{24}$/.test(search)) {
@@ -61,7 +62,7 @@ export const makeAdmin = async (req, res) => {
     user.role = "admin";
     await user.save({ validateBeforeSave: false });
 
-    res.json({ success: true, message: `${user.name} is now an admin`, user });
+    res.json({ success: true, message: `${user.firstname} is now an admin`, user });
   } catch (err) {
     console.error("Error promoting user:", err);
     res.status(500).json({ message: "Server error" });

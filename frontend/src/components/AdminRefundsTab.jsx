@@ -49,7 +49,7 @@ const AdminRefundsTab = () => {
       filtered = filtered.filter(
         (r) =>
           r.orderNumber?.toLowerCase().includes(term) ||
-          r.user?.name?.toLowerCase().includes(term) ||
+          r.user?.firstname?.toLowerCase().includes(term) ||
           r.user?.email?.toLowerCase().includes(term) ||
           r.user?._id?.toLowerCase().includes(term) ||
           r.orderId?.toLowerCase().includes(term) ||
@@ -189,7 +189,7 @@ const AdminRefundsTab = () => {
                   {/* User */}
                   <td className="px-2 py-2 border">
                     <p className="font-medium">{r.orderNumber || r.orderId}</p>
-                    <p className="text-xs text-gray-500">{r.user.name}</p>
+                    <p className="text-xs text-gray-500">{r.user.firstname + " "+ r.user.lastname || "NA"}</p>
                   </td>
 
                   {/* Product */}

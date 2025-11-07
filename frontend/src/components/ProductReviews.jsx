@@ -16,6 +16,7 @@ const ProductReviews = ({ productId }) => {
   const [canReview, setCanReview] = useState(false);
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
+  
 
   // Load all reviews
   const fetchReviews = async () => {
@@ -64,19 +65,36 @@ const ProductReviews = ({ productId }) => {
 
   const handleAddReview = async (e) => {
     e.preventDefault();
+
+    // Custom validation before calling backend
+    if (rating === 0 && comment.trim() === "") {
+      toast.error("Please add a star rating or write a review comment.");
+      return;
+    }
+
+    if (rating === 0) {
+      toast.error("Please select a star rating before submitting.");
+      return;
+    }
+
+    if (comment.trim() === "") {
+      toast.error("Please write a short comment about this product.");
+      return;
+    }
+
     try {
       const res = await addReview(productId, rating, comment);
-      toast.success("Review submitted!");
+      toast.success("Review submitted successfully!");
       setComment("");
       setRating(0);
       setCanReview(false);
       fetchReviews();
-      console.log(" Review added:", res);
     } catch (err) {
-      console.error(" Error adding review:", err);
+      console.error("❌ Error adding review:", err);
       toast.error("Failed to submit review");
     }
   };
+
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -85,6 +103,7 @@ const ProductReviews = ({ productId }) => {
     const year = date.getFullYear();
     return `${day}-${month}-${year}`;
   };
+  
 
   const StarDisplay = ({ rating }) => (
     <div className="flex space-x-1">
@@ -116,7 +135,7 @@ const ProductReviews = ({ productId }) => {
               className="border-b-1 border-gray-300 p-3 mb-6  space-y-2"
             >
               <div className=" flex justify-between">
-                <span className="text-black text-sm">{r.name}</span>
+                <span className="text-black text-sm">{r.firstname + " "+ r.lastname}</span>
                 <span className="text-xs ">{formatDate(r.createdAt)}</span>
               </div>
               <StarDisplay rating={r.rating} />
@@ -174,7 +193,6 @@ const ProductReviews = ({ productId }) => {
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             placeholder="Write your comment"
-            required
             className="border p-2 rounded-2xl resize-none border-gray-400 w-full"
           />
           <button
