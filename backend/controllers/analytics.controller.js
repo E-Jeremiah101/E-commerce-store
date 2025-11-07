@@ -11,20 +11,54 @@ export const getAnalytics = async (range = "weekly") => {
   const analyticsData = await getAnalyticsData(startDate, endDate);
   const salesData = await getSalesDataByRange(range, startDate, endDate);
   const statusCharts = await getStatusTrendsByRange(range, startDate, endDate);
+  // visitorsTrend and ordersTrend should respect the selected range (or include all when startDate is null)
+  const visitorFormat =
+    range === "yearly"
+      ? "%Y"
+      : range === "monthly"
+      ? "%Y-%m"
+      : range === "daily"
+      ? "%Y-%m-%dT%H"
+      : "%Y-%m-%d";
+  const visitorsMatch = startDate
+    ? { createdAt: { $gte: startDate, $lte: endDate } }
+    : {};
+
   const visitorsTrend = await Visitor.aggregate([
+    { $match: visitorsMatch },
     {
       $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+        _id: { $dateToString: { format: visitorFormat, date: "$createdAt" } },
         count: { $sum: 1 },
       },
     },
     { $sort: { _id: 1 } },
   ]);
 
-  const ordersTrend = await Order.aggregate([
+  const usersMatch = startDate
+    ? { createdAt: { $gte: startDate, $lte: endDate } }
+    : {};
+
+  const usersTrend = await User.aggregate([
+    { $match: usersMatch },
     {
       $group: {
-        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+        _id: { $dateToString: { format: visitorFormat, date: "$createdAt" } },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  const ordersMatch = startDate
+    ? { createdAt: { $gte: startDate, $lte: endDate } }
+    : {};
+
+  const ordersTrend = await Order.aggregate([
+    { $match: ordersMatch },
+    {
+      $group: {
+        _id: { $dateToString: { format: visitorFormat, date: "$createdAt" } },
         count: { $sum: 1 },
       },
     },
@@ -44,12 +78,12 @@ export const getAnalytics = async (range = "weekly") => {
     { $sort: { _id: 1 } },
   ]);
 
-
   return {
     analyticsData,
     salesData,
     statusCharts,
     visitorsTrend,
+    usersTrend,
     ordersTrend,
     refundTrend,
   };
@@ -59,11 +93,15 @@ export const getAnalytics = async (range = "weekly") => {
 // MAIN ANALYTIC STATS
 // -----------------------------
 async function getAnalyticsData(startDate, endDate) {
+  const dateFilter = startDate
+    ? { createdAt: { $gte: startDate, $lte: endDate } }
+    : {};
+
   const [totalUsers, totalProducts, allOrders, visitors] = await Promise.all([
-    User.countDocuments(),
+    User.countDocuments(dateFilter),
     Product.countDocuments(),
     Order.countDocuments({ status: { $nin: ["Cancelled"] } }),
-    Visitor.countDocuments({ createdAt: { $gte: startDate, $lte: endDate } }),
+    Visitor.countDocuments(dateFilter),
   ]);
 
   const pendingOrders = await Order.countDocuments({ status: "Pending" });
@@ -135,22 +173,29 @@ async function getAnalyticsData(startDate, endDate) {
 // -----------------------------
 async function getSalesDataByRange(range, startDate, endDate) {
   const matchStage = {
-    $match: {
-      createdAt: { $gte: startDate, $lte: endDate },
-      status: { $nin: ["Cancelled"] },
-    },
+    $match: Object.assign(
+      {
+        status: { $nin: ["Cancelled"] },
+      },
+      startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {}
+    ),
   };
+
+  // For daily range we need hourly buckets, for others use date/month/year granularity
+  const dateFormat =
+    range === "yearly"
+      ? "%Y"
+      : range === "monthly"
+      ? "%Y-%m"
+      : range === "daily"
+      ? "%Y-%m-%dT%H"
+      : "%Y-%m-%d";
 
   const groupStage = {
     $group: {
       _id: {
         $dateToString: {
-          format:
-            range === "yearly"
-              ? "%Y"
-              : range === "monthly"
-              ? "%Y-%m"
-              : "%Y-%m-%d",
+          format: dateFormat,
           date: "$createdAt",
         },
       },
@@ -172,7 +217,6 @@ async function getSalesDataByRange(range, startDate, endDate) {
     revenue: item.revenue,
     refunded: item.refunded,
     netRevenue: item.revenue - item.refunded,
-
   }));
 }
 
@@ -186,21 +230,26 @@ async function getStatusTrendsByRange(range, startDate, endDate) {
     "Shipped",
     "Delivered",
     "Cancelled",
-    "visitors",
   ];
   const format =
-    range === "yearly" ? "%Y" : range === "monthly" ? "%Y-%m" : "%Y-%m-%d";
+    range === "yearly"
+      ? "%Y"
+      : range === "monthly"
+      ? "%Y-%m"
+      : range === "daily"
+      ? "%Y-%m-%dT%H"
+      : "%Y-%m-%d";
 
   const charts = {};
 
   for (const status of statuses) {
+    const match = Object.assign(
+      { status },
+      startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {}
+    );
+
     const data = await Order.aggregate([
-      {
-        $match: {
-          status,
-          createdAt: { $gte: startDate, $lte: endDate },
-        },
-      },
+      { $match: match },
       {
         $group: {
           _id: { $dateToString: { format, date: "$createdAt" } },
@@ -223,6 +272,9 @@ async function getStatusTrendsByRange(range, startDate, endDate) {
 // RANGE HELPER
 // -----------------------------
 function getStartDate(range, endDate) {
+  // return null when requesting 'all' so callers can omit date filtering
+  if (range === "all") return null;
+
   const start = new Date(endDate);
   switch (range) {
     case "daily":
@@ -242,16 +294,6 @@ function getStartDate(range, endDate) {
   }
   return start;
 }
-
-
-
-
-
-
-
-
-
-
 
 // import Order from "../models/order.model.js";
 // import Product from "../models/product.model.js";

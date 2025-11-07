@@ -142,12 +142,12 @@ const Navbar = () => {
               className="md:hidden   bg-gradient-to-br from-white via-gray-100 to-gray-300 px-4 py-3 space-y-9 text-black  text-lg overflow-y-auto h-screen absolute right-15 top-0 left-0 no-scroll "
               ref={sidebarRef}
             >
-              <button
+              {/* <button
                 onClick={handleMenuToggle}
                 className="md:hidden text-gray-800 hover:text-gray-400"
               >
                 {isOpen ? <X size={24} /> : <Menu size={28} />}
-              </button>
+              </button> */}
 
               {user && (
                 <div className="flex items-center justify-between  pb-2 ">
