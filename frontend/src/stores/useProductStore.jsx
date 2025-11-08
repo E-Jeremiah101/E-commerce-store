@@ -2,7 +2,7 @@ import { create } from "zustand";
 import toast from "react-hot-toast";
 import axios from "../lib/axios";
 
-export const useProductStore = create((set) => ({
+export const useProductStore = create((set, get) => ({
   products: [],
   product: null,
   loading: false,
@@ -24,6 +24,31 @@ export const useProductStore = create((set) => ({
       );
       toast.error("Failed to create product. Please try again.");
       set({ loading: false });
+    }
+  },
+  reduceStock: async (productId) => {
+    try {
+      const product = get().products.find((p) => p._id === productId); // <-- now works
+      if (!product || product.countInStock <= 0) {
+        throw new Error("No stock left");
+      }
+
+      const res = await axios.put(`/products/${productId}/reduce-stock`, {
+        quantity: 1, // reduce by 1
+      });
+
+      set((state) => ({
+        products: state.products.map((p) =>
+          p._id === productId
+            ? { ...p, countInStock: res.data.countInStock }
+            : p
+        ),
+      }));
+
+      return res.data;
+    } catch (error) {
+      console.error(error);
+      throw error;
     }
   },
   fetchAllProducts: async () => {

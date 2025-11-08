@@ -1,3 +1,4 @@
+
 import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
@@ -43,11 +44,17 @@ export const createCheckoutSession = async (req, res) => {
     // Build full name and address string from possibly-split fields
     const fullName =
       (user.name && user.name.trim()) ||
-      `${user.firstname || ""}${user.lastname ? " " + user.lastname : ""}`.trim();
+      `${user.firstname || ""}${
+        user.lastname ? " " + user.lastname : ""
+      }`.trim();
 
     const addressString = defaultAddress
       ? (defaultAddress.address && defaultAddress.address.trim()) ||
-        `${defaultAddress.landmark ? defaultAddress.landmark + ", " : ""}${defaultAddress.lga ? defaultAddress.lga + ", " : ""}${defaultAddress.city ? defaultAddress.city + ", " : ""}${defaultAddress.state || ""}`.trim()
+        `${defaultAddress.landmark ? defaultAddress.landmark + ", " : ""}${
+          defaultAddress.lga ? defaultAddress.lga + ", " : ""
+        }${defaultAddress.city ? defaultAddress.city + ", " : ""}${
+          defaultAddress.state || ""
+        }`.trim()
       : "";
 
     // Build a usable address string from saved address fields.
@@ -310,16 +317,14 @@ export const checkoutSuccess = async (req, res) => {
     const defaultAddress =
       user.addresses?.find((a) => a.isDefault) || user.addresses?.[0];
 
-      const addressString = defaultAddress
-        ? (defaultAddress.address && defaultAddress.address.trim()) ||
-          `${defaultAddress.landmark ? defaultAddress.landmark + ", " : ""}${
-            defaultAddress.lga ? defaultAddress.lga + ", " : ""
-          }${defaultAddress.city ? defaultAddress.city + ", " : ""}${
-            defaultAddress.state || ""
-          }`.trim()
-        : "";
-
-    
+    const addressString = defaultAddress
+      ? (defaultAddress.address && defaultAddress.address.trim()) ||
+        `${defaultAddress.landmark ? defaultAddress.landmark + ", " : ""}${
+          defaultAddress.lga ? defaultAddress.lga + ", " : ""
+        }${defaultAddress.city ? defaultAddress.city + ", " : ""}${
+          defaultAddress.state || ""
+        }`.trim()
+      : "";
 
     const originalTotal =
       Number(meta.originalTotal) || Number(data.amount) || 0;

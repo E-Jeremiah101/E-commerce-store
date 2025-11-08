@@ -181,17 +181,30 @@ const ViewProductPage = () => {
                 </div>
               </div>
             )}
+            {/* Stock Info */}
+            {product.countInStock > 0 ? (
+              <p className="text-green-600 text-sm shadow w-fit rounded-2xl py-1 px-2">
+                In Stock: <span className="text-sm">{product.countInStock}</span> 
+              </p>
+            ) : (
+              <p className="text-red-600 text-sm ">Out of Stock</p>
+            )}
 
             {/* Add to Cart Button */}
             <button
               onClick={handleAddToCart}
-              className={`w-full bg-black text-white py-3 rounded-lg hover:bg-black/80 transition tracking-widest ${
-                isLoading
+              disabled={product.countInStock === 0 || isLoading}
+              className={`w-full py-3 rounded-lg transition tracking-widest ${
+                product.countInStock === 0 || isLoading
                   ? "bg-gray-400 text-white cursor-not-allowed"
                   : "bg-black text-white hover:bg-black/80"
               }`}
             >
-              {isLoading ? "Adding to Cart..." : "Add to Cart"}
+              {product.countInStock === 0
+                ? "Out of Stock"
+                : isLoading
+                ? "Adding to Cart..."
+                : "Add to Cart"}
             </button>
           </div>
         </div>

@@ -2,9 +2,12 @@ import { motion } from "framer-motion";
 import { Trash, Star } from "lucide-react";
 import { useProductStore } from "../stores/useProductStore.jsx";
 import { useState } from "react";
+import toast from "react-hot-toast"; 
 
 const ProductsList = () => {
-  const { deleteProduct, toggleFeaturedProduct, products } = useProductStore();
+  const { deleteProduct, toggleFeaturedProduct, products, reduceStock } =
+    useProductStore();
+
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 15;
 
@@ -44,6 +47,10 @@ const ProductsList = () => {
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
               Colors
             </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              Stock
+            </th>
+
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
               Category
             </th>
@@ -90,6 +97,25 @@ const ProductsList = () => {
 
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                 {product.colors?.join(", ") || "N/A"}
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                <div className="flex items-center gap-2">
+                  <span>{product.countInStock}</span>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await reduceStock(product._id);
+                        toast.success("Stock reduced!");
+                      } catch {
+                        toast.error("Failed to update stock");
+                      }
+                    }}
+                    disabled={product.countInStock === 0}
+                    className={`px-2 py-1 rounded bg-red-600 text-white hover:bg-red-500 disabled:opacity-50`}
+                  >
+                    Reduce Stock
+                  </button>
+                </div>
               </td>
 
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">

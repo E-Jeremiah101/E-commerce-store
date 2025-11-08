@@ -8,6 +8,8 @@ import "react-quill-new/dist/quill.snow.css";
 import toast from "react-hot-toast";
 import axios from "../lib/axios.js";
 
+
+
 const fallbackCategories = [
   "bottoms",
   "t-shirts",
@@ -31,6 +33,7 @@ const CreateProductForm = () => {
     images: [],
     sizes: [],
     colors: [],
+    countInStock: 0,
   });
 
   const { createProduct, loading } = useProductStore();
@@ -63,6 +66,7 @@ const CreateProductForm = () => {
         images: [],
         sizes: [],
         colors: [],
+        countInStock: 0,
       });
     } catch (error) {
       toast.error("Error creating product.");
@@ -182,6 +186,27 @@ const CreateProductForm = () => {
             onChange={(e) =>
               setNewProduct({ ...newProduct, price: e.target.value })
             }
+            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:ring-2 focus:ring-gray-600"
+            required
+          />
+        </div>
+
+        {/* STOCK COUNT */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 tracking-wider">
+            Stock Quantity
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={newProduct.countInStock || ""}
+            onChange={(e) =>
+              setNewProduct({
+                ...newProduct,
+                countInStock: Number(e.target.value),
+              })
+            }
+            placeholder="e.g. 20"
             className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:ring-2 focus:ring-gray-600"
             required
           />

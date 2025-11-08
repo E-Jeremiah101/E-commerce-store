@@ -150,7 +150,7 @@ const Navbar = () => {
               </button> */}
 
               {user && (
-                <div className="flex items-center justify-between  pb-2 ">
+                <div className="flex items-center justify-between py-3  ">
                   <div className="flex  items-center gap-4 tracking-wider">
                     <UserBadge
                       name={user?.name || user.firstname + " " + user.lastname}

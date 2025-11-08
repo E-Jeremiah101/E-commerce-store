@@ -10,9 +10,11 @@ import {
   searchProducts,
   getSearchSuggestions,
   getProductById,
+  reduceProduct,
 } from "../controllers/product.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
+import Product from "../models/product.model.js";
 
 const router = express.Router();
 
@@ -34,5 +36,8 @@ router.get("/search", searchProducts);
 
 router.get("/suggestions", getSearchSuggestions);
 router.get("/:id", getProductById);
+router.put("/:id/reduce-stock",reduceProduct);
+
+
 
 export default router;

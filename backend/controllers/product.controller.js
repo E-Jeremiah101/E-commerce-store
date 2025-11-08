@@ -44,8 +44,16 @@ export const getFeaturedProducts = async (req, res) => {
 
 export const createProduct = async (req, res) => {
   try {
-    const { name, description, price, images, category, sizes, colors } =
-      req.body;
+    const {
+      name,
+      description,
+      price,
+      images,
+      category,
+      sizes,
+      colors,
+      countInStock,
+    } = req.body;
 
     let uploadedImages = [];
 
@@ -69,6 +77,7 @@ export const createProduct = async (req, res) => {
       category,
       sizes: sizes || [],
       colors: colors || [],
+      countInStock,
     });
 
     //  Automatically create category if it doesn’t exist
@@ -86,6 +95,29 @@ export const createProduct = async (req, res) => {
   } catch (error) {
     console.log("Error in createProduct controller", error.message);
     res.status(500).json({ error: "Server error", error: error.message });
+  }
+};
+
+export const reduceProduct =  async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity } = req.body;
+
+    if (!quantity || quantity <= 0)
+      return res.status(400).json({ message: "Invalid quantity" });
+
+    const product = await Product.findById(id);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    if (product.countInStock < quantity)
+      return res.status(400).json({ message: "Not enough stock" });
+
+    product.countInStock -= quantity;
+    await product.save();
+
+    res.json({ message: "Stock updated", countInStock: product.countInStock });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 

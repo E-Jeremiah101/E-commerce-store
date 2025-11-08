@@ -26,6 +26,13 @@ const productSchema = new mongoose.Schema(
       min: 0,
       required: true,
     },
+    countInStock: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+
     reviews: [reviewSchema],
     numReviews: { type: Number, default: 0 },
     averageRating: { type: Number, default: 0 },
