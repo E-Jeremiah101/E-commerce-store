@@ -389,6 +389,22 @@ export const checkoutSuccess = async (req, res) => {
       );
     }
 
+    // reduce item after sale
+    for (const p of parsedProducts) {
+      if (!p._id) continue;
+
+      const product = await Product.findById(p._id);
+      if (product) {
+        if (product.countInStock < p.quantity) {
+          console.warn(`Product ${product.name} is out of stock!`);
+          // Optionally, handle overselling (e.g., cancel order or partially fulfill)
+          continue;
+        }
+        product.countInStock -= p.quantity;
+        await product.save();
+      }
+    }
+
     //  Clear user’s cart
     await User.findByIdAndUpdate(userId, { cartItems: [] });
 

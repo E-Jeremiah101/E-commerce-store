@@ -91,7 +91,7 @@ const CartItem = ({ item }) => {
                       {item.price.toLocaleString(undefined, {
                         minimumFractionDigits: 0,
                       })}{" "}
-                      each
+                      
                     </span>
                   )}
                 </div>
