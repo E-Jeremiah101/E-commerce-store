@@ -1,4 +1,3 @@
-
 import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
@@ -16,17 +15,175 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
-
 function generateOrderNumber() {
   return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
 }
 
-/**
- * createCheckoutSession
- * - DOES NOT create any order in DB (important: per your request).
- * - Builds Flutterwave hosted payment payload and returns hosted link.
- * - Includes meta payload with userId, products, totals, deliveryAddress so checkoutSuccess/webhook can finalize.
- */
+// Helper function to create proper payment method data
+function createPaymentMethodData(flutterwaveData) {
+  const paymentType = flutterwaveData.payment_type || "card";
+
+  return {
+    method: paymentType,
+    status: "PAID",
+    card: {
+      brand: flutterwaveData.card?.brand || "Unknown",
+      last4: flutterwaveData.card?.last_4digits || null,
+      exp_month: flutterwaveData.card?.exp_month || null,
+      exp_year: flutterwaveData.card?.exp_year || null,
+      type: flutterwaveData.card?.type || null,
+      issuer: flutterwaveData.card?.issuer || null,
+    },
+  };
+}
+
+// Helper function to process order creation atomically
+async function processOrderCreation(transactionData, session = null) {
+  const {
+    transaction_id,
+    tx_ref,
+    data,
+    meta,
+    userId,
+    parsedProducts,
+    couponCode,
+  } = transactionData;
+
+  // Idempotency check - find existing order
+  const existingOrder = await Order.findOne({
+    $or: [
+      { flutterwaveTransactionId: transaction_id },
+      { flutterwaveRef: tx_ref },
+    ],
+  }).session(session);
+
+  // If order already exists and is paid, return it
+  if (existingOrder && existingOrder.paymentStatus === "paid") {
+    return { order: existingOrder, isNew: false };
+  }
+
+  // Get user with session for transaction consistency
+  const user = await User.findById(userId).session(session);
+  if (!user) throw new Error("User not found");
+
+  // Create proper payment method data
+  const paymentMethod = createPaymentMethodData(data);
+
+  // Process inventory reduction - only if this is a new order
+  if (!existingOrder) {
+    for (const item of parsedProducts) {
+      if (!item._id) continue;
+
+      const product = await Product.findOne({ _id: item._id }).session(session);
+      if (!product) {
+        throw new Error(`Product ${item.name} not found`);
+      }
+
+      if (product.countInStock < item.quantity) {
+        throw new Error(
+          `Insufficient stock for ${item.name}. Available: ${product.countInStock}, Requested: ${item.quantity}`
+        );
+      }
+
+      const updated = await Product.findOneAndUpdate(
+        { _id: item._id, countInStock: { $gte: item.quantity } },
+        { $inc: { countInStock: -item.quantity } },
+        { new: true, session }
+      );
+
+      if (!updated) {
+        throw new Error(`Insufficient stock for product ${item.name}`);
+      }
+    }
+  }
+
+  // Deactivate coupon if used - with proper query
+  if (couponCode) {
+    const couponUpdate = await Coupon.findOneAndUpdate(
+      {
+        code: couponCode,
+        userId: userId,
+        isActive: true,
+      },
+      {
+        isActive: false,
+        usedAt: new Date(),
+      },
+      { session, new: true }
+    );
+
+    if (couponUpdate) {
+      console.log(`Coupon ${couponCode} deactivated for user ${userId}`);
+    }
+  }
+
+  let order;
+
+  if (existingOrder) {
+    // Update existing order
+    existingOrder.paymentStatus = "paid";
+    existingOrder.status = "Pending";
+    existingOrder.flutterwaveTransactionId = transaction_id;
+    existingOrder.totalAmount =
+      Number(meta.finalTotal) ||
+      Number(data.amount) ||
+      existingOrder.totalAmount;
+    existingOrder.paymentMethod = paymentMethod; // Use paymentMethod instead of paymentData
+    order = await existingOrder.save({ session });
+  } else {
+    // Create new order
+    const products = parsedProducts.map((p) => ({
+      product: p._id || null,
+      name: p.name || "Unknown Product",
+      image: (p.images && p.images[0]) || "/placeholder.png",
+      quantity: p.quantity || 1,
+      price: p.price || 0,
+      selectedSize: p.size || "",
+      selectedColor: p.color || "",
+      selectedCategory: p.category || "",
+    }));
+
+    const defaultPhone =
+      user.phones?.find((ph) => ph.isDefault) || user.phones?.[0];
+    const defaultAddress =
+      user.addresses?.find((a) => a.isDefault) || user.addresses?.[0];
+
+    const addressString = defaultAddress
+      ? (defaultAddress.address && defaultAddress.address.trim()) ||
+        `${defaultAddress.landmark ? defaultAddress.landmark + ", " : ""}${
+          defaultAddress.lga ? defaultAddress.lga + ", " : ""
+        }${defaultAddress.city ? defaultAddress.city + ", " : ""}${
+          defaultAddress.state || ""
+        }`.trim()
+      : "";
+
+    order = new Order({
+      user: user._id,
+      products: products,
+      subtotal: Number(meta.originalTotal) || Number(data.amount) || 0,
+      discount: Number(meta.discountAmount) || 0,
+      totalAmount: Number(meta.finalTotal) || Number(data.amount) || 0,
+      orderNumber: generateOrderNumber(),
+      couponCode: couponCode || null,
+      deliveryAddress:
+        addressString || meta.deliveryAddress || "No address provided",
+      phone: defaultPhone?.number || "No phone provided",
+      flutterwaveRef: tx_ref,
+      flutterwaveTransactionId: transaction_id,
+      paymentStatus: "paid",
+      status: "Pending",
+      paymentMethod: paymentMethod, // Use paymentMethod field that your model expects
+    });
+
+    await order.save({ session });
+  }
+
+  // Clear user's cart
+  await User.findByIdAndUpdate(userId, { cartItems: [] }, { session });
+
+  return { order, isNew: !existingOrder };
+}
+
 export const createCheckoutSession = async (req, res) => {
   try {
     const { products, couponCode } = req.body;
@@ -66,26 +223,28 @@ export const createCheckoutSession = async (req, res) => {
     }, 0);
 
     let discountAmount = 0;
+    let validCoupon = null;
+
     if (couponCode) {
-      const appliedCoupon = await Coupon.findOne({
+      validCoupon = await Coupon.findOne({
         code: couponCode,
         userId,
         isActive: true,
+        expirationDate: { $gt: new Date() },
       });
-      if (appliedCoupon) {
+
+      if (validCoupon) {
         discountAmount = Math.round(
-          (originalTotal * appliedCoupon.discountPercentage) / 100
+          (originalTotal * validCoupon.discountPercentage) / 100
         );
       }
     }
 
     const finalTotal = Math.max(0, originalTotal - discountAmount);
 
-
     const tx_ref = `ECOSTORE-${Date.now()}`;
 
-    // Build Flutterwave payload.
-    // IMPORTANT: do not create any DB order here.
+    // Build Flutterwave payload
     const payload = {
       tx_ref,
       amount: finalTotal,
@@ -100,7 +259,6 @@ export const createCheckoutSession = async (req, res) => {
           (user.firstname || "") + (user.lastname ? ` ${user.lastname}` : ""),
       },
       payment_options: "card",
-      // meta: include enough info to recreate order safely server-side later
       meta: {
         userId: userId.toString(),
         products: JSON.stringify(
@@ -149,7 +307,6 @@ export const createCheckoutSession = async (req, res) => {
     }
 
     console.log("Flutterwave payment initialized:", tx_ref, "link:", link);
-    // return tx_ref as well (helpful for client debugging)
     return res.status(200).json({ link, tx_ref });
   } catch (err) {
     console.error("Error initializing Flutterwave payment:", err);
@@ -160,35 +317,44 @@ export const createCheckoutSession = async (req, res) => {
   }
 };
 
-/**
- * handleFlutterwaveWebhook
- * - Endpoint Flutterwave will POST to (set this in dashboard)
- * - Verifies signature, checks event, verifies payment via API, creates/updates order idempotently
- */
 export const handleFlutterwaveWebhook = async (req, res) => {
+  // Immediately respond to Flutterwave to prevent timeouts
+  res.status(200).send("Webhook received");
+
   try {
-    const signature = req.headers["verif-hash"];
+    // FIX: Use correct header name for Flutterwave webhook signature
+    const signature = req.headers["verif-hash"] || req.headers["verif_hash"];
     if (!signature || signature !== process.env.FLW_WEBHOOK_HASH) {
-      console.warn("Invalid webhook signature");
-      return res.status(401).send("Invalid signature");
+      console.warn("Invalid webhook signature - possible forgery attempt");
+      return; // Already responded
     }
 
     const event = req.body;
-    if (!event) return res.status(400).send("No event body");
+    if (!event) {
+      console.warn("Empty webhook event body");
+      return;
+    }
 
-    // Only act on completed charges
+    // Only process charge.completed events
     if (event.event !== "charge.completed") {
-      return res.status(200).send("Ignored event");
+      console.log(`Ignoring webhook event: ${event.event}`);
+      return;
     }
 
     const { id: transaction_id, tx_ref, status } = event.data;
-    if (status !== "successful") return res.status(200).send("Not successful");
 
-    // Verify with Flutterwave API too (defense in depth)
+    if (status !== "successful") {
+      console.log(`Payment not successful: ${status} for ${tx_ref}`);
+      return;
+    }
+
+    console.log(`Processing webhook for successful payment: ${tx_ref}`);
+
+    // Verify with Flutterwave API for additional security
     const verifyResp = await flw.Transaction.verify({ id: transaction_id });
     if (!verifyResp?.data || verifyResp.data.status !== "successful") {
-      console.error("Webhook verification failed for:", transaction_id);
-      return res.status(400).send("Payment verification failed");
+      console.error(`Webhook verification failed for: ${transaction_id}`);
+      return;
     }
 
     const data = verifyResp.data;
@@ -196,168 +362,64 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     const userId = meta.userId;
     const parsedProducts = meta.products ? JSON.parse(meta.products) : [];
     const couponCode = meta.couponCode || "";
-        const paymentData = {
-          method: data.payment_type || "card",
-          status: "PAID",
-          card: {
-            brand: data.card?.brand || "Unknown",
-            last4: data.card?.last_4digits || null,
-            exp_month: data.card?.exp_month || null,
-            exp_year: data.card?.exp_year || null,
-            type: data.card?.type || null,
-            issuer: data.card?.issuer || null,
-          },
-        };
 
     if (!userId) {
-      console.error("Missing userId in webhook meta");
-      return res.status(400).send("Missing userId");
+      console.error(
+        "Missing userId in webhook meta for transaction:",
+        transaction_id
+      );
+      return;
     }
 
-    // Idempotency check: find existing order by flutterwaveTransactionId or tx_ref
-    let existingOrder = await Order.findOne({
-      $or: [
-        { flutterwaveTransactionId: transaction_id },
-        { flutterwaveRef: tx_ref },
-      ],
-    });
-
-    if (existingOrder && existingOrder.paymentStatus === "paid") {
-      return res.status(200).send("Already processed");
-    }
-
-    // Start transaction to commit stock changes + order update atomically
+    // Use transaction to ensure atomic operations
     const session = await mongoose.startSession();
-    session.startTransaction();
 
     try {
-      // Reduce stock
-      for (const item of parsedProducts) {
-        if (!item._id) continue;
-        const upd = await Product.findOneAndUpdate(
-          { _id: item._id, countInStock: { $gte: item.quantity } },
-          { $inc: { countInStock: -item.quantity } },
-          { new: true, session }
+      await session.withTransaction(async () => {
+        const transactionData = {
+          transaction_id,
+          tx_ref,
+          data,
+          meta,
+          userId,
+          parsedProducts,
+          couponCode,
+        };
+
+        const { order } = await processOrderCreation(transactionData, session);
+
+        console.log(
+          `Webhook successfully processed order: ${order.orderNumber} for user: ${userId}`
         );
-        if (!upd) {
-          throw new Error(`Insufficient stock for product ${item.name}`);
-        }
-      }
 
-      // Deactivate coupon if used
-      if (couponCode) {
-        await Coupon.findOneAndUpdate(
-          { code: couponCode },
-          { isActive: false },
-          { session }
-        );
-      }
-
-      // If order exists (pending) update it otherwise create new order
-      let order;
-      if (existingOrder) {
-        existingOrder.paymentStatus = "paid";
-        existingOrder.status = "Pending";
-        existingOrder.flutterwaveTransactionId = transaction_id;
-        existingOrder.totalAmount =
-          Number(data.amount) || existingOrder.totalAmount;
-        order = await existingOrder.save({ session });
-      } else {
-        // Build product docs for order
-        const products = parsedProducts.map((p) => ({
-          product: p._id || null,
-          name: p.name || "Unknown",
-          image: (p.images && p.images[0]) || "/placeholder.png",
-          quantity: p.quantity || 1,
-          price: p.price || 0,
-          selectedSize: p.size || "",
-          selectedColor: p.color || "",
-          selectedCategory: p.category || "",
-        }));
-
-        const user = await User.findById(userId).session(session);
-        if (!user) throw new Error("User not found");
-
-        order = new Order({
-          user: user._id,
-          products: products,
-          subtotal: Number(meta.originalTotal) || Number(data.amount) || 0,
-          discount: Number(meta.discountAmount) || 0,
-          totalAmount: Number(meta.finalTotal) || Number(data.amount) || 0,
-          orderNumber: generateOrderNumber(),
-          couponCode: couponCode || null,
-          deliveryAddress:
-            meta.deliveryAddress ||
-            user.addresses?.[0]?.address ||
-            "No address provided",
-          phone: user.phones?.[0]?.number || "No phone provided",
-          flutterwaveRef: tx_ref,
-          flutterwaveTransactionId: transaction_id,
-          paymentStatus: "paid",
-          status: "Pending",
-          paymentData: {
-            method: data.payment_type || "card",
-            status: "PAID",
-            card: {
-              brand: data.card?.brand || null,
-              last4: data.card?.last_4digits || null,
-              exp_month: data.card?.exp_month || null,
-              exp_year: data.card?.exp_year || null,
-              type: data.card?.type || null,
-              issuer: data.card?.issuer || null,
-            },
-          },
-          paymentMethod: paymentData,
-        });
-
-        await order.save({ session });
-      }
-
-      // Clear user cart
-      const userToClear = await User.findById(userId).session(session);
-      if (userToClear) {
-        userToClear.cartItems = [];
-        await userToClear.save({ session });
-      }
-
-      await session.commitTransaction();
-      session.endSession();
-
-      // Send detailed confirmation email (non-blocking)
-      (async () => {
+        // Send confirmation email (non-blocking)
         try {
-          const userEmail = (await User.findById(userId))?.email;
+          const userEmail = (await User.findById(userId)).email;
           if (userEmail) {
             await sendDetailedOrderEmail({
               to: userEmail,
               order,
               flutterwaveData: data,
             });
+            console.log(
+              `Confirmation email sent for order: ${order.orderNumber}`
+            );
           }
         } catch (emailErr) {
           console.error("Email send failed (webhook):", emailErr);
+          // Don't throw - email failure shouldn't break the webhook
         }
-      })();
-
-      return res.status(200).send("Order processed successfully");
-    } catch (txErr) {
-      await session.abortTransaction();
-      session.endSession();
-      console.error("Webhook transaction failed:", txErr);
-      return res.status(500).send("Internal Server Error");
+      });
+    } finally {
+      await session.endSession();
     }
   } catch (err) {
-    console.error("Webhook Error:", err);
-    res.status(500).send("Internal Server Error");
+    console.error("Webhook processing error:", err);
+    // Log the error for monitoring, but don't retry indefinitely
   }
 };
 
-/**
- * checkoutSuccess
- * - Called from front-end when the user returns to client after payment (frontend should POST transaction_id and tx_ref to this route).
- * - Verifies payment with Flutterwave, then creates or finalizes order.
- * - Uses retry helper for transient write conflicts.
- */
+// Retry helper for transient errors
 async function withRetry(fn, retries = 3, delay = 200) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -367,6 +429,7 @@ async function withRetry(fn, retries = 3, delay = 200) {
         err?.codeName === "WriteConflict" ||
         (err?.errorLabels &&
           err.errorLabels.includes("TransientTransactionError"));
+
       if (transient && attempt < retries) {
         console.warn(`Transient error, retrying ${attempt}/${retries}...`);
         await new Promise((r) => setTimeout(r, delay * attempt));
@@ -379,211 +442,107 @@ async function withRetry(fn, retries = 3, delay = 200) {
 
 export const checkoutSuccess = async (req, res) => {
   try {
+    const { tx_ref, transaction_id } = req.body;
+
+    if (!transaction_id) {
+      return res.status(400).json({ error: "transaction_id is required" });
+    }
+
+    // Verify payment with Flutterwave
+    const verifyResp = await flw.Transaction.verify({ id: transaction_id });
+    const data = verifyResp?.data;
+
+    if (!data || data.status !== "successful") {
+      return res.status(400).json({ error: "Payment verification failed" });
+    }
+
+    const meta = data.meta || {};
+    const userId = meta.userId;
+    const parsedProducts = meta.products ? JSON.parse(meta.products) : [];
+    const couponCode = meta.couponCode || "";
+
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ error: "Missing userId in payment metadata" });
+    }
+
+    // Check if order already exists and is paid (idempotency)
+    const existingOrder = await Order.findOne({
+      $or: [
+        { flutterwaveTransactionId: transaction_id },
+        { flutterwaveRef: tx_ref },
+      ],
+    });
+
+    // If order already exists and is paid, return success
+    if (existingOrder && existingOrder.paymentStatus === "paid") {
+      return res.status(200).json({
+        success: true,
+        message: "Order already processed",
+        orderId: existingOrder._id,
+        orderNumber: existingOrder.orderNumber,
+      });
+    }
+
+    let finalOrder;
+
+    // Use retry for the transaction
     await withRetry(async () => {
       const session = await mongoose.startSession();
-      session.startTransaction();
 
       try {
-        const { tx_ref, transaction_id } = req.body;
-        if (!transaction_id) {
-          await session.abortTransaction();
-          session.endSession();
-          return res.status(400).json({ error: "transaction_id is required" });
-        }
+        await session.withTransaction(async () => {
+          const transactionData = {
+            transaction_id,
+            tx_ref,
+            data,
+            meta,
+            userId,
+            parsedProducts,
+            couponCode,
+          };
 
-        // 1) Verify with Flutterwave
-        const verifyResp = await flw.Transaction.verify({ id: transaction_id });
-        const data = verifyResp?.data;
-        if (!data || data.status !== "successful") {
-          throw new Error("Payment verification failed");
-        }
-
-        const meta = data.meta || {};
-        const userId = meta.userId;
-        const parsedProducts = meta.products ? JSON.parse(meta.products) : [];
-        const couponCode = meta.couponCode || "";
-
-        if (!userId) throw new Error("Missing userId in payment metadata");
-            const paymentData = {
-              method: data.payment_type || "card",
-              status: "PAID",
-              card: {
-                brand: data.card?.brand || "Unknown",
-                last4: data.card?.last_4digits || null,
-                exp_month: data.card?.exp_month || null,
-                exp_year: data.card?.exp_year || null,
-                type: data.card?.type || null,
-                issuer: data.card?.issuer || null,
-              },
-            };
-
-        // Idempotency: check if order exists already
-        let existingOrder = await Order.findOne({
-          $or: [
-            { flutterwaveTransactionId: transaction_id },
-            { flutterwaveRef: tx_ref },
-          ],
-        }).session(session);
-
-        // If order exists and is paid -> early return success
-        if (existingOrder && existingOrder.paymentStatus === "paid") {
-          await session.endSession();
-          return res.status(200).json({
-            success: true,
-            message: "Order already processed",
-            orderId: existingOrder._id,
-            orderNumber: existingOrder.orderNumber,
-          });
-        }
-
-        // Get user
-        const user = await User.findById(userId).session(session);
-        if (!user) throw new Error("User not found");
-
-        // Update stock (check qty)
-        // for (const p of parsedProducts) {
-        //   if (!p._id) continue;
-        //   const updated = await Product.findOneAndUpdate(
-        //     { _id: p._id, countInStock: { $gte: p.quantity } },
-        //     { $inc: { countInStock: -p.quantity } },
-        //     { new: true, session }
-        //   );
-        //   if (!updated) {
-        //     throw new Error(`Product ${p.name} is out of stock`);
-        //   }
-        // }
-
-        // Deactivate coupon if used
-        if (couponCode) {
-          await Coupon.findOneAndUpdate(
-            { code: couponCode, userId },
-            { isActive: false },
-            { session }
+          const { order } = await processOrderCreation(
+            transactionData,
+            session
           );
-        }
+          finalOrder = order;
 
-        let order;
-        if (existingOrder) {
-          // finalize existing pending order
-          existingOrder.paymentStatus = "paid";
-          existingOrder.status = "Pending";
-          existingOrder.flutterwaveTransactionId = transaction_id;
-          existingOrder.totalAmount =
-            Number(meta.finalTotal) ||
-            Number(data.amount) ||
-            existingOrder.totalAmount;
-          order = await existingOrder.save({ session });
-        } else {
-          // create new order (backup case)
-          const products = parsedProducts.map((p) => ({
-            product: p._id || null,
-            name: p.name || "Unknown Product",
-            image: (p.images && p.images[0]) || "/placeholder.png",
-            quantity: p.quantity || 1,
-            price: p.price || 0,
-            selectedSize: p.size || "",
-            selectedColor: p.color || "",
-            selectedCategory: p.category || "",
-          }));
-
-          const defaultPhone =
-            user.phones?.find((ph) => ph.isDefault) || user.phones?.[0];
-          const defaultAddress =
-            user.addresses?.find((a) => a.isDefault) || user.addresses?.[0];
-
-          const addressString = defaultAddress
-            ? (defaultAddress.address && defaultAddress.address.trim()) ||
-              `${
-                defaultAddress.landmark ? defaultAddress.landmark + ", " : ""
-              }${defaultAddress.lga ? defaultAddress.lga + ", " : ""}${
-                defaultAddress.city ? defaultAddress.city + ", " : ""
-              }${defaultAddress.state || ""}`.trim()
-            : "";
-
-          order = new Order({
-            user: user._id,
-            products: products,
-            subtotal: Number(meta.originalTotal) || Number(data.amount) || 0,
-            discount: Number(meta.discountAmount) || 0,
-            totalAmount: Number(meta.finalTotal) || Number(data.amount) || 0,
-            orderNumber: generateOrderNumber(),
-            couponCode: couponCode || null,
-            deliveryAddress:
-              addressString || meta.deliveryAddress || "No address provided",
-            phone: defaultPhone?.number || "No phone provided",
-            flutterwaveRef: tx_ref || data.tx_ref || transaction_id,
-            flutterwaveTransactionId: transaction_id,
-            paymentStatus: "paid",
-            status: "Pending",
-            paymentData: {
-              method: data.payment_type || "card",
-              status: "PAID",
-              card: {
-                brand: data.card?.brand || null,
-                last4: data.card?.last_4digits || null,
-                exp_month: data.card?.exp_month || null,
-                exp_year: data.card?.exp_year || null,
-                type: data.card?.type || null,
-                issuer: data.card?.issuer || null,
-              },
-            },
-            paymentMethod: paymentData,
-          });
-
-          await order.save({ session });
-        }
-
-        // Clear user's cart (atomic)
-        await User.findByIdAndUpdate(userId, { cartItems: [] }, { session });
-
-        await session.commitTransaction();
-        session.endSession();
-
-        // Send detailed email (non-blocking)
-        (async () => {
-          try {
-            await sendDetailedOrderEmail({
-              to: user.email,
-              order,
-              flutterwaveData: data,
-            });
-          } catch (emailErr) {
-            console.error("Email send failed (checkoutSuccess):", emailErr);
-          }
-        })();
-
-        // Response to frontend
-        return res.status(200).json({
-          success: true,
-          message: "Payment verified and order finalized",
-          orderId: order._id,
-          orderNumber: order.orderNumber,
+          // Send email (non-blocking)
+          (async () => {
+            try {
+              const user = await User.findById(userId);
+              await sendDetailedOrderEmail({
+                to: user.email,
+                order,
+                flutterwaveData: data,
+              });
+            } catch (emailErr) {
+              console.error("Email send failed (checkoutSuccess):", emailErr);
+            }
+          })();
         });
-      } catch (innerErr) {
-        await session.abortTransaction();
-        session.endSession();
-        throw innerErr;
+      } finally {
+        await session.endSession();
       }
     });
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment verified and order finalized",
+      orderId: finalOrder._id,
+      orderNumber: finalOrder.orderNumber,
+    });
   } catch (error) {
-    console.error("checkoutSuccess transaction failed:", error);
-    // If this is called by the frontend, they can retry sending transaction_id later.
+    console.error("checkoutSuccess failed:", error);
     return res.status(500).json({
       error: error.message || "Checkout failed",
     });
   }
 };
 
-/**
- * sendDetailedOrderEmail - builds and sends a full order confirmation email (HTML + text).
- * Includes:
- *  - Order number, totals
- *  - Product table with qty and unit prices
- *  - Delivery address and phone
- *  - Masked card details (brand, last4, exp)
- *  - Flutterwave tx_ref and transaction id
- */
-
+// Update your email function to use paymentMethod instead of paymentData
 export const sendDetailedOrderEmail = async ({
   to,
   order,
@@ -591,9 +550,6 @@ export const sendDetailedOrderEmail = async ({
 }) => {
   if (!to || !order) return;
 
-        
-      
-        
   let customerName = "";
   try {
     const userDoc = await User.findById(order.user).select(
@@ -607,37 +563,21 @@ export const sendDetailedOrderEmail = async ({
     console.error("Error fetching user name for email:", err);
   }
 
-  // Normalize flutterwave data (be tolerant of different shapes)
-  const tx_ref =
-    flutterwaveData?.tx_ref ||
-    flutterwaveData?.txRef ||
-    flutterwaveData?.reference ||
-    flutterwaveData?.reference_no ||
-    "N/A";
-  const transaction_id =
-    flutterwaveData?.id ||
-    flutterwaveData?.transaction_id ||
-    flutterwaveData?.transactionId ||
-    "N/A";
-  const payment_type =
-    flutterwaveData?.payment_type ||
-    flutterwaveData?.payment_type ||
-    flutterwaveData?.paymentType ||
-    order.paymentMethod?.method ||
-    "N/A";
-  const card = flutterwaveData?.card || order.paymentMethod?.card || {};
+  // Use paymentMethod from order instead of paymentData
+  const paymentMethod = order.paymentMethod || {};
+  const tx_ref = order.flutterwaveRef || "N/A";
+  const transaction_id = order.flutterwaveTransactionId || "N/A";
+  const payment_type = paymentMethod.method || "N/A";
+  const card = paymentMethod.card || {};
 
-  // Prepare items array (supports order.products or order.items)
+  // Prepare items array
   const items = order.products || order.items || [];
 
   const productRows = items
     .map((item) => {
-    
-      
-           let details = "";
-            if (item.size) details += `Size: ${item.size} `;
-            if (item.color) details += `| Color: ${item.color}`;
-      
+      let details = "";
+      if (item.selectedSize) details += `Size: ${item.selectedSize} `;
+      if (item.selectedColor) details += `| Color: ${item.selectedColor}`;
 
       return `
         <tr>
@@ -664,23 +604,17 @@ export const sendDetailedOrderEmail = async ({
   const discount = order.discount || 0;
 
   // Card info block (masked)
-  const maskedLast4 =
-    card.last_4digits ||
-    card.last4 ||
-    card.last4digits ||
-    card.lastDigits ||
-    "****";
+  const maskedLast4 = card.last4 || card.last_4digits || "****";
   const cardBrand = card.brand || card.type || "Card";
 
-
-  const cardInfo = card
+  const cardInfo = card.last4
     ? `
     <div style="margin-top:10px;font-size:14px;color:#333;">
-      <strong>Payment Method:</strong> ${cardBrand}  **** ${maskedLast4}<br/>
+      <strong>Payment Method:</strong> ${cardBrand} **** ${maskedLast4}<br/>
     </div>`
     : "";
 
-  // HTML email
+  // HTML email (your existing email template with paymentMethod adjustments)
   const html = `
     <div style="font-family: Arial, sans-serif; background-color: #f6f8fa; padding: 20px;">
       <div style="max-width: 700px; margin: auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.06);">
@@ -696,7 +630,7 @@ export const sendDetailedOrderEmail = async ({
 
         <div style="padding: 22px; color:#333;">
           <p style="margin:0 0 8px;">Hi <strong>${customerName}</strong>,</p>
-          <p style="margin:0 0 16px;">Thank you for your order! We’ve received your payment and are now processing your purchase. Below are your order details.</p>
+          <p style="margin:0 0 16px;">Thank you for your order! We've received your payment and are now processing your purchase. Below are your order details.</p>
 
           <h3 style="margin:18px 0 8px;">🧾 Order Summary</h3>
           <table style="width:100%; border-collapse: collapse; margin-top:8px;">
@@ -715,14 +649,17 @@ export const sendDetailedOrderEmail = async ({
             </tbody>
           </table>
           <p style="margin-top: 20px; font-size: 16px;">
-       <strong>Original Subtotal:</strong> ₦${Number(
-         subtotal
-       ).toLocaleString()} <br>
-      <strong>Coupon Discount:</strong> ${Number(discount).toLocaleString()}<br>
-       <strong>Final Total:</strong> ₦${Number(totalAmount).toLocaleString()}
-     </p>
+            <strong>Original Subtotal:</strong> ₦${Number(
+              subtotal
+            ).toLocaleString()} <br>
+            <strong>Coupon Discount:</strong> -₦${Number(
+              discount
+            ).toLocaleString()}<br>
+            <strong>Final Total:</strong> ₦${Number(
+              totalAmount
+            ).toLocaleString()}
+          </p>
 
-          
           <p style="margin:0;">
             <strong>Address:</strong> ${
               order.deliveryAddress || "No address provided"
@@ -734,16 +671,16 @@ export const sendDetailedOrderEmail = async ({
           <h3 style="margin:18px 0 8px;">💳 Payment Details</h3>
           <p style="margin:0 0 6px;">
             <strong>Payment Status:</strong> ${
-              flutterwaveData?.status || order.paymentStatus || "Confirmed"
+              order.paymentStatus || "Confirmed"
             }<br/>
-            <strong>Payment Type:</strong> ${payment_type || "N/A"}<br/>
+            <strong>Payment Type:</strong> ${payment_type}<br/>
             <strong>Transaction Ref:</strong> ${tx_ref}<br/>
             <strong>Transaction ID:</strong> ${transaction_id}
           </p>
 
           ${cardInfo}
 
-          <p style="margin-top:20px; color:#555;">We’ll send another email once your order ships. If you need help, just reply to this email — we’re happy to assist.</p>
+          <p style="margin-top:20px; color:#555;">We'll send another email once your order ships. If you need help, just reply to this email — we're happy to assist.</p>
 
           <p style="margin-top:18px;">Thanks for choosing <strong>EcoStore</strong> 🌱</p>
         </div>
@@ -767,10 +704,8 @@ export const sendDetailedOrderEmail = async ({
     `Total: ₦${Number(totalAmount).toLocaleString()}`,
     `Delivery Address: ${order.deliveryAddress || "No address provided"}`,
     `Phone: ${order.phone || "No phone provided"}`,
-    `Payment Status: ${
-      flutterwaveData?.status || order.paymentStatus || "Confirmed"
-    }`,
-    `Payment Type: ${payment_type || "N/A"}`,
+    `Payment Status: ${order.paymentStatus || "Confirmed"}`,
+    `Payment Type: ${payment_type}`,
     `Transaction Ref: ${tx_ref}`,
     `Transaction ID: ${transaction_id}`,
     ``,
@@ -794,11 +729,6 @@ export const sendDetailedOrderEmail = async ({
   });
 };
 
-
-
-/**
- * Create a new reward coupon in the DB for a user (deletes any old one)
- */
 async function createNewCoupon(userId) {
   await Coupon.findOneAndDelete({ userId });
   const newCoupon = new Coupon({
@@ -810,6 +740,740 @@ async function createNewCoupon(userId) {
   await newCoupon.save();
   return newCoupon;
 }
+
+// Keep your existing createNewCoupon function
+
+// import path from "path";
+// import dotenv from "dotenv";
+// import { fileURLToPath } from "url";
+// import axios from "axios";
+// import mongoose from "mongoose";
+
+// import Coupon from "../models/coupon.model.js";
+// import Order from "../models/order.model.js";
+// import User from "../models/user.model.js";
+// import Product from "../models/product.model.js";
+// import { sendEmail } from "../lib/mailer.js";
+// import { flw } from "../lib/flutterwave.js";
+
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
+// dotenv.config({ path: path.join(__dirname, "../../.env") });
+
+// function generateOrderNumber() {
+//   return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+// }
+
+// /**
+//  * createCheckoutSession
+//  * - DOES NOT create any order in DB (important: per your request).
+//  * - Builds Flutterwave hosted payment payload and returns hosted link.
+//  * - Includes meta payload with userId, products, totals, deliveryAddress so checkoutSuccess/webhook can finalize.
+//  */
+// export const createCheckoutSession = async (req, res) => {
+//   try {
+//     const { products, couponCode } = req.body;
+//     const userId = req.user._id;
+
+//     if (!Array.isArray(products) || products.length === 0) {
+//       return res.status(400).json({ error: "Invalid or empty products array" });
+//     }
+
+//     const user = await User.findById(userId);
+//     if (!user) return res.status(404).json({ error: "User not found" });
+
+//     const defaultPhone =
+//       user.phones?.find((p) => p.isDefault) || user.phones?.[0];
+//     const defaultAddress =
+//       user.addresses?.find((a) => a.isDefault) || user.addresses?.[0];
+
+//     const addressString = defaultAddress
+//       ? (defaultAddress.address && defaultAddress.address.trim()) ||
+//         `${defaultAddress.landmark ? defaultAddress.landmark + ", " : ""}${
+//           defaultAddress.lga ? defaultAddress.lga + ", " : ""
+//         }${defaultAddress.city ? defaultAddress.city + ", " : ""}${
+//           defaultAddress.state || ""
+//         }`.trim()
+//       : "";
+
+//     if (!defaultPhone?.number?.trim() || !addressString) {
+//       return res.status(400).json({
+//         error: "You must add a phone number and address before checkout.",
+//       });
+//     }
+
+//     const originalTotal = products.reduce((acc, p) => {
+//       const qty = p.quantity || 1;
+//       const price = Number(p.price) || 0;
+//       return acc + price * qty;
+//     }, 0);
+
+//     let discountAmount = 0;
+//     if (couponCode) {
+//       const appliedCoupon = await Coupon.findOne({
+//         code: couponCode,
+//         userId,
+//         isActive: true,
+//       });
+//       if (appliedCoupon) {
+//         discountAmount = Math.round(
+//           (originalTotal * appliedCoupon.discountPercentage) / 100
+//         );
+//       }
+//     }
+
+//     const finalTotal = Math.max(0, originalTotal - discountAmount);
+
+//     const tx_ref = `ECOSTORE-${Date.now()}`;
+
+//     // Build Flutterwave payload.
+//     // IMPORTANT: do not create any DB order here.
+//     const payload = {
+//       tx_ref,
+//       amount: finalTotal,
+//       currency: "NGN",
+//       redirect_url: `${process.env.CLIENT_URL}/purchase-success`,
+//       customer: {
+//         email: user.email,
+//         phonenumber: defaultPhone.number,
+//         firstname: user.firstname || "",
+//         lastname: user.lastname || "",
+//         name:
+//           (user.firstname || "") + (user.lastname ? ` ${user.lastname}` : ""),
+//       },
+//       payment_options: "card",
+//       // meta: include enough info to recreate order safely server-side later
+//       meta: {
+//         userId: userId.toString(),
+//         products: JSON.stringify(
+//           products.map((p) => ({
+//             _id: p._id || p.id || null,
+//             name: p.name,
+//             images: p.images || [],
+//             quantity: p.quantity || 1,
+//             price: p.price,
+//             size: p.size || null,
+//             color: p.color || null,
+//             category: p.category || null,
+//           }))
+//         ),
+//         couponCode: couponCode || "",
+//         originalTotal,
+//         discountAmount,
+//         finalTotal,
+//         deliveryAddress: addressString || "",
+//       },
+//       customizations: {
+//         title: "EcoStore Purchase",
+//         description: "Payment for items in your cart",
+//         logo: process.env.STORE_LOGO || "https://yourstore.com/logo.png",
+//       },
+//     };
+
+//     const response = await axios.post(
+//       "https://api.flutterwave.com/v3/payments",
+//       payload,
+//       {
+//         headers: {
+//           Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+//           "Content-Type": "application/json",
+//         },
+//         timeout: 20000,
+//       }
+//     );
+
+//     const link =
+//       response?.data?.data?.link || response?.data?.data?.authorization_url;
+
+//     if (!link) {
+//       console.error("No payment link returned by Flutterwave:", response.data);
+//       return res.status(500).json({ message: "Failed to initialize payment" });
+//     }
+
+//     console.log("Flutterwave payment initialized:", tx_ref, "link:", link);
+//     // return tx_ref as well (helpful for client debugging)
+//     return res.status(200).json({ link, tx_ref });
+//   } catch (err) {
+//     console.error("Error initializing Flutterwave payment:", err);
+//     return res.status(500).json({
+//       message: "Payment initialization failed",
+//       error: err?.message || String(err),
+//     });
+//   }
+// };
+
+// /**
+//  * handleFlutterwaveWebhook
+//  * - Endpoint Flutterwave will POST to (set this in dashboard)
+//  * - Verifies signature, checks event, verifies payment via API, creates/updates order idempotently
+//  */
+// export const handleFlutterwaveWebhook = async (req, res) => {
+//   try {
+//     const signature = req.headers["verif-hash"];
+//     if (!signature || signature !== process.env.FLW_WEBHOOK_HASH) {
+//       console.warn("Invalid webhook signature");
+//       return res.status(401).send("Invalid signature");
+//     }
+
+//     const event = req.body;
+//     if (!event) return res.status(400).send("No event body");
+
+//     // Only act on completed charges
+//     if (event.event !== "charge.completed") {
+//       return res.status(200).send("Ignored event");
+//     }
+
+//     const { id: transaction_id, tx_ref, status } = event.data;
+//     if (status !== "successful") return res.status(200).send("Not successful");
+
+//     // Verify with Flutterwave API too (defense in depth)
+//     const verifyResp = await flw.Transaction.verify({ id: transaction_id });
+//     if (!verifyResp?.data || verifyResp.data.status !== "successful") {
+//       console.error("Webhook verification failed for:", transaction_id);
+//       return res.status(400).send("Payment verification failed");
+//     }
+
+//     const data = verifyResp.data;
+//     const meta = data.meta || {};
+//     const userId = meta.userId;
+//     const parsedProducts = meta.products ? JSON.parse(meta.products) : [];
+//     const couponCode = meta.couponCode || "";
+//     const paymentData = {
+//       method: data.payment_type || "card",
+//       status: "PAID",
+//       card: {
+//         brand: data.card?.brand || "Unknown",
+//         last4: data.card?.last_4digits || null,
+//         exp_month: data.card?.exp_month || null,
+//         exp_year: data.card?.exp_year || null,
+//         type: data.card?.type || null,
+//         issuer: data.card?.issuer || null,
+//       },
+//     };
+
+//     if (!userId) {
+//       console.error("Missing userId in webhook meta");
+//       return res.status(400).send("Missing userId");
+//     }
+
+//     // Idempotency check: find existing order by flutterwaveTransactionId or tx_ref
+//     let existingOrder = await Order.findOne({
+//       $or: [
+//         { flutterwaveTransactionId: transaction_id },
+//         { flutterwaveRef: tx_ref },
+//       ],
+//     });
+
+//     if (existingOrder && existingOrder.paymentStatus === "paid") {
+//       return res.status(200).send("Already processed");
+//     }
+
+//     // Start transaction to commit stock changes + order update atomically
+//     const session = await mongoose.startSession();
+//     session.startTransaction();
+
+//     try {
+//       // Reduce stock
+//       for (const item of parsedProducts) {
+//         if (!item._id) continue;
+//         const upd = await Product.findOneAndUpdate(
+//           { _id: item._id, countInStock: { $gte: item.quantity } },
+//           { $inc: { countInStock: -item.quantity } },
+//           { new: true, session }
+//         );
+//         if (!upd) {
+//           throw new Error(`Insufficient stock for product ${item.name}`);
+//         }
+//       }
+
+//       // Deactivate coupon if used
+//       if (couponCode) {
+//         await Coupon.findOneAndUpdate(
+//           { code: couponCode },
+//           { isActive: false },
+//           { session }
+//         );
+//       }
+
+//       // If order exists (pending) update it otherwise create new order
+//       let order;
+//       if (existingOrder) {
+//         existingOrder.paymentStatus = "paid";
+//         existingOrder.status = "Pending";
+//         existingOrder.flutterwaveTransactionId = transaction_id;
+//         existingOrder.totalAmount =
+//           Number(data.amount) || existingOrder.totalAmount;
+//         order = await existingOrder.save({ session });
+//       } else {
+//         // Build product docs for order
+//         const products = parsedProducts.map((p) => ({
+//           product: p._id || null,
+//           name: p.name || "Unknown",
+//           image: (p.images && p.images[0]) || "/placeholder.png",
+//           quantity: p.quantity || 1,
+//           price: p.price || 0,
+//           selectedSize: p.size || "",
+//           selectedColor: p.color || "",
+//           selectedCategory: p.category || "",
+//         }));
+
+//         const user = await User.findById(userId).session(session);
+//         if (!user) throw new Error("User not found");
+
+//         order = new Order({
+//           user: user._id,
+//           products: products,
+//           subtotal: Number(meta.originalTotal) || Number(data.amount) || 0,
+//           discount: Number(meta.discountAmount) || 0,
+//           totalAmount: Number(meta.finalTotal) || Number(data.amount) || 0,
+//           orderNumber: generateOrderNumber(),
+//           couponCode: couponCode || null,
+//           deliveryAddress:
+//             meta.deliveryAddress ||
+//             user.addresses?.[0]?.address ||
+//             "No address provided",
+//           phone: user.phones?.[0]?.number || "No phone provided",
+//           flutterwaveRef: tx_ref,
+//           flutterwaveTransactionId: transaction_id,
+//           paymentStatus: "paid",
+//           status: "Pending",
+//           paymentData: {
+//             method: data.payment_type || "card",
+//             status: "PAID",
+//             card: {
+//               brand: data.card?.brand || null,
+//               last4: data.card?.last_4digits || null,
+//               exp_month: data.card?.exp_month || null,
+//               exp_year: data.card?.exp_year || null,
+//               type: data.card?.type || null,
+//               issuer: data.card?.issuer || null,
+//             },
+//           },
+//           paymentMethod: paymentData,
+//         });
+
+//         await order.save({ session });
+//       }
+
+//       // Clear user cart
+//       const userToClear = await User.findById(userId).session(session);
+//       if (userToClear) {
+//         userToClear.cartItems = [];
+//         await userToClear.save({ session });
+//       }
+
+//       await session.commitTransaction();
+//       session.endSession();
+
+//       // Send detailed confirmation email (non-blocking)
+//       (async () => {
+//         try {
+//           const userEmail = (await User.findById(userId))?.email;
+//           if (userEmail) {
+//             await sendDetailedOrderEmail({
+//               to: userEmail,
+//               order,
+//               flutterwaveData: data,
+//             });
+//           }
+//         } catch (emailErr) {
+//           console.error("Email send failed (webhook):", emailErr);
+//         }
+//       })();
+
+//       return res.status(200).send("Order processed successfully");
+//     } catch (txErr) {
+//       await session.abortTransaction();
+//       session.endSession();
+//       console.error("Webhook transaction failed:", txErr);
+//       return res.status(500).send("Internal Server Error");
+//     }
+//   } catch (err) {
+//     console.error("Webhook Error:", err);
+//     res.status(500).send("Internal Server Error");
+//   }
+// };
+
+// /**
+//  * checkoutSuccess
+//  * - Called from front-end when the user returns to client after payment (frontend should POST transaction_id and tx_ref to this route).
+//  * - Verifies payment with Flutterwave, then creates or finalizes order.
+//  * - Uses retry helper for transient write conflicts.
+//  */
+// async function withRetry(fn, retries = 3, delay = 200) {
+//   for (let attempt = 1; attempt <= retries; attempt++) {
+//     try {
+//       return await fn();
+//     } catch (err) {
+//       const transient =
+//         err?.codeName === "WriteConflict" ||
+//         (err?.errorLabels &&
+//           err.errorLabels.includes("TransientTransactionError"));
+//       if (transient && attempt < retries) {
+//         console.warn(`Transient error, retrying ${attempt}/${retries}...`);
+//         await new Promise((r) => setTimeout(r, delay * attempt));
+//         continue;
+//       }
+//       throw err;
+//     }
+//   }
+// }
+
+// export const checkoutSuccess = async (req, res) => {
+//   try {
+//     await withRetry(async () => {
+//       const session = await mongoose.startSession();
+//       session.startTransaction();
+
+//       try {
+//         const { tx_ref, transaction_id } = req.body;
+//         if (!transaction_id) {
+//           await session.abortTransaction();
+//           session.endSession();
+//           return res.status(400).json({ error: "transaction_id is required" });
+//         }
+
+//         // 1) Verify with Flutterwave
+//         const verifyResp = await flw.Transaction.verify({ id: transaction_id });
+//         const data = verifyResp?.data;
+//         if (!data || data.status !== "successful") {
+//           throw new Error("Payment verification failed");
+//         }
+
+//         const meta = data.meta || {};
+//         const userId = meta.userId;
+//         const parsedProducts = meta.products ? JSON.parse(meta.products) : [];
+//         const couponCode = meta.couponCode || "";
+
+//         if (!userId) throw new Error("Missing userId in payment metadata");
+//         const paymentData = {
+//           method: data.payment_type || "card",
+//           status: "PAID",
+//           card: {
+//             brand: data.card?.brand || "Unknown",
+//             last4: data.card?.last_4digits || null,
+//             exp_month: data.card?.exp_month || null,
+//             exp_year: data.card?.exp_year || null,
+//             type: data.card?.type || null,
+//             issuer: data.card?.issuer || null,
+//           },
+//         };
+
+//         // Idempotency: check if order exists already
+//         let existingOrder = await Order.findOne({
+//           $or: [
+//             { flutterwaveTransactionId: transaction_id },
+//             { flutterwaveRef: tx_ref },
+//           ],
+//         }).session(session);
+
+//         // If order exists and is paid -> early return success
+//         if (existingOrder && existingOrder.paymentStatus === "paid") {
+//           await session.endSession();
+//           return res.status(200).json({
+//             success: true,
+//             message: "Order already processed",
+//             orderId: existingOrder._id,
+//             orderNumber: existingOrder.orderNumber,
+//           });
+//         }
+
+//         // Get user
+//         const user = await User.findById(userId).session(session);
+//         if (!user) throw new Error("User not found");
+
+//         // Update stock (check qty)
+//         for (const p of parsedProducts) {
+//           if (!p._id) continue;
+//           const updated = await Product.findOneAndUpdate(
+//             { _id: p._id, countInStock: { $gte: p.quantity } },
+//             { $inc: { countInStock: -p.quantity } },
+//             { new: true, session }
+//           );
+//           if (!updated) {
+//             throw new Error(`Product ${p.name} is out of stock`);
+//           }
+//         }
+
+//         // Deactivate coupon if used
+//         if (couponCode) {
+//           await Coupon.findOneAndUpdate(
+//             { code: couponCode, userId },
+//             { isActive: false },
+//             { session }
+//           );
+//         }
+
+//         let order;
+//         if (existingOrder) {
+//           // finalize existing pending order
+//           existingOrder.paymentStatus = "paid";
+//           existingOrder.status = "Pending";
+//           existingOrder.flutterwaveTransactionId = transaction_id;
+//           existingOrder.totalAmount =
+//             Number(meta.finalTotal) ||
+//             Number(data.amount) ||
+//             existingOrder.totalAmount;
+//           order = await existingOrder.save({ session });
+//         } else {
+//           // create new order (backup case)
+//           const products = parsedProducts.map((p) => ({
+//             product: p._id || null,
+//             name: p.name || "Unknown Product",
+//             image: (p.images && p.images[0]) || "/placeholder.png",
+//             quantity: p.quantity || 1,
+//             price: p.price || 0,
+//             selectedSize: p.size || "",
+//             selectedColor: p.color || "",
+//             selectedCategory: p.category || "",
+//           }));
+
+//           const defaultPhone =
+//             user.phones?.find((ph) => ph.isDefault) || user.phones?.[0];
+//           const defaultAddress =
+//             user.addresses?.find((a) => a.isDefault) || user.addresses?.[0];
+
+//           const addressString = defaultAddress
+//             ? (defaultAddress.address && defaultAddress.address.trim()) ||
+//               `${
+//                 defaultAddress.landmark ? defaultAddress.landmark + ", " : ""
+//               }${defaultAddress.lga ? defaultAddress.lga + ", " : ""}${
+//                 defaultAddress.city ? defaultAddress.city + ", " : ""
+//               }${defaultAddress.state || ""}`.trim()
+//             : "";
+
+//           order = new Order({
+//             user: user._id,
+//             products: products,
+//             subtotal: Number(meta.originalTotal) || Number(data.amount) || 0,
+//             discount: Number(meta.discountAmount) || 0,
+//             totalAmount: Number(meta.finalTotal) || Number(data.amount) || 0,
+//             orderNumber: generateOrderNumber(),
+//             couponCode: couponCode || null,
+//             deliveryAddress:
+//               addressString || meta.deliveryAddress || "No address provided",
+//             phone: defaultPhone?.number || "No phone provided",
+//             flutterwaveRef: tx_ref || data.tx_ref || transaction_id,
+//             flutterwaveTransactionId: transaction_id,
+//             paymentStatus: "paid",
+//             status: "Pending",
+//             paymentData: {
+//               method: data.payment_type || "card",
+//               status: "PAID",
+//               card: {
+//                 brand: data.card?.brand || null,
+//                 last4: data.card?.last_4digits || null,
+//                 exp_month: data.card?.exp_month || null,
+//                 exp_year: data.card?.exp_year || null,
+//                 type: data.card?.type || null,
+//                 issuer: data.card?.issuer || null,
+//               },
+//             },
+//             paymentMethod: paymentData,
+//           });
+
+//           await order.save({ session });
+//         }
+
+//         // Clear user's cart (atomic)
+//         await User.findByIdAndUpdate(userId, { cartItems: [] }, { session });
+
+//         await session.commitTransaction();
+//         session.endSession();
+
+//         // Send detailed email (non-blocking)
+//         (async () => {
+//           try {
+//             await sendDetailedOrderEmail({
+//               to: user.email,
+//               order,
+//               flutterwaveData: data,
+//             });
+//           } catch (emailErr) {
+//             console.error("Email send failed (checkoutSuccess):", emailErr);
+//           }
+//         })();
+
+//         // Response to frontend
+//         return res.status(200).json({
+//           success: true,
+//           message: "Payment verified and order finalized",
+//           orderId: order._id,
+//           orderNumber: order.orderNumber,
+//         });
+//       } catch (innerErr) {
+//         await session.abortTransaction();
+//         session.endSession();
+//         throw innerErr;
+//       }
+//     });
+//   } catch (error) {
+//     console.error("checkoutSuccess transaction failed:", error);
+//     // If this is called by the frontend, they can retry sending transaction_id later.
+//     return res.status(500).json({
+//       error: error.message || "Checkout failed",
+//     });
+//   }
+// };
+
+// /**
+//  * sendDetailedOrderEmail - builds and sends a full order confirmation email (HTML + text).
+//  * Includes:
+//  *  - Order number, totals
+//  *  - Product table with qty and unit prices
+//  *  - Delivery address and phone
+//  *  - Masked card details (brand, last4, exp)
+//  *  - Flutterwave tx_ref and transaction id
+//  */
+// async function sendDetailedOrderEmail({ to, order, flutterwaveData }) {
+//   if (!to || !order) return;
+//   const items = (order.products || []).map((p) => ({
+//     name: p.name,
+//     qty: p.quantity,
+//     price: p.price,
+//   }));
+
+//   const productRowsHtml = items
+//     .map(
+//       (it) => `
+//     <tr>
+//       <td style="padding:8px;border:1px solid #eee;">${it.name}</td>
+//       <td style="padding:8px;border:1px solid #eee;text-align:center;">${
+//         it.qty
+//       }</td>
+//       <td style="padding:8px;border:1px solid #eee;text-align:right;">₦${Number(
+//         it.price
+//       ).toLocaleString()}</td>
+//     </tr>`
+//     )
+//     .join("");
+
+//   // Mask card
+//   const card = flutterwaveData?.card || order?.paymentMethod?.card || {};
+//   const maskedCard = card.last_4digits || card.last4 || "****";
+//   const brand =
+//     card.brand || card.type || order?.paymentMethod?.card?.brand || "Card";
+//   const exp =
+//     card.exp_month && card.exp_year
+//       ? `${card.exp_month}/${card.exp_year}`
+//       : "MM/YY";
+
+//   const html = `
+//     <!doctype html>
+//     <html>
+//       <body style="font-family:Arial,Helvetica,sans-serif;color:#333;">
+//         <div style="max-width:700px;margin:0 auto;padding:20px;background:#ffffff;border-radius:8px;">
+//           <h1 style="color:#2ecc71;margin-bottom:0.2rem;">EcoStore — Order Confirmation</h1>
+//           <p style="margin-top:0;">Thank you for your purchase${
+//             order?.user ? ` — ${order.user}` : ""
+//           }!</p>
+
+//           <h3>Order #${order.orderNumber}</h3>
+//           <p><strong>Status:</strong> ${order.status}</p>
+//           <p><strong>Payment:</strong> ${brand} • **** ${maskedCard} • ${exp}</p>
+//           <p><strong>Flutterwave reference:</strong> ${
+//             order.flutterwaveRef || flutterwaveData?.tx_ref || "N/A"
+//           }</p>
+//           <p><strong>Transaction id:</strong> ${
+//             order.flutterwaveTransactionId || flutterwaveData?.id || "N/A"
+//           }</p>
+
+//           <h3 style="margin-top:20px;">🛒 Order summary</h3>
+//           <table style="width:100%;border-collapse:collapse;">
+//             <thead>
+//               <tr>
+//                 <th style="padding:8px;border:1px solid #eee;text-align:left;">Product</th>
+//                 <th style="padding:8px;border:1px solid #eee;text-align:center;">Qty</th>
+//                 <th style="padding:8px;border:1px solid #eee;text-align:right;">Price</th>
+//               </tr>
+//             </thead>
+//             <tbody>
+//               ${productRowsHtml}
+//             </tbody>
+//             <tfoot>
+//               <tr>
+//                 <td colspan="2" style="padding:8px;border:1px solid #eee;text-align:right;"><strong>Subtotal</strong></td>
+//                 <td style="padding:8px;border:1px solid #eee;text-align:right;">₦${Number(
+//                   order.subtotal || 0
+//                 ).toLocaleString()}</td>
+//               </tr>
+//               <tr>
+//                 <td colspan="2" style="padding:8px;border:1px solid #eee;text-align:right;"><strong>Discount</strong></td>
+//                 <td style="padding:8px;border:1px solid #eee;text-align:right;">-₦${Number(
+//                   order.discount || 0
+//                 ).toLocaleString()}</td>
+//               </tr>
+//               <tr>
+//                 <td colspan="2" style="padding:8px;border:1px solid #eee;text-align:right;"><strong>Total</strong></td>
+//                 <td style="padding:8px;border:1px solid #eee;text-align:right;"><strong>₦${Number(
+//                   order.totalAmount || 0
+//                 ).toLocaleString()}</strong></td>
+//               </tr>
+//             </tfoot>
+//           </table>
+
+//           <h3 style="margin-top:20px;">🚚 Delivery & Contact</h3>
+//           <p><strong>Address:</strong> ${
+//             order.deliveryAddress || "No address provided"
+//           }</p>
+//           <p><strong>Phone:</strong> ${order.phone || "No phone provided"}</p>
+//           <p><strong>Email:</strong> ${to}</p>
+
+//           <p style="margin-top:20px;">We will send another email once your order ships. If you have any questions reply to this email or contact support at <strong>${
+//             process.env.SUPPORT_EMAIL || "support@ecostore.example"
+//           }</strong>.</p>
+
+//           <p style="margin-top:30px;font-size:14px;color:#666;">Thanks — The EcoStore Team 🌱</p>
+//         </div>
+//       </body>
+//     </html>
+//   `;
+
+//   const text = `EcoStore — Order ${order.orderNumber}\n
+// Status: ${order.status}
+// Payment: ${brand} ****${maskedCard} ${exp}
+// Reference: ${order.flutterwaveRef || flutterwaveData?.tx_ref || ""}
+// Transaction: ${order.flutterwaveTransactionId || flutterwaveData?.id || ""}
+
+// Items:
+// ${items
+//   .map((it) => `${it.qty} x ${it.name} — ₦${Number(it.price).toLocaleString()}`)
+//   .join("\n")}
+
+// Subtotal: ₦${Number(order.subtotal || 0).toLocaleString()}
+// Discount: -₦${Number(order.discount || 0).toLocaleString()}
+// Total: ₦${Number(order.totalAmount || 0).toLocaleString()}
+
+// Delivery: ${order.deliveryAddress || "No address provided"}
+// Phone: ${order.phone || "No phone provided"}
+
+// Questions? Reply to this email or contact ${
+//     process.env.SUPPORT_EMAIL || "support@ecostore.example"
+//   }.
+// Thanks — EcoStore`;
+
+//   await sendEmail({
+//     to,
+//     subject: `EcoStore — Order Confirmation #${order.orderNumber}`,
+//     text,
+//     html,
+//   });
+// }
+
+// /**
+//  * Create a new reward coupon in the DB for a user (deletes any old one)
+//  */
+// async function createNewCoupon(userId) {
+//   await Coupon.findOneAndDelete({ userId });
+//   const newCoupon = new Coupon({
+//     code: "GIFT" + Math.random().toString(36).substring(2, 8).toUpperCase(),
+//     discountPercentage: 10,
+//     expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+//     userId,
+//   });
+//   await newCoupon.save();
+//   return newCoupon;
+// }
 
 // import path from "path";
 // import dotenv from "dotenv";
@@ -1277,17 +1941,17 @@ async function createNewCoupon(userId) {
 //             if (p.size) details += `Size: ${p.size} `;
 //             if (p.color) details += `| Color: ${p.color}`;
 //             return `
-      // <tr>
-      //   <td style="padding:8px;border:1px solid #ddd;">
-      //     ${p.name}${details ? `<br><small>${details.trim()}</small>` : ""}
-      //   </td>
-      //   <td style="padding:8px;border:1px solid #ddd;text-align:center;">${
-      //     p.quantity
-      //   }</td>
-      //   <td style="padding:8px;border:1px solid #ddd;text-align:right;">₦${p.price.toLocaleString()}</td>
-      // </tr>`;
-      //     })
-      //     .join("");
+//       <tr>
+//         <td style="padding:8px;border:1px solid #ddd;">
+//           ${p.name}${details ? `<br><small>${details.trim()}</small>` : ""}
+//         </td>
+//         <td style="padding:8px;border:1px solid #ddd;text-align:center;">${
+//           p.quantity
+//         }</td>
+//         <td style="padding:8px;border:1px solid #ddd;text-align:right;">₦${p.price.toLocaleString()}</td>
+//       </tr>`;
+//           })
+//           .join("");
 
 //         try {
 //           await sendEmail({
@@ -1306,13 +1970,13 @@ async function createNewCoupon(userId) {
 
 //                     <h3 style="margin-top: 20px;">🛒 Order Summary</h3>
 //                     <table style="width:100%; border-collapse: collapse; margin-top: 10px;">
-                      // <thead>
-                      //   <tr>
-                      //     <th style="padding: 8px; border: 1px solid #ddd; text-align:left;">Product</th>
-                      //     <th style="padding: 8px; border: 1px solid #ddd; text-align:center;">Qty</th>
-                      //     <th style="padding: 8px; border: 1px solid #ddd; text-align:right;">Price</th>
-                      //   </tr>
-                      // </thead>
+//                       <thead>
+//                         <tr>
+//                           <th style="padding: 8px; border: 1px solid #ddd; text-align:left;">Product</th>
+//                           <th style="padding: 8px; border: 1px solid #ddd; text-align:center;">Qty</th>
+//                           <th style="padding: 8px; border: 1px solid #ddd; text-align:right;">Price</th>
+//                         </tr>
+//                       </thead>
 //                       <tbody>
 //                         ${productRows}
 //                       </tbody>
