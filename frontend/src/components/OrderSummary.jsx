@@ -75,7 +75,7 @@ const OrderSummary = () => {
 
   return (
     <motion.div
-      className="space-y-4 rounded-lg border border-gray-800 bg-black p-4 shadow-sm sm:p-6"
+      className="space-y-4 rounded-lg border border-gray-800 bg-black p-4 shadow-sm sm:p-6 lg:px-5 "
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -85,7 +85,7 @@ const OrderSummary = () => {
       </p>
 
       <div className="space-y-4">
-        <div className="space-y-2">
+        <div className="space-y-2 ">
           <dl className="flex items-center justify-between gap-4">
             <dt className="text-base font-normal text-gray-200">
               Original price

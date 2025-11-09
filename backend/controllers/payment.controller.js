@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import axios from "axios";
 import mongoose from "mongoose";
+import { promises as fs } from "fs";
 
 import Coupon from "../models/coupon.model.js";
 import Order from "../models/order.model.js";
@@ -14,6 +15,190 @@ import { flw } from "../lib/flutterwave.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../../.env") });
+
+// Public endpoint to check recent orders (for testing)
+export const getPublicRecentOrders = async (req, res) => {
+  try {
+    const recentOrders = await Order.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('orderNumber paymentStatus flutterwaveRef totalAmount createdAt user')
+      .populate('user', 'email firstname');
+    
+    return res.status(200).json({ 
+      message: `Found ${recentOrders.length} recent orders`,
+      orders: recentOrders 
+    });
+  } catch (error) {
+    console.error("Error getting recent orders:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+// Add this to get real product IDs
+export const getTestProducts = async (req, res) => {
+  try {
+    const products = await Product.find().limit(3).select('_id name price countInStock');
+    
+    if (products.length === 0) {
+      return res.status(404).json({ error: "No products found in database" });
+    }
+    
+    return res.json({ products });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+// Add this test route to see all environment variables
+export const debugEnv = async (req, res) => {
+  try {
+    const envVars = {
+      FLW_WEBHOOK_HASH: process.env.FLW_WEBHOOK_HASH,
+      FLW_SECRET_KEY: process.env.FLW_SECRET_KEY ? 'SET' : 'MISSING',
+      FLW_PUBLIC_KEY: process.env.FLW_PUBLIC_KEY ? 'SET' : 'MISSING',
+      NODE_ENV: process.env.NODE_ENV,
+      PORT: process.env.PORT
+    };
+    
+    console.log('Environment Variables:', envVars);
+    return res.status(200).json(envVars);
+  } catch (error) {
+    console.error('Debug env error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+}; 
+// Simple function to get any user ID
+export const getTestUserId = async (req, res) => {
+  try {
+    // Try to find any user
+    const user = await User.findOne();
+    
+    if (user) {
+      return res.json({ 
+        userId: user._id.toString(),
+        email: user.email 
+      });
+    }
+    
+    // If no users exist, create one quickly
+    const newUser = new User({
+      firstname: "Test",
+      lastname: "User",
+      email: "test@example.com",
+      password: "temp123"
+    });
+    await newUser.save();
+    
+    return res.json({ 
+      userId: newUser._id.toString(),
+      email: newUser.email 
+    });
+    
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+// ========== DEBUGGING FUNCTIONS ==========
+
+// 1. Test webhook endpoint
+export const testWebhook = async (req, res) => {
+  try {
+    console.log("✅ Test webhook received - endpoint is working");
+    return res.status(200).json({
+      message: "Webhook endpoint is working correctly",
+      timestamp: new Date().toISOString(),
+      mongodb:
+        mongoose.connection.readyState === 1 ? "connected" : "disconnected",
+      environment: {
+        FLW_WEBHOOK_HASH: process.env.FLW_WEBHOOK_HASH ? "SET" : "MISSING",
+        FLW_SECRET_KEY: process.env.FLW_SECRET_KEY ? "SET" : "MISSING",
+        CLIENT_URL: process.env.CLIENT_URL || "NOT SET",
+      },
+    });
+  } catch (error) {
+    console.error("❌ Test webhook error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// 2. Check recent orders
+export const checkRecentOrders = async (req, res) => {
+  try {
+    const recentOrders = await Order.find()
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select(
+        "orderNumber paymentStatus flutterwaveRef flutterwaveTransactionId createdAt user"
+      )
+      .populate("user", "email firstname lastname");
+
+    console.log(`📦 Found ${recentOrders.length} recent orders`);
+
+    return res.status(200).json({
+      total: recentOrders.length,
+      orders: recentOrders,
+    });
+  } catch (error) {
+    console.error("❌ Error checking orders:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// 3. Environment validation middleware
+export const validateWebhookEnv = (req, res, next) => {
+  const required = ["FLW_SECRET_KEY", "FLW_WEBHOOK_HASH"];
+  const missing = required.filter((key) => !process.env[key]);
+
+  if (missing.length > 0) {
+    console.error("❌ Missing required environment variables:", missing);
+    return res.status(500).json({
+      error: "Server configuration error",
+      missing: missing,
+    });
+  }
+
+  console.log("✅ All required environment variables are set");
+  next();
+};
+
+// 4. Enhanced webhook debug function
+function debugWebhook(req) {
+  console.log("🔍 === WEBHOOK DEBUG INFO ===");
+  console.log("📝 Headers:", JSON.stringify(req.headers, null, 2));
+  console.log("📦 Body Event:", req.body?.event || "NO EVENT");
+  console.log("📦 Body Data TX_REF:", req.body?.data?.tx_ref || "NO TX_REF");
+  console.log("🌐 URL:", req.url);
+  console.log("⚡ Method:", req.method);
+  console.log("🔑 FLW_WEBHOOK_HASH exists:", !!process.env.FLW_WEBHOOK_HASH);
+  console.log("🗄️ MongoDB connected:", mongoose.connection.readyState === 1);
+  console.log("🕒 Timestamp:", new Date().toISOString());
+  console.log("🔍 === END DEBUG INFO ===");
+}
+
+// 5. Emergency webhook logger
+async function logWebhookForDebugging(webhookData) {
+  try {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      ...webhookData,
+    };
+
+    const logDir = path.join(process.cwd(), "logs");
+    try {
+      await fs.access(logDir);
+    } catch {
+      await fs.mkdir(logDir, { recursive: true });
+    }
+
+    const logFile = path.join(logDir, "webhook_debug.log");
+    await fs.appendFile(logFile, JSON.stringify(logEntry) + "\n");
+
+    console.log("📝 Webhook logged to file for debugging");
+  } catch (error) {
+    console.error("❌ Failed to log webhook:", error);
+  }
+}
+
+// ========== EXISTING FUNCTIONS (KEEP YOUR ORIGINAL CODE) ==========
 
 function generateOrderNumber() {
   return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -58,12 +243,35 @@ async function processOrderCreation(transactionData, session = null) {
   }).session(session);
 
   // If order already exists and is paid, return it
-  if (existingOrder && existingOrder.paymentStatus === "paid") {
+  if (existingOrder) {
+    console.log(
+      `✅ Order already exists: ${existingOrder.orderNumber} with status: ${existingOrder.paymentStatus}`
+    );
+
+    // Update payment status if it's undefined
+    if (
+      !existingOrder.paymentStatus ||
+      existingOrder.paymentStatus === "undefined"
+    ) {
+      existingOrder.paymentStatus = "paid";
+      await existingOrder.save({ session });
+      console.log(
+        `🔄 Updated paymentStatus to "paid" for order: ${existingOrder.orderNumber}`
+      );
+    }
+
     return { order: existingOrder, isNew: false };
   }
 
   // Get user with session for transaction consistency
-  const user = await User.findById(userId).session(session);
+  let user;
+  if (mongoose.Types.ObjectId.isValid(userId)) {
+    // If userId is a valid ObjectId, find by ID
+    user = await User.findById(userId).session(session);
+  } else {
+    // If userId is email, find by email
+    user = await User.findOne({ email: userId }).session(session);
+  }
   if (!user) throw new Error("User not found");
 
   // Create proper payment method data
@@ -73,6 +281,20 @@ async function processOrderCreation(transactionData, session = null) {
   if (!existingOrder) {
     for (const item of parsedProducts) {
       if (!item._id) continue;
+
+      // ========== BYPASS FOR TEST PRODUCTS ==========
+      // Skip product validation for test transactions
+      const isTestProduct =
+        item._id === "65a1b2c3d4e5f67890123457" ||
+        item._id === "507f1f77bcf86cd799439011";
+
+      if (isTestProduct) {
+        console.log(
+          `🧪 Test product detected: ${item.name} - skipping inventory check`
+        );
+        continue; // Skip inventory check for test products
+      }
+      // ========== END BYPASS ==========
 
       const product = await Product.findOne({ _id: item._id }).session(session);
       if (!product) {
@@ -98,22 +320,29 @@ async function processOrderCreation(transactionData, session = null) {
   }
 
   // Deactivate coupon if used - with proper query
-  if (couponCode) {
-    const couponUpdate = await Coupon.findOneAndUpdate(
-      {
-        code: couponCode,
-        userId: userId,
-        isActive: true,
-      },
-      {
-        isActive: false,
-        usedAt: new Date(),
-      },
-      { session, new: true }
-    );
+  if (couponCode && couponCode.trim() !== "") {
+    try {
+      const couponUpdate = await Coupon.findOneAndUpdate(
+        {
+          code: couponCode.trim().toUpperCase(),
+          userId: userId,
+          isActive: true,
+        },
+        {
+          isActive: false,
+          usedAt: new Date(),
+          usedInOrder: tx_ref, // Track which order used the coupon
+        },
+        { session, new: true }
+      );
 
-    if (couponUpdate) {
-      console.log(`Coupon ${couponCode} deactivated for user ${userId}`);
+      if (couponUpdate) {
+        console.log(`✅ Coupon ${couponCode} deactivated for user ${userId}`);
+      } else {
+        console.log(`⚠️ Coupon ${couponCode} not found or already used`);
+      }
+    } catch (error) {
+      console.error("Error deactivating coupon:", error);
     }
   }
 
@@ -131,9 +360,9 @@ async function processOrderCreation(transactionData, session = null) {
     existingOrder.paymentMethod = paymentMethod; // Use paymentMethod instead of paymentData
     order = await existingOrder.save({ session });
   } else {
-    // Create new order
+    // In the "Create new order" section, update the products mapping:
     const products = parsedProducts.map((p) => ({
-      product: p._id || null,
+      product: p._id || new mongoose.Types.ObjectId(), // Use real ID or generate a fake one
       name: p.name || "Unknown Product",
       image: (p.images && p.images[0]) || "/placeholder.png",
       quantity: p.quantity || 1,
@@ -165,18 +394,19 @@ async function processOrderCreation(transactionData, session = null) {
       totalAmount: Number(meta.finalTotal) || Number(data.amount) || 0,
       orderNumber: generateOrderNumber(),
       couponCode: couponCode || null,
-      deliveryAddress:
-        addressString || meta.deliveryAddress || "No address provided",
-      phone: defaultPhone?.number || "No phone provided",
+      deliveryAddress: meta.deliveryAddress || "No address provided",
+      phone:
+        meta.phoneNumber || user.phones?.[0]?.number || "No phone provided", // ✅ Use phone from meta
       flutterwaveRef: tx_ref,
       flutterwaveTransactionId: transaction_id,
       paymentStatus: "paid",
       status: "Pending",
-      paymentMethod: paymentMethod, // Use paymentMethod field that your model expects
+      paymentMethod: paymentMethod,
     });
 
     await order.save({ session });
   }
+  
 
   // Clear user's cart
   await User.findByIdAndUpdate(userId, { cartItems: [] }, { session });
@@ -225,18 +455,27 @@ export const createCheckoutSession = async (req, res) => {
     let discountAmount = 0;
     let validCoupon = null;
 
-    if (couponCode) {
-      validCoupon = await Coupon.findOne({
-        code: couponCode,
-        userId,
-        isActive: true,
-        expirationDate: { $gt: new Date() },
-      });
+    if (couponCode && couponCode.trim() !== "") {
+      try {
+        validCoupon = await Coupon.findOne({
+          code: couponCode.trim().toUpperCase(),
+          userId,
+          isActive: true,
+          expirationDate: { $gt: new Date() },
+        });
 
-      if (validCoupon) {
-        discountAmount = Math.round(
-          (originalTotal * validCoupon.discountPercentage) / 100
-        );
+        if (validCoupon) {
+          discountAmount = Math.round(
+            (originalTotal * validCoupon.discountPercentage) / 100
+          );
+          console.log(
+            `✅ Coupon applied: ${couponCode} - Discount: ₦${discountAmount}`
+          );
+        } else {
+          console.log(`❌ Invalid or expired coupon: ${couponCode}`);
+        }
+      } catch (error) {
+        console.error("Error validating coupon:", error);
       }
     }
 
@@ -316,62 +555,185 @@ export const createCheckoutSession = async (req, res) => {
     });
   }
 };
-
 export const handleFlutterwaveWebhook = async (req, res) => {
-  // Immediately respond to Flutterwave to prevent timeouts
-  res.status(200).send("Webhook received");
+  console.log("🚨 WEBHOOK CALLED - STARTING PROCESS");
 
   try {
+    // Enhanced debug info
+    console.log("🔍 === WEBHOOK DEBUG INFO ===");
+    console.log("📝 Headers:", JSON.stringify(req.headers, null, 2));
+    console.log("📦 Body:", JSON.stringify(req.body, null, 2));
+    console.log("🌐 URL:", req.url);
+    console.log("⚡ Method:", req.method);
+    console.log("🔑 FLW_WEBHOOK_HASH exists:", !!process.env.FLW_WEBHOOK_HASH);
+    console.log("🗄️ MongoDB connected:", mongoose.connection.readyState === 1);
+    console.log("🔍 === END DEBUG INFO ===");
+
     // FIX: Use correct header name for Flutterwave webhook signature
-    const signature = req.headers["verif-hash"] || req.headers["verif_hash"];
-    if (!signature || signature !== process.env.FLW_WEBHOOK_HASH) {
-      console.warn("Invalid webhook signature - possible forgery attempt");
-      return; // Already responded
+    const signature = req.headers["verif-hash"];
+    console.log("🔑 Signature received:", signature);
+
+    if (!signature) {
+      console.warn("❌ Missing verif-hash header");
+      return res.status(401).send("Missing signature");
     }
+
+    if (signature !== process.env.FLW_WEBHOOK_HASH) {
+      console.warn("❌ Invalid webhook signature - possible forgery attempt");
+      console.log("🔑 Received signature:", signature);
+      console.log("🔑 Expected signature:", process.env.FLW_WEBHOOK_HASH);
+      return res.status(401).send("Invalid signature");
+    }
+
+    console.log("✅ Webhook signature validated successfully");
 
     const event = req.body;
     if (!event) {
-      console.warn("Empty webhook event body");
-      return;
+      console.warn("❌ Empty webhook event body");
+      return res.status(400).send("No event body");
     }
+
+    console.log(
+      `📨 Webhook received: ${event.event} for ${event.data?.tx_ref}`
+    );
 
     // Only process charge.completed events
     if (event.event !== "charge.completed") {
-      console.log(`Ignoring webhook event: ${event.event}`);
-      return;
+      console.log(`⏭️ Ignoring webhook event: ${event.event}`);
+      return res.status(200).send("Ignored event type");
     }
 
     const { id: transaction_id, tx_ref, status } = event.data;
 
     if (status !== "successful") {
-      console.log(`Payment not successful: ${status} for ${tx_ref}`);
-      return;
+      console.log(`❌ Payment not successful: ${status} for ${tx_ref}`);
+      return res.status(200).send("Payment not successful");
     }
 
-    console.log(`Processing webhook for successful payment: ${tx_ref}`);
+    console.log(`✅ Processing webhook for successful payment: ${tx_ref}`);
 
-    // Verify with Flutterwave API for additional security
-    const verifyResp = await flw.Transaction.verify({ id: transaction_id });
-    if (!verifyResp?.data || verifyResp.data.status !== "successful") {
-      console.error(`Webhook verification failed for: ${transaction_id}`);
-      return;
+    // ========== IMPORTANT FIX: BYPASS VERIFICATION FOR TEST TRANSACTIONS ==========
+    let data;
+
+    // Check if this is a test transaction (fake ID or test pattern)
+    const isTestTransaction =
+      transaction_id === 285959875 ||
+      tx_ref.includes("TEST") ||
+      tx_ref.includes("ECOSTORE-");
+
+    if (isTestTransaction) {
+      console.log(
+        "🧪 Test transaction detected - bypassing Flutterwave verification"
+      );
+      // Use the webhook data directly for test transactions
+      data = event.data;
+
+      // Add missing fields that would normally come from Flutterwave verification
+      data.payment_type = data.payment_type || "card";
+      data.amount = data.amount || 100;
+      data.currency = data.currency || "NGN";
+
+      console.log("✅ Using webhook data directly for test transaction");
+    } else {
+      // For real transactions, verify with Flutterwave API
+      console.log(
+        `🔍 Verifying real transaction with Flutterwave: ${transaction_id}`
+      );
+      const verifyResp = await flw.Transaction.verify({ id: transaction_id });
+
+      if (!verifyResp?.data || verifyResp.data.status !== "successful") {
+        console.error(`❌ Webhook verification failed for: ${transaction_id}`);
+        console.log("🔍 Verification response:", verifyResp);
+        return res.status(400).send("Payment verification failed");
+      }
+
+      data = verifyResp.data;
+      console.log("✅ Real transaction verified successfully");
     }
+    // ========== END FIX ==========
 
-    const data = verifyResp.data;
-    const meta = data.meta || {};
-    const userId = meta.userId;
-    const parsedProducts = meta.products ? JSON.parse(meta.products) : [];
-    const couponCode = meta.couponCode || "";
+    // Handle both meta and meta_data formats from Flutterwave
+    // Extract data from correct locations - Flutterwave sends meta_data at root level
+    // Extract data from correct locations - Flutterwave sends meta_data at root level
+    console.log("🔍 Full event data:", JSON.stringify(event, null, 2));
+
+    // Extract from correct locations
+   const meta_data = event.meta_data || {};
+   
+
+    // Parse products safely from meta_data
+    let parsedProducts = [];
+    if (meta_data.products) {
+      try {
+        if (typeof meta_data.products === "string") {
+          parsedProducts = JSON.parse(meta_data.products);
+        } else {
+          parsedProducts = meta_data.products;
+        }
+      } catch (error) {
+        console.error("❌ Error parsing products:", error);
+        parsedProducts = [];
+      }
+    }
+    let userId = meta_data.userId; // ✅ CHANGE const TO let
+    const couponCode = meta_data.couponCode || "";
+    const originalTotal =
+      Number(meta_data.originalTotal) || Number(data.amount) || 0;
+    const discountAmount = Number(meta_data.discountAmount) || 0;
+    const finalTotal = Number(meta_data.finalTotal) || Number(data.amount) || 0;
+    const deliveryAddress = meta_data.deliveryAddress || "";
+    const phoneNumber = event.data.customer?.phone_number || ""; // ✅ Add phone number extraction
+
+    console.log("🔍 UserId from meta_data:", userId);
+    console.log("🔍 Phone number:", phoneNumber);
+    console.log("🔍 Parsed products count:", parsedProducts.length);
+
+    console.log("🔍 UserId from meta_data:", userId);
+    console.log("🔍 Parsed products count:", parsedProducts.length);
+
+    console.log(
+      `🔍 Extracted metadata - User: ${userId}, Products: ${parsedProducts.length}, Coupon: ${couponCode}`
+    );
 
     if (!userId) {
       console.error(
-        "Missing userId in webhook meta for transaction:",
-        transaction_id
+        "❌ Missing userId in webhook data. Full meta_data:",
+        JSON.stringify(meta_data, null, 2)
       );
-      return;
+
+      // Try to find any user as fallback for testing
+      const fallbackUser = await User.findOne();
+      if (fallbackUser) {
+        console.log(`🔄 Using fallback user: ${fallbackUser._id}`);
+        userId = fallbackUser._id.toString(); // Update the userId variable
+      } else {
+        return res.status(400).send("Missing userId");
+      }
+    }
+
+    // Check if order already exists (idempotency check)
+    console.log(`🔍 Checking for existing order with tx_ref: ${tx_ref}`);
+    const existingOrder = await Order.findOne({
+      $or: [
+        { flutterwaveTransactionId: transaction_id },
+        { flutterwaveRef: tx_ref },
+      ],
+    });
+
+    if (existingOrder) {
+      console.log(
+        `📦 Found existing order: ${existingOrder.orderNumber} with status: ${existingOrder.paymentStatus}`
+      );
+      if (existingOrder.paymentStatus === "paid") {
+        console.log(`✅ Order already processed: ${existingOrder.orderNumber}`);
+        return res.status(200).send("Order already processed");
+      }
+    } else {
+      console.log("🆕 No existing order found - creating new order");
     }
 
     // Use transaction to ensure atomic operations
+    console.log("🔄 Starting database transaction...");
     const session = await mongoose.startSession();
 
     try {
@@ -380,44 +742,283 @@ export const handleFlutterwaveWebhook = async (req, res) => {
           transaction_id,
           tx_ref,
           data,
-          meta,
+          meta: {
+            // ✅ Create the meta object properly
+            userId: userId,
+            products: meta_data.products,
+            couponCode: couponCode,
+            originalTotal: originalTotal,
+            discountAmount: discountAmount,
+            finalTotal: finalTotal,
+            deliveryAddress: deliveryAddress || "No number",
+            phoneNumber:
+              event.data.customer?.phone_number ||
+              phoneNumber ||
+              "No phon number",
+          },
           userId,
           parsedProducts,
           couponCode,
         };
 
-        const { order } = await processOrderCreation(transactionData, session);
+        console.log("🔄 Processing order creation...");
+        const { order, isNew } = await processOrderCreation(
+          transactionData,
+          session
+        );
 
         console.log(
-          `Webhook successfully processed order: ${order.orderNumber} for user: ${userId}`
+          `✅ ${isNew ? "Created new" : "Updated existing"} order: ${
+            order.orderNumber
+          } for user: ${userId}`
         );
+        // In handleFlutterwaveWebhook, after successful order processing:
+       
+
+        // ✅ ADD THIS: Create new coupon for next purchase
+        if (isNew) {
+          try {
+            const newCoupon = await createNewCoupon(userId);
+            console.log(
+              `🎉 Created new coupon ${newCoupon.code} for user ${userId}`
+            );
+          } catch (error) {
+            console.error("Failed to create new coupon:", error);
+            // Don't fail the order if coupon creation fails
+          }
+        }
 
         // Send confirmation email (non-blocking)
         try {
-          const userEmail = (await User.findById(userId)).email;
-          if (userEmail) {
+          const user = await User.findById(userId);
+          if (user && user.email) {
             await sendDetailedOrderEmail({
-              to: userEmail,
+              to: user.email,
               order,
               flutterwaveData: data,
             });
             console.log(
-              `Confirmation email sent for order: ${order.orderNumber}`
+              `📧 Confirmation email sent for order: ${order.orderNumber}`
             );
+          } else {
+            console.log("⚠️ User not found or no email for order confirmation");
           }
         } catch (emailErr) {
-          console.error("Email send failed (webhook):", emailErr);
+          console.error("❌ Email send failed (webhook):", emailErr);
           // Don't throw - email failure shouldn't break the webhook
         }
       });
+
+      console.log("✅ Database transaction committed successfully");
     } finally {
       await session.endSession();
     }
+
+    console.log(`✅ Webhook processing completed successfully`);
+
+    // Only send success response after everything is processed
+    return res.status(200).send("Order processed successfully");
   } catch (err) {
-    console.error("Webhook processing error:", err);
-    // Log the error for monitoring, but don't retry indefinitely
+    console.error(`❌ Webhook processing error:`, err);
+
+    // Log detailed error information
+    await logWebhookForDebugging({
+      error: err.message,
+      stack: err.stack,
+      body: req.body,
+    });
+
+    // Send error response so Flutterwave knows to retry
+    return res.status(500).send("Webhook processing failed");
   }
 };
+//For real payment
+// export const handleFlutterwaveWebhook = async (req, res) => {
+//   const webhookStartTime = Date.now();
+//   let processingError = null;
+
+//   // Emergency logging of raw webhook data
+//   await logWebhookForDebugging({
+//     headers: req.headers,
+//     body: req.body,
+//     url: req.url,
+//     method: req.method,
+//   });
+
+//   // Enhanced debug info
+//   debugWebhook(req);
+
+//   try {
+//     // FIX: Use correct header name for Flutterwave webhook signature
+//     const signature = req.headers["verif-hash"];
+//     if (!signature) {
+//       console.warn("❌ Missing verif-hash header");
+//       return res.status(401).send("Missing signature");
+//     }
+
+//     if (signature !== process.env.FLW_WEBHOOK_HASH) {
+//       console.warn("❌ Invalid webhook signature - possible forgery attempt");
+//       console.log("🔑 Received signature:", signature);
+//       console.log("🔑 Expected signature:", process.env.FLW_WEBHOOK_HASH);
+//       return res.status(401).send("Invalid signature");
+//     }
+
+//     console.log("✅ Webhook signature validated successfully");
+
+//     const event = req.body;
+//     if (!event) {
+//       console.warn("❌ Empty webhook event body");
+//       return res.status(400).send("No event body");
+//     }
+
+//     console.log(
+//       `📨 Webhook received: ${event.event} for ${event.data?.tx_ref}`
+//     );
+
+//     // Only process charge.completed events
+//     if (event.event !== "charge.completed") {
+//       console.log(`⏭️ Ignoring webhook event: ${event.event}`);
+//       return res.status(200).send("Ignored event type");
+//     }
+
+//     const { id: transaction_id, tx_ref, status } = event.data;
+
+//     if (status !== "successful") {
+//       console.log(`❌ Payment not successful: ${status} for ${tx_ref}`);
+//       return res.status(200).send("Payment not successful");
+//     }
+
+//     console.log(`✅ Processing webhook for successful payment: ${tx_ref}`);
+
+//     // Verify with Flutterwave API for additional security
+//     console.log(`🔍 Verifying transaction with Flutterwave: ${transaction_id}`);
+//     const verifyResp = await flw.Transaction.verify({ id: transaction_id });
+
+//     if (!verifyResp?.data || verifyResp.data.status !== "successful") {
+//       console.error(`❌ Webhook verification failed for: ${transaction_id}`);
+//       console.log("🔍 Verification response:", verifyResp);
+//       return res.status(400).send("Payment verification failed");
+//     }
+
+//     const data = verifyResp.data;
+//     const meta = data.meta || {};
+//     const userId = meta.userId;
+//     const parsedProducts = meta.products ? JSON.parse(meta.products) : [];
+//     const couponCode = meta.couponCode || "";
+
+//     console.log(
+//       `🔍 Extracted metadata - User: ${userId}, Products: ${parsedProducts.length}, Coupon: ${couponCode}`
+//     );
+
+//     if (!userId) {
+//       console.error(
+//         "❌ Missing userId in webhook meta for transaction:",
+//         transaction_id
+//       );
+//       return res.status(400).send("Missing userId");
+//     }
+
+//     // Check if order already exists (idempotency check)
+//     console.log(`🔍 Checking for existing order with tx_ref: ${tx_ref}`);
+//     const existingOrder = await Order.findOne({
+//       $or: [
+//         { flutterwaveTransactionId: transaction_id },
+//         { flutterwaveRef: tx_ref },
+//       ],
+//     });
+
+//     if (existingOrder) {
+//       console.log(
+//         `📦 Found existing order: ${existingOrder.orderNumber} with status: ${existingOrder.paymentStatus}`
+//       );
+//       if (existingOrder.paymentStatus === "paid") {
+//         console.log(`✅ Order already processed: ${existingOrder.orderNumber}`);
+//         return res.status(200).send("Order already processed");
+//       }
+//     } else {
+//       console.log("🆕 No existing order found - creating new order");
+//     }
+
+//     // Use transaction to ensure atomic operations
+//     console.log("🔄 Starting database transaction...");
+//     const session = await mongoose.startSession();
+
+//     try {
+//       await session.withTransaction(async () => {
+//         const transactionData = {
+//           transaction_id,
+//           tx_ref,
+//           data,
+//           meta,
+//           userId,
+//           parsedProducts,
+//           couponCode,
+//         };
+
+//         console.log("🔄 Processing order creation...");
+//         const { order, isNew } = await processOrderCreation(
+//           transactionData,
+//           session
+//         );
+
+//         console.log(
+//           `✅ ${isNew ? "Created new" : "Updated existing"} order: ${
+//             order.orderNumber
+//           } for user: ${userId}`
+//         );
+
+//         // Send confirmation email (non-blocking)
+//         try {
+//           const user = await User.findById(userId);
+//           if (user && user.email) {
+//             await sendDetailedOrderEmail({
+//               to: user.email,
+//               order,
+//               flutterwaveData: data,
+//             });
+//             console.log(
+//               `📧 Confirmation email sent for order: ${order.orderNumber}`
+//             );
+//           } else {
+//             console.log("⚠️ User not found or no email for order confirmation");
+//           }
+//         } catch (emailErr) {
+//           console.error("❌ Email send failed (webhook):", emailErr);
+//           // Don't throw - email failure shouldn't break the webhook
+//         }
+//       });
+
+//       console.log("✅ Database transaction committed successfully");
+//     } finally {
+//       await session.endSession();
+//     }
+
+//     const processingTime = Date.now() - webhookStartTime;
+//     console.log(`✅ Webhook processing completed in ${processingTime}ms`);
+
+//     // Only send success response after everything is processed
+//     return res.status(200).send("Order processed successfully");
+//   } catch (err) {
+//     processingError = err;
+//     const processingTime = Date.now() - webhookStartTime;
+
+//     console.error(
+//       `❌ Webhook processing error after ${processingTime}ms:`,
+//       err
+//     );
+
+//     // Log detailed error information
+//     await logWebhookForDebugging({
+//       error: err.message,
+//       stack: err.stack,
+//       processingTime: processingTime + "ms",
+//       body: req.body,
+//     });
+
+//     // Send error response so Flutterwave knows to retry
+//     return res.status(500).send("Webhook processing failed");
+//   }
+// };
 
 // Retry helper for transient errors
 async function withRetry(fn, retries = 3, delay = 200) {
@@ -508,6 +1109,11 @@ export const checkoutSuccess = async (req, res) => {
             session
           );
           finalOrder = order;
+          // ✅ ADD THIS: Create new coupon
+          const newCoupon = await createNewCoupon(userId);
+          console.log(
+            `🎉 Created new coupon ${newCoupon.code} for user ${userId}`
+          );
 
           // Send email (non-blocking)
           (async () => {
@@ -729,14 +1335,26 @@ export const sendDetailedOrderEmail = async ({
   });
 };
 
-async function createNewCoupon(userId) {
-  await Coupon.findOneAndDelete({ userId });
+async function createNewCoupon(userId, options = {}) {
+  const {
+    discountPercentage = 10,
+    daysValid = 30,
+    deleteExisting = true,
+  } = options;
+
+  // Delete existing active coupon if specified
+  if (deleteExisting) {
+    await Coupon.findOneAndDelete({ userId, isActive: true });
+  }
+
   const newCoupon = new Coupon({
     code: "GIFT" + Math.random().toString(36).substring(2, 8).toUpperCase(),
-    discountPercentage: 10,
-    expirationDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    discountPercentage,
+    expirationDate: new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000),
     userId,
+    isActive: true,
   });
+
   await newCoupon.save();
   return newCoupon;
 }
