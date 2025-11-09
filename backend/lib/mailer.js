@@ -20,7 +20,7 @@ export async function sendEmail({ to, subject, text, html }) {
       text,
       html,
     });
-
+       
     console.log("✅ Email sent:", info.messageId);
     return info;
   } catch (error) {

@@ -67,6 +67,7 @@ const orderSchema = new mongoose.Schema(
           "qr",
           "barter",
           "account",
+          "flutterwave",
         ],
         required: true,
       },
