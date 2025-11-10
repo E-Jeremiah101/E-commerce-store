@@ -140,13 +140,13 @@ const AdminOrderDetails = () => {
             <h1 className="text-gray-600">
               Status:{" "}
               <span className="text-gray-800">
-                {order.paymentMethod.status} 
+                {order.paymentMethod.status}
               </span>
             </h1>
             <h1 className="text-gray-600">
               Method:{" "}
               <span className="text-gray-800">
-                 {order.paymentMethod.method} 
+                {order.paymentMethod.method}
               </span>
             </h1>
           </div>
@@ -156,19 +156,19 @@ const AdminOrderDetails = () => {
             <h1 className="text-gray-600">
               Status:{" "}
               <span className="text-gray-800">
-                 {order.paymentMethod.status} 
+                {order.paymentMethod.status}
               </span>
             </h1>
             <h1 className="text-gray-600">
               Method:{" "}
               <span className="text-gray-800">
-                 {order.paymentMethod.card.issuer} 
+                {order.paymentMethod.card.issuer}
               </span>
             </h1>
             <h1 className="text-gray-600">
               Brand:{" "}
               <span className="text-gray-800">
-                {order.paymentMethod.card.brand} 
+                {order.paymentMethod.card.brand}
               </span>
             </h1>
             <h1 className="text-gray-600">
@@ -177,18 +177,17 @@ const AdminOrderDetails = () => {
                 {order.paymentMethod.card.last4}
               </span>
             </h1>
-            
-          
+
             <h1 className="text-gray-600">
               Card Type:{" "}
               <span className="text-gray-800">
-                 {order.paymentMethod.card.type} 
+                {order.paymentMethod.card.type}
               </span>
             </h1>
             <h1 className="text-gray-600">
               Card Issuer:{" "}
               <span className="text-gray-800">
-                {order.paymentMethod.card.issuer} 
+                {order.paymentMethod.card.issuer}
               </span>
             </h1>
           </div>
@@ -265,8 +264,7 @@ const AdminOrderDetails = () => {
               </span>
             </p>
             <p>
-              Coupon:{" "}
-              <span className="text-green-600 ">{order.coupon?.code}</span>
+              Coupon: <span className="text-green-600 ">{order.couponCode}</span>
             </p>
             <p>
               Discount:{" "}

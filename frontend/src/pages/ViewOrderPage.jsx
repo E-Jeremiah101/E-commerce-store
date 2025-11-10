@@ -247,7 +247,7 @@ const ViewOrderPage = () => {
             </p>
             <p>
               Coupon:{" "}
-              <span className="text-green-600 ">{order.coupon?.code}</span>
+              <span className="text-green-600 ">{order.couponCode}</span>
             </p>
             <p>
               Discount:{" "}

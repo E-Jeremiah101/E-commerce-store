@@ -273,11 +273,11 @@ const AdminOrdersPage = () => {
               <div className="bg-gray-700 rounded-lg p-2 text-sm font-bold">
                 <p>Subtotal: ₦{order.subtotal.toLocaleString()}</p>
                 {order.discount > 0 && (
-                  <>
+                  <> 
                     <p>
                       Coupon Applied:{" "}
                       <span className="text-green-500">
-                        {order.coupon.code}
+                        {order.couponCode}
                       </span>
                     </p>
                     <p className="text-sm my-1 font-bold">

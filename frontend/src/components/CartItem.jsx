@@ -71,15 +71,24 @@ const CartItem = ({ item }) => {
                     </button>
                     <span> {item.quantity}</span>
                     <button
-                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-gray-400  hover:bg-black/900 focus:outline-none focus:ring-2 "
-                      onClick={() =>
-                        updateQuantity(
-                          item._id,
-                          item.quantity + 1,
-                          item.size,
-                          item.color
-                        )
-                      }
+                      disabled={item.quantity >= item.countInStock}
+                      className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-gray-400 focus:outline-none focus:ring-2 ${
+                        item.quantity >= item.countInStock
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:bg-black/900"
+                      }`}
+                      onClick={() => {
+                        if (item.quantity < item.countInStock) {
+                          updateQuantity(
+                            item._id,
+                            item.quantity + 1,
+                            item.size,
+                            item.color
+                          );
+                        } else {
+                          alert(`Only ${item.countInStock} left in stock`);
+                        }
+                      }}
                     >
                       <Plus className="text-gray-300 w-4 h-4 " />
                     </button>
@@ -91,7 +100,6 @@ const CartItem = ({ item }) => {
                       {item.price.toLocaleString(undefined, {
                         minimumFractionDigits: 0,
                       })}{" "}
-                      
                     </span>
                   )}
                 </div>

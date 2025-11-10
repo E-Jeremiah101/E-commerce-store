@@ -27,6 +27,12 @@ export const addToCart = async (req, res) => {
     const { productId, size, color } = req.body;
     const user = req.user;
 
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    if (product.countInStock <= 0)
+      return res.status(400).json({ message: "Out of stock" });
+
+
     // Look for an existing item (size/color only matter if they exist)
     const existingItem = user.cartItems.find(
       (item) =>
@@ -36,6 +42,11 @@ export const addToCart = async (req, res) => {
     );
 
     if (existingItem) {
+      if (existingItem.quantity + 1 > product.countInStock) {
+        return res
+          .status(400)
+          .json({ message: `Only ${product.countInStock} left in stock` });
+      }
       existingItem.quantity += 1;
     } else {
       const newItem = {
@@ -96,6 +107,17 @@ export const updateQuantity = async (req, res) => {
     const { size, color, quantity } = req.body;
     const user = req.user;
 
+    // find product to check available stock
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    // Check stock before updating
+    if (quantity > product.countInStock) {
+      return res.status(400).json({
+        message: `Only ${product.countInStock} left in stock`,
+      });
+    }
+
     const existingItem = user.cartItems.find(
       (item) =>
         item.product?.toString() === productId &&
@@ -103,25 +125,27 @@ export const updateQuantity = async (req, res) => {
         item.color === color
     );
 
-    if (existingItem) {
-      if (quantity <= 0) {
-        user.cartItems = user.cartItems.filter(
-          (item) =>
-            !(
-              item.product?.toString() === productId &&
-              item.size === size &&
-              item.color === color
-            )
-        );
-      } else {
-        existingItem.quantity = quantity;
-      }
-
-      await user.save();
-      return res.json(user.cartItems);
-    } else {
+    if (!existingItem) {
       return res.status(404).json({ message: "Product not found in cart" });
     }
+
+    if (quantity <= 0) {
+      // remove if quantity is 0
+      user.cartItems = user.cartItems.filter(
+        (item) =>
+          !(
+            item.product?.toString() === productId &&
+            item.size === size &&
+            item.color === color
+          )
+      );
+    } else {
+      existingItem.quantity = quantity;
+    }
+
+    await user.save();
+
+    res.json(user.cartItems);
   } catch (error) {
     console.log("Error in updateQuantity controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
