@@ -2,6 +2,7 @@ import Order from "../models/order.model.js";
 import { sendEmail } from "../lib/mailer.js";
 import User from "../models/user.model.js";
 import Coupon from "../models/coupon.model.js";
+import Product from "../models/product.model.js";
 
 export const getUserOrders = async (req, res) => {
   try {
@@ -316,7 +317,42 @@ export const updateOrderStatus = async (req, res) => {
   }
 };
 
+// Add this function to reduce variant stock when order is placed
+const reduceVariantStock = async (orderItems) => {
+  try {
+    for (const item of orderItems) {
+      const product = await Product.findById(item.product);
+      if (!product) continue;
+
+      // If product has variants, reduce specific variant stock
+      if (product.variants && product.variants.length > 0) {
+        const variant = product.variants.find(v => 
+          v.size === item.selectedSize && v.color === item.selectedColor
+        );
+        
+        if (variant) {
+          if (variant.countInStock < item.quantity) {
+            throw new Error(`Not enough stock for ${product.name} - ${item.selectedSize}/${item.selectedColor}`);
+          }
+          variant.countInStock -= item.quantity;
+        }
+      } else {
+        // Fallback to overall product stock
+        if (product.countInStock < item.quantity) {
+          throw new Error(`Not enough stock for ${product.name}`);
+        }
+        product.countInStock -= item.quantity;
+      }
+
+      await product.save();
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Create new order
+
 export const createOrder = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate(
@@ -336,7 +372,7 @@ export const createOrder = async (req, res) => {
     const orderItems = user.cartItems.map((item) => ({
       product: item.product._id,
       name: item.product.name,
-      image: item.product.image,
+      image: item.product.images?.[0] || "", // FIXED: Use images array
       price: item.product.price,
       quantity: item.quantity,
       selectedSize: item.size || null,
@@ -375,6 +411,9 @@ export const createOrder = async (req, res) => {
     }
     const totalAmount = Math.max(subtotal - discount, 0);
 
+    // REDUCE STOCK BEFORE CREATING ORDER
+    await reduceVariantStock(orderItems);
+
     // Create order snapshot
     const order = new Order({
       user: user._id,
@@ -394,9 +433,15 @@ export const createOrder = async (req, res) => {
     user.cartItems = [];
     await user.save();
 
-    res.status(201).json({ message: "Order placed ", order });
+    res.status(201).json({ message: "Order placed successfully", order });
   } catch (err) {
     console.error("Error creating order", err);
+    
+    // Provide specific error message for stock issues
+    if (err.message.includes("Not enough stock")) {
+      return res.status(400).json({ message: err.message });
+    }
+    
     res.status(500).json({ message: "Server error" });
   }
 };

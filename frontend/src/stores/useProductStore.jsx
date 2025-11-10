@@ -26,9 +26,9 @@ export const useProductStore = create((set, get) => ({
       set({ loading: false });
     }
   },
-  reduceStock: async (productId) => {
+  reduceStock: async (productId, quantity = 1) => {
     try {
-      const product = get().products.find((p) => p._id === productId); // <-- now works
+      const product = get().products.find((p) => p._id === productId);
       if (!product || product.countInStock <= 0) {
         throw new Error("No stock left");
       }
@@ -134,6 +134,88 @@ export const useProductStore = create((set, get) => ({
       return product;
     } catch (error) {
       console.error("Error fetching product:", error);
+      throw error;
+    }
+  },
+
+  // Add function to fetch variant stock
+  fetchVariantStock: async (productId, size, color) => {
+    try {
+      const response = await axios.get(`/products/stock/${productId}`, {
+        params: { size, color },
+      });
+      return response.data.stock;
+    } catch (error) {
+      console.error("Error fetching variant stock:", error);
+      return 0;
+    }
+  },
+
+  updateVariantInventory: async (productId, variantId, quantityChange) => {
+    try {
+      const res = await axios.put(
+        `/products/${productId}/variants/${variantId}/inventory`,
+        {
+          quantityChange: quantityChange,
+        }
+      );
+
+      // Update the products state with the new variant stock
+      set((state) => ({
+        products: state.products.map((product) => {
+          if (product._id === productId) {
+            // Update the specific variant's countInStock
+            const updatedVariants = product.variants?.map((variant) =>
+              variant._id === variantId
+                ? { ...variant, countInStock: res.data.countInStock }
+                : variant
+            );
+
+            // Also update the main product stock if needed (sum of all variants)
+            const totalVariantStock =
+              updatedVariants?.reduce(
+                (sum, variant) => sum + (variant.countInStock || 0),
+                0
+              ) || 0;
+
+            return {
+              ...product,
+              variants: updatedVariants,
+              countInStock: res.data.productStock,
+            };
+          }
+          return product;
+        }),
+      }));
+
+      return res.data;
+    } catch (error) {
+      console.error("Error updating variant inventory:", error);
+      throw error;
+    }
+  },
+
+  updateVariantStockBulk: async (productId, variantUpdates) => {
+    try {
+      const res = await axios.put(`/products/${productId}/variants`, {
+        variants: variantUpdates,
+      });
+
+      set((state) => ({
+        products: state.products.map((product) =>
+          product._id === productId
+            ? {
+                ...product,
+                variants: res.data.variants,
+                countInStock: res.data.countInStock,
+              }
+            : product
+        ),
+      }));
+
+      return res.data;
+    } catch (error) {
+      console.error("Error updating variant stock:", error);
       throw error;
     }
   },

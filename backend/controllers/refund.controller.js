@@ -124,12 +124,16 @@ export const requestRefund = async (req, res) => {
           snapshot.name
         }" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;"/>
             <p><strong>Product:</strong> ${snapshot.name}</p>
-            <p><strong>Refund ID:</strong> ${
-              order.refunds[order.refunds.length - 1]._id
-            }</p>
             <p><strong>Quantity:</strong> ${quantity}</p>
             <p><strong>Refund Amount:</strong> ₦${refundAmount.toLocaleString()}</p>
           </div>
+          <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+    <p><strong>Refund Reference ID:</strong></p>
+    <p style="font-size: 15px; font-weight: bold; color: #2c5aa0; background: white; padding: 10px; border-radius: 5px;">
+      ${order.refunds[order.refunds.length - 1]._id}
+    </p>
+    <p><strong>Keep this ID for your records</strong></p>
+  </div>
           <p>Our team will review your request and an agent will visit to inspect the item.</p>
           <p><strong>Important:</strong> Please make sure the item is in its original condition and packaging.</p>
           <p>This process usually takes up to <b>7 working days</b>.</p>
@@ -204,7 +208,13 @@ export const approveRefund = async (req, res) => {
     const { orderId, refundId } = req.params;
 
     const order = await Order.findById(orderId).populate("user", "firstname lastname email");
+    const productImages = await Order.findById(orderId).populate(
+      "products",
+      "image"
+    );
     if (!order) return res.status(404).json({ message: "Order not found" });
+
+    
 
     const refund = order.refunds.id(refundId);
     if (!refund) return res.status(404).json({ message: "Refund not found" });
@@ -242,7 +252,10 @@ export const approveRefund = async (req, res) => {
       message: "Refund approved successfully",
       refund,
     });
-
+const productSnapshot = refund.productSnapshot || {};
+const productName = productSnapshot.name || "Deleted Product";
+const productImage = productSnapshot.image || "/images/deleted.png";
+const productPrice = productSnapshot.price || 0;
     // Fire-and-forget: call Flutterwave refund API and send email in background
     (async () => {
       try {
@@ -275,18 +288,22 @@ export const approveRefund = async (req, res) => {
         try {
           await sendEmail({
             to: order.user?.email,
-            subject: `Refund Approved — Order #${order.orderNumber}`,
+            subject: `Refund Approved — ${order.orderNumber}`,
             html: `
     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
       <h2 style="color: #2c3e50;">Refund Approved</h2>
       <p>Dear ${order.user?.firstname || "Customer"},</p>
       <p>Your refund request has been <strong>approved</strong> for the following item:</p>
       <div style="border: 1px solid #eee; padding: 10px; margin: 10px 0; border-radius: 8px;">
-        <p><strong>Refund ID:</strong> ${refund._id}</p>
-        <p><strong>Quantity:</strong> ${refund.quantity}</p>
-        <p><strong>Refund Amount:</strong> ₦${refund.amount.toLocaleString()}</p>
-      </div>
-      <p>Our delivery agent has confirmed the item collection. Your refund will be processed to your original payment method within <strong>1–7 working days</strong>.</p>
+            <img src="${
+             productImage
+            }"  style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;"/>
+            <p><strong>Product:</strong> ${productName }</p>
+            <p><strong>Refund ID:</strong> ${refund._id}</p>
+            <p><strong>Quantity:</strong> ${refund.quantity}</p>
+            <p><strong>Refund Amount:</strong> ₦${refund.amount.toLocaleString()}</p>
+          </div>
+      <p>Our delivery agent has confirmed the item collection. Your refund will be processed to your original payment method within <strong>3–7 working days</strong>.</p>
       <p>Thank you for your patience and trust.</p>
       <p>Best regards,<br/><strong>Eco Store Support Team</strong></p>
     </div>
@@ -344,29 +361,36 @@ export const rejectRefund = async (req, res) => {
 
     await order.save({ validateBeforeSave: false });
 
+    
+
     // Respond immediately so the admin UI isn't blocked by email delivery
     res.status(200).json({
       success: true,
       message: "Refund rejected successfully",
       refund,
     });
+    const productSnapshot = refund.productSnapshot || {};
+    const productName = productSnapshot.name || "Deleted Product";
+    const productImage = productSnapshot.image || "/images/deleted.png";
+    const productPrice = productSnapshot.price || 0;
 
     // Send rejection email in background
     (async () => {
       try {
         await sendEmail({
           to: order.user?.email,
-          subject: `Refund Request Denied — Order #${order.orderNumber}`,
+          subject: `Refund Denied — ${order.orderNumber}`,
           html: `
             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
               <h2 style="color: #e74c3c;">Refund Request Rejected</h2>
               <p>Dear ${order.user?.firstname || "Customer"},</p>
               <p>We regret to inform you that your refund request for the following item has been <strong>rejected</strong> after review:</p>
-              <div style="border: 1px solid #eee; padding: 10px; margin: 10px 0; border-radius: 8px;">
-                <p><strong>Refund ID:</strong> ${refund._id}</p>
-                <p><strong>Quantity:</strong> ${refund.quantity}</p>
-                <p><strong>Refund Amount:</strong> ₦${refund.amount.toLocaleString()}</p>
-              </div>
+              <img src="${productImage}"  style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;"/>
+            <p><strong>Product:</strong> ${productName}</p>
+            <p><strong>Refund ID:</strong> ${refund._id}</p>
+            <p><strong>Quantity:</strong> ${refund.quantity}</p>
+            <p><strong>Refund Amount:</strong> ₦${refund.amount.toLocaleString()}</p>
+          </div>
               <p>Reason for rejection may include product not being in original condition or policy violation. If you believe this was a mistake, please contact our support team.</p>
               <p>Best regards,<br/><strong>Eco Store Support Team</strong></p>
             </div>

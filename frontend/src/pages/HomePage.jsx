@@ -56,7 +56,7 @@ const HomePage = () => {
         setRecommendations(res.data);
       } catch (error) {
         setRecommendations([]); 
-        console.error(err)
+        console.error(error)
       }
     };
     fetchRecommendations();

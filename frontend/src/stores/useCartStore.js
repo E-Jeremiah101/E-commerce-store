@@ -107,10 +107,26 @@ export const useCartStore = create((set, get) => ({
       console.error("Failed to clear server cart:", e);
     }
   },
+  // In useCartStore.js - Update addToCart function
   addToCart: async (product, selectedSize, selectedColor) => {
     const { calculateTotals } = get();
     set({ isLoading: true });
     try {
+      // Check variant stock before adding to cart
+      const variantStockResponse = await axios.get(
+        `/products/stock/${product._id}`,
+        {
+          params: { size: selectedSize, color: selectedColor },
+        }
+      );
+
+      const availableStock = variantStockResponse.data.stock;
+
+      if (availableStock <= 0) {
+        toast.error("This variant is out of stock");
+        return;
+      }
+
       const user = (await import("./useUserStore")).useUserStore.getState()
         .user;
       if (!user) {
@@ -122,6 +138,15 @@ export const useCartStore = create((set, get) => ({
               item.size === selectedSize &&
               item.color === selectedColor
           );
+
+          // Check if adding would exceed available stock
+          if (existingItem && existingItem.quantity + 1 > availableStock) {
+            toast.error(
+              `Only ${availableStock} left in stock for this variant`
+            );
+            return prevState;
+          }
+
           const newCart = existingItem
             ? prevState.cart.map((item) =>
                 item._id === product._id &&
@@ -137,6 +162,7 @@ export const useCartStore = create((set, get) => ({
                   quantity: 1,
                   size: selectedSize,
                   color: selectedColor,
+                  countInStock: availableStock, // Store variant-specific stock
                 },
               ];
           saveGuestCart(newCart);
@@ -177,6 +203,7 @@ export const useCartStore = create((set, get) => ({
                 quantity: 1,
                 size: selectedSize,
                 color: selectedColor,
+                countInStock: availableStock, // Store variant-specific stock
               },
             ];
         return { cart: newCart };
@@ -185,11 +212,16 @@ export const useCartStore = create((set, get) => ({
       calculateTotals();
     } catch (error) {
       console.error("Error adding product to cart:", error);
-      toast.error("Failed to add product. Please try again.");
+      if (error.response?.status === 400) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error("Failed to add product. Please try again.");
+      }
     } finally {
       set({ isLoading: false });
     }
   },
+
   removeFromCart: async (productId, size, color) => {
     try {
       const user = (await import("./useUserStore")).useUserStore.getState()

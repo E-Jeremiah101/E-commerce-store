@@ -14,7 +14,7 @@ import ProductReviews from "../components/ProductReviews";
 const ViewProductPage = () => {
   const { id } = useParams();
   const { fetchProductById } = useProductStore();
-  const { addToCart, isLoading } = useCartStore();
+  const { addToCart, isLoading, cart } = useCartStore();
   const { user } = useUserStore();
 
   const [product, setProduct] = useState(null);
@@ -25,7 +25,6 @@ const ViewProductPage = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
 
-  const { cart } = useCartStore();
   useEffect(() => {
     const loadProduct = async () => {
       setLoading(true);
@@ -37,12 +36,45 @@ const ViewProductPage = () => {
     loadProduct();
   }, [id, fetchProductById]);
 
-  // If user was redirected to rate the product (query param ?rate=true), scroll to reviews after product loads
+  // Calculate variant-specific stock
+  const getVariantStock = () => {
+    if (!product) return 0;
+
+    // If no variants exist, use overall stock
+    if (!product.variants || product.variants.length === 0) {
+      return product.countInStock;
+    }
+
+    // Find the specific variant
+    const variant = product.variants.find(
+      (v) => v.size === selectedSize && v.color === selectedColor
+    );
+
+    return variant ? variant.countInStock : 0;
+  };
+
+  // Check if current variant is in cart
+  const getVariantInCart = () => {
+    return cart.find(
+      (item) =>
+        item?._id === product?._id &&
+        item?.size === selectedSize &&
+        item?.color === selectedColor
+    );
+  };
+
+  const variantStock = getVariantStock();
+  const variantInCart = getVariantInCart();
+  const currentQuantity = variantInCart?.quantity || 0;
+  const availableStock = variantStock - currentQuantity;
+
+  const isOutOfStock = availableStock <= 0;
+
+  // If user was redirected to rate the product
   useEffect(() => {
     if (!product) return;
     const params = new URLSearchParams(location.search);
     if (params.get("rate") === "true") {
-      // give time for DOM to render
       setTimeout(() => {
         const el = document.getElementById("product-reviews");
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -51,15 +83,21 @@ const ViewProductPage = () => {
   }, [product, location.search]);
 
   const handleAddToCart = () => {
-    // allow guests to add items to cart (guest cart persisted to localStorage)
     if (product.colors?.length > 0 && !selectedColor) {
-      toast.error("Please select a color ");
+      toast.error("Please select a color");
       return;
     }
     if (product.sizes?.length > 0 && !selectedSize) {
       toast.error("Please select a size");
       return;
     }
+
+    // Additional variant validation
+    if (isOutOfStock) {
+      toast.error("This variant is out of stock");
+      return;
+    }
+
     addToCart(product, selectedSize, selectedColor);
   };
 
@@ -181,42 +219,72 @@ const ViewProductPage = () => {
                 </div>
               </div>
             )}
-            {/* Stock Info */}
-            {product.countInStock > 0 ? (
-              <p className="text-green-600 text-sm shadow w-fit rounded-2xl py-1 px-2">
-                In Stock: <span className="text-sm">{product.countInStock}</span> 
-              </p>
-            ) : (
-              <p className="text-red-600 text-sm ">Out of Stock</p>
-            )}
 
-            {/* Add to Cart Button */}
+            <div>
+              {/* Only show variant-specific stock if both color and size are selected (when applicable) */}
+              {product.variants?.length > 0 &&
+              ((product.colors?.length > 0 && !selectedColor) ||
+                (product.sizes?.length > 0 && !selectedSize)) ? (
+                <p className="text-gray-500 text-sm italic"></p>
+              ) : availableStock > 0 ? (
+                <p className="text-gray-500 text-xs mt-1">
+                  In Stock:{" "}
+                  <span className="">{availableStock} available</span>
+                  {currentQuantity > 0 && (
+                    <span className="text-gray-600 text-xs ml-2">
+                      {currentQuantity} in cart
+                    </span>
+                  )}
+                </p>
+              ) : (
+                ""
+              )}
+            </div>
+
+            {/* Add to Cart Button - UPDATED */}
+            {/* Add to Cart Button - FINAL CLEAN UX */}
             <button
               onClick={handleAddToCart}
-              disabled={product.countInStock === 0 || isLoading}
+              disabled={
+                isLoading ||
+                // disable until required options are selected
+                (product.colors?.length > 0 && !selectedColor) ||
+                (product.sizes?.length > 0 && !selectedSize) ||
+                // disable only if selected variant is out of stock
+                (selectedColor || selectedSize ? isOutOfStock : false) ||
+                // disable if entire product has no stock
+                product.countInStock <= 0
+              }
               className={`w-full py-3 rounded-lg transition tracking-widest ${
-                product.countInStock === 0 || isLoading
+                isLoading ||
+                (product.colors?.length > 0 && !selectedColor) ||
+                (product.sizes?.length > 0 && !selectedSize) ||
+                (selectedColor || selectedSize ? isOutOfStock : false) ||
+                product.countInStock <= 0
                   ? "bg-gray-400 text-white cursor-not-allowed"
                   : "bg-black text-white hover:bg-black/80"
               }`}
             >
-              {product.countInStock === 0
-                ? "Out of Stock"
-                : isLoading
+              {isLoading
                 ? "Adding to Cart..."
+                : product.countInStock <= 0
+                ? "Out of Stock"
+                : selectedColor && selectedSize && isOutOfStock
+                ? "This variant is out of stock"
                 : "Add to Cart"}
             </button>
           </div>
         </div>
       </div>
 
+      {/* Rest of the component remains the same */}
       <div className=" border-gray-700 py-3 lg:pr-80  px-4 sm:px-6">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center w-full text-left focus:outline-none"
         >
           <span className="text-1xl text-black hover:text-black/60 transition-colors whitespace-nowrap tracking-widest">
-            Product deails
+            Product details
           </span>
 
           <span className="text-gray-600 rounded-4xl mr-3 transition-transform duration-300 h-7 w-7 flex items-center justify-center">

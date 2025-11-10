@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import axios from "axios";
 import mongoose from "mongoose";
-import { promises as fs } from "fs";
 
 import Coupon from "../models/coupon.model.js";
 import Order from "../models/order.model.js";
@@ -16,204 +15,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
-// Public endpoint to check recent orders (for testing)
-export const getPublicRecentOrders = async (req, res) => {
-  try {
-    const recentOrders = await Order.find()
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .select('orderNumber paymentStatus flutterwaveRef totalAmount createdAt user')
-      .populate('user', 'email firstname');
-    
-    return res.status(200).json({ 
-      message: `Found ${recentOrders.length} recent orders`,
-      orders: recentOrders 
-    });
-  } catch (error) {
-    console.error("Error getting recent orders:", error);
-    return res.status(500).json({ error: error.message });
-  }
-};
-// Add this to get real product IDs
-export const getTestProducts = async (req, res) => {
-  try {
-    const products = await Product.find().limit(3).select('_id name price countInStock');
-    
-    if (products.length === 0) {
-      return res.status(404).json({ error: "No products found in database" });
-    }
-    
-    return res.json({ products });
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-// Add this test route to see all environment variables
-export const debugEnv = async (req, res) => {
-  try {
-    const envVars = {
-      FLW_WEBHOOK_HASH: process.env.FLW_WEBHOOK_HASH,
-      FLW_SECRET_KEY: process.env.FLW_SECRET_KEY ? 'SET' : 'MISSING',
-      FLW_PUBLIC_KEY: process.env.FLW_PUBLIC_KEY ? 'SET' : 'MISSING',
-      NODE_ENV: process.env.NODE_ENV,
-      PORT: process.env.PORT
-    };
-    
-    console.log('Environment Variables:', envVars);
-    return res.status(200).json(envVars);
-  } catch (error) {
-    console.error('Debug env error:', error);
-    return res.status(500).json({ error: error.message });
-  }
-}; 
-// Simple function to get any user ID
-export const getTestUserId = async (req, res) => {
-  try {
-    // Try to find any user
-    const user = await User.findOne();
-    
-    if (user) {
-      return res.json({ 
-        userId: user._id.toString(),
-        email: user.email 
-      });
-    }
-    
-    // If no users exist, create one quickly
-    const newUser = new User({
-      firstname: "Test",
-      lastname: "User",
-      email: "test@example.com",
-      password: "temp123"
-    });
-    await newUser.save();
-    
-    return res.json({ 
-      userId: newUser._id.toString(),
-      email: newUser.email 
-    });
-    
-  } catch (error) {
-    return res.status(500).json({ error: error.message });
-  }
-};
-// ========== DEBUGGING FUNCTIONS ==========
-
-// 1. Test webhook endpoint
-export const testWebhook = async (req, res) => {
-  try {
-    console.log("✅ Test webhook received - endpoint is working");
-    return res.status(200).json({
-      message: "Webhook endpoint is working correctly",
-      timestamp: new Date().toISOString(),
-      mongodb:
-        mongoose.connection.readyState === 1 ? "connected" : "disconnected",
-      environment: {
-        FLW_WEBHOOK_HASH: process.env.FLW_WEBHOOK_HASH ? "SET" : "MISSING",
-        FLW_SECRET_KEY: process.env.FLW_SECRET_KEY ? "SET" : "MISSING",
-        CLIENT_URL: process.env.CLIENT_URL || "NOT SET",
-      },
-    });
-  } catch (error) {
-    console.error("❌ Test webhook error:", error);
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-// 2. Check recent orders
-export const checkRecentOrders = async (req, res) => {
-  try {
-    const recentOrders = await Order.find()
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .select(
-        "orderNumber paymentStatus flutterwaveRef flutterwaveTransactionId createdAt user"
-      )
-      .populate("user", "email firstname lastname");
-
-    console.log(`📦 Found ${recentOrders.length} recent orders`);
-
-    return res.status(200).json({
-      total: recentOrders.length,
-      orders: recentOrders,
-    });
-  } catch (error) {
-    console.error("❌ Error checking orders:", error);
-    return res.status(500).json({ error: error.message });
-  }
-};
-
-// 3. Environment validation middleware
-export const validateWebhookEnv = (req, res, next) => {
-  const required = ["FLW_SECRET_KEY", "FLW_WEBHOOK_HASH"];
-  const missing = required.filter((key) => !process.env[key]);
-
-  if (missing.length > 0) {
-    console.error("❌ Missing required environment variables:", missing);
-    return res.status(500).json({
-      error: "Server configuration error",
-      missing: missing,
-    });
-  }
-
-  console.log("✅ All required environment variables are set");
-  next();
-};
-
-// 4. Enhanced webhook debug function
-function debugWebhook(req) {
-  console.log("🔍 === WEBHOOK DEBUG INFO ===");
-  console.log("📝 Headers:", JSON.stringify(req.headers, null, 2));
-  console.log("📦 Body Event:", req.body?.event || "NO EVENT");
-  console.log("📦 Body Data TX_REF:", req.body?.data?.tx_ref || "NO TX_REF");
-  console.log("🌐 URL:", req.url);
-  console.log("⚡ Method:", req.method);
-  console.log("🔑 FLW_WEBHOOK_HASH exists:", !!process.env.FLW_WEBHOOK_HASH);
-  console.log("🗄️ MongoDB connected:", mongoose.connection.readyState === 1);
-  console.log("🕒 Timestamp:", new Date().toISOString());
-  console.log("🔍 === END DEBUG INFO ===");
-}
-
-// 5. Emergency webhook logger
-async function logWebhookForDebugging(webhookData) {
-  try {
-    const logEntry = {
-      timestamp: new Date().toISOString(),
-      ...webhookData,
-    };
-
-    const logDir = path.join(process.cwd(), "logs");
-    try {
-      await fs.access(logDir);
-    } catch {
-      await fs.mkdir(logDir, { recursive: true });
-    }
-
-    const logFile = path.join(logDir, "webhook_debug.log");
-    await fs.appendFile(logFile, JSON.stringify(logEntry) + "\n");
-
-    console.log("📝 Webhook logged to file for debugging");
-  } catch (error) {
-    console.error("❌ Failed to log webhook:", error);
-  }
-}
-
-// ========== EXISTING FUNCTIONS (KEEP YOUR ORIGINAL CODE) ==========
-
-// Add this function BEFORE createNewCoupon
 async function checkCouponEligibility(userId, orderAmount) {
   try {
-    // Get user's order count
     const orderCount = await Order.countDocuments({
       user: userId,
       paymentStatus: "paid",
     });
 
     console.log(
-      `🔍 Checking coupon eligibility for user ${userId}: ${orderCount} orders, ₦${orderAmount}`
+      `Checking coupon eligibility for user ${userId}: ${orderCount} orders, ₦${orderAmount}`
     );
 
-    // 🚫 Check if user has ANY active coupon (regardless of creation date)
     const activeCoupon = await Coupon.findOne({
       userId: userId,
       isActive: true,
@@ -222,14 +34,13 @@ async function checkCouponEligibility(userId, orderAmount) {
 
     if (activeCoupon) {
       console.log(
-        `ℹ️ User ${userId} already has active coupon: ${activeCoupon.code}`
+        `User ${userId} already has active coupon: ${activeCoupon.code}`
       );
       return null;
     }
 
-    // 🎯 TIERED REWARDS:
     if (orderCount === 1) {
-      console.log(`✅ User ${userId} eligible for FIRST ORDER coupon`);
+      console.log(`User ${userId} eligible for FIRST ORDER coupon`);
       return {
         discountPercentage: 10,
         codePrefix: "WELCOME",
@@ -237,7 +48,7 @@ async function checkCouponEligibility(userId, orderAmount) {
         emailType: "welcome_coupon",
       };
     } else if (orderCount === 3) {
-      console.log(`✅ User ${userId} eligible for THIRD ORDER coupon`);
+      console.log(`User ${userId} eligible for THIRD ORDER coupon`);
       return {
         discountPercentage: 15,
         codePrefix: "LOYAL",
@@ -246,7 +57,7 @@ async function checkCouponEligibility(userId, orderAmount) {
       };
     } else if (orderCount >= 5 && orderCount % 5 === 0) {
       console.log(
-        `✅ User ${userId} eligible for VIP coupon (${orderCount} orders)`
+        `User ${userId} eligible for VIP coupon (${orderCount} orders)`
       );
       return {
         discountPercentage: 20,
@@ -256,7 +67,7 @@ async function checkCouponEligibility(userId, orderAmount) {
       };
     } else if (orderAmount > 175000) {
       console.log(
-        `✅ User ${userId} eligible for BIG SPENDER coupon (₦${orderAmount})`
+        `User ${userId} eligible for BIG SPENDER coupon (₦${orderAmount})`
       );
       return {
         discountPercentage: 15,
@@ -267,11 +78,11 @@ async function checkCouponEligibility(userId, orderAmount) {
     }
 
     console.log(
-      `ℹ️ User ${userId} not eligible for coupon (${orderCount} orders, ₦${orderAmount})`
+      `User ${userId} not eligible for coupon (${orderCount} orders, ₦${orderAmount})`
     );
     return null;
   } catch (error) {
-    console.error("❌ Error checking coupon eligibility:", error);
+    console.error("Error checking coupon eligibility:", error);
     return null;
   }
 }
@@ -285,13 +96,12 @@ async function createNewCoupon(userId, options = {}) {
   } = options;
 
   try {
-    console.log(`🔄 Starting coupon creation for user ${userId}...`);
+    console.log(`Starting coupon creation for user ${userId}...`);
 
-    // ✅ FIRST: Use findOneAndUpdate with upsert to handle race conditions
     const newCode =
       couponType + Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    console.log(`🔍 Generated coupon code: ${newCode}`);
+    console.log(`Generated coupon code: ${newCode}`);
 
     const coupon = await Coupon.findOneAndUpdate(
       { userId: userId },
@@ -307,30 +117,29 @@ async function createNewCoupon(userId, options = {}) {
         usedInOrder: null,
       },
       {
-        upsert: true, // Create if doesn't exist
-        new: true, // Return updated document
+        upsert: true,
+        new: true,
         runValidators: true,
         setDefaultsOnInsert: true,
       }
     );
 
     console.log(
-      `🎉 Successfully ${coupon.$isNew ? "CREATED" : "UPDATED"} coupon: ${
+      `Successfully ${coupon.$isNew ? "CREATED" : "UPDATED"} coupon: ${
         coupon.code
       } for user ${userId}`
     );
     return coupon;
   } catch (error) {
-    console.error("❌ Failed to create/update coupon:", error);
+    console.error("Failed to create/update coupon:", error);
 
     if (error.code === 11000) {
-      console.log(`🔄 Duplicate key error, trying alternative approach...`);
+      console.log(`Duplicate key error, trying alternative approach...`);
 
-      // Alternative approach: Try to find and update existing coupon
       try {
         const existingCoupon = await Coupon.findOne({ userId });
         if (existingCoupon) {
-          console.log(`🔄 Updating existing coupon: ${existingCoupon.code}`);
+          console.log(`Updating existing coupon: ${existingCoupon.code}`);
           existingCoupon.code =
             couponType +
             Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -344,11 +153,11 @@ async function createNewCoupon(userId, options = {}) {
           existingCoupon.deactivationReason = null;
 
           await existingCoupon.save();
-          console.log(`✅ Updated existing coupon: ${existingCoupon.code}`);
+          console.log(`Updated existing coupon: ${existingCoupon.code}`);
           return existingCoupon;
         }
       } catch (fallbackError) {
-        console.error("❌ Fallback approach also failed:", fallbackError);
+        console.error("Fallback approach also failed:", fallbackError);
       }
     }
 
@@ -360,7 +169,6 @@ function generateOrderNumber() {
   return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
 }
 
-// Helper function to create proper payment method data
 function createPaymentMethodData(flutterwaveData) {
   const paymentType = flutterwaveData.payment_type || "card";
 
@@ -378,8 +186,7 @@ function createPaymentMethodData(flutterwaveData) {
   };
 }
 
-// Helper function to process order creation atomically
-async function processOrderCreation(transactionData, session = null) {
+async function processOrderCreation(transactionData) {
   const {
     transaction_id,
     tx_ref,
@@ -390,135 +197,34 @@ async function processOrderCreation(transactionData, session = null) {
     couponCode,
   } = transactionData;
 
-  // Idempotency check - find existing order
+  console.log(` STARTING order processing for: ${tx_ref}`);
+
+  // 1. IMMEDIATE DUPLICATE CHECK
   const existingOrder = await Order.findOne({
     $or: [
       { flutterwaveTransactionId: transaction_id },
       { flutterwaveRef: tx_ref },
     ],
-  }).session(session);
+  });
 
-  // If order already exists and is paid, return it
   if (existingOrder) {
-    console.log(
-      `✅ Order already exists: ${existingOrder.orderNumber} with status: ${existingOrder.paymentStatus}`
-    );
-
-    // Update payment status if it's undefined
-    if (
-      !existingOrder.paymentStatus ||
-      existingOrder.paymentStatus === "undefined"
-    ) {
-      existingOrder.paymentStatus = "paid";
-      await existingOrder.save({ session });
-      console.log(
-        `🔄 Updated paymentStatus to "paid" for order: ${existingOrder.orderNumber}`
-      );
-    }
-
+    console.log(` ORDER ALREADY EXISTS: ${existingOrder.orderNumber}`);
     return { order: existingOrder, isNew: false };
   }
 
-  // Get user with session for transaction consistency
-  let user;
-  if (mongoose.Types.ObjectId.isValid(userId)) {
-    // If userId is a valid ObjectId, find by ID
-    user = await User.findById(userId).session(session);
-  } else {
-    // If userId is email, find by email
-    user = await User.findOne({ email: userId }).session(session);
-  }
-  if (!user) throw new Error("User not found");
+  // 2. CHECK INVENTORY FIRST (before creating order)
+  console.log(` Checking inventory for ${parsedProducts.length} products`);
+  await checkInventoryAvailability(parsedProducts);
 
-  // Create proper payment method data
-  const paymentMethod = createPaymentMethodData(data);
+  // 3. CREATE ORDER
+  try {
+    console.log(` CREATING NEW ORDER for user: ${userId}`);
 
-  // Process inventory reduction - only if this is a new order
-  if (!existingOrder) {
-    for (const item of parsedProducts) {
-      if (!item._id) continue;
+    const user = await User.findById(userId);
+    if (!user) throw new Error("User not found");
 
-      // ========== BYPASS FOR TEST PRODUCTS ==========
-      // Skip product validation for test transactions
-      const isTestProduct =
-        item._id === "65a1b2c3d4e5f67890123457" ||
-        item._id === "507f1f77bcf86cd799439011";
-
-      if (isTestProduct) {
-        console.log(
-          `🧪 Test product detected: ${item.name} - skipping inventory check`
-        );
-        continue; // Skip inventory check for test products
-      }
-      // ========== END BYPASS ==========
-
-      const product = await Product.findOne({ _id: item._id }).session(session);
-      if (!product) {
-        throw new Error(`Product ${item.name} not found`);
-      }
-
-      if (product.countInStock < item.quantity) {
-        throw new Error(
-          `Insufficient stock for ${item.name}. Available: ${product.countInStock}, Requested: ${item.quantity}`
-        );
-      }
-
-      const updated = await Product.findOneAndUpdate(
-        { _id: item._id, countInStock: { $gte: item.quantity } },
-        { $inc: { countInStock: -item.quantity } },
-        { new: true, session }
-      );
-
-      if (!updated) {
-        throw new Error(`Insufficient stock for product ${item.name}`);
-      }
-    }
-  }
-
-  // Deactivate coupon if used - with proper query
-  if (couponCode && couponCode.trim() !== "") {
-    try {
-      const couponUpdate = await Coupon.findOneAndUpdate(
-        {
-          code: couponCode.trim().toUpperCase(),
-          userId: userId,
-          isActive: true,
-        },
-        {
-          isActive: false,
-          usedAt: new Date(),
-          usedInOrder: tx_ref, // Track which order used the coupon
-        },
-        { session, new: true }
-      );
-
-      if (couponUpdate) {
-        console.log(`✅ Coupon ${couponCode} deactivated for user ${userId}`);
-      } else {
-        console.log(`⚠️ Coupon ${couponCode} not found or already used`);
-      }
-    } catch (error) {
-      console.error("Error deactivating coupon:", error);
-    }
-  }
-
-  let order;
-
-  if (existingOrder) {
-    // Update existing order
-    existingOrder.paymentStatus = "paid";
-    existingOrder.status = "Pending";
-    existingOrder.flutterwaveTransactionId = transaction_id;
-    existingOrder.totalAmount =
-      Number(meta.finalTotal) ||
-      Number(data.amount) ||
-      existingOrder.totalAmount;
-    existingOrder.paymentMethod = paymentMethod; // Use paymentMethod instead of paymentData
-    order = await existingOrder.save({ session });
-  } else {
-    // In the "Create new order" section, update the products mapping:
     const products = parsedProducts.map((p) => ({
-      product: p._id || new mongoose.Types.ObjectId(), // Use real ID or generate a fake one
+      product: p._id,
       name: p.name || "Unknown Product",
       image: (p.images && p.images[0]) || "/placeholder.png",
       quantity: p.quantity || 1,
@@ -528,46 +234,179 @@ async function processOrderCreation(transactionData, session = null) {
       selectedCategory: p.category || "",
     }));
 
-    const defaultPhone =
-      user.phones?.find((ph) => ph.isDefault) || user.phones?.[0];
-    const defaultAddress =
-      user.addresses?.find((a) => a.isDefault) || user.addresses?.[0];
-
-    const addressString = defaultAddress
-      ? (defaultAddress.address && defaultAddress.address.trim()) ||
-        `${defaultAddress.landmark ? defaultAddress.landmark + ", " : ""}${
-          defaultAddress.lga ? defaultAddress.lga + ", " : ""
-        }${defaultAddress.city ? defaultAddress.city + ", " : ""}${
-          defaultAddress.state || ""
-        }`.trim()
-      : "";
-
-    order = new Order({
+    const order = new Order({
       user: user._id,
-      products: products,
+      products,
       subtotal: Number(meta.originalTotal) || Number(data.amount) || 0,
       discount: Number(meta.discountAmount) || 0,
       totalAmount: Number(meta.finalTotal) || Number(data.amount) || 0,
       orderNumber: generateOrderNumber(),
       couponCode: couponCode || null,
       deliveryAddress: meta.deliveryAddress || "No address provided",
-      phone:
-        meta.phoneNumber || user.phones?.[0]?.number || "No phone provided", // ✅ Use phone from meta
+      phone: meta.phoneNumber || "No phone provided",
       flutterwaveRef: tx_ref,
       flutterwaveTransactionId: transaction_id,
       paymentStatus: "paid",
       status: "Pending",
-      paymentMethod: paymentMethod,
+      paymentMethod: createPaymentMethodData(data),
+      isProcessed: true,
     });
 
-    await order.save({ session });
+    // Save order (will fail if duplicate due to unique indexes)
+    await order.save();
+
+    console.log(` SUCCESS: Created order ${order.orderNumber}`);
+
+    // 4. REDUCE INVENTORY (only after order is successfully created)
+    console.log(` Reducing inventory for order ${order.orderNumber}`);
+    await reduceInventory(parsedProducts);
+
+    // 5. CLEAR CART
+    await User.findByIdAndUpdate(userId, { cartItems: [] });
+
+    // 6. HANDLE COUPON
+    if (couponCode?.trim()) {
+      await Coupon.findOneAndUpdate(
+        { code: couponCode.trim().toUpperCase(), userId, isActive: true },
+        { isActive: false, usedAt: new Date(), usedInOrder: tx_ref }
+      );
+      console.log(` Coupon applied: ${couponCode}`);
+    }
+
+    return { order, isNew: true };
+  } catch (error) {
+    // Handle duplicate order error
+    if (error.code === 11000) {
+      console.log(`🔄 Duplicate key error - finding existing order...`);
+      const existingOrder = await Order.findOne({
+        $or: [
+          { flutterwaveTransactionId: transaction_id },
+          { flutterwaveRef: tx_ref },
+        ],
+      });
+
+      if (existingOrder) {
+        console.log(` Found existing order: ${existingOrder.orderNumber}`);
+        return { order: existingOrder, isNew: false };
+      }
+    }
+
+    console.error(`❌ ORDER CREATION FAILED:`, error);
+    throw error;
   }
-  
+}
 
-  // Clear user's cart
-  await User.findByIdAndUpdate(userId, { cartItems: [] }, { session });
+// Check inventory availability (READ ONLY - no changes)
+async function checkInventoryAvailability(parsedProducts) {
+  for (const item of parsedProducts) {
+    if (!item._id) continue;
 
-  return { order, isNew: !existingOrder };
+    const isTestProduct =
+      item._id === "65a1b2c3d4e5f67890123457" ||
+      item._id === "507f1f77bcf86cd799439011";
+    if (isTestProduct) {
+      console.log(` Test product - skipping inventory check`);
+      continue;
+    }
+
+    const product = await Product.findById(item._id);
+    if (!product) {
+      throw new Error(`Product ${item.name} not found`);
+    }
+
+    if (product.variants && product.variants.length > 0) {
+      const variant = product.variants.find(
+        (v) => v.size === item.size && v.color === item.color
+      );
+
+      if (!variant) {
+        throw new Error(
+          `Variant ${item.size}/${item.color} not found for ${item.name}`
+        );
+      }
+
+      if (variant.countInStock < item.quantity) {
+        throw new Error(
+          `Insufficient stock for ${item.name} - ${item.size}/${item.color}. Available: ${variant.countInStock}, Requested: ${item.quantity}`
+        );
+      }
+    } else {
+      if (product.countInStock < item.quantity) {
+        throw new Error(
+          `Insufficient stock for ${item.name}. Available: ${product.countInStock}, Requested: ${item.quantity}`
+        );
+      }
+    }
+
+    console.log(` Inventory available: ${item.name} - Qty: ${item.quantity}`);
+  }
+}
+
+// Reduce inventory (ATOMIC updates to prevent race conditions)
+async function reduceInventory(parsedProducts) {
+  for (const item of parsedProducts) {
+    if (!item._id) continue;
+
+    const isTestProduct =
+      item._id === "65a1b2c3d4e5f67890123457" ||
+      item._id === "507f1f77bcf86cd799439011";
+    if (isTestProduct) {
+      console.log(` Test product - skipping inventory reduction`);
+      continue;
+    }
+
+    try {
+      let updateResult;
+
+      // For products with variants
+      const product = await Product.findById(item._id);
+      if (product.variants && product.variants.length > 0) {
+        updateResult = await Product.findOneAndUpdate(
+          {
+            _id: item._id,
+            "variants.size": item.size,
+            "variants.color": item.color,
+            "variants.countInStock": { $gte: item.quantity },
+          },
+          {
+            $inc: {
+              "variants.$.countInStock": -item.quantity,
+            },
+          },
+          { new: true }
+        );
+
+        if (updateResult) {
+          // Update total countInStock
+          const updatedProduct = await Product.findById(item._id);
+          updatedProduct.countInStock = updatedProduct.variants.reduce(
+            (total, v) => total + v.countInStock,
+            0
+          );
+          await updatedProduct.save();
+        }
+      } else {
+        // For simple products
+        updateResult = await Product.findOneAndUpdate(
+          { _id: item._id, countInStock: { $gte: item.quantity } },
+          { $inc: { countInStock: -item.quantity } },
+          { new: true }
+        );
+      }
+
+      if (updateResult) {
+        console.log(` Inventory reduced: ${item.name} by ${item.quantity}`);
+      } else {
+        // This should rarely happen since we checked availability
+        console.error(
+          `Inventory reduction failed for: ${item.name} - manual review needed`
+        );
+      }
+    } catch (error) {
+      console.error(` Inventory reduction error for ${item.name}:`, error);
+      // Don't throw - order is already created, log for manual review
+    }
+  }
 }
 
 export const createCheckoutSession = async (req, res) => {
@@ -625,10 +464,10 @@ export const createCheckoutSession = async (req, res) => {
             (originalTotal * validCoupon.discountPercentage) / 100
           );
           console.log(
-            `✅ Coupon applied: ${couponCode} - Discount: ₦${discountAmount}`
+            `Coupon applied: ${couponCode} - Discount: ₦${discountAmount}`
           );
         } else {
-          console.log(`❌ Invalid or expired coupon: ${couponCode}`);
+          console.log(`Invalid or expired coupon: ${couponCode}`);
         }
       } catch (error) {
         console.error("Error validating coupon:", error);
@@ -639,7 +478,6 @@ export const createCheckoutSession = async (req, res) => {
 
     const tx_ref = `ECOSTORE-${Date.now()}`;
 
-    // Build Flutterwave payload
     const payload = {
       tx_ref,
       amount: finalTotal,
@@ -673,6 +511,7 @@ export const createCheckoutSession = async (req, res) => {
         discountAmount,
         finalTotal,
         deliveryAddress: addressString || "",
+        phoneNumber: defaultPhone.number || "",
       },
       customizations: {
         title: "EcoStore Purchase",
@@ -711,79 +550,79 @@ export const createCheckoutSession = async (req, res) => {
     });
   }
 };
+
 export const handleFlutterwaveWebhook = async (req, res) => {
-  console.log("🚨 WEBHOOK CALLED - STARTING PROCESS");
+  console.log("WEBHOOK CALLED - STARTING PROCESS");
 
   try {
-    // Enhanced debug info
-    console.log("🔍 === WEBHOOK DEBUG INFO ===");
-    console.log("📝 Headers:", JSON.stringify(req.headers, null, 2));
-    console.log("📦 Body:", JSON.stringify(req.body, null, 2));
-    console.log("🌐 URL:", req.url);
-    console.log("⚡ Method:", req.method);
-    console.log("🔑 FLW_WEBHOOK_HASH exists:", !!process.env.FLW_WEBHOOK_HASH);
-    console.log("🗄️ MongoDB connected:", mongoose.connection.readyState === 1);
-    console.log("🔍 === END DEBUG INFO ===");
-
-    // FIX: Use correct header name for Flutterwave webhook signature
     const signature = req.headers["verif-hash"];
-    console.log("🔑 Signature received:", signature);
+    console.log("Signature received:", signature);
 
     if (!signature) {
-      console.warn("❌ Missing verif-hash header");
+      console.warn("Missing verif-hash header");
       return res.status(401).send("Missing signature");
     }
 
     if (signature !== process.env.FLW_WEBHOOK_HASH) {
-      console.warn("❌ Invalid webhook signature - possible forgery attempt");
-      console.log("🔑 Received signature:", signature);
-      console.log("🔑 Expected signature:", process.env.FLW_WEBHOOK_HASH);
+      console.warn("Invalid webhook signature - possible forgery attempt");
+      console.log("Received signature:", signature);
+      console.log("Expected signature:", process.env.FLW_WEBHOOK_HASH);
       return res.status(401).send("Invalid signature");
     }
 
-    console.log("✅ Webhook signature validated successfully");
+    console.log("Webhook signature validated successfully");
 
     const event = req.body;
     if (!event) {
-      console.warn("❌ Empty webhook event body");
+      console.warn("Empty webhook event body");
       return res.status(400).send("No event body");
     }
 
-    console.log(
-      `📨 Webhook received: ${event.event} for ${event.data?.tx_ref}`
-    );
+    console.log(`Webhook received: ${event.event} for ${event.data?.tx_ref}`);
 
-    // Only process charge.completed events
     if (event.event !== "charge.completed") {
-      console.log(`⏭️ Ignoring webhook event: ${event.event}`);
+      console.log(`Ignoring webhook event: ${event.event}`);
       return res.status(200).send("Ignored event type");
     }
 
     const { id: transaction_id, tx_ref, status } = event.data;
 
+    // === ENHANCED DUPLICATE PROTECTION ===
+
+    const existingPaidOrder = await Order.findOne({
+      $or: [
+        { flutterwaveTransactionId: transaction_id },
+        { flutterwaveRef: tx_ref },
+      ],
+      paymentStatus: "paid",
+    });
+
+    if (existingPaidOrder) {
+      console.log(
+        ` Webhook: Order already processed: ${existingPaidOrder.orderNumber}`
+      );
+      return res.status(200).send("Order already processed");
+    }
+
     if (status !== "successful") {
-      console.log(`❌ Payment not successful: ${status} for ${tx_ref}`);
+      console.log(`Payment not successful: ${status} for ${tx_ref}`);
       return res.status(200).send("Payment not successful");
     }
 
-    console.log(`✅ Processing webhook for successful payment: ${tx_ref}`);
+    console.log(`Processing webhook for successful payment: ${tx_ref}`);
 
-    // 🛑 ENHANCED IDEMPOTENCY: Check if we're already processing this webhook
     const processingKey = `webhook_${transaction_id}_${tx_ref}`;
     if (global.webhookProcessing && global.webhookProcessing[processingKey]) {
-      console.log(`⏭️ Webhook already being processed: ${processingKey}`);
+      console.log(`Webhook already being processed: ${processingKey}`);
       return res.status(200).send("Webhook already being processed");
     }
 
-    // Set processing flag
     if (!global.webhookProcessing) global.webhookProcessing = {};
     global.webhookProcessing[processingKey] = true;
 
     let data;
 
     try {
-      // ========== IMPORTANT FIX: BYPASS VERIFICATION FOR TEST TRANSACTIONS ==========
-      // Check if this is a test transaction (fake ID or test pattern)
       const isTestTransaction =
         transaction_id === 285959875 ||
         tx_ref.includes("TEST") ||
@@ -791,43 +630,31 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
       if (isTestTransaction) {
         console.log(
-          "🧪 Test transaction detected - bypassing Flutterwave verification"
+          "Test transaction detected - bypassing Flutterwave verification"
         );
-        // Use the webhook data directly for test transactions
         data = event.data;
-
-        // Add missing fields that would normally come from Flutterwave verification
         data.payment_type = data.payment_type || "card";
         data.amount = data.amount || 100;
         data.currency = data.currency || "NGN";
-
-        console.log("✅ Using webhook data directly for test transaction");
+        console.log("Using webhook data directly for test transaction");
       } else {
-        // For real transactions, verify with Flutterwave API
         console.log(
-          `🔍 Verifying real transaction with Flutterwave: ${transaction_id}`
+          `Verifying real transaction with Flutterwave: ${transaction_id}`
         );
         const verifyResp = await flw.Transaction.verify({ id: transaction_id });
 
         if (!verifyResp?.data || verifyResp.data.status !== "successful") {
-          console.error(
-            `❌ Webhook verification failed for: ${transaction_id}`
-          );
-          console.log("🔍 Verification response:", verifyResp);
+          console.error(`Webhook verification failed for: ${transaction_id}`);
+          console.log("Verification response:", verifyResp);
           return res.status(400).send("Payment verification failed");
         }
 
         data = verifyResp.data;
-        console.log("✅ Real transaction verified successfully");
+        console.log("Real transaction verified successfully");
       }
 
-      // Handle both meta and meta_data formats from Flutterwave
-      console.log("🔍 Full event data:", JSON.stringify(event, null, 2));
-
-      // Extract from correct locations
       const meta_data = event.meta_data || {};
 
-      // Parse products safely from meta_data
       let parsedProducts = [];
       if (meta_data.products) {
         try {
@@ -836,8 +663,18 @@ export const handleFlutterwaveWebhook = async (req, res) => {
           } else {
             parsedProducts = meta_data.products;
           }
+          parsedProducts = parsedProducts.map((p) => ({
+            _id: p._id || p.id || null,
+            name: p.name,
+            images: p.images || [],
+            quantity: p.quantity || 1,
+            price: p.price,
+            size: p.size || null,
+            color: p.color || null,
+            category: p.category || null,
+          }));
         } catch (error) {
-          console.error("❌ Error parsing products:", error);
+          console.error("Error parsing products:", error);
           parsedProducts = [];
         }
       }
@@ -852,31 +689,28 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       const deliveryAddress = meta_data.deliveryAddress || "";
       const phoneNumber = event.data.customer?.phone_number || "";
 
-      console.log("🔍 UserId from meta_data:", userId);
-      console.log("🔍 Phone number:", phoneNumber);
-      console.log("🔍 Parsed products count:", parsedProducts.length);
+      console.log("UserId from meta_data:", userId);
+      console.log("Phone number:", phoneNumber);
+      console.log("Parsed products count:", parsedProducts.length);
       console.log(
-        `🔍 Extracted metadata - User: ${userId}, Products: ${parsedProducts.length}, Coupon: ${couponCode}`
+        `Extracted metadata - User: ${userId}, Products: ${parsedProducts.length}, Coupon: ${couponCode}`
       );
 
       if (!userId) {
         console.error(
-          "❌ Missing userId in webhook data. Full meta_data:",
+          "Missing userId in webhook data. Full meta_data:",
           JSON.stringify(meta_data, null, 2)
         );
-
-        // Try to find any user as fallback for testing
         const fallbackUser = await User.findOne();
         if (fallbackUser) {
-          console.log(`🔄 Using fallback user: ${fallbackUser._id}`);
+          console.log(`Using fallback user: ${fallbackUser._id}`);
           userId = fallbackUser._id.toString();
         } else {
           return res.status(400).send("Missing userId");
         }
       }
 
-      // Check if order already exists (idempotency check)
-      console.log(`🔍 Checking for existing order with tx_ref: ${tx_ref}`);
+      console.log(`Checking for existing order with tx_ref: ${tx_ref}`);
       const existingOrder = await Order.findOne({
         $or: [
           { flutterwaveTransactionId: transaction_id },
@@ -886,20 +720,17 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
       if (existingOrder) {
         console.log(
-          `📦 Found existing order: ${existingOrder.orderNumber} with status: ${existingOrder.paymentStatus}`
+          `Found existing order: ${existingOrder.orderNumber} with status: ${existingOrder.paymentStatus}`
         );
         if (existingOrder.paymentStatus === "paid") {
-          console.log(
-            `✅ Order already processed: ${existingOrder.orderNumber}`
-          );
+          console.log(`Order already processed: ${existingOrder.orderNumber}`);
           return res.status(200).send("Order already processed");
         }
       } else {
-        console.log("🆕 No existing order found - creating new order");
+        console.log("No existing order found - creating new order");
       }
 
-      // Use transaction to ensure atomic operations
-      console.log("🔄 Starting database transaction...");
+      console.log("Starting database transaction...");
       const session = await mongoose.startSession();
 
       try {
@@ -926,37 +757,35 @@ export const handleFlutterwaveWebhook = async (req, res) => {
             couponCode,
           };
 
-          console.log("🔄 Processing order creation...");
+          console.log("Processing order creation...");
           const { order, isNew } = await processOrderCreation(
             transactionData,
             session
           );
 
           console.log(
-            `✅ ${isNew ? "Created new" : "Updated existing"} order: ${
+            `${isNew ? "Created new" : "Updated existing"} order: ${
               order.orderNumber
             } for user: ${userId}`
           );
 
-          // ✅ SMART COUPON CREATION: Tiered loyalty system
-          // In your webhook handler, replace the coupon creation section with this:
           if (isNew) {
             try {
-              console.log(`🎯 STARTING COUPON PROCESS FOR USER: ${userId}`);
-              console.log(`🔍 Order amount: ₦${order.totalAmount}`);
+              console.log(`STARTING COUPON PROCESS FOR USER: ${userId}`);
+              console.log(`Order amount: ₦${order.totalAmount}`);
 
               const couponEligibility = await checkCouponEligibility(
                 userId,
                 order.totalAmount
               );
-              console.log(`🔍 Coupon eligibility result:`, couponEligibility);
+              console.log(`Coupon eligibility result:`, couponEligibility);
 
               if (couponEligibility) {
                 console.log(
-                  `🎯 User eligible for ${couponEligibility.reason} coupon`
+                  `User eligible for ${couponEligibility.reason} coupon`
                 );
 
-                console.log(`🔍 Calling createNewCoupon with:`, {
+                console.log(`Calling createNewCoupon with:`, {
                   userId,
                   discountPercentage: couponEligibility.discountPercentage,
                   couponType: couponEligibility.codePrefix,
@@ -970,21 +799,20 @@ export const handleFlutterwaveWebhook = async (req, res) => {
                   daysValid: 30,
                 });
 
-                console.log(`🔍 createNewCoupon returned:`, newCoupon);
+                console.log(`createNewCoupon returned:`, newCoupon);
 
                 if (newCoupon && newCoupon.isActive) {
                   console.log(
-                    `✅ Successfully created ACTIVE coupon: ${newCoupon.code}`
+                    `Successfully created ACTIVE coupon: ${newCoupon.code}`
                   );
 
-                  // Send coupon email
                   try {
                     const user = await User.findById(userId);
-                    console.log(`🔍 User found for email:`, user?.email);
+                    console.log(`User found for email:`, user?.email);
 
                     if (user && user.email) {
                       console.log(
-                        `📧 Attempting to send coupon email to: ${user.email}`
+                        `Attempting to send coupon email to: ${user.email}`
                       );
                       await sendCouponEmail({
                         to: user.email,
@@ -995,34 +823,31 @@ export const handleFlutterwaveWebhook = async (req, res) => {
                           paymentStatus: "paid",
                         }),
                       });
-                      console.log(
-                        `✅ Coupon email sent for: ${newCoupon.code}`
-                      );
+                      console.log(`Coupon email sent for: ${newCoupon.code}`);
                     } else {
-                      console.log(`❌ No user or email found for coupon`);
+                      console.log(`No user or email found for coupon`);
                     }
                   } catch (emailErr) {
-                    console.error("❌ Coupon email send failed:", emailErr);
+                    console.error("Coupon email send failed:", emailErr);
                     console.error("Email error details:", emailErr.message);
                   }
                 } else {
-                  console.log(`⚠️ Coupon creation returned:`, newCoupon);
+                  console.log(`Coupon creation returned:`, newCoupon);
                   if (!newCoupon) {
-                    console.log(`❌ Coupon creation returned NULL`);
+                    console.log(`Coupon creation returned NULL`);
                   } else if (!newCoupon.isActive) {
-                    console.log(`❌ Coupon created but is INACTIVE`);
+                    console.log(`Coupon created but is INACTIVE`);
                   }
                 }
               } else {
-                console.log(`ℹ️ User not eligible for coupon at this time`);
+                console.log(`User not eligible for coupon at this time`);
               }
             } catch (error) {
-              console.error("❌ Coupon creation failed:", error);
+              console.error("Coupon creation failed:", error);
               console.error("Error stack:", error.stack);
             }
           }
 
-          // Send confirmation email (non-blocking)
           try {
             const user = await User.findById(userId);
             if (user && user.email) {
@@ -1032,46 +857,32 @@ export const handleFlutterwaveWebhook = async (req, res) => {
                 flutterwaveData: data,
               });
               console.log(
-                `📧 Confirmation email sent for order: ${order.orderNumber}`
+                `Confirmation email sent for order: ${order.orderNumber}`
               );
             } else {
-              console.log(
-                "⚠️ User not found or no email for order confirmation"
-              );
+              console.log("User not found or no email for order confirmation");
             }
           } catch (emailErr) {
-            console.error("❌ Email send failed (webhook):", emailErr);
-            // Don't throw - email failure shouldn't break the webhook
+            console.error("Email send failed (webhook):", emailErr);
           }
         });
 
-        console.log("✅ Database transaction committed successfully");
+        console.log("Database transaction committed successfully");
       } finally {
         await session.endSession();
       }
 
-      console.log(`✅ Webhook processing completed successfully`);
+      console.log(`Webhook processing completed successfully`);
       return res.status(200).send("Order processed successfully");
     } finally {
-      // Clear processing flag
       delete global.webhookProcessing[processingKey];
     }
   } catch (err) {
-    console.error(`❌ Webhook processing error:`, err);
-
-    // Log detailed error information
-    await logWebhookForDebugging({
-      error: err.message,
-      stack: err.stack,
-      body: req.body,
-    });
-
-    // Send error response so Flutterwave knows to retry
+    console.error(`Webhook processing error:`, err);
     return res.status(500).send("Webhook processing failed");
   }
 };
 
-// Retry helper for transient errors
 async function withRetry(fn, retries = 3, delay = 200) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -1099,8 +910,27 @@ export const checkoutSuccess = async (req, res) => {
     if (!transaction_id) {
       return res.status(400).json({ error: "transaction_id is required" });
     }
+    // === ENHANCED DUPLICATE PROTECTION ===
+    const existingPaidOrder = await Order.findOne({
+      $or: [
+        { flutterwaveTransactionId: transaction_id },
+        { flutterwaveRef: tx_ref },
+      ],
+      paymentStatus: "paid",
+    });
 
-    // Verify payment with Flutterwave
+    if (existingPaidOrder) {
+      console.log(
+        `🔄 CheckoutSuccess: Order already processed: ${existingPaidOrder.orderNumber}`
+      );
+      return res.status(200).json({
+        success: true,
+        message: "Order already processed",
+        orderId: existingPaidOrder._id,
+        orderNumber: existingPaidOrder.orderNumber,
+      });
+    }
+
     const verifyResp = await flw.Transaction.verify({ id: transaction_id });
     const data = verifyResp?.data;
 
@@ -1119,7 +949,6 @@ export const checkoutSuccess = async (req, res) => {
         .json({ error: "Missing userId in payment metadata" });
     }
 
-    // Check if order already exists and is paid (idempotency)
     const existingOrder = await Order.findOne({
       $or: [
         { flutterwaveTransactionId: transaction_id },
@@ -1127,7 +956,6 @@ export const checkoutSuccess = async (req, res) => {
       ],
     });
 
-    // If order already exists and is paid, return success
     if (existingOrder && existingOrder.paymentStatus === "paid") {
       return res.status(200).json({
         success: true,
@@ -1139,7 +967,6 @@ export const checkoutSuccess = async (req, res) => {
 
     let finalOrder;
 
-    // Use retry for the transaction
     await withRetry(async () => {
       const session = await mongoose.startSession();
 
@@ -1160,7 +987,7 @@ export const checkoutSuccess = async (req, res) => {
             session
           );
           finalOrder = order;
-          // ✅ SMART COUPON CREATION: Tiered loyalty system
+
           const couponEligibility = await checkCouponEligibility(
             userId,
             finalOrder.totalAmount
@@ -1175,10 +1002,9 @@ export const checkoutSuccess = async (req, res) => {
 
             if (newCoupon) {
               console.log(
-                `🎉 Created ${couponEligibility.reason} coupon: ${newCoupon.code}`
+                `Created ${couponEligibility.reason} coupon: ${newCoupon.code}`
               );
 
-              // Send coupon email
               try {
                 const user = await User.findById(userId);
                 if (user && user.email) {
@@ -1198,7 +1024,6 @@ export const checkoutSuccess = async (req, res) => {
             }
           }
 
-          // Send email (non-blocking)
           (async () => {
             try {
               const user = await User.findById(userId);
@@ -1271,7 +1096,13 @@ export const sendDetailedOrderEmail = async ({
       return `
         <tr>
           <td style="padding: 8px 12px; border:1px solid #eee;">
-            ${item.name || item.productName || "Item"}
+          <p display:block; margin-top: 1; margin-bottom:1>${
+            item.name || item.productName || "Item"
+          }</p>
+            <img src="${item.image}" alt="${
+        item.name
+      }" width="60" height="60" style="border-radius: 6px; object-fit: cover;" />
+           
             ${
               details
                 ? `<br/><small style="color:#666;">${details || ""}</small>`
@@ -1312,7 +1143,7 @@ export const sendDetailedOrderEmail = async ({
             process.env.STORE_LOGO || ""
           }" alt="Store Logo" style="max-height:50px; display:block; margin: 0 auto 8px;" />
           <h1 style="margin:0; font-size:20px;">Order Confirmation</h1>
-          <div style="margin-top:6px; font-size:14px;">Order #${
+          <div style="margin-top:6px; font-size:15px;">${
             order.orderNumber || "N/A"
           }</div>
         </div>
@@ -1369,17 +1200,19 @@ export const sendDetailedOrderEmail = async ({
 
           ${cardInfo}
 
-          <p style="margin-top:20px; color:#555;">We'll send another email once your order ships. If you need help, just reply to this email — we're happy to assist.</p>
+          <p style="margin-top:20px; color:#555;">We'll send another email once your order ships.</p>
 
-          <p style="margin-top:18px;">Thanks for choosing <strong>EcoStore</strong> 🌱</p>
+          
         </div>
 
-        <div style="background:#fbfcfb; padding:14px; text-align:center; font-size:13px; color:#666;">
-          Need help? Contact us at <a href="mailto:${
+        <div style="background: #1e293b; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
+          <p style="margin: 0 0 10px 0;"><p style="margin-top:18px;">Thanks for choosing <strong>Eco~Store</strong> 🌱</p>
+          <p style="margin: 0;">Need help? Contact us at <a href="mailto:${
             process.env.SUPPORT_EMAIL || "support@ecostore.example"
-          }" style="color:#10b981;">${
-    process.env.SUPPORT_EMAIL || "support@ecostore.example"
-  }</a>
+          }" 
+             style="color: #10b981; text-decoration: none;">${
+               process.env.SUPPORT_EMAIL || "support@ecostore.example"
+             }</a></p>
         </div>
       </div>
     </div>
@@ -1388,7 +1221,7 @@ export const sendDetailedOrderEmail = async ({
   // Plain text fallback
   const text = [
     `EcoStore — Order Confirmation`,
-    `Order #: ${order.orderNumber || "N/A"}`,
+    ` ${order.orderNumber || "N/A"}`,
     `Customer: ${customerName}`,
     `Total: ₦${Number(totalAmount).toLocaleString()}`,
     `Delivery Address: ${order.deliveryAddress || "No address provided"}`,
@@ -1406,7 +1239,7 @@ export const sendDetailedOrderEmail = async ({
         ).toLocaleString()}`
     ),
     ``,
-    `Thanks for shopping with EcoStore!`,
+    `Thanks for shopping with Eco~Store!`,
   ].join("\n");
 
   // Send email
@@ -1423,7 +1256,7 @@ export const sendCouponEmail = async ({
   to,
   coupon,
   couponType = "welcome_coupon",
-  orderCount = 1
+  orderCount = 1,
 }) => {
   if (!to || !coupon) return;
 
@@ -1490,7 +1323,9 @@ export const sendCouponEmail = async ({
     <div style="font-family: Arial, sans-serif; background-color: #f0f9f4; padding: 20px;">
       <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
         <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; color: #fff;">
-          <img src="${process.env.STORE_LOGO || ''}" alt="EcoStore Logo" style="max-height: 50px; display:block; margin: 0 auto 15px;" />
+          <img src="${
+            process.env.STORE_LOGO || ""
+          }" alt="EcoStore Logo" style="max-height: 50px; display:block; margin: 0 auto 15px;" />
           <h1 style="margin:0; font-size: 28px; font-weight: bold;">${title}</h1>
           <div style="margin-top: 10px; font-size: 18px; opacity: 0.9;">Your Exclusive Discount Awaits!</div>
         </div>
@@ -1508,7 +1343,9 @@ export const sendCouponEmail = async ({
               ${couponValue}
             </div>
             <div style="font-size: 14px; color: #92400e;">
-              Valid until: ${new Date(coupon.expirationDate).toLocaleDateString()}
+              Valid until: ${new Date(
+                coupon.expirationDate
+              ).toLocaleDateString()}
             </div>
           </div>
 
@@ -1517,8 +1354,12 @@ export const sendCouponEmail = async ({
             <ol style="margin: 0; padding-left: 20px; color: #475569;">
               <li>Shop your favorite eco-friendly products</li>
               <li>Proceed to checkout</li>
-              <li>Enter code <strong style="color: #ea580c;">${coupon.code}</strong> in the coupon field</li>
-              <li>Enjoy your ${coupon.discountPercentage}% discount instantly!</li>
+              <li>Enter code <strong style="color: #ea580c;">${
+                coupon.code
+              }</strong> in the coupon field</li>
+              <li>Enjoy your ${
+                coupon.discountPercentage
+              }% discount instantly!</li>
             </ol>
           </div>
 
@@ -1527,7 +1368,7 @@ export const sendCouponEmail = async ({
           </p>
 
           <div style="text-align: center; margin-top: 30px;">
-            <a href="${process.env.CLIENT_URL || 'https://your-ecostore.com'}" 
+            <a href="${process.env.CLIENT_URL || "https://your-ecostore.com"}" 
                style="background: #10b981; color: white; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
               🛍️ Start Shopping Now
             </a>
@@ -1535,9 +1376,13 @@ export const sendCouponEmail = async ({
         </div>
 
         <div style="background: #1e293b; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
-          <p style="margin: 0 0 10px 0;">Thank you for choosing sustainable shopping with EcoStore 🌱</p>
-          <p style="margin: 0;">Need help? Contact us at <a href="mailto:${process.env.SUPPORT_EMAIL || 'support@ecostore.example'}" 
-             style="color: #10b981; text-decoration: none;">${process.env.SUPPORT_EMAIL || 'support@ecostore.example'}</a></p>
+          <p style="margin: 0 0 10px 0;">Thank you for choosing sustainable shopping with Eco~Store 🌱</p>
+          <p style="margin: 0;">Need help? Contact us at <a href="mailto:${
+            process.env.SUPPORT_EMAIL || "support@ecostore.example"
+          }" 
+             style="color: #10b981; text-decoration: none;">${
+               process.env.SUPPORT_EMAIL || "support@ecostore.example"
+             }</a></p>
         </div>
       </div>
     </div>
@@ -1547,7 +1392,7 @@ export const sendCouponEmail = async ({
   const text = `
 ${title}
 
-${message.replace(/<[^>]*>/g, '').trim()}
+${message.replace(/<[^>]*>/g, "").trim()}
 
 YOUR DISCOUNT CODE: ${coupon.code}
 DISCOUNT: ${couponValue}
@@ -1559,7 +1404,7 @@ How to Use:
 3. Enter code ${coupon.code} in the coupon field
 4. Enjoy your ${coupon.discountPercentage}% discount instantly!
 
-Shop now: ${process.env.CLIENT_URL || 'https://your-ecostore.com'}
+Shop now: ${process.env.CLIENT_URL || "https://your-ecostore.com"}
 
 This coupon is exclusively for you and cannot be transferred.
 
@@ -1573,6 +1418,4 @@ Thank you for choosing sustainable shopping with EcoStore 🌱
     text,
   });
 };
-
-
 

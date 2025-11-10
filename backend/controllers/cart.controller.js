@@ -29,11 +29,31 @@ export const addToCart = async (req, res) => {
 
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ message: "Product not found" });
-    if (product.countInStock <= 0)
+
+    // Find variant stock - NEW LOGIC
+    let availableStock = product.countInStock; // fallback to overall stock
+    let variant = null;
+
+    if (size || color) {
+      variant = product.variants.find(
+        (v) => v.size === size && v.color === color
+      );
+
+      if (variant) {
+        availableStock = variant.countInStock;
+      } else if (product.variants.length > 0) {
+        // If product has variants but this specific one doesn't exist
+        return res
+          .status(400)
+          .json({ message: "This variant is not available" });
+      }
+    }
+
+    if (availableStock <= 0) {
       return res.status(400).json({ message: "Out of stock" });
+    }
 
-
-    // Look for an existing item (size/color only matter if they exist)
+    // Look for existing item in user's cart
     const existingItem = user.cartItems.find(
       (item) =>
         item.product?.toString() === productId &&
@@ -42,10 +62,10 @@ export const addToCart = async (req, res) => {
     );
 
     if (existingItem) {
-      if (existingItem.quantity + 1 > product.countInStock) {
+      if (existingItem.quantity + 1 > availableStock) {
         return res
           .status(400)
-          .json({ message: `Only ${product.countInStock} left in stock` });
+          .json({ message: `Only ${availableStock} left in stock` });
       }
       existingItem.quantity += 1;
     } else {
@@ -53,8 +73,8 @@ export const addToCart = async (req, res) => {
         product: productId,
         quantity: 1,
       };
-      if (size) newItem.size = size; // only add if provided
-      if (color) newItem.color = color; // only add if provided
+      if (size) newItem.size = size;
+      if (color) newItem.color = color;
 
       user.cartItems.push(newItem);
     }
@@ -107,14 +127,24 @@ export const updateQuantity = async (req, res) => {
     const { size, color, quantity } = req.body;
     const user = req.user;
 
-    // find product to check available stock
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
+    // Find variant stock - NEW LOGIC
+    let availableStock = product.countInStock;
+    if (size || color) {
+      const variant = product.variants.find(
+        (v) => v.size === size && v.color === color
+      );
+      if (variant) {
+        availableStock = variant.countInStock;
+      }
+    }
+
     // Check stock before updating
-    if (quantity > product.countInStock) {
+    if (quantity > availableStock) {
       return res.status(400).json({
-        message: `Only ${product.countInStock} left in stock`,
+        message: `Only ${availableStock} left in stock`,
       });
     }
 
@@ -130,7 +160,6 @@ export const updateQuantity = async (req, res) => {
     }
 
     if (quantity <= 0) {
-      // remove if quantity is 0
       user.cartItems = user.cartItems.filter(
         (item) =>
           !(
@@ -144,7 +173,6 @@ export const updateQuantity = async (req, res) => {
     }
 
     await user.save();
-
     res.json(user.cartItems);
   } catch (error) {
     console.log("Error in updateQuantity controller", error.message);

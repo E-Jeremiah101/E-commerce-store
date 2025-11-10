@@ -2,7 +2,126 @@ import redis  from "../lib/redis.js";
 import cloudinary from "../lib/cloudinary.js";
 import Product from "../models/product.model.js";
 import {optimizeCloudinaryUrl} from "../lib/optimizeCloudinaryUrl.js";
-import Category from "../models/categoy.model.js"
+import Category from "../models/categoy.model.js";
+
+
+// Add these new functions to your product.controller.js
+
+// Get product variants
+export const getProductVariants = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    
+    res.json({
+      variants: product.variants || [],
+      totalVariants: product.variants?.length || 0
+    });
+  } catch (error) {
+    console.log("Error in getProductVariants controller", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Update variant stock
+export const updateVariantStock = async (req, res) => {
+  try {
+    const { variants } = req.body;
+    const product = await Product.findById(req.params.id);
+    
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Update variants
+    if (variants && Array.isArray(variants)) {
+      product.variants = variants;
+      
+      // Recalculate total stock
+      product.countInStock = variants.reduce((total, variant) => 
+        total + (variant.countInStock || 0), 0
+      );
+    }
+
+    await product.save();
+    res.json(product);
+  } catch (error) {
+    console.log("Error in updateVariantStock controller", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Add this to your product.controller.js
+export const updateVariantInventory = async (req, res) => {
+  try {
+    const { productId, variantId } = req.params;
+    const { quantityChange } = req.body;
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Find the variant
+    const variant = product.variants.id(variantId);
+    if (!variant) {
+      return res.status(404).json({ message: "Variant not found" });
+    }
+
+    // Update variant stock
+    const newStock = variant.countInStock + quantityChange;
+    if (newStock < 0) {
+      return res.status(400).json({ message: "Insufficient stock" });
+    }
+
+    variant.countInStock = newStock;
+    
+    // Update main product stock (sum of all variants)
+    product.countInStock = product.variants.reduce((total, v) => total + v.countInStock, 0);
+
+    await product.save();
+
+    res.json({
+      message: 'Variant stock updated successfully',
+      countInStock: variant.countInStock,
+      productStock: product.countInStock
+    });
+  } catch (error) {
+    console.error('Error updating variant inventory:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Get variant stock specifically
+export const getVariantStock = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { size, color } = req.query;
+    
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    let stock = product.countInStock;
+    
+    // If variants exist, find specific variant
+    if (product.variants && product.variants.length > 0) {
+      const variant = product.variants.find(v => 
+        v.size === size && v.color === color
+      );
+      stock = variant ? variant.countInStock : 0;
+    }
+
+    res.json({ stock, productId, size, color });
+  } catch (error) {
+    console.log("Error in getVariantStock controller", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 export const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find({}); // find all products
@@ -53,11 +172,10 @@ export const createProduct = async (req, res) => {
       sizes,
       colors,
       countInStock,
+      variants, // ADD this new field
     } = req.body;
 
     let uploadedImages = [];
-
-    // Upload each image to Cloudinary if provided as base64 strings
 
     if (Array.isArray(images) && images.length > 0) {
       const uploadPromises = images.map((img) =>
@@ -69,6 +187,11 @@ export const createProduct = async (req, res) => {
       );
     }
 
+    // Calculate total stock from variants if provided
+    const totalStock = variants
+      ? variants.reduce((sum, variant) => sum + (variant.countInStock || 0), 0)
+      : countInStock;
+
     const product = await Product.create({
       name,
       description,
@@ -77,10 +200,11 @@ export const createProduct = async (req, res) => {
       category,
       sizes: sizes || [],
       colors: colors || [],
-      countInStock,
+      countInStock: totalStock, // Set total from variants
+      variants: variants || [], // ADD variants
     });
 
-    //  Automatically create category if it doesn’t exist
+    // Automatically create category if it doesn't exist
     if (category) {
       const existingCategory = await Category.findOne({ name: category });
       if (!existingCategory) {

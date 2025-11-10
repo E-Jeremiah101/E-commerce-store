@@ -11,6 +11,13 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const productVariantSchema = new mongoose.Schema({
+  size: { type: String, required: true },
+  color: { type: String, required: true },
+  countInStock: { type: Number, required: true, default: 0, min: 0 },
+  sku: { type: String, unique: true, sparse: true },
+});
+
 const productSchema = new mongoose.Schema(
   {
     name: {
@@ -32,7 +39,8 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
-    
+
+    variants: [productVariantSchema],
 
     reviews: [reviewSchema],
     numReviews: { type: Number, default: 0 },
@@ -47,7 +55,7 @@ const productSchema = new mongoose.Schema(
     sizes: [{ type: String }],
     colors: [{ type: String }],
     category: {
-      type: String,
+      type: String, 
       required: true,
     },
     isFeatured: {

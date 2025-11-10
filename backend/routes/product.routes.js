@@ -11,33 +11,40 @@ import {
   getSearchSuggestions,
   getProductById,
   reduceProduct,
+  updateVariantStock,
+  getProductVariants,
+  getVariantStock,
+  updateVariantInventory,
 } from "../controllers/product.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
-import Product from "../models/product.model.js";
 
 const router = express.Router();
 
-router.get("/", protectRoute, adminRoute, getAllProducts);
-
+// Public routes
 router.get("/featured", getFeaturedProducts);
-
 router.get("/category/:category", getProductsByCategory);
-
 router.get("/recommendations", getRecommendedProducts);
-
-router.post("/", protectRoute, adminRoute, createProduct);
-
-router.patch("/:id", protectRoute, adminRoute, toggleFeaturedProduct);
-
-router.delete("/:id", protectRoute, adminRoute, deleteProduct);
-
 router.get("/search", searchProducts);
-
 router.get("/suggestions", getSearchSuggestions);
 router.get("/:id", getProductById);
-router.put("/:id/reduce-stock",reduceProduct);
 
+// Variant-specific routes (public)
+router.get("/:id/variants", getProductVariants);
+router.get("/stock/:productId", getVariantStock); // ADD THIS ROUTE
 
+// Admin protected routes
+router.get("/", protectRoute, adminRoute, getAllProducts);
+router.post("/", protectRoute, adminRoute, createProduct);
+router.patch("/:id", protectRoute, adminRoute, toggleFeaturedProduct);
+router.delete("/:id", protectRoute, adminRoute, deleteProduct);
+router.put("/:id/reduce-stock", protectRoute, adminRoute, reduceProduct);
+router.put("/:id/variants", protectRoute, adminRoute, updateVariantStock);
+router.put(
+  "/:productId/variants/:variantId/inventory",
+  protectRoute,
+  adminRoute,
+  updateVariantInventory
+);
 
 export default router;

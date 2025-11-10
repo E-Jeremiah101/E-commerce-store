@@ -7,7 +7,7 @@ const axiosInstance = axios.create({
 });
 
 // Default request timeout to avoid hanging requests in production
-axiosInstance.defaults.timeout = 15000; // 15 seconds
+axiosInstance.defaults.timeout = 35000; // 30 seconds
 
 let isRefreshing = false;
 let failedQueue = [];

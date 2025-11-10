@@ -28,7 +28,7 @@ const PeopleAlsoBought = () => {
       <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
     </div>
   );
-  return (
+  return ( 
     <div className="mt-20">
       <h3 className="text-1xl font-semibold text-black tracking-wider">
         You may also like

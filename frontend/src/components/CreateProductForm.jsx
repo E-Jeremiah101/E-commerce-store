@@ -1,14 +1,11 @@
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { PlusCircle, Upload, Loader, Plus } from "lucide-react";
+import { PlusCircle, Upload, Loader, Plus, Trash2 } from "lucide-react";
 import { useProductStore } from "../stores/useProductStore.jsx";
 import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import toast from "react-hot-toast";
 import axios from "../lib/axios.js";
-
-
 
 const fallbackCategories = [
   "bottoms",
@@ -34,6 +31,7 @@ const CreateProductForm = () => {
     sizes: [],
     colors: [],
     countInStock: 0,
+    variants: [], // ADD variants array
   });
 
   const { createProduct, loading } = useProductStore();
@@ -67,13 +65,14 @@ const CreateProductForm = () => {
         sizes: [],
         colors: [],
         countInStock: 0,
+        variants: [],
       });
     } catch (error) {
       toast.error("Error creating product.");
     }
   };
 
-  // Add new category (and refresh list)
+  // Add new category
   const handleAddCategory = async () => {
     if (!newCategory.trim())
       return toast.error("Category name cannot be empty.");
@@ -91,12 +90,70 @@ const CreateProductForm = () => {
     }
   };
 
-  //  Handle Quill input
+  // Handle variant generation
+  const generateVariants = () => {
+    if (newProduct.sizes.length === 0 && newProduct.colors.length === 0) {
+      toast.error("Please add sizes or colors first");
+      return;
+    }
+
+    const variants = [];
+
+    // If no sizes/colors, create one default variant
+    if (newProduct.sizes.length === 0 && newProduct.colors.length === 0) {
+      variants.push({
+        size: "",
+        color: "",
+        countInStock: newProduct.countInStock,
+        sku: `${newProduct.name.replace(/\s+/g, "-").toUpperCase()}-DEFAULT`,
+      });
+    } else {
+      // Generate all size/color combinations
+      const sizes = newProduct.sizes.length > 0 ? newProduct.sizes : [""];
+      const colors = newProduct.colors.length > 0 ? newProduct.colors : [""];
+
+      sizes.forEach((size) => {
+        colors.forEach((color) => {
+          variants.push({
+            size,
+            color,
+            countInStock: 0, // Start with 0 stock
+            sku: `${newProduct.name.replace(/\s+/g, "-").toUpperCase()}-${
+              size || "NS"
+            }-${color || "NC"}`,
+          });
+        });
+      });
+    }
+
+    setNewProduct((prev) => ({ ...prev, variants }));
+    toast.success(`Generated ${variants.length} variants`);
+  };
+
+  // Update variant stock
+  const updateVariantStock = (index, stock) => {
+    const updatedVariants = [...newProduct.variants];
+    updatedVariants[index].countInStock = parseInt(stock) || 0;
+
+    // Calculate total stock
+    const totalStock = updatedVariants.reduce(
+      (sum, variant) => sum + variant.countInStock,
+      0
+    );
+
+    setNewProduct((prev) => ({
+      ...prev,
+      variants: updatedVariants,
+      countInStock: totalStock,
+    }));
+  };
+
+  // Handle Quill input
   const handleDescriptionChange = (content) => {
     setNewProduct((prev) => ({ ...prev, description: content }));
   };
 
-  //  Handle image uploads
+  // Handle image uploads
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
     const readers = files.map(
@@ -113,7 +170,7 @@ const CreateProductForm = () => {
     });
   };
 
-  //  Quill setup
+  // Quill setup
   const modules = {
     toolbar: [
       [{ header: [1, 2, 3, false] }],
@@ -134,7 +191,7 @@ const CreateProductForm = () => {
 
   return (
     <motion.div
-      className="bg-gray-800 shadow-lg rounded-lg p-8 mb-8 max-w-xl mx-auto"
+      className="bg-gray-800 shadow-lg rounded-lg p-8 mb-8 max-w-4xl mx-auto" // Increased max-width
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
@@ -191,25 +248,101 @@ const CreateProductForm = () => {
           />
         </div>
 
-        {/* STOCK COUNT */}
+        {/* SIZES */}
         <div>
           <label className="block text-sm font-medium text-gray-300 tracking-wider">
-            Stock Quantity
+            Sizes (comma separated)
           </label>
           <input
-            type="number"
-            min="0"
-            value={newProduct.countInStock || ""}
+            type="text"
+            value={newProduct.sizes.join(", ")}
             onChange={(e) =>
               setNewProduct({
                 ...newProduct,
-                countInStock: Number(e.target.value),
+                sizes: e.target.value.split(",").map((s) => s.trim()),
               })
             }
-            placeholder="e.g. 20"
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:ring-2 focus:ring-gray-600"
-            required
+            placeholder="e.g. S, M, L, XL"
+            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
           />
+        </div>
+
+        {/* COLORS */}
+        <div>
+          <label className="block text-sm font-medium text-gray-300 tracking-wider">
+            Colors (comma separated)
+          </label>
+          <input
+            type="text"
+            value={newProduct.colors.join(", ")}
+            onChange={(e) =>
+              setNewProduct({
+                ...newProduct,
+                colors: e.target.value.split(",").map((c) => c.trim()),
+              })
+            }
+            placeholder="e.g. Red, Blue, Green"
+            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
+          />
+        </div>
+
+        {/* VARIANT MANAGEMENT */}
+        <div className="border border-gray-600 rounded-md p-4">
+          <div className="flex justify-between items-center mb-4">
+            <label className="block text-sm font-medium text-gray-300 tracking-wider">
+              Product Variants & Inventory
+            </label>
+            <button
+              type="button"
+              onClick={generateVariants}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-sm"
+            >
+              Generate Variants
+            </button>
+          </div>
+
+          {newProduct.variants.length > 0 ? (
+            <div className="space-y-3 max-h-60 overflow-y-auto">
+              {newProduct.variants.map((variant, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-3 bg-gray-700 p-2 rounded"
+                >
+                  <div className="flex-1">
+                    <span className="text-white text-sm">
+                      {variant.size || "No Size"} /{" "}
+                      {variant.color || "No Color"}
+                    </span>
+                    <span className="text-gray-400 text-xs block">
+                      {variant.sku}
+                    </span>
+                  </div>
+                  <input
+                    type="number"
+                    min="0"
+                    value={variant.countInStock}
+                    onChange={(e) => updateVariantStock(index, e.target.value)}
+                    placeholder="Stock"
+                    className="w-20 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-white text-sm"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm">
+              Add sizes and/or colors, then click "Generate Variants" to set up
+              inventory per variant.
+            </p>
+          )}
+
+          {/* TOTAL STOCK DISPLAY */}
+          {newProduct.variants.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-600">
+              <p className="text-green-400 text-sm">
+                Total Stock: {newProduct.countInStock} units
+              </p>
+            </div>
+          )}
         </div>
 
         {/* CATEGORY SELECT + CREATE NEW */}
@@ -256,44 +389,6 @@ const CreateProductForm = () => {
               </button>
             </div>
           </div>
-        </div>
-
-        {/* SIZES */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 tracking-wider">
-            Sizes (comma separated)
-          </label>
-          <input
-            type="text"
-            value={newProduct.sizes.join(", ")}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                sizes: e.target.value.split(",").map((s) => s.trim()),
-              })
-            }
-            placeholder="e.g. S, M, L, XL"
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
-          />
-        </div>
-
-        {/* COLORS */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 tracking-wider">
-            Colors (comma separated)
-          </label>
-          <input
-            type="text"
-            value={newProduct.colors.join(", ")}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                colors: e.target.value.split(",").map((c) => c.trim()),
-              })
-            }
-            placeholder="e.g. Red, Blue, Green"
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
-          />
         </div>
 
         {/* IMAGES */}
