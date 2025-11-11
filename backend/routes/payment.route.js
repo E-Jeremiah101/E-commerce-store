@@ -6,11 +6,13 @@ import {
   handleFlutterwaveWebhook,
 } from "../controllers/payment.controller.js";
 
+
 const router = express.Router();
 
 router.post("/flutterwave-pay", protectRoute, createCheckoutSession);
 router.post("/flutterwave-webhook", handleFlutterwaveWebhook);
 router.post("/checkout-success", protectRoute, checkoutSuccess);
+
 
 
 

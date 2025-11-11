@@ -19,6 +19,7 @@ import reviewRoutes from "./routes/review.routes.js"
 import visitorRoutes from "./routes/visitor.route.js"
 import refundRoutes from "./routes/refund.routes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
+import Product from "./models/product.model.js";
 
 
 dotenv.config();
@@ -45,7 +46,27 @@ app.set("trust proxy", true);
 app.use(express.json({ limit: "10mb" })); // allow to parse the body of the request
 app.use(cookieParser());
 
-
+// Add this debug route to check inventory
+app.get('/api/debug-inventory', async (req, res) => {
+  try {
+    const products = await Product.find({});
+    const inventory = products.map(p => ({
+      name: p.name,
+      totalStock: p.countInStock,
+      reserved: p.reserved || 0,
+      variants: p.variants?.map(v => ({
+        size: v.size,
+        color: v.color,
+        stock: v.countInStock,
+        reserved: v.reserved || 0
+      }))
+    }));
+    
+    res.json({ success: true, inventory });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 //authRoute
 app.use("/api/auth", authRouthes);

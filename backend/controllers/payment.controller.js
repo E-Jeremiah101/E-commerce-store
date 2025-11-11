@@ -15,6 +15,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
+
 // ==================== INVENTORY RESERVATION SYSTEM ====================
 const inventoryReservations = new Map();
 
@@ -33,97 +34,106 @@ setInterval(() => {
 // Reserve inventory atomically
 async function reserveInventory(products, reservationId, timeoutMinutes = 10) {
   const session = await mongoose.startSession();
-  
+
   try {
     await session.withTransaction(async () => {
       for (const item of products) {
         if (!item._id) continue;
 
-        console.log(`🔄 Attempting to reserve: ${item.name}, Qty: ${item.quantity}`);
+        console.log(`🔄 Reserving ${item.quantity} of ${item.name}`);
 
-        let updateResult;
+        const product = await Product.findById(item._id).session(session);
+        if (!product) throw new Error(`Product ${item.name} not found`);
 
+        // Handle variants (like Almond Suit with size/color)
         if (item.size && item.color) {
-          // Get current state for logging
-          const beforeProduct = await Product.findById(item._id).session(session);
-          const beforeVariant = beforeProduct?.variants?.find(
-            v => v.size === item.size && v.color === item.color
-          );
-          
-          console.log(`Before reservation - Variant ${item.size}/${item.color}: CountInStock: ${beforeVariant?.countInStock}, Reserved: ${beforeVariant?.reserved}`);
-
-          updateResult = await Product.findOneAndUpdate(
-            {
-              _id: item._id,
-              "variants.size": item.size,
-              "variants.color": item.color,
-              "variants.countInStock": { $gte: item.quantity }
-            },
-            {
-              $inc: {
-                "variants.$.countInStock": -item.quantity,
-                "variants.$.reserved": item.quantity
-              }
-            },
-            { session, new: true }
+          const variantIndex = product.variants.findIndex(
+            (v) => v.size === item.size && v.color === item.color
           );
 
-          if (updateResult) {
-            const afterVariant = updateResult.variants.find(
-              v => v.size === item.size && v.color === item.color
+          if (variantIndex === -1) {
+            throw new Error(
+              `Variant ${item.size}/${item.color} not found for ${item.name}`
             );
-            console.log(`After reservation - Variant ${item.size}/${item.color}: CountInStock: ${afterVariant?.countInStock}, Reserved: ${afterVariant?.reserved}`);
           }
-        } else {
-          // Get current state for logging
-          const beforeProduct = await Product.findById(item._id).session(session);
-          console.log(`Before reservation - Product: CountInStock: ${beforeProduct?.countInStock}, Reserved: ${beforeProduct?.reserved}`);
 
-          updateResult = await Product.findOneAndUpdate(
-            {
-              _id: item._id,
-              countInStock: { $gte: item.quantity }
-            },
-            {
-              $inc: {
-                countInStock: -item.quantity,
-                reserved: item.quantity
-              }
-            },
-            { session, new: true }
+          const variant = product.variants[variantIndex];
+          console.log(
+            `📦 BEFORE - ${item.name} ${item.size}/${item.color}: Stock=${
+              variant.countInStock
+            }, Reserved=${variant.reserved || 0}`
           );
 
-          if (updateResult) {
-            console.log(`After reservation - Product: CountInStock: ${updateResult.countInStock}, Reserved: ${updateResult.reserved}`);
+          // Check stock
+          if (variant.countInStock < item.quantity) {
+            throw new Error(
+              `Only ${variant.countInStock} available, but ${item.quantity} requested`
+            );
           }
+
+          // ACTUALLY DEDUCT INVENTORY HERE
+          variant.countInStock -= item.quantity;
+          variant.reserved = (variant.reserved || 0) + item.quantity;
+
+          console.log(
+            `📦 AFTER - ${item.name} ${item.size}/${item.color}: Stock=${variant.countInStock}, Reserved=${variant.reserved}`
+          );
+
+          // Update total product stock
+          product.countInStock = product.variants.reduce(
+            (total, v) => total + v.countInStock,
+            0
+          );
+        }
+        // Handle simple products (no variants)
+        else {
+          console.log(
+            `📦 BEFORE - ${item.name}: Stock=${
+              product.countInStock
+            }, Reserved=${product.reserved || 0}`
+          );
+
+          if (product.countInStock < item.quantity) {
+            throw new Error(
+              `Only ${product.countInStock} available, but ${item.quantity} requested`
+            );
+          }
+
+          // ACTUALLY DEDUCT INVENTORY HERE
+          product.countInStock -= item.quantity;
+          product.reserved = (product.reserved || 0) + item.quantity;
+
+          console.log(
+            `📦 AFTER - ${item.name}: Stock=${product.countInStock}, Reserved=${product.reserved}`
+          );
         }
 
-        if (!updateResult) {
-          throw new Error(`Insufficient stock for ${item.name}. Please refresh your cart.`);
-        }
-
-        console.log(`✅ Reserved ${item.quantity} of ${item.name}`);
+        await product.save({ session });
+        console.log(
+          `✅ Successfully reserved ${item.quantity} of ${item.name}`
+        );
       }
-
-      // Store reservation only if ALL items were successfully reserved
-      inventoryReservations.set(reservationId, {
-        products,
-        createdAt: new Date(),
-        expiresAt: new Date(Date.now() + timeoutMinutes * 60 * 1000)
-      });
     });
-    
+
+    // Store reservation
+    inventoryReservations.set(reservationId, {
+      products,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + timeoutMinutes * 60 * 1000),
+    });
+
+    console.log(`🎉 ALL inventory reserved successfully: ${reservationId}`);
     return true;
   } catch (error) {
-    console.error('❌ Inventory reservation failed:', error);
-    
-    // Release any partially reserved inventory
+    console.error("❌ Reservation failed:", error);
+
+    // Release any partial reservations
     try {
       await releaseInventory(reservationId);
     } catch (releaseError) {
-      console.error('Failed to release inventory after reservation failure:', releaseError);
+      console.error("Failed to release inventory after failure:", releaseError);
     }
-    
+
     throw error;
   } finally {
     await session.endSession();
@@ -133,132 +143,126 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 10) {
 // Release reserved inventory
 async function releaseInventory(reservationId) {
   const reservation = inventoryReservations.get(reservationId);
-  if (!reservation) return;
+  if (!reservation) {
+    console.log(`No reservation found: ${reservationId}`);
+    return;
+  }
+
+  console.log(`🔄 Releasing reservation: ${reservationId}`);
 
   const session = await mongoose.startSession();
-
   try {
     await session.withTransaction(async () => {
       for (const item of reservation.products) {
         if (!item._id) continue;
 
+        const product = await Product.findById(item._id).session(session);
+        if (!product) {
+          console.log(`Product not found for ID: ${item._id}`);
+          continue;
+        }
+
         if (item.size && item.color) {
-          await Product.findOneAndUpdate(
-            {
-              _id: item._id,
-              "variants.size": item.size,
-              "variants.color": item.color,
-            },
-            {
-              $inc: {
-                "variants.$.countInStock": item.quantity,
-                "variants.$.reserved": -item.quantity,
-              },
-            },
-            { session }
+          const variantIndex = product.variants.findIndex(
+            (v) => v.size === item.size && v.color === item.color
           );
+
+          if (variantIndex !== -1) {
+            // RESTORE the inventory we deducted
+            product.variants[variantIndex].countInStock += item.quantity;
+            product.variants[variantIndex].reserved = Math.max(
+              0,
+              (product.variants[variantIndex].reserved || 0) - item.quantity
+            );
+
+            // Update total
+            product.countInStock = product.variants.reduce(
+              (total, v) => total + v.countInStock,
+              0
+            );
+
+            console.log(
+              `✅ Released ${item.quantity} of ${item.name} variant - Stock now: ${product.variants[variantIndex].countInStock}`
+            );
+          }
         } else {
-          await Product.findOneAndUpdate(
-            { _id: item._id },
-            {
-              $inc: {
-                countInStock: item.quantity,
-                reserved: -item.quantity,
-              },
-            },
-            { session }
+          // Simple product - restore inventory
+          product.countInStock += item.quantity;
+          product.reserved = Math.max(
+            0,
+            (product.reserved || 0) - item.quantity
+          );
+          console.log(
+            `✅ Released ${item.quantity} of ${item.name} - Stock now: ${product.countInStock}`
           );
         }
+
+        await product.save({ session });
       }
     });
 
     inventoryReservations.delete(reservationId);
-    console.log(`Released reservation: ${reservationId}`);
+    console.log(`🎉 Successfully released reservation: ${reservationId}`);
   } catch (error) {
-    console.error("Inventory release failed:", error);
+    console.error("❌ Release failed:", error);
   } finally {
     await session.endSession();
   }
 }
 
 // Confirm inventory (convert reservation to permanent deduction)
-// Confirm inventory (convert reservation to permanent deduction)
 async function confirmInventory(reservationId) {
   const reservation = inventoryReservations.get(reservationId);
   if (!reservation) {
-    console.log(`No reservation found for: ${reservationId}`);
+    console.log(`No reservation found to confirm: ${reservationId}`);
     return;
   }
-  
-  console.log(`Confirming inventory for reservation: ${reservationId}`);
-  
+
+  console.log(`🔄 Confirming reservation: ${reservationId}`);
+
   const session = await mongoose.startSession();
-  
   try {
     await session.withTransaction(async () => {
       for (const item of reservation.products) {
         if (!item._id) continue;
 
-        console.log(`Processing item: ${item.name}, Qty: ${item.quantity}`);
+        const product = await Product.findById(item._id).session(session);
+        if (!product) continue;
 
         if (item.size && item.color) {
-          // For variants: just remove the reservation, countInStock already reduced
-          const result = await Product.findOneAndUpdate(
-            {
-              _id: item._id,
-              "variants.size": item.size,
-              "variants.color": item.color
-            },
-            {
-              $inc: {
-                "variants.$.reserved": -item.quantity
-              }
-            },
-            { session, new: true }
+          const variantIndex = product.variants.findIndex(
+            (v) => v.size === item.size && v.color === item.color
           );
-          
-          if (result) {
-            console.log(`✅ Confirmed variant inventory: ${item.name} - ${item.size}/${item.color}`);
-            
-            // Update total product countInStock
-            const updatedProduct = await Product.findById(item._id).session(session);
-            if (updatedProduct && updatedProduct.variants) {
-              updatedProduct.countInStock = updatedProduct.variants.reduce(
-                (total, v) => total + v.countInStock,
-                0
-              );
-              await updatedProduct.save({ session });
-              console.log(`✅ Updated total countInStock: ${updatedProduct.countInStock}`);
-            }
-          } else {
-            console.error(`❌ Failed to confirm variant: ${item.name}`);
+
+          if (variantIndex !== -1) {
+            // Just remove the reservation flag - inventory already deducted
+            product.variants[variantIndex].reserved = Math.max(
+              0,
+              (product.variants[variantIndex].reserved || 0) - item.quantity
+            );
+            console.log(
+              `✅ Confirmed ${item.name} variant - Final: Stock=${product.variants[variantIndex].countInStock}, Reserved=${product.variants[variantIndex].reserved}`
+            );
           }
         } else {
-          // For simple products: just remove the reservation, countInStock already reduced
-          const result = await Product.findOneAndUpdate(
-            { _id: item._id },
-            {
-              $inc: {
-                reserved: -item.quantity
-              }
-            },
-            { session, new: true }
+          // Simple product - remove reservation flag
+          product.reserved = Math.max(
+            0,
+            (product.reserved || 0) - item.quantity
           );
-          
-          if (result) {
-            console.log(`✅ Confirmed simple product inventory: ${item.name}`);
-            console.log(`✅ Final countInStock: ${result.countInStock}, Reserved: ${result.reserved}`);
-          } else {
-            console.error(`❌ Failed to confirm product: ${item.name}`);
-          }
+          console.log(
+            `✅ Confirmed ${item.name} - Final: Stock=${product.countInStock}, Reserved=${product.reserved}`
+          );
         }
+
+        await product.save({ session });
       }
     });
-    
+
     inventoryReservations.delete(reservationId);
-    console.log(`✅ Inventory confirmed and reservation removed: ${reservationId}`);
+    console.log(`🎉 Successfully confirmed reservation: ${reservationId}`);
   } catch (error) {
-    console.error('❌ Inventory confirmation failed:', error);
+    console.error("❌ Confirmation failed:", error);
     throw error;
   } finally {
     await session.endSession();
@@ -1503,6 +1507,39 @@ Thank you for choosing sustainable shopping with EcoStore 🌱
     text,
   });
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // import path from "path";
 // import dotenv from "dotenv";
