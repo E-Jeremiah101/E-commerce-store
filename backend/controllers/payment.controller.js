@@ -32,7 +32,7 @@ setInterval(() => {
 
 // Reserve inventory atomically
 // Reserve inventory atomically
-async function reserveInventory(products, reservationId, timeoutMinutes = 10) {
+async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
   const session = await mongoose.startSession();
 
   try {
@@ -597,7 +597,7 @@ export const createCheckoutSession = async (req, res) => {
     // === CRITICAL: RESERVE INVENTORY BEFORE PAYMENT ===
     const reservationId = `res_${tx_ref}`;
     try {
-      await reserveInventory(products, reservationId, 10); // Reserve for 10 minutes
+      await reserveInventory(products, reservationId, 4); // Reserve for 10 minutes
       console.log(`✅ Inventory reserved: ${reservationId}`);
     } catch (reservationError) {
       console.error("❌ Inventory reservation failed:", reservationError);
@@ -719,21 +719,31 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     const { id: transaction_id, tx_ref, status } = event.data;
 
-    // Duplicate protection
-    const existingPaidOrder = await Order.findOne({
+    // === ENHANCED DUPLICATE PROTECTION ===
+
+    // 1. Check for existing order FIRST (before any processing)
+    const existingOrder = await Order.findOne({
       $or: [
         { flutterwaveTransactionId: transaction_id },
         { flutterwaveRef: tx_ref },
       ],
-      paymentStatus: "paid",
     });
 
-    if (existingPaidOrder) {
+    if (existingOrder) {
       console.log(
-        ` Webhook: Order already processed: ${existingPaidOrder.orderNumber}`
+        `🔄 DUPLICATE: Order ${existingOrder.orderNumber} already exists with status: ${existingOrder.paymentStatus}`
       );
 
-      // Release inventory if it was reserved but order already exists
+      // If order exists but payment status needs updating
+      if (existingOrder.paymentStatus !== "paid" && status === "successful") {
+        existingOrder.paymentStatus = "paid";
+        await existingOrder.save();
+        console.log(
+          `✅ Updated order status to paid: ${existingOrder.orderNumber}`
+        );
+      }
+
+      // Release any reserved inventory
       const reservationId = event.data.meta?.reservationId;
       if (reservationId) {
         await releaseInventory(reservationId);
@@ -756,9 +766,10 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     console.log(`Processing webhook for successful payment: ${tx_ref}`);
 
-    const processingKey = `webhook_${transaction_id}_${tx_ref}`;
+    // 2. Enhanced processing lock with longer timeout
+    const processingKey = `webhook_${transaction_id}`;
     if (global.webhookProcessing && global.webhookProcessing[processingKey]) {
-      console.log(`Webhook already being processed: ${processingKey}`);
+      console.log(`⏳ Webhook already being processed: ${processingKey}`);
       return res.status(200).send("Webhook already being processed");
     }
 
@@ -856,6 +867,27 @@ export const handleFlutterwaveWebhook = async (req, res) => {
         return res.status(400).send("Missing userId");
       }
 
+      // 3. FINAL DUPLICATE CHECK (in case order was created between first check and now)
+      const finalDuplicateCheck = await Order.findOne({
+        $or: [
+          { flutterwaveTransactionId: transaction_id },
+          { flutterwaveRef: tx_ref },
+        ],
+      });
+
+      if (finalDuplicateCheck) {
+        console.log(
+          `🔄 LATE DUPLICATE: Order ${finalDuplicateCheck.orderNumber} created during processing`
+        );
+
+        // Release inventory
+        if (reservationId) {
+          await releaseInventory(reservationId);
+        }
+
+        return res.status(200).send("Order already processed");
+      }
+
       console.log("Starting database transaction...");
       const session = await mongoose.startSession();
 
@@ -891,6 +923,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
             } for user: ${userId}`
           );
 
+          // ONLY send email for NEW orders
           if (isNew) {
             try {
               console.log(`STARTING COUPON PROCESS FOR USER: ${userId}`);
@@ -936,22 +969,27 @@ export const handleFlutterwaveWebhook = async (req, res) => {
             } catch (error) {
               console.error("Coupon creation failed:", error);
             }
-          }
 
-          try {
-            const user = await User.findById(userId);
-            if (user && user.email) {
-              await sendDetailedOrderEmail({
-                to: user.email,
-                order,
-                flutterwaveData: data,
-              });
-              console.log(
-                `Confirmation email sent for order: ${order.orderNumber}`
-              );
+            // SEND ORDER CONFIRMATION EMAIL ONLY FOR NEW ORDERS
+            try {
+              const user = await User.findById(userId);
+              if (user && user.email) {
+                await sendDetailedOrderEmail({
+                  to: user.email,
+                  order,
+                  flutterwaveData: data,
+                });
+                console.log(
+                  `✅ Confirmation email sent for NEW order: ${order.orderNumber}`
+                );
+              }
+            } catch (emailErr) {
+              console.error("Email send failed (webhook):", emailErr);
             }
-          } catch (emailErr) {
-            console.error("Email send failed (webhook):", emailErr);
+          } else {
+            console.log(
+              `📧 Skipping email for existing order: ${order.orderNumber}`
+            );
           }
         });
 
@@ -972,7 +1010,11 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       console.log(`Webhook processing completed successfully`);
       return res.status(200).send("Order processed successfully");
     } finally {
-      delete global.webhookProcessing[processingKey];
+      // Keep the lock for 30 seconds to prevent duplicate processing
+      setTimeout(() => {
+        delete global.webhookProcessing[processingKey];
+        console.log(`🔓 Released webhook lock: ${processingKey}`);
+      }, 30000);
     }
   } catch (err) {
     console.error(`Webhook processing error:`, err);
@@ -1108,16 +1150,16 @@ export const checkoutSuccess = async (req, res) => {
           }
 
           // Send confirmation email
-          try {
-            const user = await User.findById(userId);
-            await sendDetailedOrderEmail({
-              to: user.email,
-              order,
-              flutterwaveData: data,
-            });
-          } catch (emailErr) {
-            console.error("Email send failed (checkoutSuccess):", emailErr);
-          }
+          // try {
+          //   const user = await User.findById(userId);
+          //   await sendDetailedOrderEmail({
+          //     to: user.email,
+          //     order,
+          //     flutterwaveData: data,
+          //   });
+          // } catch (emailErr) {
+          //   console.error("Email send failed (checkoutSuccess):", emailErr);
+          // }
         });
       } finally {
         await session.endSession();

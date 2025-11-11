@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useCartStore } from "../stores/useCartStore";
 import { MoveRight } from "lucide-react";
@@ -20,6 +20,7 @@ const OrderSummary = () => {
   const formattedSavings = savings.toLocaleString(undefined, {
     minimumFractionDigits: 0,
   });
+  const [loading, setIsLoading] = useState(false)
 
   // Fetch fresh profile when OrderSummary mounts
   useEffect(() => {
@@ -54,6 +55,7 @@ const OrderSummary = () => {
     }
 
     try {
+      setIsLoading(true);
       const res = await axios.post("/payments/flutterwave-pay", {
         products: cart,
         user,
@@ -70,6 +72,8 @@ const OrderSummary = () => {
     } catch (error) {
       console.error("Payment initialization failed:", error);
       alert("Payment initialization failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -128,9 +132,19 @@ const OrderSummary = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handlePayment}
-          disabled={!defaultPhone || !defaultAddress}
+          disabled={!defaultPhone || !defaultAddress || loading}
         >
-          Proceed to Checkout
+          {loading ? (
+            <>
+              
+              Processing...
+            </>
+          ) : (
+            <>
+              
+              Proceed to Checkout
+            </>
+          )}
         </motion.button>
 
         {(!defaultPhone || !defaultAddress) && (
