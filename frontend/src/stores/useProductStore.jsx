@@ -137,6 +137,15 @@ export const useProductStore = create((set, get) => ({
       throw error;
     }
   },
+  clearFeaturedCache: async () => {
+    try {
+      await axios.delete("/api/products/cache/featured");
+      toast.success("Featured products cache cleared!");
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+      toast.error("Failed to clear cache");
+    }
+  },
 
   // Add function to fetch variant stock
   fetchVariantStock: async (productId, size, color) => {

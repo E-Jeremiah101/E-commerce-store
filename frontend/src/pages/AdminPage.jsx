@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import AnalyticsTab from "../components/AnalyticsTab.jsx";
 import ProductsList from "../components/ProductsList.jsx";
 import CreateProductForm from "../components/CreateProductForm.jsx";
+import axios from "../lib/axios.js";
 import AdminOrdersPage from "../components/AdminOrder.jsx";
 import AllUsers from "../components/AllUsers.jsx";
 import { useProductStore } from "../stores/useProductStore.jsx";
@@ -18,6 +19,16 @@ const tabs = [
   { id: "AdminRefunds", label: "Refund Request", icon: Package },
   { id: "AllUsers", label: "Users", icon: Package },
 ];
+const clearCache = async () => {
+  try {
+    const response = await axios.delete("/products/cache/featured");
+    console.log(response.data.message); // "Featured products cache cleared successfully"
+    alert("Cache cleared successfully!");
+  } catch (error) {
+    console.error("Error clearing cache:", error);
+    alert("Failed to clear cache");
+  }
+};
 
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("products");
@@ -41,6 +52,12 @@ const AdminPage = () => {
           <span className=" flex  text-center text-xl  text-gray-900 tracking-widest">
             Admin Dashboard
           </span>
+          {/* <button
+            onClick={clearCache}
+            className="bg-red-500 text-white p-2 rounded"
+          >
+            Clear Featured Cache
+          </button> */}
         </div>
       </motion.div>
       <div className="  bg-gradient-to-br from-white via-gray-100 to-gray-300  flex-2 md:flex md:h-[100vh] md:w-full px-2 md:mx-auto   md:overflow-hidden -10          min-h-screen  mt-19">

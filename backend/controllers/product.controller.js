@@ -4,7 +4,15 @@ import Product from "../models/product.model.js";
 import {optimizeCloudinaryUrl} from "../lib/optimizeCloudinaryUrl.js";
 import Category from "../models/categoy.model.js";
 
-
+export const clearFeaturedCache = async (req, res) => {
+  try {
+    await redis.del("featured_products");
+    res.json({ message: "Featured products cache cleared" });
+  } catch (error) {
+    console.log("Error clearing cache", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 // Add these new functions to your product.controller.js
 
 // Get product variants
@@ -259,6 +267,8 @@ export const deleteProduct = async (req, res) => {
     }
 
     await product.deleteOne();
+
+    await updateFeaturedProductsCache();
     res.json({ message: "Product deleted successfully" });
   } catch (error) {
     console.log("Error in deleteProduct controller", error.message);
@@ -327,14 +337,19 @@ export const toggleFeaturedProduct = async (req, res) => {
 
 async function updateFeaturedProductsCache() {
   try {
-    // The lean() method  is used to return plain JavaScript objects instead of full Mongoose documents. This can significantly improve performance
+    const featuredProducts = await Product.find({ isFeatured: true })
+      .select("name price images category sizes colors")
+      .lean();
 
-    const featuredProducts = await Product.find({ isFeatured: true }).select("name price images category sizes colors").lean();
-    await redis.set("featured_products", JSON.stringify(featuredProducts));
+    // Set with expiration to prevent stale data
+   await redis.set("featured_products", JSON.stringify(featuredProducts), {
+     EX: 3600, // Set expiration in seconds (1 hour)
+   });
+    console.log("✅ Featured products cache updated");
   } catch (error) {
-    console.log("error in update cache function");
+    console.log("Error updating featured products cache:", error.message);
   }
-};
+} 
 
 export const searchProducts = async (req, res) => {
   const query = req.query.q?.trim(); // remove spaces at the ends

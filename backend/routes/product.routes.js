@@ -15,6 +15,7 @@ import {
   getProductVariants,
   getVariantStock,
   updateVariantInventory,
+  clearFeaturedCache,
 } from "../controllers/product.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
@@ -46,5 +47,6 @@ router.put(
   adminRoute,
   updateVariantInventory
 );
+router.delete("/cache/featured", protectRoute, adminRoute, clearFeaturedCache);
 
 export default router;
