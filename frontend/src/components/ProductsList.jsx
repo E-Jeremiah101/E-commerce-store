@@ -14,6 +14,7 @@ const ProductsList = () => {
     fetchVariantStock,
     fetchProductById,
   } = useProductStore();
+  const {loading} = useProductStore()
 
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -21,6 +22,7 @@ const ProductsList = () => {
   const [reduceQuantity, setReduceQuantity] = useState(1);
   const [showVariantModal, setShowVariantModal] = useState(false);
   const productsPerPage = 15;
+   
 
   // Pagination logic
   const totalProducts = products?.length || 0;
@@ -94,6 +96,13 @@ const ProductsList = () => {
     const color = variant.color ? `Color: ${variant.color}` : "";
     return [size, color].filter(Boolean).join(" | ");
   };
+
+  if (loading)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+      </div>
+    );
 
   return (
     <>

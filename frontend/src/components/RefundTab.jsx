@@ -258,7 +258,7 @@ const RefundTab = () => {
                           Coupon Applied:{" "}
                           <span className="text-red-500 text-xs">-10%</span>{" "}
                           <span className="text-green-500 text-xs">
-                            {order.coupon.code}
+                            {order.couponCode}
                           </span>
                         </p>{" "}
                         <p className="text-xs text-gray-500 mb-1">
