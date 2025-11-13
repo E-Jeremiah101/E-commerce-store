@@ -97,7 +97,7 @@ const AdminOrdersPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
         <input
           type="text"
-          placeholder="Search by order number / order Id"
+          placeholder="Search by ORD/EC0STORE/Id"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={handleSearchKeyDown}

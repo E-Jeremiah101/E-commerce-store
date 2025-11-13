@@ -140,7 +140,7 @@ const AdminRefundsTab = () => {
       <div className="flex flex-wrap gap-3 mb-4">
         <input
           type="text"
-          placeholder="Search by name, email, order or refund ID"
+          placeholder="Search by ID/email/ORD "
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="border p-2 rounded   text-sm"
@@ -157,12 +157,14 @@ const AdminRefundsTab = () => {
           <option value="Rejected">Rejected</option>
         </select>
 
-        <input
-          type="date"
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="border p-2 rounded text-sm"
-        />
+        <div className="block w-fit">
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="border p-2 rounded text-sm"
+          />
+        </div>
       </div>
 
       {/* Refunds Table */}
@@ -189,7 +191,9 @@ const AdminRefundsTab = () => {
                   {/* User */}
                   <td className="px-2 py-2 border">
                     <p className="font-medium">{r.orderNumber || r.orderId}</p>
-                    <p className="text-xs text-gray-500">{r.user.firstname + " "+ r.user.lastname || "NA"}</p>
+                    <p className="text-xs text-gray-500">
+                      {r.user.firstname + " " + r.user.lastname || "NA"}
+                    </p>
                   </td>
 
                   {/* Product */}

@@ -88,6 +88,7 @@ export const getAllOrders = async (req, res) => {
       searchFilter = {
         $or: [
           { orderNumber: { $regex: search, $options: "i" } },
+          { flutterwaveRef: { $regex: search, $options: "i" } },
           ...(isObjectId ? [{ _id: search }] : []),
           { "user.fistname": { $regex: search, $options: "i" } },
           { "user.lastname": { $regex: search, $options: "i" } },
