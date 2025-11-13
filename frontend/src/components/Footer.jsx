@@ -52,20 +52,7 @@ const Footer = () => {
             </tbody>
           </table>
         </div>
-        <div className="flex justify-center items-center mt-7 md:mt-0">
-          <form action="">
-            <label htmlFor="" className="block">
-              Join our newsletter
-            </label>
-            <input
-              type="text"
-              className="border-1 border-gray-500 px-2 py-1 rounded-sm w-fit"
-            />
-            <button className="bg-gray-500 px-2 text-sm border-gray-500 rounded-lg border-1 ml-2 py-1.5">
-              Subscribe
-            </button>
-          </form>
-        </div>
+        
       </div>
       <Link to={"/"} className="flex justify-center items-center mb-3">
         <img src="/logo-buz.jpg" alt="Logo" className="h-10 w-auto " />

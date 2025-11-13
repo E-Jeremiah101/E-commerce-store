@@ -29,10 +29,9 @@ const FeaturedProducts = ({ featuredProducts }) => {
  
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth < 640) setItemsPerPage(1);
-      else if (window.innerWidth < 1020) setItemsPerPage(2);
-      else if (window.innerWidth < 1280) setItemsPerPage(3);
-      else setItemsPerPage(4);
+      if (window.innerWidth < 640) setItemsPerPage(2);
+      else if (window.innerWidth > 840) setItemsPerPage(3);
+      
     };
     handleResize();
     window.addEventListener("resize", handleResize);
@@ -53,13 +52,10 @@ const FeaturedProducts = ({ featuredProducts }) => {
   return (
     <div className="py-19 mt-5">
       <div className="container mx-auto px-1">
-        <div className=" flex text-center align-middle text-3xl sm:text-6xl  font-bebas text-black mc-4 tracking-widest justify-center mb-5">
-          <h2
-            className="rounded mb-1 text-2xl"
-            
-          >
+        <div className=" flex text-center align-middle text-xl font-bebas text-black mc-4 tracking-wider justify-center mb-2">
+          <span>
             Just For You
-          </h2>
+          </span>
         </div>
         <div className="relative">
           <div className="overflow-hidden">

@@ -79,82 +79,72 @@ const OrderSummary = () => {
 
   return (
     <motion.div
-      className="space-y-4 rounded-lg border border-gray-800 bg-black p-4 shadow-sm sm:p-6 lg:px-5 "
+      className="space-y-4 rounded-lg border-1 border-gray-500  p-4 shadow-sm sm:p-6 lg:px-5 "
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <p className="text-xl font-semibold text-white tracking-widest">
+      <p className="text-xl font-semibold text-black tracking-widest">
         Order summary
       </p>
 
       <div className="space-y-4">
         <div className="space-y-2 ">
           <dl className="flex items-center justify-between gap-4">
-            <dt className="text-base font-normal text-gray-200">
+            <dt className="text-base font-normal text-gray-600">
               Original price
             </dt>
-            <dt className="text-sm font-medium text-white">
-              ₦ {formattedSubtotal}
+            <dt className="text-sm font-medium text-black">
+              ₦{formattedSubtotal}
             </dt>
           </dl>
 
           {savings > 0 && (
             <dl className="flex items-center justify-between gap-4">
-              <dt className="text-base font-normal text-gray-300">Savings</dt>
-              <dt className="text-base font-medium text-white">
-                ₦ {formattedSavings}
+              <dt className="text-base font-normal text-gray-600">Savings</dt>
+              <dt className="text-base font-medium text-black">
+                ₦{formattedSavings}
               </dt>
             </dl>
           )}
 
           {coupon && isCouponApplied && (
             <dl className="flex items-center justify-between gap-4">
-              <dt className="text-base font-normal text-white">
+              <dt className="text-base font-normal text-gray-600">
                 Coupon ({coupon.code})
               </dt>
-              <dt className="text-base font-medium text-white">
+              <dt className="text-base font-medium text-red-500">
                 -{coupon.discountPercentage}%
               </dt>
             </dl>
           )}
 
           <dl className="flex items-center justify-between gap-4">
-            <dt className="text-base font-normal text-gray-200">Total </dt>
-            <dt className="text-lg font-medium text-yellow-100">
-              ₦ {formattedTotal}
+            <dt className="text-base font-normal text-gray-600">Total </dt>
+            <dt className="text-lg font-medium text-black-">
+              ₦{formattedTotal}
             </dt>
           </dl>
         </div>
 
         <motion.button
-          className="flex w-full items-center justify-center rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 px-5 py-2.5 text-sm font-medium text-black hover:bg-gray-300 disabled:opacity-50"
+          className="flex w-full items-center justify-center rounded-lg  bg-black/90 px-5 py-2.5 text-sm font-medium text-white hover:bg-black/80 disabled:opacity-50"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={handlePayment}
           disabled={!defaultPhone || !defaultAddress || loading}
         >
-          {loading ? (
-            <>
-              
-              Processing...
-            </>
-          ) : (
-            <>
-              
-              Proceed to Checkout
-            </>
-          )}
+          {loading ? <>Processing...</> : <>Proceed to Checkout</>}
         </motion.button>
 
         {(!defaultPhone || !defaultAddress) && (
           <>
-            <div className="bg-red-100 text-red-700 p-3 rounded-md text-sm mb-3">
+            <div className=" text-black p-3 rounded-md text-sm mb-3">
               Please provide a <strong>valid phone number</strong> and{" "}
               <strong>address</strong> before checkout.
               <br />
             </div>
-            <Link to="/Personal-info" className="text-white underline">
+            <Link to="/Personal-info" className="text-black underline">
               Update your Profile
             </Link>
           </>
@@ -163,17 +153,17 @@ const OrderSummary = () => {
           <>
             <div className=" space-y-2">
               <dl className="flex items-center justify-between gap-4">
-                <dt className="text-base font-normal text-white">Address:</dt>
+                <dt className="text-base font-normal text-gray-600">Address:</dt>
                 <dt
-                  className="text-xs font-thin text-gray-100 truncate"
+                  className="text-xs font-thin text-black truncate"
                   title={defaultAddress}
                 >
                   {defaultAddress}
                 </dt>
               </dl>
               <dl className="flex items-center justify-between gap-4">
-                <dt className="text-base font-normal text-white">Phone:</dt>
-                <dt className="text-sm font-thin text-gray-100">
+                <dt className="text-base font-normal text-gray-600">Phone:</dt>
+                <dt className="text-sm font-thin text-black">
                   {defaultPhone}
                 </dt>
               </dl>
