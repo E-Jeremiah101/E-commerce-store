@@ -10,9 +10,9 @@ import { Link } from "react-router-dom";
 const Footer = () => {
   return (
     <div className=" text-black ">
-      <div className="grid grid-cols-1 md:grid-cols-2 m-0  py-16 lg:px-16    overflow-hidden whitespace-nowrap">
+      <div className="flex m-0 justify-center  py-16 lg:px-16    overflow-hidden whitespace-nowrap">
         <div>
-          <table className="border-separate lg:border-spacing-x-15 border-spacing-x-11  border-spacing-y-4">
+          <table className="border-separate lg:border-spacing-x-40 border-spacing-x-11  border-spacing-y-4">
             <thead className="text-lg">
               <tr className="">
                 <th className=" ">Links</th>
@@ -55,10 +55,10 @@ const Footer = () => {
         
       </div>
       <Link to={"/"} className="flex justify-center items-center mb-3">
-        <img src="/logo-buz.jpg" alt="Logo" className="h-10 w-auto " />
-        <span className="text-emerald-400 font-bold text-xl">Eco~Store</span>
+        <img src="/logo-buz.jpg" alt="Logo" className="h-10 w-auto rounded-2xl" />
+        <span className="text-black px-2 font-bold text-xl">Eco~Store</span>
       </Link>
-      <hr className="border-1 my-1" />
+      <hr className="border-1 my-1 border-gray-400" />
       <div className="flex justify-center items-center gap-2 text-sm font-light">
         <FaRegCopyright /> {new Date().getFullYear()}{" "}
         <span className="">All Right Reserved</span>
