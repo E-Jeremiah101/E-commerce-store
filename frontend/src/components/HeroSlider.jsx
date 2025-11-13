@@ -30,14 +30,14 @@ const HeroSlider = () => {
       return () => clearInterval(timer);
     }, []);
   return (
-    <div className="relative w-full  overflow-hidden lg:mt-0 md:mt-16">
+    <div className="relative w-full  overflow-hidden lg:mt-0 md:mt-16 bg-gradient-to-br from-white via-gray-100 to-gray-300 pb-0">
       {/* Images */}
       <div
         className="flex transition-transform duration-[1000ms] ease-in-out"
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
         {slides.map((slide, index) => (
-          <div key={index} className="w-full h-full flex-shrink-0 relative">
+          <div key={index} className="w-full h-full flex-shrink-0 relative ">
             <img
               src={slide.url}
               alt={slide.title}
@@ -46,7 +46,7 @@ const HeroSlider = () => {
              lg:h-[36rem]  object-cover"
             />
             {/* Absolute text */}
-            <div className="lg:hidden text-center text-black px-3 py-6 bg-gradient-to-br from-white via-gray-100 to-gray-300 h-[10rem]">
+            <div className="lg:hidden text-center text-black px-3 py-6  h-[10rem] ">
               <h1
                 className="text-2xl font-bold mb-3 tracking-wider"
                 style={{ textShadow: "2px 2px 6px rgba(0,0,0,0.2)" }}
@@ -72,7 +72,7 @@ const HeroSlider = () => {
       </div>
 
       {/* Optional Dots Indicator */}
-      <div
+      {/* <div
         className=" text-black/80 
        justify-center items-center flex gap-3 border-b-1 h-10 border-gray-300 "
       >
@@ -95,7 +95,7 @@ const HeroSlider = () => {
             <ChevronRight size={18} />
           </span>
         </>
-      </div>
+      </div> */}
     </div>
   );
 };

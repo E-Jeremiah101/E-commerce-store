@@ -1,5 +1,3 @@
-
-
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useProductStore } from "../stores/useProductStore.jsx";
@@ -8,6 +6,7 @@ import toast from "react-hot-toast";
 import { ShoppingCart } from "lucide-react";
 import CategoryItem from "../components/CategoryItem.jsx";
 import FeaturedProducts from "../components/FeaturedProducts.jsx";
+import { Link } from "react-router-dom";
 import FAQSection from "../components/FAQSection.jsx";
 import Footer from "../components/Footer.jsx";
 import HeroSlider from "../components/HeroSlider.jsx";
@@ -73,7 +72,7 @@ const HomePage = () => {
     >
       {/* HERO SLIDER */}
       <motion.div
-        className="relative pt-16 pb-5 md:py-0"
+        className="relative pt-16  md:py-0"
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.2 }}
@@ -81,33 +80,70 @@ const HomePage = () => {
         <HeroSlider />
       </motion.div>
 
+      <div className="bg-white pb-4 py-6 border-b md:hidden">
+        <div className="max-w-7xl mx-auto px-4">
+          {isLoadingCategories ? (
+            <div className="flex gap-4 overflow-hidden">
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-10 bg-gray-200 rounded-full animate-pulse min-w-20"
+                ></div>
+              ))}
+            </div>
+          ) : categories.length > 0 ? (
+            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide no-scroll">
+              {/* All Categories Button */}
+              <button className="flex-shrink-0 px-6 py-2 bg-black text-white rounded-full hover:bg-gray-800 transition-colors whitespace-nowrap">
+                All Products
+              </button>
+
+              {/* Category Buttons */}
+              {categories.map((category) => (
+                <Link
+      to={`/category/${category.name}`} >
+                <button
+                  key={category.name}
+                  className="flex-shrink-0 px-6 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors whitespace-nowrap"
+                >
+                  {category.name}
+                </button>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            ""
+          )}
+        </div>
+      </div>
+
       <CollectionTab />
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 root lg:px-25 bg-gradient-to-br from-white via-gray-100 to-gray-300">
-       {isLoadingCategories ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {[...Array(6)].map((_, i) => (
-            <div
-              key={i}
-              className="h-48 bg-gray-200 rounded-lg animate-pulse"
-            ></div>
-          ))}
-        </div>
-      ) : categories.length > 0 ? (
-        <LandingProducts 
-          recommendations={recommendations}
-          isLoading={isLoadingRecommendations}
-        />
-      ) : (
-        <div className="text-center py-12">
-          <div className="text-gray-500 text-lg mb-4">
-            No categories found
+        {isLoadingCategories ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {[...Array(14)].map((_, i) => (
+              <div
+                key={i}
+                className="h-48 bg-gray-200 rounded-lg animate-pulse"
+              ></div>
+            ))}
           </div>
-          <button className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
-            Refresh
-          </button>
-        </div>
-      )}
+        ) : categories.length > 0 ? (
+          <LandingProducts
+            recommendations={recommendations}
+            isLoading={isLoadingRecommendations}
+          />
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-gray-500 text-lg mb-4">
+              No categories found
+            </div>
+            <button className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
+              Refresh
+            </button>
+          </div>
+        )}
 
         {/* TITLE SECTION */}
         <div className="text-black flex justify-center items-center my-17 lg:mt-25 look">
@@ -124,38 +160,7 @@ const HomePage = () => {
 
         <OtherFeatures className="look" />
 
-        <div>
-          <h1 className="text-xl tracking-widest mb-2 text-black drop-shadow-lg text-center">
-            EXPLORE CATEGORY
-          </h1>
-          {/* CATEGORY GRID */}
-          {isLoadingCategories ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-48 bg-gray-300 rounded-lg animate-pulse"
-                ></div>
-              ))}
-            </div>
-          ) : categories.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-5 md:gap-6 gap-5 look">
-              {categories.map((category) => (
-                <CategoryItem category={category} key={category.name} />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-48 bg-gray-300 rounded-lg animate-pulse"
-                ></div>
-              ))}
-            </div>
-          )}
-        </div>
-
+        
         {/* FEATURED PRODUCTS */}
         {!isLoadingProducts && products.length > 0 && (
           <FeaturedProducts className="look" featuredProducts={products} />

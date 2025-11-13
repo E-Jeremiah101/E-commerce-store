@@ -26,20 +26,7 @@ const FeaturedProducts = ({ featuredProducts }) => {
     }
   }, [featuredProducts]);
 
-  const handleAddToCart = (product) => {
-    const { size, color } = selectedOptions[product._id] || {};
-
-    if (product.sizes?.length > 0 && !size) {
-      toast.error("Please select a size");
-      return;
-    }
-    if (product.colors?.length > 0 && !color) {
-      toast.error("Please select a color");
-      return;
-    }
-
-    addToCart(product, size || null, color || null);
-  };
+ 
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 640) setItemsPerPage(1);
@@ -100,17 +87,16 @@ const FeaturedProducts = ({ featuredProducts }) => {
                             className="w-full h-43 sm:h-48 object-cover transition-transform duration-300 ease-in-out hover:scale-110"
                           />
                         </div>
-                        <div className="p-2 text-center">
-                          <h3 className="text-lg   text-gray-900 tracking-wider mb-1 ">
+                        <div className="p-2  text-sm truncate w-45">
+                          <h3 className="  text-gray-900 tracking-wider mb-1 ">
                             {product.name}
                           </h3>
-                          <p className="text-gray-700  text-lg tracking-widest text">
-                            ₦{" "}
+                          <p className="text-gray-700 text-sm   lg:text-md tracking-widest text">
+                            ₦
                             {product.price.toLocaleString(undefined, {
                               minimumFractionDigits: 0,
                             })}
                           </p>
-                         
                         </div>
                       </Link>
                     </div>
