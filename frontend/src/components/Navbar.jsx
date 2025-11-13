@@ -137,7 +137,6 @@ const Navbar = () => {
         {/* Mobile Dropdown */}
         {isOpen && (
           <>
-            
             <div
               className="md:hidden   bg-gradient-to-br from-white via-gray-100 to-gray-300 px-4 py-3 space-y-9 text-black  text-lg overflow-y-auto h-screen absolute right-15 top-0 left-0 no-scroll "
               ref={sidebarRef}
@@ -155,7 +154,6 @@ const Navbar = () => {
                     <UserBadge
                       name={user?.name || user.firstname + " " + user.lastname}
                       size="lg"
-                      
                     />
                   </div>
                 </div>
@@ -250,7 +248,7 @@ const Navbar = () => {
                     </li>
 
                     <li>
-                      <Link to={"/category/suits&blazer"}>
+                      <Link to={"/category/suits&blazers"}>
                         <span className="hover:text-gray-700">
                           SUITS & BLAZERS
                         </span>
@@ -258,7 +256,7 @@ const Navbar = () => {
                     </li>
 
                     <li>
-                      <Link to={"/category/jackets&Outerwear"}>
+                      <Link to={"/category/Jackets&Outerwear"}>
                         <span className="hover:text-gray-700">
                           JACKETS & OUTERWEARS
                         </span>
@@ -278,11 +276,6 @@ const Navbar = () => {
                         <span className="hover:text-gray-700">FOOTWEARS</span>
                       </Link>
                     </li>
-                    <li>
-                      <Link to={"/category/bags"}>
-                        <span className="hover:text-gray-700">BAGS</span>
-                      </Link>
-                    </li>
 
                     <li>
                       <Link to={"/category/sets&cords"}>
@@ -293,9 +286,9 @@ const Navbar = () => {
                     </li>
 
                     <li>
-                      <Link to={"/category/accessories&essentials"}>
+                      <Link to={"/category/Accessories"}>
                         <span className="hover:text-gray-700">
-                          ACCESSORIES & ESSENTIALS
+                          ACCESSORIES
                         </span>
                       </Link>
                     </li>

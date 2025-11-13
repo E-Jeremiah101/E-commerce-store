@@ -185,7 +185,7 @@ const ViewProductPage = () => {
                     <button
                       key={i}
                       onClick={() => setSelectedColor(color)}
-                      className={`px-3 py-1 rounded-full hover:bg-gray-300  border ${
+                      className={`px-3 py-1  hover:bg-gray-300  border-2 ${
                         selectedColor === color
                           ? "border-black bg-black text-white"
                           : "border-gray-300"
@@ -207,7 +207,7 @@ const ViewProductPage = () => {
                     <button
                       key={i}
                       onClick={() => setSelectedSize(size)}
-                      className={`px-3 py-1 rounded-full hover:bg-gray-300 border ${
+                      className={`px-3 py-1 hover:bg-gray-300 border-2 ${
                         selectedSize === size
                           ? "border-black bg-black text-white"
                           : "border-gray-300"

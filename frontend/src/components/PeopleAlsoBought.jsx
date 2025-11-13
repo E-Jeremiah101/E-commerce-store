@@ -30,10 +30,10 @@ const PeopleAlsoBought = () => {
   );
   return ( 
     <div className="mt-20">
-      <h3 className="text-1xl font-semibold text-black tracking-wider">
-        You may also like
+      <h3 className="text-1xl font-semibold text-gray-800 tracking-wider">
+        YOU MAY ALSO LIKE
       </h3>
-      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3">
+      <div className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3">
         {recommendations.map((product) => (
           <ProductCard key={product._id} product={product} />
         ))}

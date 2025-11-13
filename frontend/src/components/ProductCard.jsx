@@ -1,11 +1,12 @@
 import { Link } from "react-router-dom";
+import { ShoppingCart } from "lucide-react";
 
 const ProductCard = ({ product }) => {
   return (
-    <div className="flex-w-full relative flex-col h-full overflow-hidden rounded-lg border-gray-700">
+    <div className="flex-w-full relative flex-col h-full overflow-hidden border-gray-700">
       {/* Product Image */}
       <Link to={`/product/${product._id}`}>
-        <div className="relative rounded-1xl mt-3 flex overflow-hidden h-50">
+        <div className="relative flex overflow-hidden h-50 rounded-xs">
           <img
             className="object-cover w-full h-full"
             src={product.images?.[0]}
@@ -26,19 +27,22 @@ const ProductCard = ({ product }) => {
         </div>
 
         {/* Product Info */}
-        <div className="mt-2 px-2 pb-2 space-y-2 flex flex-col justify-center items-center">
-          <h3 className="text-md text-gray-800 mb-1 text-center tracking-wider">
+        <div className="mt-1 px-2 pb-1 space-y-2  flex flex-col ">
+          <h3 className="text-sm truncate w-45 lg:text-md text-gray-600 mb-1 tracking-wider">
             {product.name}
           </h3>
 
-          <span className="text-md font-light text-gray-900">
-            ₦{" "}
-            {product.price.toLocaleString(undefined, {
-              minimumFractionDigits: 0,
-            })}
-          </span>
-
-          
+          <div className="flex justify-between w-full text-gray-900">
+            <div className="text-sm lg:text-md text-gray-900">
+              ₦{" "}
+              {product.price.toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+              })}
+            </div>
+            <div>
+              <ShoppingCart size={20} />
+            </div>
+          </div>
         </div>
       </Link>
     </div>

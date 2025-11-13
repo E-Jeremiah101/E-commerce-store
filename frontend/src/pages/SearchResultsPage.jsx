@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {useParams, useSearchParams, Link } from "react-router-dom";
+import ProductCard from "../components/ProductCard.jsx";
 import axios from "../lib/axios";
 import { useCartStore } from "../stores/useCartStore";
 import { toast } from "react-hot-toast";
@@ -46,15 +47,7 @@ const SearchResultsPage = () => {
         const res = await axios.get(`/products/search?q=${query}`);
         setProducts(res.data);
 
-        // initialize dropdown defaults
-        const defaults = {};
-        res.data.forEach((product) => {
-          defaults[product._id] = {
-            size: product.sizes?.[0] || "",
-            color: product.colors?.[0] || "",
-          };
-        });
-        setSelectedOptions(defaults);
+   
       } catch (error) {
         console.error("Error fetching search results:", error);
       } finally {
@@ -64,20 +57,7 @@ const SearchResultsPage = () => {
     fetchResults();
   }, [query]);
 
-  const handleAddToCart = (product) => {
-    const { size, color } = selectedOptions[product._id] || {};
-
-    if (product.sizes?.length > 0 && !size) {
-      toast.error("Please select a size");
-      return;
-    }
-    if (product.colors?.length > 0 && !color) {
-      toast.error("Please select a color");
-      return;
-    }
-
-    addToCart(product, size || null, color || null);
-  };
+  
 
   // Pagination logic
   const totalProducts = products?.length || 0;
@@ -121,39 +101,9 @@ const SearchResultsPage = () => {
           <p>No products found.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {displayedProducts?.map((product) => {
-              const { size, color } = selectedOptions[product._id] || {};
-
-              return (
-                <div
-                  key={product._id}
-                  className="bg-white bg-opacity-10 backdrop-blur-sm rounded-lg shadow-lg overflow-hidden h-full transition-all duration-300 hover:shadow-xl border border-white"
-                >
-                  <img
-                    src={product.images?.[0]}
-                    alt={product.name}
-                    className="w-full h-44 object-cover transition-transform duration-300 ease-in-out hover:scale-110"
-                  />
-                  <div className="p-3 pt-2">
-                    <h3 className="text-lg h-11 mb-2 font-semibold text-black tracking-widest">
-                      {product.name}
-                    </h3>
-
-                    <p className="text-black font-medium mb-2 tracking">
-                      ₦{" "}
-                      {product.price.toLocaleString(undefined, {
-                        minimumFractionDigits: 0,
-                      })}
-                    </p>
-                    <Link to={`/product/${product._id}`}>
-                      <button className="mt-auto w-full bg-black hover:bg-gray-800 text-white font-semibold py-2 px-4 rounded flex items-center justify-center">
-                        View Product
-                      </button>
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
+            {displayedProducts?.map((product) => (
+              <ProductCard key={product._id} product={product} />
+          ) )}
           </div>
         )}
         {/* ✅ Pagination Controls */}
