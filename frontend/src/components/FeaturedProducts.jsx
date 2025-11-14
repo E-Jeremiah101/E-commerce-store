@@ -83,16 +83,21 @@ const FeaturedProducts = ({ featuredProducts }) => {
                             className="w-full h-43 sm:h-48 object-cover transition-transform duration-300 ease-in-out hover:scale-110"
                           />
                         </div>
-                        <div className="p-2  text-sm truncate w-45">
+                        <div className="px-2 text-sm truncate w-45">
                           <h3 className="  text-gray-900 tracking-wider mb-1 ">
                             {product.name}
                           </h3>
-                          <p className="text-gray-700 text-sm   lg:text-md tracking-widest text">
-                            ₦
+                        </div>
+                        <div className="flex justify-between w-full text-gray-900 px-2">
+                          <div className="text-sm lg:text-md text-gray-900">
+                            ₦{" "}
                             {product.price.toLocaleString(undefined, {
                               minimumFractionDigits: 0,
                             })}
-                          </p>
+                          </div>
+                          <div>
+                            <ShoppingCart size={20} />
+                          </div>
                         </div>
                       </Link>
                     </div>
