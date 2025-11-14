@@ -25,7 +25,30 @@ redis.on("error", (err) => console.log(" Redis Client Error", err));
 redis.on("reconnecting", () => console.log("♻️ Redis reconnecting..."));
 redis.on("end", () => console.error("🔌 Redis connection closed"));
 
+// Redis Locking Functions
+export async function acquireWebhookLock(transactionId, timeoutMs = 30000) {
+  try {
+    const lockKey = `webhook_lock:${transactionId}`;
+    const acquired = await redis.set(lockKey, '1', {
+      NX: true, // Only set if not exists
+      PX: timeoutMs // Expire after timeout
+    });
+    return acquired === 'OK';
+  } catch (error) {
+    console.error('Redis lock acquisition failed:', error);
+    return false;
+  }
+}
 
+export async function releaseWebhookLock(transactionId) {
+  try {
+    const lockKey = `webhook_lock:${transactionId}`;
+    await redis.del(lockKey);
+    console.log(`🔓 Released Redis lock: ${lockKey}`);
+  } catch (error) {
+    console.error('Redis lock release failed:', error);
+  }
+}
 
 export const connectRedis = async() =>{
   if (!redis.isOpen){
