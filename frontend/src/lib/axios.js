@@ -25,8 +25,19 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    //  Ignore if no response or not a 401
-    if (!error.response || error.response.status !== 401) {
+    // Handle network errors separately
+    if (
+      error.code === "NETWORK_ERROR" ||
+      error.code === "ECONNABORTED" ||
+      !error.response
+    ) {
+      console.warn("Network error detected:", error.message);
+      // For network errors, don't attempt token refresh - just reject
+      return Promise.reject(error);
+    }
+
+    // Only handle 401 errors for token refresh
+    if (error.response.status !== 401) {
       return Promise.reject(error);
     }
 
@@ -51,17 +62,24 @@ axiosInstance.interceptors.response.use(
     if (isRefreshing) {
       return new Promise((resolve, reject) => {
         failedQueue.push({ resolve, reject });
-      }).then((token) => {
-        originalRequest.headers["Authorization"] = `Bearer ${token}`;
-        return axiosInstance(originalRequest);
-      });
+      })
+        .then(() => {
+          return axiosInstance(originalRequest);
+        })
+        .catch((err) => {
+          return Promise.reject(err);
+        });
     }
 
     originalRequest._retry = true;
     isRefreshing = true;
 
     try {
-      const { data } = await axiosInstance.post("/auth/refresh-token");
+      
+      // Add timeout and better error handling for refresh
+      const { data } = await axiosInstance.post("/auth/refresh-token", {}, {
+        timeout: 10000 // 10 second timeout for refresh
+      });
       processQueue(null);
 
       // Try the original request again
@@ -69,14 +87,24 @@ axiosInstance.interceptors.response.use(
     } catch (refreshError) {
       processQueue(refreshError, null);
 
-      // Token refresh failed. Don't call store/logout here to avoid circular imports
-      // or triggering axios again from inside the interceptor. Bubble the error
-      // back to the original callers so UI code can handle logout or show messages.
-      console.error(
-        "Token refresh failed:",
-        refreshError?.message || refreshError
-      );
+      
+      if (
+        refreshError.code === "NETWORK_ERROR" ||
+        refreshError.code === "ECONNABORTED"
+      ) {
+        console.warn(
+          "Network error during token refresh - preserving auth state"
+        );
+        // For network errors, don't treat as auth failure
+        // Let the original request fail naturally
+      } else {
+        console.error(
+          "Token refresh failed:",
+          refreshError?.message || refreshError
+        );
+      }
       return Promise.reject(refreshError);
+      
     } finally {
       isRefreshing = false;
     }

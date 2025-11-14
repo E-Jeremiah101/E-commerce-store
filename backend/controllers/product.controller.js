@@ -13,6 +13,215 @@ export const clearFeaturedCache = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+// In product.controller.js - Add these functions
+
+// Check variant availability
+export const checkVariantAvailability = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { size, color, quantity = 1 } = req.query;
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ 
+        available: false, 
+        availableStock: 0,
+        message: 'Product not found'
+      });
+    }
+
+    let availableStock = 0;
+    
+    // Check variant stock
+    if (size && color && product.variants?.length > 0) {
+      const variant = product.variants.find(
+        v => v.size === size && v.color === color
+      );
+      availableStock = variant ? variant.countInStock : 0;
+    } else {
+      // Check simple product stock
+      availableStock = product.countInStock;
+    }
+
+    const isAvailable = availableStock >= parseInt(quantity);
+
+    res.json({
+      available: isAvailable,
+      availableStock,
+      requestedQuantity: parseInt(quantity),
+      productName: product.name
+    });
+  } catch (error) {
+    console.error('Error checking availability:', error);
+    res.status(500).json({ 
+      available: false, 
+      availableStock: 0,
+      message: 'Error checking availability'
+    });
+  }
+};
+// In product.controller.js - Add this test function
+export const debugProductStock = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    
+    console.log('🔍 Debugging product stock for:', productId);
+    
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    
+    const debugInfo = {
+      id: product._id,
+      name: product.name,
+      mainStock: product.countInStock,
+      variants: product.variants?.map(v => ({
+        size: v.size,
+        color: v.color,
+        stock: v.countInStock
+      })) || [],
+      totalVariants: product.variants?.length || 0
+    };
+    
+    console.log('📊 Product debug info:', debugInfo);
+    res.json(debugInfo);
+  } catch (error) {
+    console.error('Debug error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const checkCartAvailability = async (req, res) => {
+  try {
+    const { cartItems } = req.body;
+    
+    console.log('🔍 [START] Checking cart availability');
+    console.log('📦 Cart items received:', JSON.stringify(cartItems, null, 2));
+    
+    // If cart is empty, return all available
+    if (!cartItems || cartItems.length === 0) {
+      console.log('🛒 Cart is empty, returning all available');
+      return res.json({
+        allAvailable: true,
+        unavailableItems: [],
+        availabilityResults: []
+      });
+    }
+
+    const availabilityResults = [];
+    let allAvailable = true;
+    const unavailableItems = [];
+
+    for (const [index, item] of cartItems.entries()) {
+      console.log(`\n📦 [Item ${index + 1}/${cartItems.length}] Checking:`, {
+        id: item._id,
+        name: item.name,
+        quantity: item.quantity,
+        size: item.size,
+        color: item.color
+      });
+      
+      const product = await Product.findById(item._id);
+      if (!product) {
+        console.log(`❌ Product not found in database: ${item._id}`);
+        availabilityResults.push({
+          productId: item._id,
+          available: false,
+          availableStock: 0,
+          message: 'Product not found'
+        });
+        allAvailable = false;
+        unavailableItems.push({
+          ...item,
+          availableStock: 0,
+          message: 'Product not found'
+        });
+        continue;
+      }
+
+      console.log(`✅ Product found: ${product.name}, Main stock: ${product.countInStock}`);
+      console.log(`📊 Product variants:`, product.variants);
+
+      let availableStock = 0;
+      let stockSource = 'main';
+      
+      // Check variant stock
+      if (item.size && item.color && product.variants?.length > 0) {
+        const variant = product.variants.find(
+          v => v.size === item.size && v.color === item.color
+        );
+        
+        if (variant) {
+          availableStock = variant.countInStock;
+          stockSource = 'variant';
+          console.log(`✅ Found variant: ${item.size}/${item.color}, Stock: ${availableStock}`);
+        } else {
+          console.log(`❌ Variant not found: ${item.size}/${item.color}, using main stock`);
+          availableStock = product.countInStock;
+        }
+      } else {
+        // Check simple product stock
+        availableStock = product.countInStock;
+        console.log(`📊 Using main product stock: ${availableStock}`);
+      }
+
+      const isAvailable = availableStock >= item.quantity;
+      console.log(`📋 Availability check: ${isAvailable ? '✅ AVAILABLE' : '❌ UNAVAILABLE'} (Requested: ${item.quantity}, Available: ${availableStock}, Source: ${stockSource})`);
+
+      availabilityResults.push({
+        productId: item._id,
+        available: isAvailable,
+        availableStock,
+        requestedQuantity: item.quantity,
+        productName: product.name,
+        stockSource
+      });
+
+      if (!isAvailable) {
+        allAvailable = false;
+        unavailableItems.push({
+          ...item,
+          name: product.name,
+          availableStock,
+          message: `Only ${availableStock} available`
+        });
+        console.log(`🚫 Marking as unavailable: ${product.name}`);
+      } else {
+        console.log(`✅ Marking as available: ${product.name}`);
+      }
+    }
+
+    console.log(`\n🎯 [FINAL RESULT]`, {
+      allAvailable,
+      unavailableItemsCount: unavailableItems.length,
+      unavailableItems: unavailableItems.map(item => ({
+        name: item.name,
+        requested: item.quantity,
+        available: item.availableStock
+      })),
+      totalItems: cartItems.length
+    });
+
+    console.log('🔍 [END] Availability check complete\n');
+    
+    res.json({
+      allAvailable,
+      unavailableItems,
+      availabilityResults
+    });
+  } catch (error) {
+    console.error('❌ [ERROR] Checking cart availability:', error);
+    // Return all available on error to avoid blocking users
+    res.json({ 
+      allAvailable: true, 
+      unavailableItems: [],
+      availabilityResults: [],
+      message: 'Error checking availability, defaulting to available'
+    });
+  }
+};
 // Add these new functions to your product.controller.js
 
 // Get product variants

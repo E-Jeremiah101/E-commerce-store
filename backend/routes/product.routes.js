@@ -16,6 +16,9 @@ import {
   getVariantStock,
   updateVariantInventory,
   clearFeaturedCache,
+  checkVariantAvailability,
+  checkCartAvailability,
+  debugProductStock,
 } from "../controllers/product.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
@@ -33,6 +36,11 @@ router.get("/:id", getProductById);
 // Variant-specific routes (public)
 router.get("/:id/variants", getProductVariants);
 router.get("/stock/:productId", getVariantStock); // ADD THIS ROUTE
+// In product.routes.js
+router.get('/debug-stock/:productId', debugProductStock);
+
+router.get("/:productId/check-availability", checkVariantAvailability);
+router.post("/check-cart-availability", checkCartAvailability);
 
 // Admin protected routes
 router.get("/", protectRoute, adminRoute, getAllProducts);

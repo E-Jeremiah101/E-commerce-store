@@ -557,6 +557,60 @@ export const createCheckoutSession = async (req, res) => {
       });
     }
 
+// === CHECK AVAILABILITY BEFORE RESERVATION ===
+    console.log('🔍 Checking availability before reservation...');
+    try {
+      for (const item of products) {
+        if (!item._id) continue;
+
+        const product = await Product.findById(item._id);
+        if (!product) {
+          throw new Error(`Product ${item.name} not found`);
+        }
+
+        // Handle variants
+        if (item.size && item.color) {
+          const variantIndex = product.variants.findIndex(
+            (v) => v.size === item.size && v.color === item.color
+          );
+
+          if (variantIndex === -1) {
+            throw new Error(
+              `Variant ${item.size}/${item.color} not found for ${item.name}`
+            );
+          }
+
+          const variant = product.variants[variantIndex];
+          console.log(
+            `📊 Availability check - ${item.name} ${item.size}/${item.color}: Stock=${variant.countInStock}, Requested=${item.quantity}`
+          );
+
+          if (variant.countInStock < item.quantity) {
+            throw new Error(
+              ` ${item.name} ${item.size}/${item.color}, is out of stock, please update you cart`
+            );
+          }
+        }
+        // Handle simple products
+        else {
+          console.log(
+            `📊 Availability check - ${item.name}: Stock=${product.countInStock}, Requested=${item.quantity}`
+          );
+
+          if (product.countInStock < item.quantity) {
+            throw new Error(
+              `Only ${product.countInStock} available for ${item.name}, but ${item.quantity} requested`
+            );
+          }
+        }
+      }
+      console.log('✅ All items available for reservation');
+    } catch (availabilityError) {
+      console.error('❌ Availability check failed:', availabilityError.message);
+      return res.status(400).json({
+        error: availabilityError.message,
+      });
+    }
     // Calculate totals
     const originalTotal = products.reduce((acc, p) => {
       const qty = p.quantity || 1;
@@ -682,6 +736,7 @@ export const createCheckoutSession = async (req, res) => {
     });
   }
 };
+
 
 // ==================== UPDATED WEBHOOK HANDLER ====================
 

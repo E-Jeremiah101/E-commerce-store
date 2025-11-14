@@ -1,26 +1,25 @@
+// In OrderSummary.js - Fixed version
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useCartStore } from "../stores/useCartStore";
-import { MoveRight } from "lucide-react";
+import { MoveRight, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import axios from "../lib/axios";
 import { useUserStore } from "../stores/useUserStore";
+import { useProductStore } from "../stores/useProductStore";
+import toast from "react-hot-toast";
 
 const OrderSummary = () => {
   const { user, setUser } = useUserStore();
   const { total, subtotal, coupon, cart, isCouponApplied } = useCartStore();
+  const { checkCartAvailability } = useProductStore();
 
-  const savings = subtotal - total;
-  const formattedSubtotal = subtotal.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
+  const [loading, setIsLoading] = useState(false);
+  const [availabilityCheck, setAvailabilityCheck] = useState({
+    allAvailable: true,
+    unavailableItems: [],
+    checked: false,
   });
-  const formattedTotal = total.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-  });
-  const formattedSavings = savings.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-  });
-  const [loading, setIsLoading] = useState(false)
 
   // Fetch fresh profile when OrderSummary mounts
   useEffect(() => {
@@ -46,6 +45,25 @@ const OrderSummary = () => {
       }`
     : "";
 
+  // Check cart availability when cart changes
+  useEffect(() => {
+    // Just set as available since backend will handle the real check
+    if (cart.length > 0) {
+      setAvailabilityCheck({
+        allAvailable: true,
+        unavailableItems: [],
+        checked: true,
+      });
+    } else {
+      setAvailabilityCheck({
+        allAvailable: true,
+        unavailableItems: [],
+        checked: false,
+      });
+    }
+  }, [cart]);
+
+  // In OrderSummary.js - Simplify the handlePayment function
   const handlePayment = async () => {
     if (!defaultPhone || !defaultAddress) {
       alert(
@@ -56,6 +74,10 @@ const OrderSummary = () => {
 
     try {
       setIsLoading(true);
+
+      console.log("🔄 Proceeding with payment...");
+
+      // Proceed with payment - backend will handle availability checks
       const res = await axios.post("/payments/flutterwave-pay", {
         products: cart,
         user,
@@ -64,22 +86,54 @@ const OrderSummary = () => {
 
       const { link } = res.data;
       if (link) {
-        // Redirect user to Flutterwave payment page
         window.location.href = link;
       } else {
-        alert("Unable to initialize payment. Please try again.");
+        toast.error("Unable to initialize payment. Please try again.");
       }
     } catch (error) {
-      console.error("Payment initialization failed:", error);
-      alert("Payment initialization failed. Please try again.");
+      console.error("❌ Payment initialization failed:", error);
+
+      // Handle specific error messages from backend
+      if (error.response?.data?.error) {
+        toast.error(error.response.data.error);
+      } else if (error.response?.data?.message) {
+        console.log(error.response.data.message);
+      } else {
+        toast.error("Payment initialization failed. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Fix the logic here - only show unavailable if we have checked AND there are actually unavailable items
+  const hasUnavailableItems =
+    availabilityCheck.checked &&
+    !availabilityCheck.allAvailable &&
+    availabilityCheck.unavailableItems.length > 0;
+
+  console.log("🔄 Availability state:", {
+    hasUnavailableItems,
+    allAvailable: availabilityCheck.allAvailable,
+    unavailableCount: availabilityCheck.unavailableItems.length,
+    checked: availabilityCheck.checked,
+    cartLength: cart.length,
+  });
+
+  const savings = subtotal - total;
+  const formattedSubtotal = subtotal.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+  });
+  const formattedTotal = total.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+  });
+  const formattedSavings = savings.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+  });
+
   return (
     <motion.div
-      className="space-y-4 rounded-lg border-1 border-gray-500  p-4 shadow-sm sm:p-6 lg:px-5 "
+      className="space-y-4 rounded-lg border-1 border-gray-500 p-4 shadow-sm sm:p-6 lg:px-5"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
@@ -87,9 +141,10 @@ const OrderSummary = () => {
       <p className="text-xl font-semibold text-black tracking-widest">
         Order summary
       </p>
+    
 
       <div className="space-y-4">
-        <div className="space-y-2 ">
+        <div className="space-y-2">
           <dl className="flex items-center justify-between gap-4">
             <dt className="text-base font-normal text-gray-600">
               Original price
@@ -128,18 +183,38 @@ const OrderSummary = () => {
         </div>
 
         <motion.button
-          className="flex w-full items-center justify-center rounded-lg  bg-black/90 px-5 py-2.5 text-sm font-medium text-white hover:bg-black/80 disabled:opacity-50"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+          className={`flex w-full items-center justify-center rounded-lg px-5 py-2.5 text-sm font-medium text-white ${
+            hasUnavailableItems || !defaultPhone || !defaultAddress
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-black/90 hover:bg-black/80"
+          } disabled:opacity-50`}
+          whileHover={
+            !hasUnavailableItems && defaultPhone && defaultAddress
+              ? { scale: 1.05 }
+              : {}
+          }
+          whileTap={
+            !hasUnavailableItems && defaultPhone && defaultAddress
+              ? { scale: 0.95 }
+              : {}
+          }
           onClick={handlePayment}
-          disabled={!defaultPhone || !defaultAddress || loading}
+          disabled={
+            hasUnavailableItems || !defaultPhone || !defaultAddress || loading
+          }
         >
-          {loading ? <>Processing...</> : <>Proceed to Checkout</>}
+          {loading ? (
+            <>Processing...</>
+          ) : hasUnavailableItems ? (
+            <>Unavailable Items in Cart</>
+          ) : (
+            <>Proceed to Checkout</>
+          )}
         </motion.button>
 
         {(!defaultPhone || !defaultAddress) && (
           <>
-            <div className=" text-black p-3 rounded-md text-sm mb-3">
+            <div className="text-black p-3 rounded-md text-sm mb-3">
               Please provide a <strong>valid phone number</strong> and{" "}
               <strong>address</strong> before checkout.
               <br />
@@ -149,11 +224,14 @@ const OrderSummary = () => {
             </Link>
           </>
         )}
+
         {(defaultPhone || defaultAddress) && (
           <>
-            <div className=" space-y-2">
+            <div className="space-y-2">
               <dl className="flex items-center justify-between gap-4">
-                <dt className="text-base font-normal text-gray-600">Address:</dt>
+                <dt className="text-base font-normal text-gray-600">
+                  Address:
+                </dt>
                 <dt
                   className="text-xs font-thin text-black truncate"
                   title={defaultAddress}
@@ -163,31 +241,11 @@ const OrderSummary = () => {
               </dl>
               <dl className="flex items-center justify-between gap-4">
                 <dt className="text-base font-normal text-gray-600">Phone:</dt>
-                <dt className="text-sm font-thin text-black">
-                  {defaultPhone}
-                </dt>
+                <dt className="text-sm font-thin text-black">{defaultPhone}</dt>
               </dl>
             </div>
           </>
         )}
-
-        <div className="hidden space-y-2">
-          <dl className="flex items-center justify-between gap-4">
-            <dt className="text-base font-normal text-white">Address:</dt>
-            <dt
-              className="text-xs font-thin text-gray-100 truncate"
-              title={defaultAddress}
-            >
-              {defaultAddress}
-            </dt>
-          </dl>
-          <dl className="flex items-center justify-between gap-4">
-            <dt className="text-base font-normal text-white">Phone:</dt>
-            <dt className="text-sm font-thin text-gray-100">{defaultPhone}</dt>
-          </dl>
-        </div>
-
-        <div className="flex items-center justify-between gap-2"></div>
       </div>
     </motion.div>
   );

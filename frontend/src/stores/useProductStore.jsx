@@ -146,6 +146,35 @@ export const useProductStore = create((set, get) => ({
       toast.error("Failed to clear cache");
     }
   },
+  checkVariantAvailability: async (productId, size, color, quantity = 1) => {
+    try {
+      const response = await axios.get(
+        `/api/products/${productId}/check-availability`,
+        {
+          params: { size, color, quantity },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error checking availability:", error);
+      return { available: false, availableStock: 0 };
+    }
+  },
+
+  checkCartAvailability: async (cartItems) => {
+    try {
+      const response = await axios.post(
+        "/api/products/check-cart-availability",
+        {
+          cartItems,
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error checking cart availability:", error);
+      return { allAvailable: false, unavailableItems: [] };
+    }
+  },
 
   // Add function to fetch variant stock
   fetchVariantStock: async (productId, size, color) => {
