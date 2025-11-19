@@ -79,17 +79,13 @@ function App() {
     );
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-white via-gray-100 to-gray-300  text-black  relative overflow-hidden ">
+     
         {/*Background gradient */}
 
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute inset-0">
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full " />
-          </div>
-        </div>
+       
 
         {/* {the app content} */}
-        <div className="relative z-50 ">
+        
           {location.pathname === "/" && <Navbar />}
 
           <Routes>
@@ -156,9 +152,9 @@ function App() {
                     autoClose={4000}
                     style={{ marginTop: "75px" }}
                   />
-        </div>
+       
         <Toaster />
-      </div>
+     
     </>
   );
 }

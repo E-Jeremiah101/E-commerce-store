@@ -10,7 +10,7 @@ const WelcomePage = () => {
           <div className="py-4">
             <GoBackButton size={20} />
           </div>
-          <div className="md:text-4xl flex justify-center items-center text-4xl bg-white pb-7 md:pb-0 md:tracking-widest">
+          <div className="md:text-4xl flex justify-center items-center text-4xl bg-white  md:pb-0 md:tracking-widest">
             <div>
               WELCOME TO <span className="font-bold">ECO~STORE</span>
             </div>
