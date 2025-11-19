@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "../components/Otherfeatures.css";
 import axios from "../lib/axios";
-
+import { Link } from "react-router-dom";
+import ScrollReveal from "./ScrollReveal.jsx";
 const OtherFeatures = () => {
   const [recommendations, setRecommendations] = useState([]);
 
@@ -32,29 +33,54 @@ const OtherFeatures = () => {
     "/white-snick.jpg",
   ];
 
-  // Use product images if available, otherwise use fallbacks
-  const imagesToUse =
+  // Combine recommendations with fallbacks
+  const displayItems =
     recommendations.length >= 8
-      ? recommendations.slice(0, 8).map((product) => product.images?.[0])
-      : fallbackImages;
+      ? recommendations.slice(0, 8)
+      : Array.from({ length: 8 }).map((_, index) => ({
+          _id: `fallback-${index}`,
+          images: [fallbackImages[index] || "/placeholder.jpg"],
+          name: `Product ${index + 1}`,
+        }));
 
   return (
-    <div className="box-head my-20 look">
-      <div className="box">
-        {imagesToUse.map((imageSrc, index) => (
-          <span key={index} style={{ "--i": index + 1 }}>
-            <img
-              src={imageSrc}
-              alt={`feature-${index + 1}`}
-              onError={(e) => {
-                // If image fails to load, use fallback
-                e.target.src = fallbackImages[index] || "/placeholder.jpg";
-              }}
-            />
-          </span>
-        ))}
+    <ScrollReveal direction="up" delay={0.5} duration={1}>
+      <div className="text-black flex justify-center items-center my-14 lg:mt-25 look">
+                <div className="text-center">
+                  <h1 className="text-3xl tracking-widest mb-4 text-black drop-shadow-lg">
+                    CLASSIC WEARS
+                  </h1>
+                  <p className="text-1xl lg:text-sm tracking-widest">
+                    Stay Relaxed, Stay Stylish: Redefine Comfort with the Perfect
+                    style Fit!
+                  </p>
+                </div>
+              </div>
+      <div className="box-head my-20 look">
+        <div className="box">
+          {displayItems.map((item, index) => (
+            <span key={item._id} style={{ "--i": index + 1 }}>
+              <Link
+                to={
+                  item._id.startsWith("fallback")
+                    ? "#"
+                    : `/products/${item._id}`
+                }
+              >
+                <img
+                  src={item.images?.[0]}
+                  alt={item.name || `feature-${index + 1}`}
+                  onError={(e) => {
+                    // If image fails to load, use fallback
+                    e.target.src = fallbackImages[index] || "/placeholder.jpg";
+                  }}
+                />
+              </Link>
+            </span>
+          ))}
+        </div>
       </div>
-    </div>
+    </ScrollReveal>
   );
 };
 

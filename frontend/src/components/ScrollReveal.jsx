@@ -1,50 +1,80 @@
-import { useEffect, useRef, useState } from "react";
+import React from "react";
+import { motion } from "framer-motion";
+import { useInView } from "framer-motion";
+import { useRef } from "react";
 
-export default function ScrollReveal({
+const ScrollReveal = ({
   children,
-  className = "",
-  threshold = 0.2, // % of element visible before animation triggers
-  once = true, // if false, animates every time it enters view
-  delay = 0, // ms delay before animating
-  duration = 700, // total animation duration (ms)
-}) {
+  delay = 0,
+  direction = "up",
+  duration = 0.8,
+  distance = 30,
+  easing = [0.25, 0.1, 0.25, 1], // Custom easing curve for smoothness
+}) => {
   const ref = useRef(null);
-  const [isVisible, setIsVisible] = useState(false);
+  const isInView = useInView(ref, {
+    once: true,
+    threshold: 0.1,
+    margin: "-50px", // Starts animation slightly before element is fully in view
+  });
 
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
+  const getInitialState = () => {
+    switch (direction) {
+      case "up":
+        return { opacity: 0, y: distance, scale: 0.95 };
+      case "down":
+        return { opacity: 0, y: -distance, scale: 0.95 };
+      case "left":
+        return { opacity: 0, x: distance, scale: 0.95 };
+      case "right":
+        return { opacity: 0, x: -distance, scale: 0.95 };
+      case "fade":
+        return { opacity: 0, scale: 0.98 };
+      case "scale":
+        return { opacity: 0, scale: 0.8 };
+      default:
+        return { opacity: 0, y: distance, scale: 0.95 };
+    }
+  };
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          // Add delay for smoother entry
-          setTimeout(() => setIsVisible(true), delay);
-          if (once) observer.unobserve(element);
-        } else if (!once) {
-          setIsVisible(false);
-        }
-      },
-      { threshold }
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [threshold, once, delay]);
+  const getAnimateState = () => {
+    switch (direction) {
+      case "up":
+      case "down":
+        return { opacity: 1, y: 0, scale: 1 };
+      case "left":
+      case "right":
+        return { opacity: 1, x: 0, scale: 1 };
+      case "fade":
+      case "scale":
+        return { opacity: 1, scale: 1 };
+      default:
+        return { opacity: 1, y: 0, scale: 1 };
+    }
+  };
 
   return (
-    <div
+    <motion.div
       ref={ref}
-      style={{
-        transition: `all ${duration}ms cubic-bezier(0.4, 0, 0.2, 1)`,
+      initial={getInitialState()}
+      animate={isInView ? getAnimateState() : {}}
+      transition={{
+        duration: duration,
+        delay: delay,
+        ease: easing,
+        scale: {
+          type: "spring",
+          damping: 15,
+          stiffness: 100,
+        },
       }}
-      className={`transform ${
-        isVisible
-          ? "opacity-100 scale-100 translate-y-0"
-          : "opacity-0 scale-95 translate-y-6"
-      } ${className}`}
+      style={{
+        transformOrigin: "center center",
+      }}
     >
       {children}
-    </div>
+    </motion.div>
   );
-}
+};
+
+export default ScrollReveal;

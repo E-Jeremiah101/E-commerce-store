@@ -1,4 +1,5 @@
 import FAQItem from "./FAQItem";
+import ScrollReveal from "./ScrollReveal";
 
 const FAQSection = () => {
   const faqs = [
@@ -25,6 +26,7 @@ const FAQSection = () => {
   ];
 
   return (
+    <ScrollReveal direction="up" delay={0.7} duration={1}>
     <section className=" text-black py-10 px-5 md:px-20">
       <h2 className="text-3xl  mb-6 text-center text-black/80 tracking-wide">
         Frequently Asked Questions
@@ -36,6 +38,7 @@ const FAQSection = () => {
         ))}
       </div>
     </section>
+    </ScrollReveal>
   );
 };
 

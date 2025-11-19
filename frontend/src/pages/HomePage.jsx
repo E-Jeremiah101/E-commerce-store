@@ -146,17 +146,7 @@ const HomePage = () => {
         )}
 
         {/* TITLE SECTION */}
-        <div className="text-black flex justify-center items-center my-14 lg:mt-25 look">
-          <div className="text-center">
-            <h1 className="text-3xl tracking-widest mb-4 text-black drop-shadow-lg">
-              CLASSIC WEARS
-            </h1>
-            <p className="text-1xl lg:text-sm tracking-widest">
-              Stay Relaxed, Stay Stylish: Redefine Comfort with the Perfect
-              style Fit!
-            </p>
-          </div>
-        </div>
+      
 
         <OtherFeatures className="look" />
 
