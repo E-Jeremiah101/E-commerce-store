@@ -101,8 +101,8 @@ const PurchaseSuccessPage = () => {
           </p>
 
           <p className="text-emerald-400 text-center text-sm mb-6">
-            Congratulations! Your order was successfully submitted. You will
-            receive a confirmation email or SMS about your order. Please check
+            Your order was successfully submitted. You will
+            receive a confirmation email about your order. Please check
             your inbox for updates.
           </p>
 

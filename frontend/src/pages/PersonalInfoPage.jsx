@@ -104,7 +104,7 @@ const PersonalInfoPage = () => {
   return (
     <div className="flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <motion.div
-        className=" fixed top-0 left-0 right-0 flex z-40 items-center justify-center bg-gradient-to-br from-white via-gray-100 to-gray-300 py-5"
+        className=" fixed top-0 left-0 right-0 flex z-40 items-center justify-center bg-gradient-to-br from-white via-gray-50 to-gray-200  shadow py-5"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
@@ -227,7 +227,7 @@ const PersonalInfoPage = () => {
                       updated[i].number = e.target.value;
                       setUser({ ...user, phones: updated });
                     }}
-                    className="block w-full px-4 py-4 pl-10 bg-gray-100 rounded-md shadow-sm focus:outline-none text-gray-800"
+                    className="block w-full px-4 py-4 pl-10  rounded-md shadow-sm focus:outline-none text-gray-800"
                   />
                 </div>
               </div>
@@ -269,7 +269,7 @@ const PersonalInfoPage = () => {
                     updated[i].lga = "";
                     setUser({ ...user, addresses: updated });
                   }}
-                  className="w-full px-3 py-3 rounded-md bg-gray-100 border border-gray-300 focus:outline-none mb-2"
+                  className="w-full px-3 py-4 rounded-md border border-gray-300 focus:outline-none mb-2"
                 >
                   <option value="">Select State</option>
                   {Object.keys(nigeriaLocations).map((state) => (
@@ -290,7 +290,7 @@ const PersonalInfoPage = () => {
                     setUser({ ...user, addresses: updated });
                   }}
                   disabled={!a.state}
-                  className="w-full px-3 py-3 rounded-md bg-gray-100 border border-gray-300 focus:outline-none mb-2"
+                  className="w-full px-3 py-4 rounded-md  border border-gray-300 focus:outline-none mb-2"
                 >
                   <option value="">Select City</option>
                   {a.state &&
@@ -313,7 +313,7 @@ const PersonalInfoPage = () => {
                     setUser({ ...user, addresses: updated });
                   }}
                   disabled={!a.city}
-                  className="w-full px-3 py-3 rounded-md bg-gray-100 border border-gray-300 focus:outline-none mb-2"
+                  className="w-full px-3 py-4 rounded-md  border border-gray-300 focus:outline-none mb-2"
                 >
                   <option value="">Select LGA</option>
                   {a.state &&
@@ -335,7 +335,7 @@ const PersonalInfoPage = () => {
                     updated[i].landmark = e.target.value;
                     setUser({ ...user, addresses: updated });
                   }}
-                  className="w-full mt-2 px-3 py-3 rounded-md bg-gray-100 border border-gray-300 focus:outline-none"
+                  className="w-full mt-2 px-3 py-4 rounded-md  border border-gray-300 focus:outline-none"
                 />
               </div>
             ))}
@@ -344,7 +344,7 @@ const PersonalInfoPage = () => {
             <button
               onClick={handleSave}
               type="button"
-              className="w-full flex mt-10 justify-center py-2 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 transition disabled:opacity-50"
+              className="w-full flex mt-10 justify-center py-4 px-4 rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 transition disabled:opacity-50"
               disabled={saving}
             >
               {saving ? (

@@ -19,7 +19,7 @@ const OrderHistoryPage = () => {
   return (
     <>
       <motion.div
-        className=" fixed top-0 left-0 right-0 flex z-40 items-center justify-center bg-gradient-to-br from-white via-gray-100 to-gray-300 py-5"
+        className=" fixed top-0 left-0 right-0 flex z-40 items-center justify-center bg-gradient-to-br from-white via-gray-50 to-gray-200 py-5"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
@@ -46,7 +46,7 @@ const OrderHistoryPage = () => {
                 {tab.label}
               </span>
             ))}
-          </div >
+          </div>
           {activeTab === "ongoing" && <Ongoing />}
           {activeTab === "delivered" && <Delivered />}
           {activeTab === "refunded" && <RefundTab />}

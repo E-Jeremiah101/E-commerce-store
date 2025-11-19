@@ -60,7 +60,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className="w-full  bg-gradient-to-br from-white via-gray-100 to-gray-300 bg-opacity-90 backdrop-blur-md shadow-lg  fixed lg:static text-black top-0 left-0 z-40 transition-all duration-300 ">
+    <header className="w-full  bg-gradient-to-br from-white via-gray-50 to-gray-200 bg-opacity-90 backdrop-blur-md shadow-lg  fixed lg:static text-black top-0 left-0 z-40 transition-all duration-300 ">
       {/* Mobile View */}
 
       <div className="sm:hidden  ">
@@ -287,9 +287,7 @@ const Navbar = () => {
 
                     <li>
                       <Link to={"/category/Accessories"}>
-                        <span className="hover:text-gray-700">
-                          ACCESSORIES
-                        </span>
+                        <span className="hover:text-gray-700">ACCESSORIES</span>
                       </Link>
                     </li>
 

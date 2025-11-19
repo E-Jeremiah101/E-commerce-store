@@ -75,7 +75,7 @@ const SearchResultsPage = () => {
   return (
     <>
       <motion.div
-        className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center  bg-gradient-to-br from-white via-gray-100 to-gray-300  z-40 py-5"
+        className="sm:mx-auto sm:w-full sm:max-w-md fixed top-0 left-0 right-0  flex items-center justify-center  bg-gradient-to-br from-white via-gray-50 to-gray-200  z-40 py-5"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
@@ -103,7 +103,7 @@ const SearchResultsPage = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {displayedProducts?.map((product) => (
               <ProductCard key={product._id} product={product} />
-          ) )}
+            ))}
           </div>
         )}
         {/* ✅ Pagination Controls */}
