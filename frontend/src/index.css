@@ -3,6 +3,9 @@
 body::-webkit-scrollbar {
   display: none;
 }
+html {
+  scroll-behavior: smooth;
+}
 .no-scroll::-webkit-scrollbar {
   display: none;
 }
