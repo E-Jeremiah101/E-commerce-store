@@ -45,7 +45,7 @@ export const getUserOrders = async (req, res) => {
           color: p.selectedColor || null,
           selectedCategory: p.selectedCategory || null,
           name: p.name || p.product?.name || "Unknown Product",
-          image: p.image || p.product?.image || "/placeholder.png",
+          image: p.image  || "/placeholder.png", //changes made here
           refundStatus: refund?.status || null,
         };
       });
@@ -215,7 +215,7 @@ export const getAllOrders = async (req, res) => {
             color: p.selectedColor || null,
             selectedCategory: p.selectedCategory || null,
             name: p.name || p.product?.name || "Unknown Product",
-            image: p.image || p.pyoduct?.image || "/placeholder.png",
+            image: p.image || "/placeholder.png", //here also
           })),
         };
       }),
@@ -373,7 +373,7 @@ export const createOrder = async (req, res) => {
     const orderItems = user.cartItems.map((item) => ({
       product: item.product._id,
       name: item.product.name,
-      image: item.product.images?.[0] || "", // FIXED: Use images array
+      image: item.product.images?.[0] || item.product.image || "", 
       price: item.product.price,
       quantity: item.quantity,
       selectedSize: item.size || null,

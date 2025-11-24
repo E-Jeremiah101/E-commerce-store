@@ -17,6 +17,7 @@ const productVariantSchema = new mongoose.Schema({
   countInStock: { type: Number, required: true, default: 0, min: 0 },
   reserved: { type: Number, default: 0 }, // For variants - ADDED THIS
   sku: { type: String, unique: true, sparse: true },
+  price: { type: Number, min: 0 },
 });
 
 const productSchema = new mongoose.Schema(
@@ -35,17 +36,18 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
     // REMOVED DUPLICATE countInStock FIELD
-    countInStock: {
-      type: Number,
-      required: true,
-      default: 0,
-      min: 0,
-    },
-    reserved: {
-      type: Number,
-      default: 0,
-    }, // For simple products
-    variants: [productVariantSchema], // FIXED: Removed extra bracket
+    // countInStock: {
+    //   type: Number,
+    //   required: true,
+    //   default: 0,
+    //   min: 0,
+    // },
+    // reserved: {
+    //   type: Number,
+    //   default: 0,
+    // }, // still tetsing
+
+    variants: [productVariantSchema], 
 
     reviews: [reviewSchema],
     numReviews: { type: Number, default: 0 },
@@ -71,7 +73,7 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Add index for better performance on variant searches
+//  index for better performance on variant searches
 productSchema.index({ "variants.size": 1, "variants.color": 1 });
 
 const Product = mongoose.model("Product", productSchema);
