@@ -341,7 +341,7 @@ export const getVariantStock = async (req, res) => {
 
 export const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find({}); // find all products
+    const products = await Product.find({ archived: { $ne: true } }); // find all products and exclude archived
     res.json({ products });
   } catch (error) {
     console.log("Error in getAllProducts controller", error.message);
@@ -359,7 +359,10 @@ export const getFeaturedProducts = async (req, res) => {
     // if not in redis, fetch from mongodb
     // .lean() is gonna return a plain javascript object instead of a mongodb document
     // which is good for performance
-    featuredProducts = await Product.find({ isFeatured: true })
+    featuredProducts = await Product.find({
+      isFeatured: true,
+      archived: { $ne: true },
+    })
       .select("name price images category sizes colors")
       .lean();
 
@@ -462,29 +465,64 @@ export const reduceProduct =  async (req, res) => {
   }
 };
 
+// export const deleteProduct = async (req, res) => {
+//   try {
+//     const product = await Product.findById(req.params.id);
+//     if (!product) return res.status(404).json({ message: "Product not found" });
+
+//     // delete all images from Cloudinary
+//     if (product.images?.length > 0) {
+//       for (const url of product.images) {
+//         const publicId = url.split("/").pop().split(".")[0];
+//         await cloudinary.uploader.destroy(`products/${publicId}`);
+//       }
+//     }
+
+//     await product.deleteOne();
+
+//     await updateFeaturedProductsCache();
+//     res.json({ message: "Product deleted successfully" });
+//   } catch (error) {
+//     console.log("Error in deleteProduct controller", error.message);
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
 export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    // delete all images from Cloudinary
-    if (product.images?.length > 0) {
-      for (const url of product.images) {
-        const publicId = url.split("/").pop().split(".")[0];
-        await cloudinary.uploader.destroy(`products/${publicId}`);
-      }
+    // ✅ DON'T DELETE IMAGES FROM CLOUDINARY - JUST ARCHIVE THE PRODUCT
+    // ❌ REMOVE THIS WHOLE BLOCK:
+    // if (product.images?.length > 0) {
+    //   for (const url of product.images) {
+    //     const publicId = url.split("/").pop().split(".")[0];
+    //     await cloudinary.uploader.destroy(`products/${publicId}`);
+    //   }
+    // }
+
+    // ✅ INSTEAD: Just mark as archived (soft delete)
+    product.archived = true;
+    product.isActive = false;
+    await product.save();
+
+    // Optional: Remove from featured cache if it was featured
+    if (product.isFeatured) {
+      product.isFeatured = false;
+      await product.save();
     }
 
-    await product.deleteOne();
-
     await updateFeaturedProductsCache();
-    res.json({ message: "Product deleted successfully" });
+
+    res.json({
+      message: "Product archived successfully",
+      archived: true,
+    });
   } catch (error) {
     console.log("Error in deleteProduct controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 
 export const getRecommendedProducts = async (req, res) => {
   try {
@@ -516,7 +554,7 @@ export const getProductsByCategory = async (req, res) => {
   const { category } = req.params;
   const {size, color} = req.query
   try {
-    let filter = { category };
+    let filter = { category, archived: { $ne: true } };
     if (size) filter.sizes = size; 
     if (color) filter.colors = color;
     const products = await Product.find( filter );
@@ -601,7 +639,10 @@ export const searchProducts = async (req, res) => {
     });
 
     // Combine all text and number conditions
-    const queryConditions = { $or: [...textConditions, ...numberConditions] };
+    const queryConditions = {
+      $or: [...textConditions, ...numberConditions],
+      archived: { $ne: true },
+    };
 
     // Perform MongoDB search
     const products = (await Product.find(queryConditions));
@@ -665,4 +706,55 @@ export const getProductById = async (req, res) => {
   }
 };
 
+// Get archived products (admin only)
+export const getArchivedProducts = async (req, res) => {
+  try {
+    const products = await Product.find({ archived: true });
+    res.json({ products });
+  } catch (error) {
+    console.log("Error in getArchivedProducts controller", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
 
+// Restore archived product
+export const restoreProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    product.archived = false;
+    product.isActive = true;
+    product.archivedAt = null;
+    await product.save();
+
+    res.json({ message: "Product restored successfully" });
+  } catch (error) {
+    console.log("Error in restoreProduct controller", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Permanent delete (if really needed)
+export const permanentDeleteProduct = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    // Only delete images if product is archived
+    if (product.archived && product.images?.length > 0) {
+      for (const url of product.images) {
+        const publicId = url.split("/").pop().split(".")[0];
+        await cloudinary.uploader.destroy(`products/${publicId}`);
+      }
+    }
+
+    await product.deleteOne();
+    await updateFeaturedProductsCache();
+    
+    res.json({ message: "Product permanently deleted" });
+  } catch (error) {
+    console.log("Error in permanentDeleteProduct controller", error.message);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};

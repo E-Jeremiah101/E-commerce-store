@@ -19,6 +19,9 @@ import {
   checkVariantAvailability,
   checkCartAvailability,
   debugProductStock,
+  permanentDeleteProduct,
+  restoreProduct,
+  getArchivedProducts,
 } from "../controllers/product.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
@@ -47,6 +50,11 @@ router.get("/", protectRoute, adminRoute, getAllProducts);
 router.post("/", protectRoute, adminRoute, createProduct);
 router.patch("/:id", protectRoute, adminRoute, toggleFeaturedProduct);
 router.delete("/:id", protectRoute, adminRoute, deleteProduct);
+// In your product routes
+router.get('/archived', protectRoute, adminRoute, getArchivedProducts);
+router.patch('/:id/restore', protectRoute, adminRoute, restoreProduct);
+router.delete('/:id/permanent', protectRoute, adminRoute, permanentDeleteProduct);
+//end
 router.put("/:id/reduce-stock", protectRoute, adminRoute, reduceProduct);
 router.put("/:id/variants", protectRoute, adminRoute, updateVariantStock);
 router.put(

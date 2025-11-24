@@ -36,18 +36,18 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
     // REMOVED DUPLICATE countInStock FIELD
-    // countInStock: {
-    //   type: Number,
-    //   required: true,
-    //   default: 0,
-    //   min: 0,
-    // },
+    countInStock: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
     // reserved: {
     //   type: Number,
     //   default: 0,
     // }, // still tetsing
 
-    variants: [productVariantSchema], 
+    variants: [productVariantSchema],
 
     reviews: [reviewSchema],
     numReviews: { type: Number, default: 0 },
@@ -68,6 +68,17 @@ const productSchema = new mongoose.Schema(
     isFeatured: {
       type: Boolean,
       default: false,
+    },
+    archived: {
+      type: Boolean,
+      default: false,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    archivedAt: {
+      type: Date,
     },
   },
   { timestamps: true }
