@@ -11,7 +11,7 @@ dotenv.config() //Load .env variables
     port: process.env.REDIS_PORT,
     reconnectStrategy: (retries) => {
       console.log(`🔄 Redis reconnect attempt #${retries}`);
-      if (redis > 10) {
+      if (retries > 10) {
         console.error("❌ Could not reconnect to Redis after 10 attempts.");
         return new Error("Redis connection failed");
       }

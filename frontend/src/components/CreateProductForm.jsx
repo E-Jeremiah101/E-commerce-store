@@ -55,7 +55,8 @@ const CreateProductForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await createProduct(newProduct);
+       const success =  await createProduct(newProduct);
+       if(success){
       setNewProduct({
         name: "",
         description: "",
@@ -67,8 +68,9 @@ const CreateProductForm = () => {
         countInStock: 0,
         variants: [],
       });
+    }
     } catch (error) {
-      toast.error("Error creating product.");
+      toast.error("Error creating product, try again");
     }
   };
 

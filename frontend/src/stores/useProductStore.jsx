@@ -17,6 +17,7 @@ export const useProductStore = create((set, get) => ({
         loading: false,
       }));
       toast.success("Product created successfully!");
+      return true;
     } catch (error) {
       console.error(
         "Error creating product:",
@@ -24,6 +25,8 @@ export const useProductStore = create((set, get) => ({
       );
       toast.error("Failed to create product. Please try again.");
       set({ loading: false });
+
+      return false;
     }
   },
   reduceStock: async (productId, quantity = 1) => {

@@ -217,7 +217,7 @@ const Delivered = () => {
                               to={`/product/${
                                 item.product?._id || item._id
                               }?rate=true&order=${order._id}`}
-                              className="inline-flex items-center gap-1   text-xs font-medium  text-black border-b-1 border-black hover:bg-gray-300 transition duration-200"
+                              className="inline-flex items-center gap-1   text-xs font-medium  text-black   bg-gray-300 p-1 rounded transition duration-200"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -272,9 +272,10 @@ const Delivered = () => {
                     ) && (
                       <button
                         onClick={() => handleRefundClick(order)}
-                        className="hover:text-red-600 text-red-500 px-2 py-2 rounded-lg text-xs"
+                        className="hover:text-red-600 text-red-500 px-2 py-2 rounded-lg text-xs cursor-pointer "
                       >
-                        Request Refund?
+                        <span className="bg-red-50 p-1 rounded">Request Refund</span>
+                        
                       </button>
                     )}
                   </div>
