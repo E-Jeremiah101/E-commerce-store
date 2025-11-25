@@ -210,7 +210,7 @@ async function releaseInventory(reservationId) {
   }
 }
 
-// Confirm inventory (convert reservation to permanent deduction)
+
 async function confirmInventory(reservationId) {
   const reservation = inventoryReservations.get(reservationId);
   if (!reservation) {
@@ -269,7 +269,6 @@ async function confirmInventory(reservationId) {
   }
 }
 
-// ==================== EXISTING FUNCTIONS (UPDATED) ====================
 
 async function checkCouponEligibility(userId, orderAmount) {
   try {
@@ -413,7 +412,7 @@ function createPaymentMethodData(flutterwaveData) {
   };
 }
 
-// UPDATED: Remove inventory checks - inventory already reserved
+
 async function processOrderCreation(transactionData) {
   const {
     transaction_id,
@@ -523,10 +522,6 @@ async function processOrderCreation(transactionData) {
   }
 }
 
-// REMOVED: checkInventoryAvailability and reduceInventory functions
-// Inventory is now managed through reservation system
-
-// ==================== UPDATED CHECKOUT SESSION ====================
 
 export const createCheckoutSession = async (req, res) => {
   try {
@@ -741,10 +736,11 @@ export const createCheckoutSession = async (req, res) => {
 };
 
 
-// ==================== UPDATED WEBHOOK HANDLER ====================
-
 export const handleFlutterwaveWebhook = async (req, res) => {
   console.log("WEBHOOK CALLED - STARTING PROCESS");
+
+  let transaction_id; // DECLARE IT HERE
+  let lockAcquired = false;
 
   try {
     const signature = req.headers["verif-hash"];
@@ -775,332 +771,320 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       return res.status(200).send("Ignored event type");
     }
 
-    const { id: transaction_id, tx_ref, status } = event.data;
+    // MOVE THIS OUTSIDE OF NESTED TRY
+    transaction_id = event.data?.id; // ASSIGN VALUE HERE
+    const tx_ref = event.data?.tx_ref;
+    const status = event.data?.status;
+
+    if (!transaction_id) {
+      console.error("No transaction_id in webhook data");
+      return res.status(400).send("Missing transaction_id");
+    }
+
+     console.log(
+       ` ENTERING ORDER PROCESSING - Source: ${
+         req.path
+       }, TX: ${transaction_id}, Time: ${new Date().toISOString()}`
+     );
+
+    console.log(`Processing transaction: ${transaction_id}, status: ${status}`);
 
     // === REDIS-BASED DISTRIBUTED LOCKING ===
     console.log(`🔒 Attempting to acquire Redis lock for: ${transaction_id}`);
-    const lockAcquired = await acquireWebhookLock(transaction_id, 45000); // 45 second lock
+    lockAcquired = await acquireWebhookLock(transaction_id, 45000);
 
     if (!lockAcquired) {
-      console.log(
-        `⏳ Webhook already being processed (Redis lock): ${transaction_id}`
-      );
+      console.log(`⏳ Webhook already being processed: ${transaction_id}`);
       return res.status(200).send("Webhook already being processed");
     }
     console.log(`✅ Acquired Redis lock for: ${transaction_id}`);
 
-    let processingCompleted = false;
+    // === ENHANCED DUPLICATE PROTECTION ===
+    const existingOrder = await Order.findOne({
+      $or: [
+        { flutterwaveTransactionId: transaction_id },
+        { flutterwaveRef: tx_ref },
+      ],
+    });
 
-    try {
-      // === ENHANCED DUPLICATE PROTECTION ===
-      // 1. Check for existing order FIRST (before any processing)
-      const existingOrder = await Order.findOne({
-        $or: [
-          { flutterwaveTransactionId: transaction_id },
-          { flutterwaveRef: tx_ref },
-        ],
-      });
+    if (existingOrder) {
+      console.log(
+        `🔄 DUPLICATE: Order ${existingOrder.orderNumber} already exists`
+      );
 
-      if (existingOrder) {
-        console.log(
-          `🔄 DUPLICATE: Order ${existingOrder.orderNumber} already exists with status: ${existingOrder.paymentStatus}`
-        );
+      // Release any reserved inventory
+      const reservationId = event.data?.meta?.reservationId;
+      if (reservationId) {
+        await releaseInventory(reservationId);
+      }
 
-        // If order exists but payment status needs updating
-        if (existingOrder.paymentStatus !== "paid" && status === "successful") {
-          existingOrder.paymentStatus = "paid";
-          await existingOrder.save();
-          console.log(
-            `✅ Updated order status to paid: ${existingOrder.orderNumber}`
-          );
-        }
+      return res.status(200).send("Order already processed");
+    }
 
-        // Release any reserved inventory
-        const reservationId = event.data.meta?.reservationId;
+    if (status !== "successful") {
+      console.log(`Payment not successful: ${status} for ${tx_ref}`);
+
+      // Release inventory if payment failed
+      const reservationId = event.data?.meta?.reservationId;
+      if (reservationId) {
+        await releaseInventory(reservationId);
+      }
+
+      return res.status(200).send("Payment not successful");
+    }
+
+    console.log(`Processing webhook for successful payment: ${tx_ref}`);
+
+    let data;
+
+    const isTestTransaction =
+      transaction_id === 285959875 ||
+      tx_ref.includes("TEST") ||
+      tx_ref.includes("ECOSTORE-");
+
+    if (isTestTransaction) {
+      console.log(
+        "Test transaction detected - bypassing Flutterwave verification"
+      );
+      data = event.data;
+      data.payment_type = data.payment_type || "card";
+      data.amount = data.amount || 100;
+      data.currency = data.currency || "NGN";
+      console.log("Using webhook data directly for test transaction");
+    } else {
+      console.log(
+        `Verifying real transaction with Flutterwave: ${transaction_id}`
+      );
+      const verifyResp = await flw.Transaction.verify({ id: transaction_id });
+
+      if (!verifyResp?.data || verifyResp.data.status !== "successful") {
+        console.error(`Webhook verification failed for: ${transaction_id}`);
+
+        // Release inventory if verification fails
+        const reservationId = event.data?.meta?.reservationId;
         if (reservationId) {
           await releaseInventory(reservationId);
         }
 
-        processingCompleted = true;
-        return res.status(200).send("Order already processed");
+        return res.status(400).send("Payment verification failed");
       }
 
-      if (status !== "successful") {
-        console.log(`Payment not successful: ${status} for ${tx_ref}`);
+      data = verifyResp.data;
+      console.log("Real transaction verified successfully");
+    }
 
-        // Release inventory if payment failed
-        const reservationId = event.data.meta?.reservationId;
-        if (reservationId) {
-          await releaseInventory(reservationId);
-        }
+    const meta_data = data.meta || event.meta_data || {};
 
-        processingCompleted = true;
-        return res.status(200).send("Payment not successful");
-      }
-
-      console.log(`Processing webhook for successful payment: ${tx_ref}`);
-
-      let data;
-
-      const isTestTransaction =
-        transaction_id === 285959875 ||
-        tx_ref.includes("TEST") ||
-        tx_ref.includes("ECOSTORE-");
-
-      if (isTestTransaction) {
-        console.log(
-          "Test transaction detected - bypassing Flutterwave verification"
-        );
-        data = event.data;
-        data.payment_type = data.payment_type || "card";
-        data.amount = data.amount || 100;
-        data.currency = data.currency || "NGN";
-        console.log("Using webhook data directly for test transaction");
-      } else {
-        console.log(
-          `Verifying real transaction with Flutterwave: ${transaction_id}`
-        );
-        const verifyResp = await flw.Transaction.verify({ id: transaction_id });
-
-        if (!verifyResp?.data || verifyResp.data.status !== "successful") {
-          console.error(`Webhook verification failed for: ${transaction_id}`);
-
-          // Release inventory if verification fails
-          const reservationId = event.data.meta?.reservationId;
-          if (reservationId) {
-            await releaseInventory(reservationId);
-          }
-
-          processingCompleted = true;
-          return res.status(400).send("Payment verification failed");
-        }
-
-        data = verifyResp.data;
-        console.log("Real transaction verified successfully");
-      }
-
-      const meta_data = data.meta || event.meta_data || {};
-
-      let parsedProducts = [];
-      if (meta_data.products) {
-        try {
-          if (typeof meta_data.products === "string") {
-            parsedProducts = JSON.parse(meta_data.products);
-          } else {
-            parsedProducts = meta_data.products;
-          }
-          parsedProducts = parsedProducts.map((p) => ({
-            _id: p._id || p.id || null,
-            name: p.name,
-            images: p.images || [],
-            quantity: p.quantity || 1,
-            price: p.price,
-            size: p.size || null,
-            color: p.color || null,
-            category: p.category || null,
-          }));
-        } catch (error) {
-          console.error("Error parsing products:", error);
-          parsedProducts = [];
-        }
-      }
-
-      let userId = meta_data.userId;
-      const couponCode = meta_data.couponCode || "";
-      const reservationId = meta_data.reservationId;
-      const originalTotal =
-        Number(meta_data.originalTotal) || Number(data.amount) || 0;
-      const discountAmount = Number(meta_data.discountAmount) || 0;
-      const finalTotal =
-        Number(meta_data.finalTotal) || Number(data.amount) || 0;
-      const deliveryAddress = meta_data.deliveryAddress || "";
-      const phoneNumber = data.customer?.phone_number || "";
-
-      console.log("UserId from meta_data:", userId);
-      console.log("Reservation ID:", reservationId);
-      console.log("Parsed products count:", parsedProducts.length);
-
-      if (!userId) {
-        console.error("Missing userId in webhook data");
-
-        // Release inventory if no user ID
-        if (reservationId) {
-          await releaseInventory(reservationId);
-        }
-
-        processingCompleted = true;
-        return res.status(400).send("Missing userId");
-      }
-
-      // 2. FINAL DUPLICATE CHECK (in case order was created between first check and now)
-      const finalDuplicateCheck = await Order.findOne({
-        $or: [
-          { flutterwaveTransactionId: transaction_id },
-          { flutterwaveRef: tx_ref },
-        ],
-      });
-
-      if (finalDuplicateCheck) {
-        console.log(
-          `🔄 LATE DUPLICATE: Order ${finalDuplicateCheck.orderNumber} created during processing`
-        );
-
-        // Release inventory
-        if (reservationId) {
-          await releaseInventory(reservationId);
-        }
-
-        processingCompleted = true;
-        return res.status(200).send("Order already processed");
-      }
-
-      console.log("Starting database transaction...");
-      const session = await mongoose.startSession();
-
+    let parsedProducts = [];
+    if (meta_data.products) {
       try {
-        await session.withTransaction(async () => {
-          const transactionData = {
-            transaction_id,
-            tx_ref,
-            data,
-            meta: {
-              userId: userId,
-              products: meta_data.products,
-              couponCode: couponCode,
-              originalTotal: originalTotal,
-              discountAmount: discountAmount,
-              finalTotal: finalTotal,
-              deliveryAddress: deliveryAddress || "No address provided",
-              phoneNumber:
-                data.customer?.phone_number || phoneNumber || "No phone number",
-            },
-            userId,
-            parsedProducts,
-            couponCode,
-            reservationId,
-          };
-
-          console.log("Processing order creation...");
-          const { order, isNew } = await processOrderCreation(transactionData);
-
-          console.log(
-            `${isNew ? "Created new" : "Updated existing"} order: ${
-              order.orderNumber
-            } for user: ${userId}`
-          );
-
-          // ONLY send email and check coupons for NEW orders
-          if (isNew) {
-            try {
-              console.log(`STARTING COUPON PROCESS FOR USER: ${userId}`);
-              const couponEligibility = await checkCouponEligibility(
-                userId,
-                order.totalAmount
-              );
-
-              if (couponEligibility) {
-                console.log(
-                  `User eligible for ${couponEligibility.reason} coupon`
-                );
-                const newCoupon = await createNewCoupon(userId, {
-                  discountPercentage: couponEligibility.discountPercentage,
-                  couponType: couponEligibility.codePrefix,
-                  reason: couponEligibility.reason,
-                  daysValid: 30,
-                });
-
-                if (newCoupon && newCoupon.isActive) {
-                  console.log(
-                    `Successfully created ACTIVE coupon: ${newCoupon.code}`
-                  );
-                  try {
-                    const user = await User.findById(userId);
-                    if (user && user.email) {
-                      await sendCouponEmail({
-                        to: user.email,
-                        coupon: newCoupon,
-                        couponType: couponEligibility.emailType,
-                        orderCount: await Order.countDocuments({
-                          user: userId,
-                          paymentStatus: "paid",
-                        }),
-                      });
-                      console.log(`Coupon email sent for: ${newCoupon.code}`);
-                    }
-                  } catch (emailErr) {
-                    console.error("Coupon email send failed:", emailErr);
-                  }
-                }
-              }
-            } catch (error) {
-              console.error("Coupon creation failed:", error);
-            }
-
-            // SEND ORDER CONFIRMATION EMAIL ONLY FOR NEW ORDERS
-            try {
-              const user = await User.findById(userId);
-              if (user && user.email) {
-                await sendDetailedOrderEmail({
-                  to: user.email,
-                  order,
-                  flutterwaveData: data,
-                });
-                console.log(
-                  `✅ Confirmation email sent for NEW order: ${order.orderNumber}`
-                );
-              }
-            } catch (emailErr) {
-              console.error("Email send failed (webhook):", emailErr);
-            }
-          } else {
-            console.log(
-              `📧 Skipping email and coupons for existing order: ${order.orderNumber}`
-            );
-          }
-        });
-
-        console.log("Database transaction committed successfully");
-        processingCompleted = true;
-      } catch (transactionError) {
-        console.error("Transaction failed:", transactionError);
-
-        // Release inventory if transaction fails
-        if (reservationId) {
-          await releaseInventory(reservationId);
+        if (typeof meta_data.products === "string") {
+          parsedProducts = JSON.parse(meta_data.products);
+        } else {
+          parsedProducts = meta_data.products;
         }
-
-        throw transactionError;
-      } finally {
-        await session.endSession();
-      }
-
-      console.log(`Webhook processing completed successfully`);
-      return res.status(200).send("Order processed successfully");
-    } finally {
-      // Release Redis lock immediately if processing completed
-      // Otherwise, let it expire automatically after 45 seconds
-      if (processingCompleted) {
-        await releaseWebhookLock(transaction_id);
-      } else {
-        console.log(
-          `⏳ Letting Redis lock expire naturally for: ${transaction_id}`
-        );
+        parsedProducts = parsedProducts.map((p) => ({
+          _id: p._id || p.id || null,
+          name: p.name,
+          images: p.images || [],
+          quantity: p.quantity || 1,
+          price: p.price,
+          size: p.size || null,
+          color: p.color || null,
+          category: p.category || null,
+        }));
+      } catch (error) {
+        console.error("Error parsing products:", error);
+        parsedProducts = [];
       }
     }
+
+    let userId = meta_data.userId;
+    const couponCode = meta_data.couponCode || "";
+    const reservationId = meta_data.reservationId;
+    const originalTotal =
+      Number(meta_data.originalTotal) || Number(data.amount) || 0;
+    const discountAmount = Number(meta_data.discountAmount) || 0;
+    const finalTotal = Number(meta_data.finalTotal) || Number(data.amount) || 0;
+    const deliveryAddress = meta_data.deliveryAddress || "";
+    const phoneNumber = data.customer?.phone_number || "";
+
+    console.log("UserId from meta_data:", userId);
+    console.log("Reservation ID:", reservationId);
+    console.log("Parsed products count:", parsedProducts.length);
+
+    if (!userId) {
+      console.error("Missing userId in webhook data");
+
+      // Release inventory if no user ID
+      if (reservationId) {
+        await releaseInventory(reservationId);
+      }
+
+      return res.status(400).send("Missing userId");
+    }
+
+    // 2. FINAL DUPLICATE CHECK (in case order was created between first check and now)
+    const finalDuplicateCheck = await Order.findOne({
+      $or: [
+        { flutterwaveTransactionId: transaction_id },
+        { flutterwaveRef: tx_ref },
+      ],
+    });
+
+    if (finalDuplicateCheck) {
+      console.log(
+        `🔄 LATE DUPLICATE: Order ${finalDuplicateCheck.orderNumber} created during processing`
+      );
+
+      // Release inventory
+      if (reservationId) {
+        await releaseInventory(reservationId);
+      }
+
+      return res.status(200).send("Order already processed");
+    }
+
+    console.log("Starting database transaction...");
+    const session = await mongoose.startSession();
+
+    try {
+      await session.withTransaction(async () => {
+        const transactionData = {
+          transaction_id,
+          tx_ref,
+          data,
+          meta: {
+            userId: userId,
+            products: meta_data.products,
+            couponCode: couponCode,
+            originalTotal: originalTotal,
+            discountAmount: discountAmount,
+            finalTotal: finalTotal,
+            deliveryAddress: deliveryAddress || "No address provided",
+            phoneNumber:
+              data.customer?.phone_number || phoneNumber || "No phone number",
+          },
+          userId,
+          parsedProducts,
+          couponCode,
+          reservationId,
+        };
+
+        console.log("Processing order creation...");
+        const { order, isNew } = await processOrderCreation(transactionData);
+
+        console.log(
+          `${isNew ? "Created new" : "Updated existing"} order: ${
+            order.orderNumber
+          } for user: ${userId}`
+        );
+
+        // ONLY send email and check coupons for NEW orders
+
+        if (isNew) {
+          try {
+            console.log(`STARTING COUPON PROCESS FOR USER: ${userId}`);
+            const couponEligibility = await checkCouponEligibility(   
+              userId,
+              order.totalAmount        
+            );
+
+            if (couponEligibility) {
+              console.log(
+                `User eligible for ${couponEligibility.reason} coupon`
+              );
+              const newCoupon = await createNewCoupon(userId, {
+                discountPercentage: couponEligibility.discountPercentage,
+                couponType: couponEligibility.codePrefix,
+                reason: couponEligibility.reason,
+                daysValid: 30,
+              });
+
+              if (newCoupon && newCoupon.isActive) {
+                console.log(
+                  `Successfully created ACTIVE coupon: ${newCoupon.code}`
+                );
+                try {
+                  const user = await User.findById(userId);
+                  if (user && user.email) {
+                    await sendCouponEmail({
+                      to: user.email,
+                      coupon: newCoupon,
+                      couponType: couponEligibility.emailType,
+                      orderCount: await Order.countDocuments({
+                        user: userId,
+                        paymentStatus: "paid",
+                      }),
+                    });
+                    console.log(`Coupon email sent for: ${newCoupon.code}`);
+                  }
+                } catch (emailErr) {
+                  console.error("Coupon email send failed:", emailErr);
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Coupon creation failed:", error);
+          }
+
+          // SEND ORDER CONFIRMATION EMAIL ONLY FOR NEW ORDERS
+          try {
+            const user = await User.findById(userId);
+            if (user && user.email) {
+              await sendDetailedOrderEmail({
+                to: user.email,
+                order,
+                flutterwaveData: data,
+              });
+              console.log(
+                `✅ Confirmation email sent for NEW order: ${order.orderNumber}`
+              );
+            }
+          } catch (emailErr) {
+            console.error("Email send failed (webhook):", emailErr);
+          }
+        } else {
+          console.log(
+            `📧 Skipping email and coupons for existing order: ${order.orderNumber}`
+          );
+        }
+      });
+
+      console.log("Database transaction committed successfully");
+    } catch (transactionError) {
+      console.error("Transaction failed:", transactionError);
+
+      // Release inventory if transaction fails
+      if (reservationId) {
+        await releaseInventory(reservationId);
+      }
+
+      throw transactionError;
+    } finally {
+      await session.endSession();
+    }
+
+    console.log(`Webhook processing completed successfully`);
+    return res.status(200).send("Order processed successfully");
   } catch (err) {
     console.error(`Webhook processing error:`, err);
 
-    // Always try to release the lock on error
-    try {
-      await releaseWebhookLock(transaction_id);
-    } catch (lockError) {
-      console.error("Failed to release lock on error:", lockError);
+    // Release inventory on error
+    const reservationId = req.body?.data?.meta?.reservationId;
+    if (reservationId) {
+      await releaseInventory(reservationId);
     }
 
     return res.status(500).send("Webhook processing failed");
+  } finally {
+    // Always release lock if we acquired it
+    if (lockAcquired && transaction_id) {
+      await releaseWebhookLock(transaction_id);
+      console.log(`🔓 Webhook lock released for: ${transaction_id}`);
+    }
   }
 };
-
 async function withRetry(fn, retries = 3, delay = 200) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -1122,13 +1106,26 @@ async function withRetry(fn, retries = 3, delay = 200) {
 }
 
 export const checkoutSuccess = async (req, res) => {
+  let lockAcquired = false;
+  const { tx_ref, transaction_id } = req.body;
+
+  console.log(
+    ` ENTERING ORDER PROCESSING - Source: ${
+      req.path
+    }, TX: ${transaction_id}, Time: ${new Date().toISOString()}`
+  );
+
+  // ADD VALIDATION
+  if (!transaction_id) {
+    return res.status(400).json({
+      error: "transaction_id is required",
+      received: req.body,
+    });
+  }
+
+  console.log(`🔄 checkoutSuccess called for transaction: ${transaction_id}`);
+
   try {
-    const { tx_ref, transaction_id } = req.body;
-
-    if (!transaction_id) {
-      return res.status(400).json({ error: "transaction_id is required" });
-    }
-
     // Duplicate protection
     const existingPaidOrder = await Order.findOne({
       $or: [
@@ -1147,6 +1144,38 @@ export const checkoutSuccess = async (req, res) => {
         message: "Order already processed",
         orderId: existingPaidOrder._id,
         orderNumber: existingPaidOrder.orderNumber,
+      });
+    }
+
+    // Acquire lock
+    lockAcquired = await acquireWebhookLock(transaction_id, 30000);
+    if (!lockAcquired) {
+      console.log(
+        `⏳ checkoutSuccess: Lock already acquired for ${transaction_id}`
+      );
+
+      // Wait 1 second and check if order exists now
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const orderNow = await Order.findOne({
+        $or: [
+          { flutterwaveTransactionId: transaction_id },
+          { flutterwaveRef: tx_ref },
+        ],
+        paymentStatus: "paid",
+      });
+
+      if (orderNow) {
+        return res.status(200).json({
+          success: true,
+          orderId: orderNow._id,
+          orderNumber: orderNow.orderNumber,
+        });
+      }
+
+      return res.status(200).json({
+        success: false,
+        message: "Please wait a moment and refresh the page",
       });
     }
 
@@ -1170,6 +1199,7 @@ export const checkoutSuccess = async (req, res) => {
     }
 
     let finalOrder;
+    let isNewOrder = false;
 
     await withRetry(async () => {
       const session = await mongoose.startSession();
@@ -1187,55 +1217,66 @@ export const checkoutSuccess = async (req, res) => {
             reservationId,
           };
 
-          const { order } = await processOrderCreation(transactionData);
+          const { order, isNew } = await processOrderCreation(transactionData);
           finalOrder = order;
+          isNewOrder = isNew; // Store whether this is a new order
 
-          // Handle coupon eligibility
-          const couponEligibility = await checkCouponEligibility(
-            userId,
-            finalOrder.totalAmount
-          );
-          if (couponEligibility) {
-            const newCoupon = await createNewCoupon(userId, {
-              discountPercentage: couponEligibility.discountPercentage,
-              couponType: couponEligibility.codePrefix,
-              reason: couponEligibility.reason,
-              daysValid: 30,
-            });
+          // ONLY process coupons and send emails for NEW orders
+          if (isNew) {
+            // Handle coupon eligibility
+            const couponEligibility = await checkCouponEligibility(
+              userId,
+              finalOrder.totalAmount
+            );
+            if (couponEligibility) {
+              const newCoupon = await createNewCoupon(userId, {
+                discountPercentage: couponEligibility.discountPercentage,
+                couponType: couponEligibility.codePrefix,
+                reason: couponEligibility.reason,
+                daysValid: 30,
+              });
 
-            if (newCoupon) {
-              console.log(
-                `Created ${couponEligibility.reason} coupon: ${newCoupon.code}`
-              );
-              try {
-                const user = await User.findById(userId);
-                if (user && user.email) {
-                  await sendCouponEmail({
-                    to: user.email,
-                    coupon: newCoupon,
-                    couponType: couponEligibility.emailType,
-                    orderCount: await Order.countDocuments({
-                      user: userId,
-                      paymentStatus: "paid",
-                    }),
-                  });
+              if (newCoupon) {
+                console.log(
+                  `Created ${couponEligibility.reason} coupon: ${newCoupon.code}`
+                );
+                try {
+                  const user = await User.findById(userId);
+                  if (user && user.email) {
+                    await sendCouponEmail({
+                      to: user.email,
+                      coupon: newCoupon,
+                      couponType: couponEligibility.emailType,
+                      orderCount: await Order.countDocuments({
+                        user: userId,
+                        paymentStatus: "paid",
+                      }),
+                    });
+                  }
+                } catch (emailErr) {
+                  console.error("Coupon email send failed:", emailErr);
                 }
-              } catch (emailErr) {
-                console.error("Coupon email send failed:", emailErr);
               }
             }
-          }
 
-          // Send confirmation email
-          try {
-            const user = await User.findById(userId);
-            await sendDetailedOrderEmail({
-              to: user.email,
-              order,
-              flutterwaveData: data,
-            });
-          } catch (emailErr) {
-            console.error("Email send failed (checkoutSuccess):", emailErr);
+            // Send confirmation email ONLY for new orders
+            try {
+              const user = await User.findById(userId);
+              await sendDetailedOrderEmail({
+                to: user.email,
+                order,
+                flutterwaveData: data,
+              });
+              console.log(
+                `✅ Confirmation email sent for NEW order: ${order.orderNumber}`
+              );
+            } catch (emailErr) {
+              console.error("Email send failed (checkoutSuccess):", emailErr);
+            }
+          } else {
+            console.log(
+              `📧 Skipping email for existing order: ${order.orderNumber}`
+            );
           }
         });
       } finally {
@@ -1248,6 +1289,7 @@ export const checkoutSuccess = async (req, res) => {
       message: "Payment verified and order finalized",
       orderId: finalOrder._id,
       orderNumber: finalOrder.orderNumber,
+      isNew: isNewOrder, // Optional: include for debugging
     });
   } catch (error) {
     console.error("checkoutSuccess failed:", error);
@@ -1261,6 +1303,11 @@ export const checkoutSuccess = async (req, res) => {
     return res.status(500).json({
       error: error.message || "Checkout failed",
     });
+  } finally {
+    // RELEASE LOCK
+    if (lockAcquired) {
+      await releaseWebhookLock(transaction_id);
+    }
   }
 };
 

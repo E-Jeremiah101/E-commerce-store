@@ -1,5 +1,5 @@
-// In OrderSummary.js - Fixed version
-import React, { useEffect, useState } from "react";
+// In OrderSummary.js - Fixed version with one-click protection
+import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useCartStore } from "../stores/useCartStore";
 import { MoveRight, AlertTriangle } from "lucide-react";
@@ -20,6 +20,9 @@ const OrderSummary = () => {
     unavailableItems: [],
     checked: false,
   });
+
+  // Add one-click protection
+  const isProcessing = useRef(false);
 
   // Fetch fresh profile when OrderSummary mounts
   useEffect(() => {
@@ -63,8 +66,20 @@ const OrderSummary = () => {
     }
   }, [cart]);
 
-  // In OrderSummary.js - Simplify the handlePayment function
+  // Reset processing state when component unmounts or cart changes
+  useEffect(() => {
+    return () => {
+      isProcessing.current = false;
+    };
+  }, [cart]);
+
   const handlePayment = async () => {
+    // One-click protection
+    if (isProcessing.current) {
+      console.log("🛑 Payment already processing, ignoring click");
+      return;
+    }
+
     if (!defaultPhone || !defaultAddress) {
       alert(
         "Please provide a phone number and address before checkout. Please update your Profile Page."
@@ -73,6 +88,8 @@ const OrderSummary = () => {
     }
 
     try {
+      // Set processing flag immediately
+      isProcessing.current = true;
       setIsLoading(true);
 
       console.log("🔄 Proceeding with payment...");
@@ -86,12 +103,19 @@ const OrderSummary = () => {
 
       const { link } = res.data;
       if (link) {
+        // Success - redirect to payment
+        console.log("✅ Payment initialized, redirecting...");
         window.location.href = link;
       } else {
         toast.error("Unable to initialize payment. Please try again.");
+        // Reset processing state on error
+        isProcessing.current = false;
       }
     } catch (error) {
       console.error("❌ Payment initialization failed:", error);
+
+      // Reset processing state on error
+      isProcessing.current = false;
 
       // Handle specific error messages from backend
       if (error.response?.data?.error) {
@@ -131,6 +155,14 @@ const OrderSummary = () => {
     minimumFractionDigits: 0,
   });
 
+  // Determine if button should be disabled
+  const isButtonDisabled =
+    hasUnavailableItems ||
+    !defaultPhone ||
+    !defaultAddress ||
+    loading ||
+    isProcessing.current;
+
   return (
     <motion.div
       className="space-y-4 rounded-lg border-1 border-gray-500 p-4 shadow-sm sm:p-6 lg:px-5"
@@ -141,7 +173,6 @@ const OrderSummary = () => {
       <p className="text-xl font-semibold text-black tracking-widest">
         Order summary
       </p>
-    
 
       <div className="space-y-4">
         <div className="space-y-2">
@@ -184,31 +215,27 @@ const OrderSummary = () => {
 
         <motion.button
           className={`flex w-full items-center justify-center rounded-lg px-5 py-2.5 text-sm font-medium text-white ${
-            hasUnavailableItems || !defaultPhone || !defaultAddress
+            isButtonDisabled
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-black/90 hover:bg-black/80"
           } disabled:opacity-50`}
-          whileHover={
-            !hasUnavailableItems && defaultPhone && defaultAddress
-              ? { scale: 1.05 }
-              : {}
-          }
-          whileTap={
-            !hasUnavailableItems && defaultPhone && defaultAddress
-              ? { scale: 0.95 }
-              : {}
-          }
+          whileHover={!isButtonDisabled ? { scale: 1.05 } : {}}
+          whileTap={!isButtonDisabled ? { scale: 0.95 } : {}}
           onClick={handlePayment}
-          disabled={
-            hasUnavailableItems || !defaultPhone || !defaultAddress || loading
-          }
+          disabled={isButtonDisabled}
         >
-          {loading ? (
-            <>Processing...</>
+          {loading || isProcessing.current ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+              Processing...
+            </>
           ) : hasUnavailableItems ? (
             <>Unavailable Items in Cart</>
           ) : (
-            <>Proceed to Checkout</>
+            <>
+              Proceed to Checkout
+              <MoveRight className="ml-2" size={16} />
+            </>
           )}
         </motion.button>
 

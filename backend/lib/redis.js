@@ -26,13 +26,19 @@ redis.on("reconnecting", () => console.log("♻️ Redis reconnecting..."));
 redis.on("end", () => console.error("🔌 Redis connection closed"));
 
 // Redis Locking Functions
-export async function acquireWebhookLock(transactionId, timeoutMs = 30000) {
+export async function acquireWebhookLock(transactionId, timeoutMs = 45000) {
   try {
     const lockKey = `webhook_lock:${transactionId}`;
-    const acquired = await redis.set(lockKey, '1', {
+    const lockValue = `${transactionId}_${Date.now()}`;
+    const acquired = await redis.set(lockKey,lockValue, {
       NX: true, // Only set if not exists
       PX: timeoutMs // Expire after timeout
     });
+    console.log(
+      `🔒 Lock acquisition ${
+        acquired === "OK" ? "successful" : "failed"
+      } for: ${transactionId}`
+    );
     return acquired === 'OK';
   } catch (error) {
     console.error('Redis lock acquisition failed:', error);

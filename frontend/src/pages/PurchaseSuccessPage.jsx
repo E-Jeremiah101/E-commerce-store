@@ -1,5 +1,5 @@
-import { ArrowRight, CheckCircle, HandHeart } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowRight, CheckCircle, HandHeart, RefreshCw } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCartStore } from "../stores/useCartStore";
 import axios from "../lib/axios";
@@ -9,8 +9,10 @@ const PurchaseSuccessPage = () => {
   const [isProcessing, setIsProcessing] = useState(true);
   const [orderNumber, setOrderNumber] = useState("");
   const [error, setError] = useState(null);
+  const [needsRefresh, setNeedsRefresh] = useState(false);
   const { clearCart } = useCartStore();
   const navigate = useNavigate();
+  const hasProcessed = useRef(false); // Prevent duplicate processing
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -24,6 +26,10 @@ const PurchaseSuccessPage = () => {
       return;
     }
 
+    // Prevent duplicate processing
+    if (hasProcessed.current) return;
+    hasProcessed.current = true;
+
     // Proceed with verification
     const handleCheckoutSuccess = async (transaction_id, tx_ref) => {
       try {
@@ -32,19 +38,32 @@ const PurchaseSuccessPage = () => {
           tx_ref,
         });
 
-        clearCart();
-        setOrderNumber(response.data.orderNumber);
+        console.log("🔍 Backend response:", response.data);
 
-        // Clean up URL
-        const url = new URL(window.location);
-        url.searchParams.delete("transaction_id");
-        url.searchParams.delete("tx_ref");
-        url.searchParams.delete("status");
-        window.history.replaceState({}, document.title, url);
+        // ✅ FIX: Check if the request was actually successful
+        if (response.data.success) {
+          // Order completed successfully
+          clearCart();
+          setOrderNumber(response.data.orderNumber);
+          setIsProcessing(false);
+
+          // Clean up URL
+          const url = new URL(window.location);
+          url.searchParams.delete("transaction_id");
+          url.searchParams.delete("tx_ref");
+          url.searchParams.delete("status");
+          window.history.replaceState({}, document.title, url);
+        } else {
+          // ❌ Backend says order is still processing or lock is busy
+          // Wait longer and retry instead of immediate refresh
+          console.log("Order still processing, waiting...");
+          setTimeout(() => {
+            handleCheckoutSuccess(transaction_id, tx_ref); // Retry same function
+          }, 3000); // Wait 3 seconds before retry
+        }
       } catch (error) {
         console.error("Verification failed:", error);
         setError("Could not verify payment. Please contact support.");
-      } finally {
         setIsProcessing(false);
       }
     };
@@ -52,29 +71,49 @@ const PurchaseSuccessPage = () => {
     handleCheckoutSuccess(transaction_id, tx_ref);
   }, [navigate, clearCart]);
 
-  // 🌀 Loading state
+  // Loading state
   if (isProcessing)
     return (
       <div className="flex justify-center items-center h-screen w-screen bg-gray-700">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-emerald-500 rounded-full animate-spin"></div>
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-gray-300 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-300">Processing your order...</p>
+          <p className="text-sm text-gray-400 mt-2">
+            This may take a few moments
+          </p>
+        </div>
       </div>
     );
 
   // ❌ Error state
   if (error)
     return (
-      <div className="flex flex-col items-center justify-center h-screen text-red-400 text-lg">
-        <p>{error}</p>
-        <Link
-          to="/purchase-cancel"
-          className="mt-4 underline text-emerald-400 hover:text-emerald-300"
-        >
-          Go to Cancel Page
-        </Link>
+      <div className="flex flex-col items-center justify-center h-screen bg-gray-700 px-4">
+        <div className="max-w-md w-full bg-gray-800 rounded-lg shadow-xl overflow-hidden p-6 text-center">
+          <RefreshCw className="text-yellow-400 w-16 h-16 mb-4 mx-auto" />
+          <h2 className="text-xl font-bold text-yellow-400 mb-4">
+            Verification Issue
+          </h2>
+          <p className="text-gray-300 mb-2">{error}</p>
+          <div className="space-y-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition duration-300"
+            >
+              Try Again
+            </button>
+            <Link
+              to="/"
+              className="w-full bg-gray-700 hover:bg-gray-600 text-emerald-400 font-bold py-2 px-4 rounded-lg transition duration-300 block text-center"
+            >
+              Continue Shopping
+            </Link>
+          </div>
+        </div>
       </div>
     );
 
-  //  Success state
+  // ✅ Success state
   return (
     <div className="h-screen w-screen bg-gray-700 flex items-center justify-center px-4 relative">
       <Confetti
@@ -101,16 +140,16 @@ const PurchaseSuccessPage = () => {
           </p>
 
           <p className="text-emerald-400 text-center text-sm mb-6">
-            Your order was successfully submitted. You will
-            receive a confirmation email about your order. Please check
-            your inbox for updates.
+            Your order was successfully submitted. You will receive a
+            confirmation email about your order. Please check your inbox for
+            updates.
           </p>
 
           <div className="bg-gray-700 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm text-gray-400">Order number</span>
               <span className="text-sm font-semibold text-emerald-400">
-                {orderNumber || "Processing..."}
+                {orderNumber}
               </span>
             </div>
             <div className="flex items-center justify-between">
