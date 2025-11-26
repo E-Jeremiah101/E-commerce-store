@@ -47,7 +47,20 @@ const OrderSummary = () => {
         defaultAddressObj.state || ""
       }`
     : "";
-
+useEffect(() => {
+  console.log("🛒 Current cart items:", cart);
+  console.log(
+    "🛒 Cart item details:",
+    cart.map((item) => ({
+      id: item._id,
+      name: item.name,
+      size: item.size,
+      color: item.color,
+      quantity: item.quantity,
+      countInStock: item.countInStock,
+    }))
+  );
+}, [cart]);
   // Check cart availability when cart changes
   useEffect(() => {
     // Just set as available since backend will handle the real check

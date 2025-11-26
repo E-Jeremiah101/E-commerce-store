@@ -12,8 +12,8 @@ const reviewSchema = new mongoose.Schema(
 );
 
 const productVariantSchema = new mongoose.Schema({
-  size: { type: String, required: true },
-  color: { type: String, required: true },
+  size: { type: String, default: "" },
+  color: { type: String, default: "" },
   countInStock: { type: Number, required: true, default: 0, min: 0 },
   reserved: { type: Number, default: 0 }, // For variants - ADDED THIS
   sku: { type: String, unique: true, sparse: true },

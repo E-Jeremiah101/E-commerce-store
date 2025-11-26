@@ -16,22 +16,187 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
 
-// ==================== INVENTORY RESERVATION SYSTEM ====================
+
 const inventoryReservations = new Map();
 
-// Clean up expired reservations every minute
-setInterval(() => {
+// 1. First define all helper functions
+async function clearStaleDatabaseReservations() {
+  console.log('🔍 Checking for stale database reservations...');
+  
+  try {
+    const productsWithReservations = await Product.find({
+      $or: [
+        { reserved: { $gt: 0 } },
+        { 'variants.reserved': { $gt: 0 } }
+      ]
+    });
+
+    for (const product of productsWithReservations) {
+      let needsUpdate = false;
+
+      // Check if reservations match any active in-memory reservations
+      if (product.reserved > 0) {
+        const hasActiveReservation = Array.from(inventoryReservations.values()).some(reservation => 
+          reservation.products.some(item => 
+            item._id === product._id.toString() && !item.size && !item.color
+          )
+        );
+
+        if (!hasActiveReservation) {
+          console.log(`🔄 Releasing orphaned main reservation for ${product.name}: ${product.reserved} units`);
+          product.countInStock += product.reserved;
+          product.reserved = 0;
+          needsUpdate = true;
+        }
+      }
+
+      // Check variant reservations
+      if (product.variants && product.variants.length > 0) {
+        product.variants.forEach((variant, index) => {
+          if (variant.reserved > 0) {
+            const hasActiveVariantReservation = Array.from(inventoryReservations.values()).some(reservation => 
+              reservation.products.some(item => {
+                const sizeMatch = item.size ? variant.size === item.size : (!variant.size || variant.size === "");
+                const colorMatch = item.color ? variant.color === item.color : (!variant.color || variant.color === "");
+                return item._id === product._id.toString() && sizeMatch && colorMatch;
+              })
+            );
+
+            if (!hasActiveVariantReservation) {
+              console.log(`🔄 Releasing orphaned variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units`);
+              product.variants[index].countInStock += variant.reserved;
+              product.variants[index].reserved = 0;
+              needsUpdate = true;
+            }
+          }
+        });
+
+        if (needsUpdate) {
+          product.countInStock = product.variants.reduce(
+            (total, v) => total + v.countInStock,
+            0
+          );
+        }
+      }
+
+      if (needsUpdate) {
+        await product.save();
+        console.log(`✅ Cleared orphaned reservations for ${product.name}`);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error checking for stale database reservations:', error);
+  }
+}
+
+// 2. Then define the main reservation functions (reserveInventory, releaseInventory, confirmInventory)
+// ... your existing reserveInventory, releaseInventory, confirmInventory functions here ...
+
+// 3. Then set up the cleanup interval
+// Enhanced cleanup - runs every 30 seconds and clears expired reservations
+setInterval(async () => {
   const now = new Date();
+  let releasedCount = 0;
+  
+  console.log(`🕒 Running reservation cleanup (${inventoryReservations.size} active reservations)...`);
+
+  // Release expired reservations
   for (const [reservationId, reservation] of inventoryReservations.entries()) {
     if (reservation.expiresAt < now) {
-      console.log(`Releasing expired reservation: ${reservationId}`);
-      releaseInventory(reservationId).catch(console.error);
+      console.log(`⏰ Releasing expired reservation: ${reservationId}`);
+      try {
+        await releaseInventory(reservationId);
+        releasedCount++;
+      } catch (error) {
+        console.error(`❌ Failed to release reservation ${reservationId}:`, error);
+      }
     }
   }
-}, 60000);
 
-// Reserve inventory atomically
-// Reserve inventory atomically
+  if (releasedCount > 0) {
+    console.log(`✅ Released ${releasedCount} expired reservations`);
+  }
+
+  // Periodically check for database inconsistencies (every 5 minutes)
+  if (Date.now() % 300000 < 60000) { // Run roughly every 5 minutes
+    await clearStaleDatabaseReservations();
+  }
+}, 30000); // Run every 30 seconds instead of 60
+
+// 4. Add the immediate cleanup function (run this once)
+async function clearAllReservations() {
+  console.log('🧹 Clearing all stale reservations from database...');
+  
+  try {
+    const session = await mongoose.startSession();
+    
+    await session.withTransaction(async () => {
+      // Find all products with reserved inventory
+      const productsWithReservations = await Product.find({
+        $or: [
+          { reserved: { $gt: 0 } },
+          { 'variants.reserved': { $gt: 0 } }
+        ]
+      }).session(session);
+
+      console.log(`📊 Found ${productsWithReservations.length} products with reservations`);
+
+      for (const product of productsWithReservations) {
+        let changed = false;
+
+        // Clear main product reservations
+        if (product.reserved > 0) {
+          console.log(`🔄 Clearing main reservation for ${product.name}: ${product.reserved} units`);
+          product.countInStock += product.reserved;
+          product.reserved = 0;
+          changed = true;
+        }
+
+        // Clear variant reservations
+        if (product.variants && product.variants.length > 0) {
+          product.variants.forEach((variant, index) => {
+            if (variant.reserved > 0) {
+              console.log(`🔄 Clearing variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units`);
+              product.variants[index].countInStock += variant.reserved;
+              product.variants[index].reserved = 0;
+              changed = true;
+            }
+          });
+
+          // Update total stock
+          if (changed) {
+            product.countInStock = product.variants.reduce(
+              (total, v) => total + v.countInStock,
+              0
+            );
+          }
+        }
+
+        if (changed) {
+          await product.save({ session });
+          console.log(`✅ Cleared reservations for ${product.name}`);
+        }
+      }
+    });
+
+    await session.endSession();
+    console.log('🎉 All stale reservations cleared successfully');
+    
+    // Also clear the in-memory reservations
+    inventoryReservations.clear();
+    console.log('🧹 Cleared in-memory reservation map');
+    
+  } catch (error) {
+    console.error('❌ Failed to clear reservations:', error);
+  }
+}
+
+// 5. Run the immediate cleanup once
+clearAllReservations();
+
+
+
+// Reserve inventory atomically - FIXED VERSION
 async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
   const session = await mongoose.startSession();
 
@@ -45,21 +210,27 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
         const product = await Product.findById(item._id).session(session);
         if (!product) throw new Error(`Product ${item.name} not found`);
 
-        // Handle variants (like Almond Suit with size/color)
-        if (item.size && item.color) {
-          const variantIndex = product.variants.findIndex(
-            (v) => v.size === item.size && v.color === item.color
-          );
+        // FIXED: Use flexible matching for variants (same as frontend)
+        if (item.size || item.color) {
+          const variantIndex = product.variants.findIndex((v) => {
+            const sizeMatches = item.size 
+              ? v.size === item.size 
+              : (!v.size || v.size === "" || v.size === "Standard");
+            const colorMatches = item.color 
+              ? v.color === item.color 
+              : (!v.color || v.color === "" || v.color === "Standard");
+            return sizeMatches && colorMatches;
+          });
 
           if (variantIndex === -1) {
             throw new Error(
-              `Variant ${item.size}/${item.color} not found for ${item.name}`
+              `Variant ${item.size || 'Any'}/${item.color || 'Any'} not found for ${item.name}`
             );
           }
 
           const variant = product.variants[variantIndex];
           console.log(
-            `📦 BEFORE - ${item.name} ${item.size}/${item.color}: Stock=${
+            `📦 BEFORE - ${item.name} ${item.size || ''}/${item.color || ''}: Stock=${
               variant.countInStock
             }, Reserved=${variant.reserved || 0}`
           );
@@ -76,7 +247,7 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
           variant.reserved = (variant.reserved || 0) + item.quantity;
 
           console.log(
-            `📦 AFTER - ${item.name} ${item.size}/${item.color}: Stock=${variant.countInStock}, Reserved=${variant.reserved}`
+            `📦 AFTER - ${item.name} ${item.size || ''}/${item.color || ''}: Stock=${variant.countInStock}, Reserved=${variant.reserved}`
           );
 
           // Update total product stock
@@ -112,6 +283,17 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
         console.log(
           `✅ Successfully reserved ${item.quantity} of ${item.name}`
         );
+        console.log(`💾 Storing reservation: ${reservationId}`, {
+          products: products.map((p) => ({
+            _id: p._id,
+            name: p.name,
+            size: p.size,
+            color: p.color,
+            quantity: p.quantity,
+          })),
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + timeoutMinutes * 60 * 1000),
+        });
       }
     });
 
@@ -140,7 +322,8 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
   }
 }
 
-// Release reserved inventory
+
+// Release reserved inventory - FIXED VERSION
 async function releaseInventory(reservationId) {
   const reservation = inventoryReservations.get(reservationId);
   if (!reservation) {
@@ -162,10 +345,17 @@ async function releaseInventory(reservationId) {
           continue;
         }
 
-        if (item.size && item.color) {
-          const variantIndex = product.variants.findIndex(
-            (v) => v.size === item.size && v.color === item.color
-          );
+        // FIXED: Use flexible matching for variants
+        if (item.size || item.color) {
+          const variantIndex = product.variants.findIndex((v) => {
+            const sizeMatches = item.size 
+              ? v.size === item.size 
+              : (!v.size || v.size === "" || v.size === "Standard");
+            const colorMatches = item.color 
+              ? v.color === item.color 
+              : (!v.color || v.color === "" || v.color === "Standard");
+            return sizeMatches && colorMatches;
+          });
 
           if (variantIndex !== -1) {
             // RESTORE the inventory we deducted
@@ -211,6 +401,8 @@ async function releaseInventory(reservationId) {
 }
 
 
+
+// Confirm inventory - FIXED VERSION
 async function confirmInventory(reservationId) {
   const reservation = inventoryReservations.get(reservationId);
   if (!reservation) {
@@ -229,10 +421,17 @@ async function confirmInventory(reservationId) {
         const product = await Product.findById(item._id).session(session);
         if (!product) continue;
 
-        if (item.size && item.color) {
-          const variantIndex = product.variants.findIndex(
-            (v) => v.size === item.size && v.color === item.color
-          );
+        // FIXED: Use flexible matching for variants (same as reserveInventory)
+        if (item.size || item.color) {
+          const variantIndex = product.variants.findIndex((v) => {
+            const sizeMatches = item.size 
+              ? v.size === item.size 
+              : (!v.size || v.size === "" || v.size === "Standard");
+            const colorMatches = item.color 
+              ? v.color === item.color 
+              : (!v.color || v.color === "" || v.color === "Standard");
+            return sizeMatches && colorMatches;
+          });
 
           if (variantIndex !== -1) {
             // Just remove the reservation flag - inventory already deducted
@@ -241,8 +440,10 @@ async function confirmInventory(reservationId) {
               (product.variants[variantIndex].reserved || 0) - item.quantity
             );
             console.log(
-              `✅ Confirmed ${item.name} variant - Final: Stock=${product.variants[variantIndex].countInStock}, Reserved=${product.variants[variantIndex].reserved}`
+              `✅ Confirmed ${item.name} ${item.size || ''}/${item.color || ''} - Final: Stock=${product.variants[variantIndex].countInStock}, Reserved=${product.variants[variantIndex].reserved}`
             );
+          } else {
+            console.log(`❌ Variant not found for confirmation: ${item.name} ${item.size || ''}/${item.color || ''}`);
           }
         } else {
           // Simple product - remove reservation flag
@@ -389,7 +590,7 @@ async function createNewCoupon(userId, options = {}) {
     console.error("Failed to create/update coupon:", error);
     return null;
   }
-}
+} 
 
 function generateOrderNumber() {
   return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -567,25 +768,38 @@ export const createCheckoutSession = async (req, res) => {
         }
 
         // Handle variants
-        if (item.size && item.color) {
-          const variantIndex = product.variants.findIndex(
-            (v) => v.size === item.size && v.color === item.color
-          );
+        if (item.size || item.color) {
+          const variantIndex = product.variants.findIndex((v) => {
+            const sizeMatches = item.size
+              ? v.size === item.size
+              : !v.size || v.size === "" || v.size === "Standard";
+            const colorMatches = item.color
+              ? v.color === item.color
+              : !v.color || v.color === "" || v.color === "Standard";
+            return sizeMatches && colorMatches;
+          });
+
 
           if (variantIndex === -1) {
             throw new Error(
-              `Variant ${item.size}/${item.color} not found for ${item.name}`
+              `Variant ${item.size || "Any"}/${
+                item.color || "Any"
+              } not found for ${item.name}`
             );
           }
 
           const variant = product.variants[variantIndex];
           console.log(
-            `📊 Availability check - ${item.name} ${item.size}/${item.color}: Stock=${variant.countInStock}, Requested=${item.quantity}`
+            `📊 Availability check - ${item.name} ${item.size || ""}/${
+              item.color || ""
+            }: Stock=${variant.countInStock}, Requested=${item.quantity}`
           );
 
           if (variant.countInStock < item.quantity) {
             throw new Error(
-              ` ${item.name} ${item.size}/${item.color}, is out of stock, please update you cart`
+              ` ${item.name} ${item.size || ""}/${
+                item.color || ""
+              }, is out of stock, please update you cart`
             );
           }
         }

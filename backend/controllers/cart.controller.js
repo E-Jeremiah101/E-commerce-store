@@ -27,39 +27,56 @@ export const addToCart = async (req, res) => {
     const { productId, size, color } = req.body;
     const user = req.user;
 
+    console.log("🛒 Backend addToCart received:", { productId, size, color });
+
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    // Find variant stock - NEW LOGIC
+    // Find variant stock - FIXED LOGIC
     let availableStock = product.countInStock; // fallback to overall stock
     let variant = null;
 
-    if (size || color) {
-      variant = product.variants.find(
-        (v) => v.size === size && v.color === color
-      );
+    if (product.variants && product.variants.length > 0) {
+      // FIXED: Use flexible matching for variants
+      variant = product.variants.find((v) => {
+        const sizeMatches = size
+          ? v.size === size
+          : !v.size || v.size === "" || v.size === "Standard";
+        const colorMatches = color
+          ? v.color === color
+          : !v.color || v.color === "" || v.color === "Standard";
+        return sizeMatches && colorMatches;
+      });
+
+      console.log("📊 Found variant:", variant);
 
       if (variant) {
         availableStock = variant.countInStock;
-      } else if (product.variants.length > 0) {
-        // If product has variants but this specific one doesn't exist
+      } else {
+        // If product has variants but no matching variant found
         return res
           .status(400)
           .json({ message: "This variant is not available" });
       }
     }
 
+    console.log("📊 Available stock:", availableStock);
+
     if (availableStock <= 0) {
       return res.status(400).json({ message: "Out of stock" });
     }
 
-    // Look for existing item in user's cart
-    const existingItem = user.cartItems.find(
-      (item) =>
-        item.product?.toString() === productId &&
-        (size ? item.size === size : !item.size) &&
-        (color ? item.color === color : !item.color)
-    );
+    // Look for existing item in user's cart - FIXED MATCHING
+    const existingItem = user.cartItems.find((item) => {
+      const productMatch = item.product?.toString() === productId;
+      const sizeMatch = size
+        ? item.size === size
+        : !item.size || item.size === "";
+      const colorMatch = color
+        ? item.color === color
+        : !item.color || item.color === "";
+      return productMatch && sizeMatch && colorMatch;
+    });
 
     if (existingItem) {
       if (existingItem.quantity + 1 > availableStock) {
@@ -80,7 +97,22 @@ export const addToCart = async (req, res) => {
     }
 
     await user.save();
-    res.json(user.cartItems);
+
+    // Return the updated cart items
+    const cartItems = await Promise.all(
+      user.cartItems.map(async (cartItem) => {
+        const product = await Product.findById(cartItem.product);
+        if (!product) return null;
+        return {
+          ...product.toJSON(),
+          quantity: cartItem.quantity,
+          size: cartItem.size || "",
+          color: cartItem.color || "",
+        };
+      })
+    );
+
+    res.json(cartItems.filter(Boolean));
   } catch (error) {
     console.log("Error in addToCart controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });

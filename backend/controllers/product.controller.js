@@ -22,6 +22,8 @@ export const checkVariantAvailability = async (req, res) => {
     const { productId } = req.params;
     const { size, color, quantity = 1 } = req.query;
 
+    console.log("🔍 checkVariantAvailability called:", { productId, size, color, quantity });
+
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ 
@@ -31,17 +33,22 @@ export const checkVariantAvailability = async (req, res) => {
       });
     }
 
-    let availableStock = 0;
+    let availableStock = product.countInStock;
     
-    // Check variant stock
-    if (size && color && product.variants?.length > 0) {
-      const variant = product.variants.find(
-        v => v.size === size && v.color === color
-      );
+    // Check variant stock with FLEXIBLE matching
+    if (product.variants?.length > 0) {
+      const variant = product.variants.find((v) => {
+        const sizeMatches = size
+          ? v.size === size
+          : !v.size || v.size === "" || v.size === "Standard";
+        const colorMatches = color
+          ? v.color === color
+          : !v.color || v.color === "" || v.color === "Standard";
+        return sizeMatches && colorMatches;
+      });
+      
       availableStock = variant ? variant.countInStock : 0;
-    } else {
-      // Check simple product stock
-      availableStock = product.countInStock;
+      console.log("📊 Variant stock found:", availableStock);
     }
 
     const isAvailable = availableStock >= parseInt(quantity);
@@ -311,27 +318,39 @@ export const updateVariantInventory = async (req, res) => {
   }
 };
 
-// Get variant stock specifically
+// Get variant stock specifically - FIXED VERSION
 export const getVariantStock = async (req, res) => {
   try {
     const { productId } = req.params;
     const { size, color } = req.query;
-    
+
+    console.log("🔍 getVariantStock called:", { productId, size, color });
+
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
     let stock = product.countInStock;
-    
-    // If variants exist, find specific variant
+
+    // If variants exist, find specific variant with FLEXIBLE matching (same as addToCart)
     if (product.variants && product.variants.length > 0) {
-      const variant = product.variants.find(v => 
-        v.size === size && v.color === color
-      );
+      const variant = product.variants.find((v) => {
+        // Use the SAME flexible matching logic as addToCart
+        const sizeMatches = size
+          ? v.size === size
+          : !v.size || v.size === "" || v.size === "Standard";
+        const colorMatches = color
+          ? v.color === color
+          : !v.color || v.color === "" || v.color === "Standard";
+        return sizeMatches && colorMatches;
+      });
+
+      console.log("📊 Found variant:", variant);
       stock = variant ? variant.countInStock : 0;
     }
 
+    console.log("✅ Final stock:", stock);
     res.json({ stock, productId, size, color });
   } catch (error) {
     console.log("Error in getVariantStock controller", error.message);

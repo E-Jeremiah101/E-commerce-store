@@ -31,7 +31,7 @@ const CreateProductForm = () => {
     sizes: [],
     colors: [],
     countInStock: 0,
-    variants: [], // ADD variants array
+    variants: [],
   });
 
   const { createProduct, loading } = useProductStore();
@@ -51,24 +51,64 @@ const CreateProductForm = () => {
     fetchCategories();
   }, []);
 
+  // Helper function to format variant display names
+  const getVariantDisplayName = (variant) => {
+    const hasSize = variant.size && variant.size.trim() !== "";
+    const hasColor = variant.color && variant.color.trim() !== "";
+
+    if (!hasSize && !hasColor) {
+      return "Standard";
+    }
+
+    if (hasSize && !hasColor) {
+      return variant.size;
+    }
+
+    if (!hasSize && hasColor) {
+      return variant.color;
+    }
+
+    return `${variant.size} / ${variant.color}`;
+  };
+
   // Handle product creation
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-       const success =  await createProduct(newProduct);
-       if(success){
-      setNewProduct({
-        name: "",
-        description: "",
-        price: "",
-        category: "",
-        images: [],
-        sizes: [],
-        colors: [],
-        countInStock: 0,
-        variants: [],
-      });
-    }
+      // Ensure variants are properly set for products without sizes/colors
+      const productData = { ...newProduct };
+
+      // If no variants were generated but we have a product without sizes/colors,
+      // create a default variant
+      if (
+        (!productData.sizes || productData.sizes.length === 0) &&
+        (!productData.colors || productData.colors.length === 0) &&
+        (!productData.variants || productData.variants.length === 0)
+      ) {
+        productData.variants = [
+          {
+            size: "",
+            color: "",
+            countInStock: productData.countInStock || 0,
+            sku: `${productData.name.replace(/\s+/g, "-").toUpperCase()}-STD`,
+          },
+        ];
+      }
+
+      const success = await createProduct(productData);
+      if (success) {
+        setNewProduct({
+          name: "",
+          description: "",
+          price: "",
+          category: "",
+          images: [],
+          sizes: [],
+          colors: [],
+          countInStock: 0,
+          variants: [],
+        });
+      }
     } catch (error) {
       toast.error("Error creating product, try again");
     }
@@ -94,41 +134,58 @@ const CreateProductForm = () => {
 
   // Handle variant generation
   const generateVariants = () => {
+    // If no sizes and no colors, create a simple product with one variant
     if (newProduct.sizes.length === 0 && newProduct.colors.length === 0) {
-      toast.error("Please add sizes or colors first");
+      const variants = [
+        {
+          size: "",
+          color: "",
+          countInStock: newProduct.countInStock || 0,
+          sku: `${newProduct.name.replace(/\s+/g, "-").toUpperCase()}-STD`,
+        },
+      ];
+
+      setNewProduct((prev) => ({
+        ...prev,
+        variants,
+        countInStock: newProduct.countInStock || 0,
+      }));
+      toast.success("Created product without variants");
       return;
     }
 
+    // If we have sizes or colors, generate combinations
     const variants = [];
+    const sizes = newProduct.sizes.length > 0 ? newProduct.sizes : [""];
+    const colors = newProduct.colors.length > 0 ? newProduct.colors : [""];
 
-    // If no sizes/colors, create one default variant
-    if (newProduct.sizes.length === 0 && newProduct.colors.length === 0) {
-      variants.push({
-        size: "",
-        color: "",
-        countInStock: newProduct.countInStock,
-        sku: `${newProduct.name.replace(/\s+/g, "-").toUpperCase()}-DEFAULT`,
-      });
-    } else {
-      // Generate all size/color combinations
-      const sizes = newProduct.sizes.length > 0 ? newProduct.sizes : [""];
-      const colors = newProduct.colors.length > 0 ? newProduct.colors : [""];
+    sizes.forEach((size) => {
+      colors.forEach((color) => {
+        // Cleaner SKU generation
+        const sizePart = size ? `-${size.replace(/\s+/g, "")}` : "";
+        const colorPart = color ? `-${color.replace(/\s+/g, "")}` : "";
 
-      sizes.forEach((size) => {
-        colors.forEach((color) => {
-          variants.push({
-            size,
-            color,
-            countInStock: 0, // Start with 0 stock
-            sku: `${newProduct.name.replace(/\s+/g, "-").toUpperCase()}-${
-              size || "NS"
-            }-${color || "NC"}`,
-          });
+        variants.push({
+          size,
+          color,
+          countInStock: 0,
+          sku: `${newProduct.name
+            .replace(/\s+/g, "-")
+            .toUpperCase()}${sizePart}${colorPart}`,
         });
       });
-    }
+    });
 
-    setNewProduct((prev) => ({ ...prev, variants }));
+    const totalStock = variants.reduce(
+      (sum, variant) => sum + variant.countInStock,
+      0
+    );
+
+    setNewProduct((prev) => ({
+      ...prev,
+      variants,
+      countInStock: totalStock,
+    }));
     toast.success(`Generated ${variants.length} variants`);
   };
 
@@ -193,7 +250,7 @@ const CreateProductForm = () => {
 
   return (
     <motion.div
-      className="bg-gray-800 shadow-lg rounded-lg p-8 mb-8 max-w-4xl mx-auto" // Increased max-width
+      className="bg-gray-800 shadow-lg rounded-lg p-8 mb-8 max-w-4xl mx-auto"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
@@ -312,8 +369,7 @@ const CreateProductForm = () => {
                 >
                   <div className="flex-1">
                     <span className="text-white text-sm">
-                      {variant.size || "No Size"} /{" "}
-                      {variant.color || "No Color"}
+                      {getVariantDisplayName(variant)}
                     </span>
                     <span className="text-gray-400 text-xs block">
                       {variant.sku}

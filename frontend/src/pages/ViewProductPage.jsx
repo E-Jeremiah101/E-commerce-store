@@ -36,7 +36,7 @@ const ViewProductPage = () => {
     loadProduct();
   }, [id, fetchProductById]);
 
-  // Calculate variant-specific stock
+  // Calculate variant-specific stock - FIXED VERSION
   const getVariantStock = () => {
     if (!product) return 0;
 
@@ -45,22 +45,37 @@ const ViewProductPage = () => {
       return product.countInStock;
     }
 
-    // Find the specific variant
-    const variant = product.variants.find(
-      (v) => v.size === selectedSize && v.color === selectedColor
-    );
+    // Find variant that matches the selected options with FLEXIBLE matching
+    const variant = product.variants.find((v) => {
+      const sizeMatches = selectedSize
+        ? v.size === selectedSize
+        : !v.size || v.size === "" || v.size === "Standard";
+      const colorMatches = selectedColor
+        ? v.color === selectedColor
+        : !v.color || v.color === "" || v.color === "Standard";
+      return sizeMatches && colorMatches;
+    });
 
     return variant ? variant.countInStock : 0;
   };
 
-  // Check if current variant is in cart
+  // Check if current variant is in cart - FIXED VERSION
+  // Check if current variant is in cart - FIXED VERSION
   const getVariantInCart = () => {
-    return cart.find(
-      (item) =>
-        item?._id === product?._id &&
-        item?.size === selectedSize &&
-        item?.color === selectedColor
-    );
+    return cart.find((item) => {
+      const productMatch = item?._id === product?._id;
+
+      // FIXED: Use flexible matching for size and color
+      const sizeMatch = selectedSize
+        ? item?.size === selectedSize
+        : !item?.size || item?.size === "" || item?.size === "Standard";
+
+      const colorMatch = selectedColor
+        ? item?.color === selectedColor
+        : !item?.color || item?.color === "" || item?.color === "Standard";
+
+      return productMatch && sizeMatch && colorMatch;
+    });
   };
 
   const variantStock = getVariantStock();
@@ -69,6 +84,24 @@ const ViewProductPage = () => {
   const availableStock = variantStock - currentQuantity;
 
   const isOutOfStock = availableStock <= 0;
+
+  // Check if variant exists - FIXED VERSION
+  const variantExists = () => {
+    if (!product || !product.variants || product.variants.length === 0)
+      return true;
+
+    const variant = product.variants.find((v) => {
+      const sizeMatches = selectedSize
+        ? v.size === selectedSize
+        : !v.size || v.size === "" || v.size === "Standard";
+      const colorMatches = selectedColor
+        ? v.color === selectedColor
+        : !v.color || v.color === "" || v.color === "Standard";
+      return sizeMatches && colorMatches;
+    });
+
+    return !!variant;
+  };
 
   // If user was redirected to rate the product
   useEffect(() => {
@@ -83,6 +116,7 @@ const ViewProductPage = () => {
   }, [product, location.search]);
 
   const handleAddToCart = () => {
+    // Validation for required selections
     if (product.colors?.length > 0 && !selectedColor) {
       toast.error("Please select a color");
       return;
@@ -92,7 +126,13 @@ const ViewProductPage = () => {
       return;
     }
 
-    // Additional variant validation
+    // FIXED: Check if variant exists
+    if (!variantExists()) {
+      toast.error("This variant is not available");
+      return;
+    }
+
+    // FIXED: Check available stock
     if (isOutOfStock) {
       toast.error("This variant is out of stock");
       return;
@@ -221,28 +261,46 @@ const ViewProductPage = () => {
             )}
 
             <div>
-              {/* Only show variant-specific stock if both color and size are selected (when applicable) */}
-              {product.variants?.length > 0 &&
-              ((product.colors?.length > 0 && !selectedColor) ||
-                (product.sizes?.length > 0 && !selectedSize)) ? (
-                <p className="text-gray-500 text-sm italic"></p>
-              ) : availableStock > 0 ? (
+              {/* Stock information - FIXED LOGIC */}
+              {product.variants?.length > 0 ? (
+                // Show stock info when we have a valid variant selection
+                (selectedSize ||
+                  selectedColor ||
+                  (product.sizes?.length === 0 &&
+                    product.colors?.length === 0)) &&
+                variantExists() ? (
+                  availableStock > 0 ? (
+                    <p className="text-gray-500 text-xs mt-1">
+                      In Stock:{" "}
+                      <span className="">{availableStock} available</span>
+                      {currentQuantity > 0 && (
+                        <span className="text-gray-600 text-xs ml-2">
+                          {currentQuantity} in cart
+                        </span>
+                      )}
+                    </p>
+                  ) : (
+                    <p className="text-red-500 text-xs mt-1">Out of stock</p>
+                  )
+                ) : // Show nothing or hint when selection is incomplete
+                (product.colors?.length > 0 && !selectedColor) ||
+                  (product.sizes?.length > 0 && !selectedSize) ? (
+                  <p className="text-gray-400 text-xs mt-1">
+                    Select options to see availability
+                  </p>
+                ) : null
+              ) : // For products without variants
+              product.countInStock > 0 ? (
                 <p className="text-gray-500 text-xs mt-1">
                   In Stock:{" "}
-                  <span className="">{availableStock} available</span>
-                  {currentQuantity > 0 && (
-                    <span className="text-gray-600 text-xs ml-2">
-                      {currentQuantity} in cart
-                    </span>
-                  )}
+                  <span className="">{product.countInStock} available</span>
                 </p>
               ) : (
-                ""
+                <p className="text-red-500 text-xs mt-1">Out of stock</p>
               )}
             </div>
 
-            {/* Add to Cart Button - UPDATED */}
-            {/* Add to Cart Button - FINAL CLEAN UX */}
+            {/* Add to Cart Button - FIXED VERSION */}
             <button
               onClick={handleAddToCart}
               disabled={
@@ -250,8 +308,10 @@ const ViewProductPage = () => {
                 // disable until required options are selected
                 (product.colors?.length > 0 && !selectedColor) ||
                 (product.sizes?.length > 0 && !selectedSize) ||
-                // disable only if selected variant is out of stock
-                (selectedColor || selectedSize ? isOutOfStock : false) ||
+                // disable if variant doesn't exist
+                !variantExists() ||
+                // disable if selected variant is out of stock
+                isOutOfStock ||
                 // disable if entire product has no stock
                 product.countInStock <= 0
               }
@@ -259,7 +319,8 @@ const ViewProductPage = () => {
                 isLoading ||
                 (product.colors?.length > 0 && !selectedColor) ||
                 (product.sizes?.length > 0 && !selectedSize) ||
-                (selectedColor || selectedSize ? isOutOfStock : false) ||
+                !variantExists() ||
+                isOutOfStock ||
                 product.countInStock <= 0
                   ? "bg-gray-400 text-white cursor-not-allowed"
                   : "bg-black text-white hover:bg-black/80"
@@ -269,7 +330,9 @@ const ViewProductPage = () => {
                 ? "Adding to Cart..."
                 : product.countInStock <= 0
                 ? "Out of Stock"
-                : selectedColor && selectedSize && isOutOfStock
+                : !variantExists()
+                ? "Add to Cart"
+                : isOutOfStock
                 ? "This variant is out of stock"
                 : "Add to Cart"}
             </button>
