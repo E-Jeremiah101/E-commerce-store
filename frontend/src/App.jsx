@@ -24,6 +24,7 @@ import ViewProductPage from "./pages/ViewProductPage.jsx";
 import Welcome from "./pages/WelcomePage.jsx";
 import useTrackVisitors from "./stores/useTrackVisitors.js";
 import ViewOrderPage from "./pages/ViewOrderPage.jsx";
+import SavedProductsPage from "./pages/SavedProductsPage.jsx";
 
 
 function App() {
@@ -79,82 +80,67 @@ function App() {
     );
   return (
     <>
-     
-        {/*Background gradient */}
+      {/*Background gradient */}
 
+      {/* {the app content} */}
+
+      {location.pathname === "/" && <Navbar />}
+
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route
+          path="/signup"
+          element={!user ? <SignUpPage /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/login"
+          element={!user ? <LoginPage /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/welcome"
+          element={!user ? <Welcome /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/secret-dashboard"
+          element={
+            user?.role === "admin" ? <AdminPage /> : <Navigate to="/login" />
+          }
+        />
+        <Route path="/category/:category" element={<CategoryPage />} />
+        <Route path="/product/:id" element={<ViewProductPage />} />
+        <Route path="/cart" element={<CartPage />} />
+        <Route
+          path="/order-history"
+          element={user ? <OrderHistoryPage /> : <Navigate to="/login" />}
+        />
+        <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
+        <Route path="/vieworders/:id" element={<ViewOrderPage />} />
+        <Route
+          path="Personal-info"
+          element={user ? <PersonalInfoPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/purchase-success"
+          element={user ? <PurchaseSuccessPage /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/purchase-cancel"
+          element={user ? <PurchaseCancelPage /> : <Navigate to="/login" />}
+        />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
        
+        <Route path="/saved" element={<SavedProductsPage />} />
+        <Route path="/search" element={<SearchResultsPage />} />
+      </Routes>
 
-        {/* {the app content} */}
-        
-          {location.pathname === "/" && <Navbar />}
+      <ToastContainer
+        position="top-center"
+        autoClose={4000}
+        style={{ marginTop: "75px" }}
+      />
 
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route
-              path="/signup"
-              element={!user ? <SignUpPage /> : <Navigate to="/" />}
-            />
-            <Route
-              path="/login"
-              element={!user ? <LoginPage /> : <Navigate to="/" />}
-            />
-            <Route
-              path="/welcome"
-              element={!user ? <Welcome /> : <Navigate to="/" />}
-            />
-            <Route
-              path="/secret-dashboard"
-              element={
-                user?.role === "admin" ? (
-                  <AdminPage />
-                ) : (
-                  <Navigate to="/login" />
-                )
-              }
-            />
-            <Route path="/category/:category" element={<CategoryPage />} />
-            <Route path="/product/:id" element={<ViewProductPage />} />
-            <Route path="/cart" element={<CartPage />} />
-
-            <Route
-              path="/order-history"
-              element={user ? <OrderHistoryPage /> : <Navigate to="/login" />}
-            />
-            <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
-
-            <Route path="/vieworders/:id" element={<ViewOrderPage />} />
-
-            <Route
-              path="Personal-info"
-              element={user ? <PersonalInfoPage /> : <Navigate to="/login" />}
-            />
-
-            <Route
-              path="/purchase-success"
-              element={
-                user ? <PurchaseSuccessPage /> : <Navigate to="/login" />
-              }
-            />
-            <Route
-              path="/purchase-cancel"
-              element={user ? <PurchaseCancelPage /> : <Navigate to="/login" />}
-            />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route
-              path="/reset-password/:token"
-              element={<ResetPasswordPage />}
-            />
-            <Route path="/search" element={<SearchResultsPage />} />
-          </Routes>
-
-          <ToastContainer
-                    position="top-center"
-                    autoClose={4000}
-                    style={{ marginTop: "75px" }}
-                  />
-       
-        <Toaster />
-     
+      <Toaster />
     </>
   );
 }

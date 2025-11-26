@@ -10,6 +10,7 @@ import {
   Package,
   Menu,
   X,
+  Heart,
   Search,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -192,6 +193,14 @@ const Navbar = () => {
                   <Package size={19} /> Orders
                 </Link>
               )}
+
+              <Link
+                to={"/saved"}
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-5 tracking-widest"
+              >
+                <Heart size={19} /> Wishlist
+              </Link>
 
               <Link
                 to={"/cart"}

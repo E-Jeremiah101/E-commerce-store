@@ -3,7 +3,7 @@ import { useParams, Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useProductStore } from "../stores/useProductStore";
 import toast from "react-hot-toast";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Heart } from "lucide-react"; // Import both Heart icons
 import { useCartStore } from "../stores/useCartStore";
 import { useUserStore } from "../stores/useUserStore";
 import GoBackButton from "../components/GoBackButton";
@@ -23,7 +23,69 @@ const ViewProductPage = () => {
   const [selectedSize, setSelectedSize] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isLoadingSave, setIsLoadingSave] = useState(false); // Fixed: Added this state
   const location = useLocation();
+
+  // Check if product is saved when component loads
+  useEffect(() => {
+    if (user && product) {
+      checkSavedStatus();
+    }
+  }, [user, product]);
+
+  const checkSavedStatus = async () => {
+    try {
+      const response = await fetch(`/api/saved-products/check/${product._id}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const data = await response.json();
+      setIsSaved(data.isSaved);
+    } catch (error) {
+      console.error("Error checking saved status:", error);
+    }
+  };
+
+  const toggleSave = async () => {
+    if (!user) {
+      toast.error("Please login to add product to wishlist");
+      return;
+    }
+
+    setIsLoadingSave(true);
+    try {
+      if (isSaved) {
+        // Unsave
+        await fetch(`/api/saved-products/${product._id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        setIsSaved(false);
+        toast.success("Removed from wishlist");
+      } else {
+        // Save
+        await fetch("/api/saved-products", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ productId: product._id }),
+        });
+        setIsSaved(true);
+        toast.success("Product successfully added to your wishlist!");
+      }
+    } catch (error) {
+      console.error("Error toggling save:", error);
+      toast.error("Failed to update saved items");
+    } finally {
+      setIsLoadingSave(false);
+    }
+  };
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -59,7 +121,6 @@ const ViewProductPage = () => {
     return variant ? variant.countInStock : 0;
   };
 
-  // Check if current variant is in cart - FIXED VERSION
   // Check if current variant is in cart - FIXED VERSION
   const getVariantInCart = () => {
     return cart.find((item) => {
@@ -166,14 +227,19 @@ const ViewProductPage = () => {
           {product.name}
         </span>
 
-        <Link to={"/cart"} className="relative text-black ">
-          <ShoppingCart size={22} />
-          {cart.length > 0 && (
-            <span className="absolute -top-2 -right-2 bg-black text-white rounded-full px-2 text-xs">
-              {cart.length}
-            </span>
-          )}
-        </Link>
+        <div className="flex items-center gap-4">
+          
+
+          {/* Cart Link */}
+          <Link to={"/cart"} className="relative text-black ">
+            <ShoppingCart size={22} />
+            {cart.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-black text-white rounded-full px-2 text-xs">
+                {cart.length}
+              </span>
+            )}
+          </Link>
+        </div>
       </motion.div>
 
       {/* Content */}
@@ -206,10 +272,15 @@ const ViewProductPage = () => {
 
           {/* Details */}
           <div className="flex flex-col space-y-5">
-            <span className="text-2xl tracking-widest text-black m-0 mb-2">
-              {product.name}
-            </span>
-            <span className="text-1xl text-gray-900 tracking-tight">
+            <div className="flex justify-between items-start">
+              <span className="text-2xl tracking-wider text-black m-0 ">
+                {product.name}
+              </span>
+
+              
+            </div>
+
+            <span className="text-[1.2rem] text-black font-medium tracking-tight">
               ₦{" "}
               {product.price.toLocaleString(undefined, {
                 minimumFractionDigits: 0,
@@ -219,8 +290,8 @@ const ViewProductPage = () => {
             {/* Color Options */}
             {product.colors?.length > 0 && (
               <div>
-                <h3 className="text-gray-800 tracking-widest mb-2">Colors:</h3>
-                <div className="flex gap-2 flex-wrap tracking-widest">
+                <h3 className="text-gray-800 tracking-widest ">Colors:</h3>
+                <div className="flex gap-2 flex-wrap tracking-wider">
                   {product.colors.map((color, i) => (
                     <button
                       key={i}
@@ -241,8 +312,8 @@ const ViewProductPage = () => {
             {/* Size Options */}
             {product.sizes?.length > 0 && (
               <div>
-                <h3 className="text-gray-800  mb-2 tracking-widest">Sizes:</h3>
-                <div className="flex gap-2 flex-wrap tracking-widest ">
+                <h3 className="text-gray-800  tracking-widest">Sizes:</h3>
+                <div className="flex gap-2 flex-wrap tracking-wider ">
                   {product.sizes.map((size, i) => (
                     <button
                       key={i}
@@ -296,51 +367,70 @@ const ViewProductPage = () => {
                   <span className="">{product.countInStock} available</span>
                 </p>
               ) : (
-                <p className="text-red-500 text-xs mt-1">Out of stock</p>
+                ""
               )}
             </div>
 
-            {/* Add to Cart Button - FIXED VERSION */}
-            <button
-              onClick={handleAddToCart}
-              disabled={
-                isLoading ||
-                // disable until required options are selected
-                (product.colors?.length > 0 && !selectedColor) ||
-                (product.sizes?.length > 0 && !selectedSize) ||
-                // disable if variant doesn't exist
-                !variantExists() ||
-                // disable if selected variant is out of stock
-                isOutOfStock ||
-                // disable if entire product has no stock
-                product.countInStock <= 0
-              }
-              className={`w-full py-3 rounded-lg transition tracking-widest ${
-                isLoading ||
-                (product.colors?.length > 0 && !selectedColor) ||
-                (product.sizes?.length > 0 && !selectedSize) ||
-                !variantExists() ||
-                isOutOfStock ||
-                product.countInStock <= 0
-                  ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-black text-white hover:bg-black/80"
-              }`}
-            >
-              {isLoading
-                ? "Adding to Cart..."
-                : product.countInStock <= 0
-                ? "Out of Stock"
-                : !variantExists()
-                ? "Add to Cart"
-                : isOutOfStock
-                ? "This variant is out of stock"
-                : "Add to Cart"}
-            </button>
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              {/* Add to Cart Button */}
+              <button
+                onClick={handleAddToCart}
+                disabled={
+                  isLoading ||
+                  (product.colors?.length > 0 && !selectedColor) ||
+                  (product.sizes?.length > 0 && !selectedSize) ||
+                  !variantExists() ||
+                  isOutOfStock ||
+                  product.countInStock <= 0
+                }
+                className={`flex-1 py-3 rounded-lg transition tracking-widest ${
+                  isLoading ||
+                  (product.colors?.length > 0 && !selectedColor) ||
+                  (product.sizes?.length > 0 && !selectedSize) ||
+                  !variantExists() ||
+                  isOutOfStock ||
+                  product.countInStock <= 0
+                    ? "bg-gray-400 text-white cursor-not-allowed"
+                    : "bg-black text-white hover:bg-black/80"
+                }`}
+              >
+                {isLoading
+                  ? "Adding to Cart..."
+                  : product.countInStock <= 0
+                  ? "Out of Stock"
+                  : !variantExists()
+                  ? "Add to Cart"
+                  : isOutOfStock
+                  ? "This variant is out of stock"
+                  : "Add to Cart"}
+              </button>
+
+              {/* Save Button - Side by Side */}
+              <button
+                onClick={toggleSave}
+                disabled={isLoadingSave}
+                className={`p-3 border rounded-lg transition flex items-center justify-center ${
+                  isSaved
+                    ? "border-red-300 bg-red-50 text-black"
+                    : "border-gray-300 hover:bg-gray-50 text-gray-600"
+                } ${isLoadingSave ? "opacity-50 cursor-not-allowed" : ""}`}
+                title={isSaved ? "Remove from wishlist" : "Add to wishlist"}
+              >
+                {isLoadingSave ? (
+                  <div className="w-5 h-5 border-2 border-gray-300 border-t-current rounded-full animate-spin"></div>
+                ) : isSaved ? (
+                  <Heart size={20} className="fill-current" />
+                ) : (
+                  <Heart size={20} />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Rest of the component remains the same */}
+      {/* Product Details Accordion */}
       <div className=" border-gray-700 py-3 lg:pr-80  px-4 sm:px-6">
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -370,6 +460,7 @@ const ViewProductPage = () => {
         </div>
       </div>
 
+      {/* Reviews Section */}
       <div id="product-reviews">
         <ProductReviews productId={product._id} />
       </div>

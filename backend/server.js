@@ -20,6 +20,7 @@ import visitorRoutes from "./routes/visitor.route.js"
 import refundRoutes from "./routes/refund.routes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import Product from "./models/product.model.js";
+import savedProductRoutes from "./routes/savedProduct.routes.js"; 
 
 
 dotenv.config();
@@ -108,6 +109,8 @@ app.use("/api/refunds", refundRoutes);
 app.use("/api", categoryRoutes)
 
 app.use("/api/categories", categoryRoutes);
+
+app.use("/api/saved-products", savedProductRoutes);
 
 
 const __filename = fileURLToPath(import.meta.url);
