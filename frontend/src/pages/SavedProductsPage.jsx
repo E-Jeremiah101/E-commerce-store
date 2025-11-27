@@ -56,8 +56,8 @@ const SavedProductsPage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+      <div className="flex justify-center items-center h-screen">
+        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -74,10 +74,8 @@ const SavedProductsPage = () => {
           <GoBackButton />
         </div>
         <span className="text-center text-xl text-gray-900 tracking-widest">
-          Wishlist ({savedProducts.length}{" "})
-         
+          Wishlist ({savedProducts.length} )
         </span>
-       
       </motion.div>
 
       <div className="min-h-screen bg-gray-50 py-8 mt-12">
@@ -99,7 +97,7 @@ const SavedProductsPage = () => {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 ">
               {savedProducts.map(({ product, _id }) => (
                 <div
                   key={_id}
@@ -113,9 +111,9 @@ const SavedProductsPage = () => {
                     />
                   </Link>
 
-                  <div className="p-4">
+                  <div className="p-2">
                     <Link to={`/product/${product._id}`}>
-                      <h3 className="font-semibold text-gray-900 hover:text-black transition-colors mb-2">
+                      <h3 className=" text-gray-900 text-xl hover:text-black transition-colors mb-2">
                         {product.name}
                       </h3>
                     </Link>
@@ -124,20 +122,14 @@ const SavedProductsPage = () => {
                       ₦{product.price.toLocaleString()}
                     </p>
 
-                    <div className="flex justify-between items-center">
+                    <div className="text-right">
                       <button
                         onClick={() => removeSavedProduct(product._id)}
-                        className="text-red-500 hover:text-red-700 transition-colors text-sm"
+                        className="text-red-500 px-4 py-2 rounded text-sm hover:bg-red-500 
+                        hover:text-white transition"
                       >
                         Remove
                       </button>
-
-                      <Link
-                        to={`/product/${product._id}`}
-                        className="bg-black text-white px-4 py-2 rounded text-sm hover:bg-black/80 transition"
-                      >
-                        View Product
-                      </Link>
                     </div>
                   </div>
                 </div>

@@ -547,8 +547,15 @@ export const getRecommendedProducts = async (req, res) => {
   try {
     const products = await Product.aggregate([
       {
+        $match: {
+          archived: { $ne: true }, //  Exclude archived products
+          isActive: { $ne: false }, //  Also exclude inactive products
+        },
+      },
+      {
         $sample: { size: 16 },
       },
+
       {
         $project: {
           _id: 1,
@@ -556,7 +563,7 @@ export const getRecommendedProducts = async (req, res) => {
           description: 1,
           images: 1,
           price: 1,
-          sizes: 1, 
+          sizes: 1,
           colors: 1,
         },
       },

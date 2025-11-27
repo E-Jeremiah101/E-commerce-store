@@ -136,9 +136,7 @@ const HomePage = () => {
               <div className="text-gray-500 text-lg mb-4">
                 No categories found
               </div>
-              <button className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
-                Refresh
-              </button>
+             
             </div>
           )}
 

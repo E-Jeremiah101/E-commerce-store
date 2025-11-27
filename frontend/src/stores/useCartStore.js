@@ -316,6 +316,58 @@ export const useCartStore = create((set, get) => ({
 
     set({ subtotal, total });
   },
+
+  // Add this function to your existing useCartStore - no other changes needed
+  validateCartItems: async () => {
+    try {
+      const { cart } = get();
+      const user = (await import("./useUserStore")).useUserStore.getState()
+        .user;
+
+      if (!user) {
+        // Guest cart validation
+        const validatedCart = [];
+
+        for (const item of cart) {
+          try {
+            // Check if product still exists and is not archived
+            const response = await axios.get(`/products/${item._id}`);
+            const product = response.data.product || response.data;
+
+            // Only keep products that exist and are not archived
+            if (product && !product.archived && product.isActive !== false) {
+              validatedCart.push(item);
+            }
+          } catch (error) {
+            // Product doesn't exist or is unavailable - skip it
+            console.log(
+              `Product ${item._id} no longer available, removing from cart`
+            );
+          }
+        }
+
+        // Update cart if any items were removed
+        if (validatedCart.length !== cart.length) {
+          set({ cart: validatedCart });
+          saveGuestCart(validatedCart);
+          get().calculateTotals();
+          console.log(
+            `Removed ${
+              cart.length - validatedCart.length
+            } archived products from cart`
+          );
+        }
+      } else {
+        // For logged-in users, the backend should handle validation
+        // Just refresh the cart to get cleaned data
+        const res = await axios.get("/cart");
+        set({ cart: res.data });
+        get().calculateTotals();
+      }
+    } catch (error) {
+      console.error("Error validating cart items:", error);
+    }
+  },
   // Sync guest cart to server after user logs in
   syncGuestCart: async () => {
     const user = (await import("./useUserStore")).useUserStore.getState().user;
@@ -346,4 +398,4 @@ export const useCartStore = create((set, get) => ({
       console.error("Failed to sync guest cart:", error);
     }
   },
-}));
+})); 

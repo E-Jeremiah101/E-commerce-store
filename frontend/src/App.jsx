@@ -53,7 +53,12 @@ function App() {
     checkAuth();
   }, [checkAuth, location.pathname]);
 
-  
+   const { validateCartItems } = useCartStore();
+
+   useEffect(() => {
+     // Validate cart when app loads
+     validateCartItems();
+   }, [validateCartItems]);
 
   useEffect(() => {
     if (user) {
@@ -131,7 +136,7 @@ function App() {
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
        
         <Route path="/saved" element={user ?<SavedProductsPage /> : < Navigate to='/login'/>} />
-        
+
         <Route path="/search" element={<SearchResultsPage />} />
       </Routes>
 

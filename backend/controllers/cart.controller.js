@@ -5,7 +5,12 @@ export const getCartProducts = async (req, res) => {
     const cartItems = await Promise.all(
       req.user.cartItems.map(async (cartItem) => {
         const product = await Product.findById(cartItem.product);
-        if (!product) return null; // in case product was deleted
+
+        // ✅ FIXED: Check if product exists AND is not archived
+        if (!product || product.archived || product.isActive === false) {
+          return null; // Remove from cart if product is deleted/archived
+        }
+
         return {
           ...product.toJSON(),
           quantity: cartItem.quantity,
@@ -15,7 +20,18 @@ export const getCartProducts = async (req, res) => {
       })
     );
 
-    res.json(cartItems.filter(Boolean)); // remove nulls
+    // Remove null items (archived/deleted products)
+    const validCartItems = cartItems.filter(Boolean);
+
+    // ✅ FIXED: Also clean up the user's cartItems array
+    if (validCartItems.length !== req.user.cartItems.length) {
+      req.user.cartItems = req.user.cartItems.filter(
+        (cartItem, index) => cartItems[index] !== null
+      );
+      await req.user.save();
+    }
+
+    res.json(validCartItems);
   } catch (error) {
     console.log("Error in getCartProducts controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -30,14 +46,17 @@ export const addToCart = async (req, res) => {
     console.log("🛒 Backend addToCart received:", { productId, size, color });
 
     const product = await Product.findById(productId);
-    if (!product) return res.status(404).json({ message: "Product not found" });
+
+    // ✅ FIXED: Check if product exists AND is not archived
+    if (!product || product.archived || product.isActive === false) {
+      return res.status(404).json({ message: "Product not found" });
+    }
 
     // Find variant stock - FIXED LOGIC
-    let availableStock = product.countInStock; // fallback to overall stock
+    let availableStock = product.countInStock;
     let variant = null;
 
     if (product.variants && product.variants.length > 0) {
-      // FIXED: Use flexible matching for variants
       variant = product.variants.find((v) => {
         const sizeMatches = size
           ? v.size === size
@@ -53,7 +72,6 @@ export const addToCart = async (req, res) => {
       if (variant) {
         availableStock = variant.countInStock;
       } else {
-        // If product has variants but no matching variant found
         return res
           .status(400)
           .json({ message: "This variant is not available" });
@@ -98,11 +116,16 @@ export const addToCart = async (req, res) => {
 
     await user.save();
 
-    // Return the updated cart items
+    // Return the updated cart items with validation
     const cartItems = await Promise.all(
       user.cartItems.map(async (cartItem) => {
         const product = await Product.findById(cartItem.product);
-        if (!product) return null;
+
+        // ✅ FIXED: Filter out archived products in response too
+        if (!product || product.archived || product.isActive === false) {
+          return null;
+        }
+
         return {
           ...product.toJSON(),
           quantity: cartItem.quantity,
@@ -119,7 +142,6 @@ export const addToCart = async (req, res) => {
   }
 };
 
-
 export const removeFromCart = async (req, res) => {
   try {
     const { productId, size, color } = req.body;
@@ -135,7 +157,10 @@ export const removeFromCart = async (req, res) => {
     );
 
     await user.save();
-    res.json(user.cartItems);
+
+    // ✅ FIXED: Return validated cart items
+    const validatedCartItems = await getValidatedCartItems(user.cartItems);
+    res.json(validatedCartItems);
   } catch (error) {
     console.log("Error in removeFromCart controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -160,9 +185,23 @@ export const updateQuantity = async (req, res) => {
     const user = req.user;
 
     const product = await Product.findById(productId);
-    if (!product) return res.status(404).json({ message: "Product not found" });
 
-    // Find variant stock - NEW LOGIC
+    // ✅ FIXED: Check if product exists AND is not archived
+    if (!product || product.archived || product.isActive === false) {
+      // Remove from cart if product is archived
+      user.cartItems = user.cartItems.filter(
+        (item) =>
+          !(
+            item.product?.toString() === productId &&
+            item.size === size &&
+            item.color === color
+          )
+      );
+      await user.save();
+      return res.status(404).json({ message: "Product no longer available" });
+    }
+
+    // Find variant stock
     let availableStock = product.countInStock;
     if (size || color) {
       const variant = product.variants.find(
@@ -205,9 +244,34 @@ export const updateQuantity = async (req, res) => {
     }
 
     await user.save();
-    res.json(user.cartItems);
+
+    // ✅ FIXED: Return validated cart items
+    const validatedCartItems = await getValidatedCartItems(user.cartItems);
+    res.json(validatedCartItems);
   } catch (error) {
     console.log("Error in updateQuantity controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
+};
+
+// ✅ NEW: Helper function to validate cart items
+const getValidatedCartItems = async (cartItems) => {
+  const validatedItems = await Promise.all(
+    cartItems.map(async (cartItem) => {
+      const product = await Product.findById(cartItem.product);
+
+      if (!product || product.archived || product.isActive === false) {
+        return null;
+      }
+
+      return {
+        ...product.toJSON(),
+        quantity: cartItem.quantity,
+        size: cartItem.size || "",
+        color: cartItem.color || "",
+      };
+    })
+  );
+
+  return validatedItems.filter(Boolean);
 };
