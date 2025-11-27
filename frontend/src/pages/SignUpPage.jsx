@@ -8,6 +8,7 @@ import {
   checkEmail,
 } from "../utils/validateForm.js";
 import { useUserStore } from "../stores/useUserStore";
+import GoBackButton from "../components/GoBackButton";
 
 const SignUpPage = () => {
   const [formData, setFormData] = useState({
@@ -93,6 +94,7 @@ const SignUpPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
+        <GoBackButton/>
         <h2 className="mt-6 text-3xl px-4 text-black  tracking-widest">
           Create Account
         </h2>

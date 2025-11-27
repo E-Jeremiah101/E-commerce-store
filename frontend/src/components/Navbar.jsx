@@ -190,7 +190,7 @@ const Navbar = () => {
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-5 tracking-widest"
                 >
-                  <Package size={19} /> Orders
+                  <Package size={19} /> My orders
                 </Link>
               )}
 
@@ -369,6 +369,13 @@ const Navbar = () => {
                   Orders
                 </Link>
               )}
+              <Link
+                to={"/saved"}
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-5 tracking-widest"
+              >
+                 Wishlist
+              </Link>
               {isAdmin && (
                 <Link
                   to={"/secret-dashboard"}
@@ -390,19 +397,18 @@ const Navbar = () => {
                 </button>
 
                 {/* Cart */}
-                {user && (
-                  <Link
-                    to={"/cart"}
-                    className="relative text-black hover:text-gray-300"
-                  >
-                    <ShoppingCart size={22} />
-                    {cart.length > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-black text-white rounded-full px-2 text-xs">
-                        {cart.length}
-                      </span>
-                    )}
-                  </Link>
-                )}
+
+                <Link
+                  to={"/cart"}
+                  className="relative text-black hover:text-gray-300"
+                >
+                  <ShoppingCart size={22} />
+                  {cart.length > 0 && (
+                    <span className="absolute -top-2 -right-2 bg-black text-white rounded-full px-2 text-xs">
+                      {cart.length}
+                    </span>
+                  )}
+                </Link>
 
                 {user ? (
                   <button

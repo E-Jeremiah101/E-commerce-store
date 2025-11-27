@@ -74,7 +74,7 @@ const SavedProductsPage = () => {
           <GoBackButton />
         </div>
         <span className="text-center text-xl text-gray-900 tracking-widest">
-          Wishlist ({savedProducts.length} )
+          Wishlist ({savedProducts.length})
         </span>
       </motion.div>
 
@@ -84,10 +84,10 @@ const SavedProductsPage = () => {
             <div className="text-center py-16">
               <Heart size={48} className="mx-auto text-gray-300 mb-4" />
               <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                No saved products yet
+                Your wishlist is empty
               </h3>
               <p className="text-gray-500 mb-6">
-                Start saving products you love!
+                Save products you love to your wishlist!
               </p>
               <Link
                 to="/products"

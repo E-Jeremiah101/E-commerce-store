@@ -4,20 +4,19 @@ import {
   Mail,
   Lock,
   Loader,
-  ArrowRight,
   Eye,
   EyeOff,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useUserStore } from "../stores/useUserStore";
+import GoBackButton from "../components/GoBackButton";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const { login, loading } = useUserStore();
-
   const [backendError, setBackendError] = useState("");
 
   const handleSubmit = async (e) => {
@@ -45,6 +44,7 @@ const LoginPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
+        <GoBackButton/>
         <h2 className="mt-6 px-4 text-3xl  text-black  tracking-widest">
           Login
         </h2>
