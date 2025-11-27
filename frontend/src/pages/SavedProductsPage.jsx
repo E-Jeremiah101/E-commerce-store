@@ -90,35 +90,35 @@ const SavedProductsPage = () => {
                 Save products you love to your wishlist!
               </p>
               <Link
-                to="/products"
+                to="/"
                 className="inline-block bg-black text-white px-6 py-3 rounded-lg hover:bg-black/80 transition"
               >
                 Browse Products
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 ">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 ">
               {savedProducts.map(({ product, _id }) => (
                 <div
                   key={_id}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden"
+                  className=" rounded-lg shadow-sm border border-gray-200 overflow-hidden"
                 >
                   <Link to={`/product/${product._id}`}>
                     <img
                       src={product.images?.[0]}
                       alt={product.name}
-                      className="w-full h-48 object-cover hover:scale-105 transition-transform"
+                      className="w-full h-50 object-cover hover:scale-105 transition-transform"
                     />
                   </Link>
 
                   <div className="p-2">
                     <Link to={`/product/${product._id}`}>
-                      <h3 className=" text-gray-900 text-xl hover:text-black transition-colors mb-2">
+                      <h3 className=" text-sm truncate w-45 lg:text-md text-gray-600 mb-1 tracking-widert">
                         {product.name}
                       </h3>
                     </Link>
 
-                    <p className="text-lg font-bold text-gray-900 mb-4">
+                    <p className="text-sm lg:text-md text-black">
                       ₦{product.price.toLocaleString()}
                     </p>
 
