@@ -143,8 +143,50 @@ export const useCartStore = create((set, get) => ({
         .user;
 
       if (!user) {
-        // GUEST FLOW - unchanged
-        // ... your existing guest flow code
+        // GUEST FLOW
+        console.log("🛒 Guest cart flow");
+        set((prevState) => {
+          const existingItem = prevState.cart.find(
+            (item) =>
+              item._id === product._id &&
+              item.size === selectedSize &&
+              item.color === selectedColor
+          );
+
+          // Check if adding would exceed available stock
+          if (existingItem && existingItem.quantity + 1 > availableStock) {
+            toast.error(
+              `Only ${availableStock} left in stock for this variant`
+            );
+            return prevState;
+          }
+
+          const newCart = existingItem
+            ? prevState.cart.map((item) =>
+                item._id === product._id &&
+                item.size === selectedSize &&
+                item.color === selectedColor
+                  ? { ...item, quantity: item.quantity + 1 }
+                  : item
+              )
+            : [
+                ...prevState.cart,
+                {
+                  ...product,
+                  quantity: 1,
+                  size: selectedSize || "",
+                  color: selectedColor || "",
+                  countInStock: availableStock,
+                },
+              ];
+
+          saveGuestCart(newCart);
+          toast.success("Product added to cart");
+          return { cart: newCart };
+        });
+        calculateTotals();
+        set({ isLoading: false });
+        return;
       } else {
         // LOGGED IN USER FLOW - FIXED
         console.log("🛒 Logged in user flow");

@@ -130,7 +130,8 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
        
-        <Route path="/saved" element={<SavedProductsPage />} />
+        <Route path="/saved" element={user ?<SavedProductsPage /> : < Navigate to='/login'/>} />
+        
         <Route path="/search" element={<SearchResultsPage />} />
       </Routes>
 
