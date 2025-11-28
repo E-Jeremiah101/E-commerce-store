@@ -55,7 +55,7 @@ const AdminOrderDetails = () => {
           <GoBackButton />
         </div>
         <span className="text-lg font-semibold tracking-wider text-gray-900">
-          {order.flutterwaveRef}
+          {order.orderNumber}
         </span>
         <span
           className={`px-1 py-1 rounded text-xs ml-2 font-medium ${
@@ -72,8 +72,8 @@ const AdminOrderDetails = () => {
       {/* Order Info */}
       <div className=" bg-gradient-to-br from-white via-gray-100 to-gray-300 grid grid-cols-2 text-black gap-5 mt-12 py-6 px-2  ">
         <div>
-          <h1 className="text-gray-600">Order NO</h1>
-          <p className="font-semibold">{order.orderNumber}</p>
+          <h1 className="text-gray-600">FlutterwaveRef</h1>
+          <p className="font-semibold">{order.flutterwaveRef}</p>
         </div>
 
         <div>
@@ -157,18 +157,6 @@ const AdminOrderDetails = () => {
               Status:{" "}
               <span className="text-gray-800">
                 {order.paymentMethod.status}
-              </span>
-            </h1>
-            <h1 className="text-gray-600">
-              Method:{" "}
-              <span className="text-gray-800">
-                {order.paymentMethod.card.issuer}
-              </span>
-            </h1>
-            <h1 className="text-gray-600">
-              Brand:{" "}
-              <span className="text-gray-800">
-                {order.paymentMethod.card.brand}
               </span>
             </h1>
             <h1 className="text-gray-600">
@@ -264,7 +252,8 @@ const AdminOrderDetails = () => {
               </span>
             </p>
             <p>
-              Coupon: <span className="text-green-600 ">{order.couponCode}</span>
+              Coupon:{" "}
+              <span className="text-green-600 ">{order.couponCode}</span>
             </p>
             <p>
               Discount:{" "}

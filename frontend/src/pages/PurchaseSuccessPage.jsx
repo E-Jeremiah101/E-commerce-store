@@ -20,8 +20,18 @@ const PurchaseSuccessPage = () => {
     const tx_ref = params.get("tx_ref");
     const status = params.get("status");
 
-    // Redirect if failed or missing details
-    if (status !== "successful" || !transaction_id) {
+    const hasPaymentAttempt = tx_ref && tx_ref.includes("ECOSTORE");
+
+    if (!hasPaymentAttempt) {
+      console.log("❌ No payment attempt detected");
+      navigate("/purchase-cancel");
+      return;
+    }
+
+    const shouldProceed = status === "successful" || hasPaymentAttempt;
+
+    if (!shouldProceed || !transaction_id) {
+      console.log("❌ Missing required parameters");
       navigate("/purchase-cancel");
       return;
     }

@@ -356,7 +356,7 @@ export const getVariantStock = async (req, res) => {
     console.log("Error in getVariantStock controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
-};
+}; 
 
 export const getAllProducts = async (req, res) => {
   try {

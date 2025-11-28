@@ -73,8 +73,8 @@ const ViewOrderPage = () => {
       {/* Order Info */}
       <div className=" bg-gradient-to-br from-white via-gray-100 to-gray-300 grid grid-cols-2 text-black gap-5 mt-12 py-6 px-2  ">
         <div>
-          <h1 className="text-gray-600">Order NO</h1>
-          <p className="font-semibold">{order.orderNumber}</p>
+          <h1 className="text-gray-600">FlutterwaveRef</h1>
+          <p className="font-semibold">{order.flutterwaveRef}</p>
         </div>
 
         <div>
@@ -134,7 +134,7 @@ const ViewOrderPage = () => {
       <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
       <div className=" text-black rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 py-6 px-2">
         <h2 className="text-lg font-semibold mb-4  border-gray-600 pb-2">
-          PAYMENT METHOD
+          PAYMENT METHOD ({order.paymentMethod.method})
         </h2>
         {order.paymentMethod.method === "account" && (
           <div>
@@ -155,21 +155,25 @@ const ViewOrderPage = () => {
         {order.paymentMethod.method === "card" && (
           <div>
             <h1 className="text-gray-600">
-              Card Num:************
+              Status:{" "}
               <span className="text-gray-800">
-                {order.paymentMethod.card.last4}
+                {order.paymentMethod.status}
               </span>
             </h1>
             <h1 className="text-gray-600">
-              Card Type:{" "}
-              <span className="text-gray-800">
-                {order.paymentMethod.card.type}
-              </span>
-            </h1>
-            <h1 className="text-gray-600">
-              Card Issuer:{" "}
+              Issuer:{" "}
               <span className="text-gray-800">
                 {order.paymentMethod.card.issuer}
+              </span>
+            </h1>
+          </div>
+        )}
+        {order.paymentMethod.method === "bank_transfer" && (
+          <div>
+            <h1 className="text-gray-600">
+              Status:{" "}
+              <span className="text-gray-800">
+                {order.paymentMethod.status}
               </span>
             </h1>
           </div>
@@ -234,7 +238,7 @@ const ViewOrderPage = () => {
       <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
       {/* Totals */}
       <div className="bg-gradient-to-br from-white via-gray-50 to-gray-200 text-gray-600 rounded-lg py-6 px-2">
-        <h2 className="text-lg font-semibold mb-4  pb-2">Payment Details</h2>
+        <h2 className="text-lg font-semibold ">Payment Summary</h2>
 
         {order.discount > 0 && (
           <>

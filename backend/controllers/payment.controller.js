@@ -20,30 +20,44 @@ dotenv.config({ path: path.join(__dirname, "../../.env") });
 const inventoryReservations = new Map();
 
 // 1. First define all helper functions
+
 async function clearStaleDatabaseReservations() {
-  console.log('🔍 Checking for stale database reservations...');
-  
+  console.log("🔍 Checking for stale database reservations...");
+
   try {
     const productsWithReservations = await Product.find({
-      $or: [
-        { reserved: { $gt: 0 } },
-        { 'variants.reserved': { $gt: 0 } }
-      ]
+      $or: [{ reserved: { $gt: 0 } }, { "variants.reserved": { $gt: 0 } }],
     });
+
+    // ✅ FIXED: Add null check for inventoryReservations
+    const activeReservations = inventoryReservations
+      ? Array.from(inventoryReservations.values())
+      : [];
 
     for (const product of productsWithReservations) {
       let needsUpdate = false;
 
       // Check if reservations match any active in-memory reservations
       if (product.reserved > 0) {
-        const hasActiveReservation = Array.from(inventoryReservations.values()).some(reservation => 
-          reservation.products.some(item => 
-            item._id === product._id.toString() && !item.size && !item.color
-          )
-        );
+        const hasActiveReservation =
+          activeReservations.length > 0 &&
+          activeReservations.some(
+            (reservation) =>
+              reservation &&
+              reservation.products &&
+              reservation.products.some(
+                (item) =>
+                  item &&
+                  item._id === product._id.toString() &&
+                  !item.size &&
+                  !item.color
+              )
+          );
 
         if (!hasActiveReservation) {
-          console.log(`🔄 Releasing orphaned main reservation for ${product.name}: ${product.reserved} units`);
+          console.log(
+            `🔄 Releasing orphaned main reservation for ${product.name}: ${product.reserved} units`
+          );
           product.countInStock += product.reserved;
           product.reserved = 0;
           needsUpdate = true;
@@ -54,16 +68,32 @@ async function clearStaleDatabaseReservations() {
       if (product.variants && product.variants.length > 0) {
         product.variants.forEach((variant, index) => {
           if (variant.reserved > 0) {
-            const hasActiveVariantReservation = Array.from(inventoryReservations.values()).some(reservation => 
-              reservation.products.some(item => {
-                const sizeMatch = item.size ? variant.size === item.size : (!variant.size || variant.size === "");
-                const colorMatch = item.color ? variant.color === item.color : (!variant.color || variant.color === "");
-                return item._id === product._id.toString() && sizeMatch && colorMatch;
-              })
-            );
+            const hasActiveVariantReservation =
+              activeReservations.length > 0 &&
+              activeReservations.some(
+                (reservation) =>
+                  reservation &&
+                  reservation.products &&
+                  reservation.products.some((item) => {
+                    if (!item) return false;
+                    const sizeMatch = item.size
+                      ? variant.size === item.size
+                      : !variant.size || variant.size === "";
+                    const colorMatch = item.color
+                      ? variant.color === item.color
+                      : !variant.color || variant.color === "";
+                    return (
+                      item._id === product._id.toString() &&
+                      sizeMatch &&
+                      colorMatch
+                    );
+                  })
+              );
 
             if (!hasActiveVariantReservation) {
-              console.log(`🔄 Releasing orphaned variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units`);
+              console.log(
+                `🔄 Releasing orphaned variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units`
+              );
               product.variants[index].countInStock += variant.reserved;
               product.variants[index].reserved = 0;
               needsUpdate = true;
@@ -73,7 +103,7 @@ async function clearStaleDatabaseReservations() {
 
         if (needsUpdate) {
           product.countInStock = product.variants.reduce(
-            (total, v) => total + v.countInStock,
+            (total, v) => total + (v.countInStock || 0),
             0
           );
         }
@@ -85,7 +115,7 @@ async function clearStaleDatabaseReservations() {
       }
     }
   } catch (error) {
-    console.error('❌ Error checking for stale database reservations:', error);
+    console.error("❌ Error checking for stale database reservations:", error);
   }
 }
 
@@ -121,8 +151,17 @@ setInterval(async () => {
   if (Date.now() % 300000 < 60000) { // Run roughly every 5 minutes
     await clearStaleDatabaseReservations();
   }
-}, 30000); // Run every 30 seconds instead of 60
 
+  for (const [key, value] of inventoryReservations.entries()) {
+    if (
+      key.startsWith("released_") &&
+      value.releasedAt < now - 60 * 60 * 1000
+    ) {
+      inventoryReservations.delete(key); 
+    }
+  }
+}, 30000); // Run every 30 seconds instead of 60
+ 
 // 4. Add the immediate cleanup function (run this once)
 async function clearAllReservations() {
   console.log('🧹 Clearing all stale reservations from database...');
@@ -192,7 +231,14 @@ async function clearAllReservations() {
 }
 
 // 5. Run the immediate cleanup once
-clearAllReservations();
+mongoose.connection.on('connected', async () => {
+  console.log('✅ MongoDB connected - starting reservation cleanup...');
+  await clearAllReservations();
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('❌ MongoDB connection error:', err);
+});
 
 
 
@@ -324,7 +370,15 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
 
 
 // Release reserved inventory - FIXED VERSION
+
+// FIXED: releaseInventory with idempotency protection
 async function releaseInventory(reservationId) {
+  // Check if we've already processed this release
+  if (inventoryReservations.has(`released_${reservationId}`)) {
+    console.log(`🔄 Release already processed for: ${reservationId}`);
+    return;
+  }
+
   const reservation = inventoryReservations.get(reservationId);
   if (!reservation) {
     console.log(`No reservation found: ${reservationId}`);
@@ -358,40 +412,58 @@ async function releaseInventory(reservationId) {
           });
 
           if (variantIndex !== -1) {
-            // RESTORE the inventory we deducted
-            product.variants[variantIndex].countInStock += item.quantity;
-            product.variants[variantIndex].reserved = Math.max(
-              0,
-              (product.variants[variantIndex].reserved || 0) - item.quantity
-            );
+            const variant = product.variants[variantIndex];
+            
+            // ✅ FIXED: Add safety check - only release if we have enough reserved
+            const reservedToRelease = Math.min(item.quantity, variant.reserved || 0);
+            
+            if (reservedToRelease > 0) {
+              variant.countInStock += reservedToRelease;
+              variant.reserved = Math.max(0, (variant.reserved || 0) - reservedToRelease);
+              
+              console.log(
+                `✅ Released ${reservedToRelease} of ${item.name} variant - Stock now: ${variant.countInStock}, Reserved: ${variant.reserved}`
+              );
+            } else {
+              console.log(
+                `⚠️ No reserved stock to release for ${item.name} ${item.size || ''}/${item.color || ''}`
+              );
+            }
 
-            // Update total
+            // Update total product stock
             product.countInStock = product.variants.reduce(
               (total, v) => total + v.countInStock,
               0
             );
-
-            console.log(
-              `✅ Released ${item.quantity} of ${item.name} variant - Stock now: ${product.variants[variantIndex].countInStock}`
-            );
           }
         } else {
-          // Simple product - restore inventory
-          product.countInStock += item.quantity;
-          product.reserved = Math.max(
-            0,
-            (product.reserved || 0) - item.quantity
-          );
-          console.log(
-            `✅ Released ${item.quantity} of ${item.name} - Stock now: ${product.countInStock}`
-          );
+          // Simple product - add safety check
+          const reservedToRelease = Math.min(item.quantity, product.reserved || 0);
+          
+          if (reservedToRelease > 0) {
+            product.countInStock += reservedToRelease;
+            product.reserved = Math.max(0, (product.reserved || 0) - reservedToRelease);
+            console.log(
+              `✅ Released ${reservedToRelease} of ${item.name} - Stock now: ${product.countInStock}, Reserved: ${product.reserved}`
+            );
+          } else {
+            console.log(`⚠️ No reserved stock to release for ${item.name}`);
+          }
         }
 
         await product.save({ session });
       }
     });
 
+    // ✅ Mark this reservation as released to prevent duplicate processing
+    inventoryReservations.set(`released_${reservationId}`, {
+      releasedAt: new Date(),
+      originalReservation: reservation
+    });
+    
+    // Remove the original reservation
     inventoryReservations.delete(reservationId);
+    
     console.log(`🎉 Successfully released reservation: ${reservationId}`);
   } catch (error) {
     console.error("❌ Release failed:", error);
@@ -401,8 +473,7 @@ async function releaseInventory(reservationId) {
 }
 
 
-
-// Confirm inventory - FIXED VERSION
+// FIXED: Confirm inventory - Permanently reduce stock
 async function confirmInventory(reservationId) {
   const reservation = inventoryReservations.get(reservationId);
   if (!reservation) {
@@ -421,7 +492,7 @@ async function confirmInventory(reservationId) {
         const product = await Product.findById(item._id).session(session);
         if (!product) continue;
 
-        // FIXED: Use flexible matching for variants (same as reserveInventory)
+        // FIXED: Use flexible matching for variants
         if (item.size || item.color) {
           const variantIndex = product.variants.findIndex((v) => {
             const sizeMatches = item.size 
@@ -434,25 +505,49 @@ async function confirmInventory(reservationId) {
           });
 
           if (variantIndex !== -1) {
-            // Just remove the reservation flag - inventory already deducted
-            product.variants[variantIndex].reserved = Math.max(
-              0,
-              (product.variants[variantIndex].reserved || 0) - item.quantity
-            );
+            const variant = product.variants[variantIndex];
+            
+            // ✅ CRITICAL FIX: Actually reduce the stock permanently
+            // The inventory was temporarily reduced in reserveInventory, but we need to make it permanent
+            // by keeping the reduced countInStock and just removing the reservation
+            
             console.log(
-              `✅ Confirmed ${item.name} ${item.size || ''}/${item.color || ''} - Final: Stock=${product.variants[variantIndex].countInStock}, Reserved=${product.variants[variantIndex].reserved}`
+              `📊 BEFORE CONFIRMATION - ${item.name} ${item.size || ''}/${item.color || ''}: Stock=${variant.countInStock}, Reserved=${variant.reserved || 0}`
+            );
+            
+            // Remove reservation flag - stock is already at the reduced level from reservation
+            variant.reserved = Math.max(
+              0,
+              (variant.reserved || 0) - item.quantity
+            );
+            
+            console.log(
+              `✅ CONFIRMED ${item.name} ${item.size || ''}/${item.color || ''} - Final: Stock=${variant.countInStock}, Reserved=${variant.reserved}`
+            );
+            
+            console.log(
+              `📊 INVENTORY REDUCTION: ${item.name} ${item.size || ''}/${item.color || ''} - Stock permanently reduced by ${item.quantity} units`
             );
           } else {
             console.log(`❌ Variant not found for confirmation: ${item.name} ${item.size || ''}/${item.color || ''}`);
           }
         } else {
-          // Simple product - remove reservation flag
+          // Simple product - remove reservation flag only (stock already reduced)
+          console.log(
+            `📊 BEFORE CONFIRMATION - ${item.name}: Stock=${product.countInStock}, Reserved=${product.reserved || 0}`
+          );
+          
           product.reserved = Math.max(
             0,
             (product.reserved || 0) - item.quantity
           );
+          
           console.log(
-            `✅ Confirmed ${item.name} - Final: Stock=${product.countInStock}, Reserved=${product.reserved}`
+            `✅ CONFIRMED ${item.name} - Final: Stock=${product.countInStock}, Reserved=${product.reserved}`
+          );
+          
+          console.log(
+            `📊 INVENTORY REDUCTION: ${item.name} - Stock permanently reduced by ${item.quantity} units`
           );
         }
 
@@ -461,7 +556,8 @@ async function confirmInventory(reservationId) {
     });
 
     inventoryReservations.delete(reservationId);
-    console.log(`🎉 Successfully confirmed reservation: ${reservationId}`);
+    console.log(`🎉 Successfully CONFIRMED reservation: ${reservationId}`);
+    
   } catch (error) {
     console.error("❌ Confirmation failed:", error);
     throw error;
@@ -722,7 +818,7 @@ async function processOrderCreation(transactionData) {
     throw error;
   }
 }
-
+ 
 
 export const createCheckoutSession = async (req, res) => {
   try {
@@ -886,7 +982,7 @@ export const createCheckoutSession = async (req, res) => {
         name:
           (user.firstname || "") + (user.lastname ? ` ${user.lastname}` : ""),
       },
-      payment_options: "card",
+      payment_options: "card, banktransfer",
       meta: {
         userId: userId.toString(),
         products: JSON.stringify(
@@ -951,7 +1047,12 @@ export const createCheckoutSession = async (req, res) => {
 
 
 export const handleFlutterwaveWebhook = async (req, res) => {
-  console.log("WEBHOOK CALLED - STARTING PROCESS");
+  console.log("🔔 WEBHOOK CALLED - LIVE MODE");
+  console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
+  console.log("🔐 Headers:", req.headers);
+
+  const signature = req.headers["verif-hash"];
+  console.log("Signature received:", signature ? "YES" : "NO");
 
   let transaction_id; // DECLARE IT HERE
   let lockAcquired = false;
@@ -980,15 +1081,67 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     console.log(`Webhook received: ${event.event} for ${event.data?.tx_ref}`);
 
-    if (event.event !== "charge.completed") {
-      console.log(`Ignoring webhook event: ${event.event}`);
-      return res.status(200).send("Ignored event type");
-    }
+   const paymentCompletionEvents = [
+     "charge.completed",
+     "transfer.completed",
+     "bank_transfer.completed",
+   ];
 
+   if (!paymentCompletionEvents.includes(event.event)) {
+     console.log(
+       `Ignoring non-payment-completion webhook event: ${event.event}`
+     );
+     return res.status(200).send("Ignored event type");
+   } 
+ 
     // MOVE THIS OUTSIDE OF NESTED TRY
     transaction_id = event.data?.id; // ASSIGN VALUE HERE
     const tx_ref = event.data?.tx_ref;
     const status = event.data?.status;
+    const paymentType = event.data?.payment_type;
+    
+    if (!paymentCompletionEvents.includes(event.event)) {
+      console.log(
+        `Ignoring non-payment-completion webhook event: ${event.event}`
+      );
+      return res.status(200).send("Ignored event type");
+    }
+
+    // For bank transfers, be more flexible with status values
+    if (paymentType === "banktransfer" || paymentType === "bank_transfer") {
+      const isBankTransferSuccessful =
+        status === "successful" ||
+        status === "success" ||
+        status === "completed" ||
+        status === 'credited';
+      if (!isBankTransferSuccessful) {
+        console.log(
+          `Bank transfer not successful: ${status} for ${event.data?.tx_ref}`
+        );
+
+        // Release inventory
+        const reservationId = event.data?.meta?.reservationId;
+        if (reservationId) {
+          await releaseInventory(reservationId);
+        }
+
+        return res.status(200).send("Bank transfer not completed");
+      }
+    } else {
+      // For other payment types, use strict checking
+      if (status !== "successful") {
+        console.log(
+          `Payment not successful: ${status} for ${event.data?.tx_ref}`
+        );
+
+        const reservationId = event.data?.meta?.reservationId;
+        if (reservationId) {
+          await releaseInventory(reservationId);
+        }
+
+        return res.status(200).send("Payment not successful");
+      }
+    }
 
     if (!transaction_id) {
       console.error("No transaction_id in webhook data");

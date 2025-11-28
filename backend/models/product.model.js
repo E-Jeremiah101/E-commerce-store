@@ -42,10 +42,10 @@ const productSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
-    // reserved: {
-    //   type: Number,
-    //   default: 0,
-    // }, // still tetsing
+    reserved: {
+      type: Number,
+      default: 0,
+    }, 
 
     variants: [productVariantSchema],
 
