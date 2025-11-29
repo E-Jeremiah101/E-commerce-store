@@ -25,6 +25,7 @@ import Welcome from "./pages/WelcomePage.jsx";
 import useTrackVisitors from "./stores/useTrackVisitors.js";
 import ViewOrderPage from "./pages/ViewOrderPage.jsx";
 import SavedProductsPage from "./pages/SavedProductsPage.jsx";
+import Support from "./components/Support.jsx";
 
 
 function App() {
@@ -119,6 +120,7 @@ function App() {
           element={user ? <OrderHistoryPage /> : <Navigate to="/login" />}
         />
         <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
+        <Route path="/admin/support/recovery" element={<Support />} />
         <Route path="/vieworders/:id" element={<ViewOrderPage />} />
         <Route
           path="Personal-info"
@@ -134,8 +136,11 @@ function App() {
         />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-       
-        <Route path="/saved" element={user ?<SavedProductsPage /> : < Navigate to='/login'/>} />
+
+        <Route
+          path="/saved"
+          element={user ? <SavedProductsPage /> : <Navigate to="/login" />}
+        />
 
         <Route path="/search" element={<SearchResultsPage />} />
       </Routes>

@@ -19,6 +19,7 @@ dotenv.config({ path: path.join(__dirname, "../../.env") });
 
 const inventoryReservations = new Map();
 
+
 // 1. First define all helper functions
 
 async function clearStaleDatabaseReservations() {
@@ -1081,25 +1082,12 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     console.log(`Webhook received: ${event.event} for ${event.data?.tx_ref}`);
 
-   const paymentCompletionEvents = [
-     "charge.completed",
-     "transfer.completed",
-     "bank_transfer.completed",
-   ];
+    const paymentCompletionEvents = [
+      "charge.completed",
+      "transfer.completed",
+      "bank_transfer.completed",
+    ];
 
-   if (!paymentCompletionEvents.includes(event.event)) {
-     console.log(
-       `Ignoring non-payment-completion webhook event: ${event.event}`
-     );
-     return res.status(200).send("Ignored event type");
-   } 
- 
-    // MOVE THIS OUTSIDE OF NESTED TRY
-    transaction_id = event.data?.id; // ASSIGN VALUE HERE
-    const tx_ref = event.data?.tx_ref;
-    const status = event.data?.status;
-    const paymentType = event.data?.payment_type;
-    
     if (!paymentCompletionEvents.includes(event.event)) {
       console.log(
         `Ignoring non-payment-completion webhook event: ${event.event}`
@@ -1107,13 +1095,19 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       return res.status(200).send("Ignored event type");
     }
 
+    // MOVE THIS OUTSIDE OF NESTED TRY
+    transaction_id = event.data?.id; // ASSIGN VALUE HERE
+    const tx_ref = event.data?.tx_ref;
+    const status = event.data?.status;
+    const paymentType = event.data?.payment_type;
+
     // For bank transfers, be more flexible with status values
     if (paymentType === "banktransfer" || paymentType === "bank_transfer") {
       const isBankTransferSuccessful =
         status === "successful" ||
         status === "success" ||
         status === "completed" ||
-        status === 'credited';
+        status === "credited";
       if (!isBankTransferSuccessful) {
         console.log(
           `Bank transfer not successful: ${status} for ${event.data?.tx_ref}`
@@ -1148,11 +1142,11 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       return res.status(400).send("Missing transaction_id");
     }
 
-     console.log(
-       ` ENTERING ORDER PROCESSING - Source: ${
-         req.path
-       }, TX: ${transaction_id}, Time: ${new Date().toISOString()}`
-     );
+    console.log(
+      ` ENTERING ORDER PROCESSING - Source: ${
+        req.path
+      }, TX: ${transaction_id}, Time: ${new Date().toISOString()}`
+    );
 
     console.log(`Processing transaction: ${transaction_id}, status: ${status}`);
 
@@ -1352,9 +1346,9 @@ export const handleFlutterwaveWebhook = async (req, res) => {
         if (isNew) {
           try {
             console.log(`STARTING COUPON PROCESS FOR USER: ${userId}`);
-            const couponEligibility = await checkCouponEligibility(   
+            const couponEligibility = await checkCouponEligibility(
               userId,
-              order.totalAmount        
+              order.totalAmount
             );
 
             if (couponEligibility) {
@@ -1452,6 +1446,85 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     }
   }
 };
+
+// ✅ HELPER FUNCTIONS
+function isPaymentSuccessful(status, paymentType) {
+  if (paymentType === "banktransfer" || paymentType === "bank_transfer") {
+    return ["successful", "success", "completed", "credited"].includes(status);
+  }
+  return status === "successful";
+}
+
+function parseProducts(productsData) {
+  if (!productsData) return [];
+
+  try {
+    const products =
+      typeof productsData === "string"
+        ? JSON.parse(productsData)
+        : productsData;
+
+    return products.map((p) => ({
+      _id: p._id || p.id || null,
+      name: p.name,
+      images: p.images || [],
+      quantity: p.quantity || 1,
+      price: p.price,
+      size: p.size || null,
+      color: p.color || null,
+      category: p.category || null,
+    }));
+  } catch (error) {
+    console.error("Error parsing products:", error);
+    return [];
+  }
+}
+
+async function handlePostOrderActions(userId, order, flutterwaveData) {
+  try {
+    // Handle coupon eligibility
+    const couponEligibility = await checkCouponEligibility(
+      userId,
+      order.totalAmount
+    );
+
+    if (couponEligibility) {
+      const newCoupon = await createNewCoupon(userId, {
+        discountPercentage: couponEligibility.discountPercentage,
+        couponType: couponEligibility.codePrefix,
+        reason: couponEligibility.reason,
+        daysValid: 30,
+      });
+
+      if (newCoupon) {
+        const user = await User.findById(userId);
+        if (user?.email) {
+          await sendCouponEmail({
+            to: user.email,
+            coupon: newCoupon,
+            couponType: couponEligibility.emailType,
+            orderCount: await Order.countDocuments({
+              user: userId,
+              paymentStatus: "paid",
+            }),
+          });
+        }
+      }
+    }
+
+    // Send order confirmation
+    const user = await User.findById(userId);
+    if (user?.email) {
+      await sendDetailedOrderEmail({
+        to: user.email,
+        order,
+        flutterwaveData,
+      });
+    }
+  } catch (error) {
+    console.error("Post-order actions failed:", error);
+  }
+}
 async function withRetry(fn, retries = 3, delay = 200) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {

@@ -1,5 +1,13 @@
 
-import { BarChart, PlusCircle, ShoppingBasket, Package } from "lucide-react";
+import {
+  BarChart,
+  PlusCircle,
+  ShoppingBasket,
+  Package,
+  Headset,
+  RotateCcw,
+  User,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import AnalyticsTab from "../components/AnalyticsTab.jsx";
@@ -11,13 +19,15 @@ import AllUsers from "../components/AllUsers.jsx";
 import { useProductStore } from "../stores/useProductStore.jsx";
 import AdminRefundsTab from "../components/AdminRefundsTab.jsx";
 import GoBackButton from "../components/GoBackButton";
+import Support from "../components/Support.jsx";
 const tabs = [
   { id: "create", label: "Create Product", icon: PlusCircle },
   { id: "products", label: "Products", icon: ShoppingBasket },
   { id: "analytics", label: "Analytics", icon: BarChart },
   { id: "AdminOrder", label: "Orders", icon: Package },
-  { id: "AdminRefunds", label: "Refund Request", icon: Package },
-  { id: "AllUsers", label: "Users", icon: Package },
+  { id: "AdminRefunds", label: "Refund ", icon: RotateCcw },
+  { id: "AllUsers", label: "Users", icon: User },
+  { id: "Support", label: "Support", icon: Headset },
 ];
 const clearCache = async () => {
   try {
@@ -107,6 +117,7 @@ const AdminPage = () => {
           {activeTab === "AdminOrder" && <AdminOrdersPage />}
           {activeTab === "AdminRefunds" && <AdminRefundsTab />}
           {activeTab === "AllUsers" && <AllUsers />}
+          {activeTab === "Support" && <Support />}
         </div>
       </div>
     </>

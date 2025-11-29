@@ -3,6 +3,7 @@ import { sendEmail } from "../lib/mailer.js";
 import User from "../models/user.model.js";
 import Coupon from "../models/coupon.model.js";
 import Product from "../models/product.model.js";
+import { flw } from "../lib/flutterwave.js";
 
 export const getUserOrders = async (req, res) => {
   try {
@@ -76,6 +77,267 @@ export const getUserOrders = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Simple order recovery for support team
+
+
+ 
+  export const supportRecoverOrder = async (req, res) => {
+     function generateOrderNumber() {
+    return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+  }
+    try {
+      const { transaction_ref, flutterwave_ref, customer_email, amount } =
+        req.body;
+
+      console.log("🔄 Order recovery attempt:", {
+        transaction_ref,
+        flutterwave_ref,
+        customer_email,
+        amount,
+      });
+
+      // Validate input
+      if (!transaction_ref && !flutterwave_ref) {
+        return res.status(400).json({
+          error:
+            "Please provide either Transaction Reference or Flutterwave Reference",
+        });
+      }
+
+      if (!customer_email || !amount) {
+        return res.status(400).json({
+          error: "Customer email and amount are required",
+        });
+      }
+
+      let payment = null;
+      let searchMethod = "";
+
+      // STRATEGY 1: Search by Flutterwave Reference (Most Accurate - using transaction ID)
+      if (flutterwave_ref) {
+        console.log("🔍 Searching by Flutterwave Reference:", flutterwave_ref);
+
+        try {
+          // For Flutterwave references like "JayyTech_PZBXZJ1764348466589204262"
+          // We need to find the transaction ID first
+          const recentTx = await flw.Transaction.fetch({
+            from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+              .toISOString()
+              .split("T")[0],
+            status: "successful",
+          });
+
+          // Look for transaction with matching flw_ref
+          const matchingPayment = recentTx.data.find(
+            (tx) => tx.flw_ref === flutterwave_ref
+          );
+
+          if (matchingPayment) {
+            payment = matchingPayment;
+            searchMethod = "flutterwave_reference";
+            console.log(
+              "✅ Found payment via Flutterwave Reference:",
+              payment.id
+            );
+          } else {
+            console.log(
+              "❌ No payment found with Flutterwave Reference:",
+              flutterwave_ref
+            );
+          }
+        } catch (error) {
+          console.error("Flutterwave Reference search failed:", error.message);
+        }
+      }
+
+      // STRATEGY 2: Search by Transaction Reference (Customer-friendly)
+      if (!payment && transaction_ref) {
+        console.log("🔍 Searching by Transaction Reference:", transaction_ref);
+
+        try {
+          const transactions = await flw.Transaction.fetch({
+            tx_ref: transaction_ref,
+          });
+
+          if (transactions.data && transactions.data.length > 0) {
+            // Filter by amount to find the correct payment
+            const amountTolerance = 1;
+            const successfulPayments = transactions.data.filter(
+              (p) =>
+                p.status === "successful" &&
+                Math.abs(p.amount - parseFloat(amount)) <= amountTolerance
+            );
+
+            if (successfulPayments.length > 0) {
+              // Use the most recent successful payment
+              payment = successfulPayments.sort(
+                (a, b) => new Date(b.created_at) - new Date(a.created_at)
+              )[0];
+              searchMethod = "transaction_reference";
+              console.log(
+                "✅ Found payment via Transaction Reference:",
+                payment.id
+              );
+            } else {
+              console.log("❌ No successful payments match the amount");
+              // Show what we found for debugging
+              transactions.data.forEach((p) => {
+                console.log(
+                  `   - Amount: ${p.amount}, Status: ${p.status}, Date: ${p.created_at}`
+                );
+              });
+            }
+          } else {
+            console.log(
+              "❌ No payments found with Transaction Reference:",
+              transaction_ref
+            );
+          }
+        } catch (error) {
+          console.error("Transaction Reference search failed:", error.message);
+        }
+      }
+
+      if (!payment) {
+        return res.status(404).json({
+          error: "No successful payment found with the provided details",
+          searchMethodsTried: [
+            flutterwave_ref ? "Flutterwave Reference" : null,
+            transaction_ref ? "Transaction Reference" : null,
+          ].filter(Boolean),
+          tips: [
+            "For Flutterwave Reference: Use the exact reference from webhook logs (starts with JayyTech_)",
+            "For Transaction Reference: Use the ECOSTORE- reference from customer receipt",
+            "Verify the exact amount charged",
+            'Confirm payment status is "successful"',
+          ],
+        });
+      }
+
+      // ✅ Check if order already exists
+      const existingOrder = await Order.findOne({
+        $or: [
+          { flutterwaveTransactionId: payment.id },
+          { flutterwaveRef: payment.tx_ref },
+        ],
+      });
+
+      if (existingOrder) {
+        console.log("🔄 Order already exists:", {
+          orderNumber: existingOrder.orderNumber,
+          transactionId: existingOrder.flutterwaveTransactionId,
+          transactionRef: existingOrder.flutterwaveRef,
+          status: existingOrder.status,
+          createdAt: existingOrder.createdAt,
+        });
+
+        // Get user details for better context
+        const user = await User.findById(existingOrder.user);
+
+        return res.status(400).json({
+          error: "Order already exists in system",
+          orderDetails: {
+            orderNumber: existingOrder.orderNumber,
+            status: existingOrder.status,
+            createdAt: existingOrder.createdAt,
+            totalAmount: existingOrder.totalAmount,
+            customer: user ? `${user.firstname} ${user.lastname}` : "Unknown",
+            customerEmail: user?.email,
+            products: existingOrder.products?.map((p) => p.name) || [],
+          },
+          paymentDetails: {
+            transactionReference: existingOrder.flutterwaveRef,
+            flutterwaveTransactionId: existingOrder.flutterwaveTransactionId,
+            amount: existingOrder.totalAmount,
+          },
+          action: "No recovery needed - check order status or contact customer",
+        });
+      }
+
+      // ✅ Find or create user
+      let user = await User.findOne({ email: customer_email });
+      if (!user) {
+        user = await User.create({
+          email: customer_email,
+          firstname: payment.customer?.firstname || "Recovery",
+          lastname: payment.customer?.lastname || "Customer",
+          phones: payment.customer?.phone_number
+            ? [{ number: payment.customer.phone_number }]
+            : [],
+        });
+        console.log("✅ Created new user for recovery:", user.email);
+      }
+
+      // ✅ Create the recovered order
+      const order = new Order({
+        user: user._id,
+        products: [], // Support will add products manually
+        orderNumber: generateOrderNumber(),
+        subtotal: amount || payment.amount,
+        totalAmount: amount || payment.amount,
+        deliveryAddress: "To be confirmed by customer",
+        phone: payment.customer?.phone_number || "To be confirmed",
+        flutterwaveRef: payment.tx_ref,
+        flutterwaveTransactionId: payment.id,
+        paymentStatus: "paid",
+        status: "Pending",
+        paymentMethod: {
+          method: payment.payment_type || "card",
+          status: "PAID",
+          ...(payment.card
+            ? {
+                card: {
+                  brand: payment.card.type || "Unknown",
+                  last4: payment.card.last_4digits || null,
+                  issuer: payment.card.issuer || null,
+                },
+              }
+            : {}),
+        },
+        isProcessed: true,
+        notes: `MANUALLY RECOVERED - Found via ${searchMethod}. 
+              Flutterwave Ref: ${payment.flw_ref}
+              Transaction Ref: ${payment.tx_ref}
+              Recovered on: ${new Date().toLocaleString()}`,
+      });
+
+      await order.save();
+      console.log("✅ Order recovered successfully:", order.orderNumber);
+
+      res.json({
+        success: true,
+        message: `Order recovered successfully via ${searchMethod.replace(
+          "_",
+          " "
+        )}!`,
+        orderNumber: order.orderNumber,
+        orderId: order._id,
+        customerEmail: customer_email,
+        amount: order.totalAmount,
+        searchMethod: searchMethod.replace("_", " "),
+        paymentDetails: {
+          transactionReference: payment.tx_ref,
+          flutterwaveReference: payment.flw_ref,
+          flutterwaveTransactionId: payment.id,
+          amount: payment.amount,
+          paidAt: payment.created_at,
+          paymentType: payment.payment_type,
+        },
+        nextSteps: [
+          "Contact customer with order number",
+          "Add products to the order manually",
+          "Confirm delivery address with customer",
+          "Update order status as needed",
+        ],
+      });
+    } catch (error) {
+      console.error("❌ Order recovery failed:", error);
+      res.status(500).json({
+        error: "Order recovery failed: " + error.message,
+      });
+    }
+  };
 
 export const getAllOrders = async (req, res) => {
   try {
