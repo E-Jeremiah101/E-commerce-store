@@ -1755,6 +1755,7 @@ import User from "../models/user.model.js";
 import Product from "../models/product.model.js";
 import { sendEmail } from "../lib/mailer.js";
 import { flw } from "../lib/flutterwave.js";
+import redis from "../lib/redis.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -2120,15 +2121,111 @@ async function confirmInventory(reservationId) {
     await session.endSession();
   }
 }
+setInterval(async () => {
+  console.log("🕒 Running Redis reservation cleanup...");
 
-// 3. Then set up the cleanup interval
-// setInterval(async () => {
-//   // Keep your database inconsistency check
-//   if (Date.now() % 300000 < 60000) {
-//     await clearStaleDatabaseReservations();
-//   }
-// }, 30000);
+  try {
+    // Get all Redis reservation keys
+    const keys = await redis.keys("reservation:*");
+    console.log(`📊 Found ${keys.length} Redis reservations`);
 
+    let releasedCount = 0;
+    let expiredButStuckCount = 0;
+
+    // Get all active reservation IDs from Redis
+    const activeReservationIds = new Set();
+    for (const key of keys) {
+      const reservationId = key.replace("reservation:", "");
+      activeReservationIds.add(reservationId);
+
+      const reservationData = await getReservation(reservationId);
+      if (reservationData) {
+        const now = new Date();
+        const expiresAt = new Date(reservationData.expiresAt);
+
+        // If reservation has expired, release it
+        if (now > expiresAt) {
+          console.log(`⏰ Releasing expired reservation: ${reservationId}`);
+          try {
+            await releaseInventory(reservationId);
+            releasedCount++;
+          } catch (error) {
+            console.error(`❌ Failed to release ${reservationId}:`, error);
+          }
+        } else {
+          const ttl = Math.floor((expiresAt - now) / 1000);
+          console.log(`⏰ ${reservationId}: ${ttl} seconds remaining`);
+        }
+      }
+    }
+
+    // ONLY check for stuck reservations that are NOT in Redis
+    const stuckProducts = await Product.find({
+      $or: [{ reserved: { $gt: 0 } }, { "variants.reserved": { $gt: 0 } }],
+    });
+
+    for (const product of stuckProducts) {
+      let needsFix = false;
+
+      // Check if this product has any active Redis reservations
+      const hasActiveReservation = await checkProductHasActiveReservation(
+        product,
+        activeReservationIds
+      );
+
+      if (!hasActiveReservation) {
+        // Only fix reservations that don't have active Redis entries
+        if (product.reserved > 0) {
+          console.log(
+            `🔄 Found STUCK main reservation for ${product.name}: ${product.reserved} units (no active Redis reservation)`
+          );
+          product.countInStock += product.reserved;
+          product.reserved = 0;
+          needsFix = true;
+        }
+
+        // Check variants
+        if (product.variants && product.variants.length > 0) {
+          product.variants.forEach((variant, index) => {
+            if (variant.reserved > 0) {
+              console.log(
+                `🔄 Found STUCK variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units (no active Redis reservation)`
+              );
+              product.variants[index].countInStock += variant.reserved;
+              product.variants[index].reserved = 0;
+              needsFix = true;
+            }
+          });
+        }
+      }
+
+      if (needsFix) {
+        await product.save();
+        expiredButStuckCount++;
+        console.log(`✅ Fixed STUCK reservations for ${product.name}`);
+      }
+    }
+
+    if (releasedCount > 0 || expiredButStuckCount > 0) {
+      console.log(
+        `✅ Released ${releasedCount} expired reservations and fixed ${expiredButStuckCount} stuck reservations`
+      );
+    } else {
+      console.log("✅ No expired or stuck reservations found");
+    }
+  } catch (error) {
+    console.error("❌ Error in reservation cleanup:", error);
+  }
+}, 30000);
+
+// Helper function to check if a product has active Redis reservations
+async function checkProductHasActiveReservation(product, activeReservationIds) {
+  // This would require storing product IDs in Redis reservations
+  // For now, we'll assume any reservation in Redis might be for this product
+  // and be conservative (don't release if there are any active reservations)
+  return activeReservationIds.size > 0;
+}
+ 
 // 4. Add the immediate cleanup function (run this once)
 async function clearAllReservations() {
   console.log("🧹 Clearing all stale reservations from database...");
@@ -3139,6 +3236,7 @@ async function handlePostOrderActions(userId, order, flutterwaveData) {
     console.error("Post-order actions failed:", error);
   }
 }
+
 
 async function withRetry(fn, retries = 3, delay = 200) {
   for (let attempt = 1; attempt <= retries; attempt++) {

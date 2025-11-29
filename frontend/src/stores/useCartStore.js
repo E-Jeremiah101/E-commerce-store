@@ -273,7 +273,9 @@ export const useCartStore = create((set, get) => ({
     try {
       const user = (await import("./useUserStore")).useUserStore.getState()
         .user;
+
       if (!user) {
+        // Guest flow
         set((prevState) => {
           const newCart = prevState.cart.map((item) =>
             item._id === productId && item.size === size && item.color === color
@@ -287,18 +289,38 @@ export const useCartStore = create((set, get) => ({
         return;
       }
 
-      await axios.put(`/cart/${productId}`, { quantity, size, color });
-      set((prevState) => ({
-        cart: prevState.cart.map((item) =>
-          item._id === productId && item.size === size && item.color === color
-            ? { ...item, quantity: Math.max(quantity, 1) }
-            : item
-        ),
-      }));
+      // FIXED: Ensure we always send proper data format
+      const requestData = {
+        quantity: Math.max(quantity, 1),
+        size: size || "", // Always send as string, never undefined
+        color: color || "", // Always send as string, never undefined
+      };
+
+      console.log("🔄 Updating quantity:", { productId, ...requestData });
+
+      const response = await axios.put(`/cart/${productId}`, requestData);
+
+      // Use the validated response from server instead of optimistic update
+      set({ cart: response.data });
       get().calculateTotals();
     } catch (error) {
-      console.error("Error updating quantity:", error);
-      toast.error("Unable to update item quantity.");
+      console.error("❌ Error updating quantity:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message,
+      });
+
+      // Revert to previous cart state on error
+      await get().getCartItems();
+
+      if (error.response?.status === 400) {
+        toast.error(error.response.data?.message || "Cannot update quantity");
+      } else if (error.response?.status === 404) {
+        toast.error("Product no longer available");
+        await get().getCartItems(); // Refresh cart to remove unavailable items
+      } else {
+        toast.error("Unable to update item quantity.");
+      }
     }
   },
   calculateTotals: () => {

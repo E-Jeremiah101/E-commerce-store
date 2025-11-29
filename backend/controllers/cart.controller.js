@@ -184,59 +184,91 @@ export const updateQuantity = async (req, res) => {
     const { size, color, quantity } = req.body;
     const user = req.user;
 
+    console.log("🔄 Backend updateQuantity:", {
+      productId,
+      size,
+      color,
+      quantity,
+    });
+
+    // Validate quantity
+    if (typeof quantity !== "number" || quantity < 0) {
+      return res.status(400).json({ message: "Invalid quantity" });
+    }
+
     const product = await Product.findById(productId);
 
-    // ✅ FIXED: Check if product exists AND is not archived
+    // Check if product exists and is available
     if (!product || product.archived || product.isActive === false) {
       // Remove from cart if product is archived
       user.cartItems = user.cartItems.filter(
         (item) =>
           !(
             item.product?.toString() === productId &&
-            item.size === size &&
-            item.color === color
+            item.size === (size || "") &&
+            item.color === (color || "")
           )
       );
       await user.save();
-      return res.status(404).json({ message: "Product no longer available" });
+      const validatedCartItems = await getValidatedCartItems(user.cartItems);
+      return res.status(404).json({
+        message: "Product no longer available",
+        cart: validatedCartItems,
+      });
     }
 
-    // Find variant stock
+    // Find variant stock - use consistent matching logic
     let availableStock = product.countInStock;
-    if (size || color) {
-      const variant = product.variants.find(
-        (v) => v.size === size && v.color === color
-      );
+    let variant = null;
+
+    if (product.variants && product.variants.length > 0) {
+      variant = product.variants.find((v) => {
+        const sizeMatches = size
+          ? v.size === size
+          : !v.size || v.size === "" || v.size === "Standard";
+        const colorMatches = color
+          ? v.color === color
+          : !v.color || v.color === "" || v.color === "Standard";
+        return sizeMatches && colorMatches;
+      });
+
       if (variant) {
         availableStock = variant.countInStock;
       }
     }
 
-    // Check stock before updating
+    // Check stock availability
     if (quantity > availableStock) {
       return res.status(400).json({
         message: `Only ${availableStock} left in stock`,
+        availableStock,
       });
     }
 
-    const existingItem = user.cartItems.find(
-      (item) =>
-        item.product?.toString() === productId &&
-        item.size === size &&
-        item.color === color
-    );
+    // Find existing cart item with consistent matching
+    const existingItem = user.cartItems.find((item) => {
+      const productMatch = item.product?.toString() === productId;
+      const sizeMatch = size
+        ? item.size === size
+        : !item.size || item.size === "";
+      const colorMatch = color
+        ? item.color === color
+        : !item.color || item.color === "";
+      return productMatch && sizeMatch && colorMatch;
+    });
 
     if (!existingItem) {
       return res.status(404).json({ message: "Product not found in cart" });
     }
 
     if (quantity <= 0) {
+      // Remove item if quantity is 0 or less
       user.cartItems = user.cartItems.filter(
         (item) =>
           !(
             item.product?.toString() === productId &&
-            item.size === size &&
-            item.color === color
+            item.size === (size || "") &&
+            item.color === (color || "")
           )
       );
     } else {
@@ -245,7 +277,7 @@ export const updateQuantity = async (req, res) => {
 
     await user.save();
 
-    // ✅ FIXED: Return validated cart items
+    // Return validated cart items
     const validatedCartItems = await getValidatedCartItems(user.cartItems);
     res.json(validatedCartItems);
   } catch (error) {
