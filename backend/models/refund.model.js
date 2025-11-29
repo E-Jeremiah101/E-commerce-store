@@ -1,10 +1,18 @@
+// models/refund.model.js - UPDATED
 import mongoose from "mongoose";
 
 const refundSchema = new mongoose.Schema({
-  // Link to order if it was created but refunded
+  // Order reference
   order: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Order",
+    required: true,
+  },
+
+  // Product reference (for partial refunds)
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
     default: null,
   },
 
@@ -12,13 +20,17 @@ const refundSchema = new mongoose.Schema({
   transactionId: {
     type: String,
     required: true,
- 
   },
   tx_ref: {
     type: String,
     required: true,
-  
   },
+  flw_ref: {
+    type: String, // Flutterwave transaction reference
+    required: true,
+  },
+
+  // Refund amounts
   amount: {
     type: Number,
     required: true,
@@ -29,77 +41,79 @@ const refundSchema = new mongoose.Schema({
   },
 
   // Flutterwave refund details
-  refundId: {
-    type: String,
-    
+  flutterwaveRefundId: {
+    type: String, // Flutterwave's refund ID
+    sparse: true,
   },
+  refundReference: {
+    type: String, // Your refund reference
+  },
+
+  // Status tracking
   status: {
     type: String,
-    enum: ["initiated", "processed", "failed", "pending"],
-    default: "initiated",
+    enum: ["pending", "approved", "processed", "failed", "rejected"],
+    default: "pending",
   },
 
   // Refund context
   type: {
     type: String,
-    enum: ["automatic", "manual", "partial", "full"],
-    default: "automatic",
+    enum: ["full", "partial"],
+    default: "full",
   },
   reason: {
     type: String,
     required: true,
   },
+  quantity: {
+    type: Number,
+    default: 1,
+  },
 
   // Customer info
-  customerEmail: {
-    type: String,
-  },
+  customerEmail: String,
   customerId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    default: null,
-  },
-
-  // System tracking
-  orderAttempted: {
-    type: Boolean,
-    default: false,
-  },
-  errorDetails: {
-    type: String,
   },
 
   // Flutterwave response data
-  flutterwaveResponse: {
-    type: mongoose.Schema.Types.Mixed,
+  flutterwaveResponse: mongoose.Schema.Types.Mixed,
+  webhookData: mongoose.Schema.Types.Mixed,
+
+  // Error handling
+  errorDetails: String,
+  retryCount: {
+    type: Number,
+    default: 0,
   },
 
   // Timestamps
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-  processedAt: {
-    type: Date,
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
+  createdAt: { type: Date, default: Date.now },
+  approvedAt: Date,
+  processedAt: Date,
+  updatedAt: { type: Date, default: Date.now },
 });
 
-// Update the updatedAt field before saving
 refundSchema.pre("save", function (next) {
   this.updatedAt = Date.now();
+
+  // Generate refund reference if not exists
+  if (!this.refundReference) {
+    this.refundReference = `REF-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+  }
+
   next();
 });
 
-// Index for common queries
 refundSchema.index({ transactionId: 1 });
-refundSchema.index({ tx_ref: 1 });
+refundSchema.index({ flw_ref: 1 });
 refundSchema.index({ status: 1 });
+refundSchema.index({ refundReference: 1 });
 refundSchema.index({ createdAt: -1 });
 
 const Refund = mongoose.model("Refund", refundSchema);
-
 export default Refund;
