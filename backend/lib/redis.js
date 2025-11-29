@@ -26,17 +26,50 @@ redis.on("reconnecting", () => console.log("♻️ Redis reconnecting..."));
 redis.on("end", () => console.error("🔌 Redis connection closed"));
 
 // Redis Locking Functions
+// export async function acquireWebhookLock(transactionId, timeoutMs = 45000) {
+//   try {
+//     const lockKey = `webhook_lock:${transactionId}`;
+//     const lockValue = `${transactionId}_${Date.now()}`;
+//     const acquired = await redis.set(lockKey,lockValue, {
+//       NX: true, // Only set if not exists
+//       PX: timeoutMs // Expire after timeout
+//     });
+//     console.log(
+//       `🔒 Lock acquisition ${
+//         acquired === "OK" ? "successful" : "failed"
+//       } for: ${transactionId}`
+//     );
+//     return acquired === 'OK';
+//   } catch (error) {
+//     console.error('Redis lock acquisition failed:', error);
+//     return false;
+//   }
+// }
+
+// export async function releaseWebhookLock(transactionId) {
+//   try {
+//     const lockKey = `webhook_lock:${transactionId}`;
+//     await redis.del(lockKey);
+//     console.log(`🔓 Released Redis lock: ${lockKey}`);
+//   } catch (error) {
+//     console.error('Redis lock release failed:', error);
+//   }
+// }
+// Redis Locking Functions - Updated for Redis v4+
 export async function acquireWebhookLock(transactionId, timeoutMs = 45000) {
   try {
     const lockKey = `webhook_lock:${transactionId}`;
     const lockValue = `${transactionId}_${Date.now()}`;
-    const acquired = await redis.set(lockKey,lockValue, {
+    
+    // For Redis v4+, use SET with NX and PX options
+    const acquired = await redis.set(lockKey, lockValue, {
       NX: true, // Only set if not exists
-      PX: timeoutMs // Expire after timeout
+      PX: timeoutMs // Expire after timeout in milliseconds
     });
+    
     console.log(
       `🔒 Lock acquisition ${
-        acquired === "OK" ? "successful" : "failed"
+        acquired ? "successful" : "failed"
       } for: ${transactionId}`
     );
     return acquired === 'OK';
@@ -53,6 +86,70 @@ export async function releaseWebhookLock(transactionId) {
     console.log(`🔓 Released Redis lock: ${lockKey}`);
   } catch (error) {
     console.error('Redis lock release failed:', error);
+  }
+}
+// Replace the reservation functions in your redis.js file with these:
+
+// Reservation Storage Functions
+export async function storeReservation(reservationId, reservationData) {
+  try {
+    await redis.set(
+      `reservation:${reservationId}`,
+      JSON.stringify(reservationData),
+      {
+        EX: reservationData.timeoutMinutes * 60 // TTL in seconds
+      }
+    );
+    console.log(`✅ Stored reservation: ${reservationId}`);
+  } catch (error) {
+    console.error('❌ Failed to store reservation:', error);
+    throw error;
+  }
+}
+
+export async function getReservation(reservationId) {
+  try {
+    const data = await redis.get(`reservation:${reservationId}`);
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    console.error('❌ Failed to get reservation:', error);
+    return null;
+  }
+}
+
+export async function deleteReservation(reservationId) {
+  try {
+    await redis.del(`reservation:${reservationId}`);
+    console.log(`✅ Deleted reservation: ${reservationId}`);
+  } catch (error) {
+    console.error('❌ Failed to delete reservation:', error);
+    throw error;
+  }
+}
+
+export async function storeReleasedReservation(reservationId, releaseData) {
+  try {
+    // Store released marker for 1 hour
+    await redis.set(
+      `released_${reservationId}`,
+      JSON.stringify(releaseData),
+      {
+        EX: 60 * 60 // 1 hour TTL
+      }
+    );
+  } catch (error) {
+    console.error('❌ Failed to store released reservation:', error);
+    throw error;
+  }
+}
+
+export async function getReleasedReservation(reservationId) {
+  try {
+    const data = await redis.get(`released_${reservationId}`);
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    console.error('❌ Failed to get released reservation:', error);
+    return null;
   }
 }
 
