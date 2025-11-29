@@ -79,266 +79,542 @@ export const getUserOrders = async (req, res) => {
 };
 
 // Simple order recovery for support team
-
-
- 
-  export const supportRecoverOrder = async (req, res) => {
-     function generateOrderNumber() {
+export const supportRecoverOrder = async (req, res) => {
+  function generateOrderNumber() {
     return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
   }
-    try {
-      const { transaction_ref, flutterwave_ref, customer_email, amount } =
-        req.body;
 
-      console.log("🔄 Order recovery attempt:", {
-        transaction_ref,
-        flutterwave_ref,
-        customer_email,
-        amount,
+  try {
+    const { transaction_ref, flutterwave_ref, customer_email } = req.body;
+
+    console.log("🔄 Order recovery attempt:", {
+      transaction_ref,
+      flutterwave_ref,
+      customer_email,
+    });
+
+    // Validate input
+    if (!transaction_ref && !flutterwave_ref) {
+      return res.status(400).json({
+        error:
+          "Please provide either Transaction Reference or Flutterwave Reference",
       });
+    }
 
-      // Validate input
-      if (!transaction_ref && !flutterwave_ref) {
-        return res.status(400).json({
-          error:
-            "Please provide either Transaction Reference or Flutterwave Reference",
+    if (!customer_email) {
+      return res.status(400).json({
+        error: "Customer email is required",
+      });
+    }
+
+    let payment = null;
+    let searchMethod = "";
+    let referenceUsed = "";
+
+    // STRATEGY 1: Search by Transaction Reference (tx_ref) - This is ECOSTORE-xxx
+    if (transaction_ref && transaction_ref.trim() !== "") {
+      console.log("🔍 Searching by Transaction Reference:", transaction_ref);
+      searchMethod = "transaction_reference";
+      referenceUsed = transaction_ref;
+
+      try {
+        // Direct search by transaction reference
+        const response = await flw.Transaction.fetch({
+          tx_ref: transaction_ref.trim(),
         });
-      }
 
-      if (!customer_email || !amount) {
-        return res.status(400).json({
-          error: "Customer email and amount are required",
-        });
-      }
-
-      let payment = null;
-      let searchMethod = "";
-
-      // STRATEGY 1: Search by Flutterwave Reference (Most Accurate - using transaction ID)
-      if (flutterwave_ref) {
-        console.log("🔍 Searching by Flutterwave Reference:", flutterwave_ref);
-
-        try {
-          // For Flutterwave references like "JayyTech_PZBXZJ1764348466589204262"
-          // We need to find the transaction ID first
-          const recentTx = await flw.Transaction.fetch({
-            from: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-              .toISOString()
-              .split("T")[0],
-            status: "successful",
-          });
-
-          // Look for transaction with matching flw_ref
-          const matchingPayment = recentTx.data.find(
-            (tx) => tx.flw_ref === flutterwave_ref
+        if (response.data && response.data.length > 0) {
+          // Find successful payments
+          const successfulPayments = response.data.filter(
+            (p) => p.status === "successful"
           );
 
-          if (matchingPayment) {
-            payment = matchingPayment;
-            searchMethod = "flutterwave_reference";
+          if (successfulPayments.length > 0) {
+            payment = successfulPayments[0]; // Take the first successful one
             console.log(
-              "✅ Found payment via Flutterwave Reference:",
+              "✅ Found payment via Transaction Reference:",
               payment.id
             );
           } else {
             console.log(
-              "❌ No payment found with Flutterwave Reference:",
-              flutterwave_ref
+              "❌ No successful payments found for transaction reference"
             );
-          }
-        } catch (error) {
-          console.error("Flutterwave Reference search failed:", error.message);
-        }
-      }
-
-      // STRATEGY 2: Search by Transaction Reference (Customer-friendly)
-      if (!payment && transaction_ref) {
-        console.log("🔍 Searching by Transaction Reference:", transaction_ref);
-
-        try {
-          const transactions = await flw.Transaction.fetch({
-            tx_ref: transaction_ref,
-          });
-
-          if (transactions.data && transactions.data.length > 0) {
-            // Filter by amount to find the correct payment
-            const amountTolerance = 1;
-            const successfulPayments = transactions.data.filter(
-              (p) =>
-                p.status === "successful" &&
-                Math.abs(p.amount - parseFloat(amount)) <= amountTolerance
-            );
-
-            if (successfulPayments.length > 0) {
-              // Use the most recent successful payment
-              payment = successfulPayments.sort(
-                (a, b) => new Date(b.created_at) - new Date(a.created_at)
-              )[0];
-              searchMethod = "transaction_reference";
+            // Show what we found
+            response.data.forEach((p) => {
               console.log(
-                "✅ Found payment via Transaction Reference:",
+                `   - Status: ${p.status}, Amount: ${p.amount}, Date: ${p.created_at}`
+              );
+            });
+          }
+        } else {
+          console.log(
+            "❌ No payments found with Transaction Reference:",
+            transaction_ref
+          );
+        }
+      } catch (error) {
+        console.error("Transaction Reference search failed:", error.message);
+        console.error("Full error:", error);
+      }
+    }
+
+    // STRATEGY 2: Search by Flutterwave Reference - Multiple formats
+    if (!payment && flutterwave_ref && flutterwave_ref.trim() !== "") {
+      console.log("🔍 Searching by Flutterwave Reference:", flutterwave_ref);
+      searchMethod = "flutterwave_reference";
+      referenceUsed = flutterwave_ref;
+
+      try {
+        // DETERMINE REFERENCE TYPE
+        let referenceType = "";
+        if (flutterwave_ref.startsWith("JayyTech_")) {
+          referenceType = "flw_ref";
+          console.log("📝 Identified as Flutterwave Reference (flw_ref)");
+        } else if (/^\d+$/.test(flutterwave_ref)) {
+          referenceType = "transaction_id";
+          console.log("📝 Identified as Transaction ID (numeric)");
+        } else {
+          referenceType = "unknown";
+          console.log("📝 Unknown reference format, trying all methods");
+        }
+
+        // METHOD 1: Try direct verification with different ID types
+        console.log("🔄 Trying direct verification...");
+
+        if (referenceType === "flw_ref" || referenceType === "unknown") {
+          try {
+            console.log("🔄 Trying as Flutterwave Reference (flw_ref)...");
+            const verificationResponse = await flw.Transaction.verify({
+              id: flutterwave_ref.trim(),
+            });
+            if (
+              verificationResponse.data &&
+              verificationResponse.data.status === "successful"
+            ) {
+              payment = verificationResponse.data;
+              console.log(
+                "✅ Found payment via Flutterwave Reference verification:",
                 payment.id
               );
-            } else {
-              console.log("❌ No successful payments match the amount");
-              // Show what we found for debugging
-              transactions.data.forEach((p) => {
-                console.log(
-                  `   - Amount: ${p.amount}, Status: ${p.status}, Date: ${p.created_at}`
-                );
-              });
             }
-          } else {
+          } catch (verifyError) {
             console.log(
-              "❌ No payments found with Transaction Reference:",
-              transaction_ref
+              "❌ Verification as Flutterwave Reference failed:",
+              verifyError.message
             );
           }
-        } catch (error) {
-          console.error("Transaction Reference search failed:", error.message);
+        }
+
+        if (
+          !payment &&
+          (referenceType === "transaction_id" || referenceType === "unknown")
+        ) {
+          try {
+            console.log("🔄 Trying as Transaction ID...");
+            const verificationResponse = await flw.Transaction.verify({
+              id: parseInt(flutterwave_ref.trim()),
+            });
+            if (
+              verificationResponse.data &&
+              verificationResponse.data.status === "successful"
+            ) {
+              payment = verificationResponse.data;
+              console.log(
+                "✅ Found payment via Transaction ID verification:",
+                payment.id
+              );
+            }
+          } catch (verifyError) {
+            console.log(
+              "❌ Verification as Transaction ID failed:",
+              verifyError.message
+            );
+          }
+        }
+
+        // METHOD 2: Search through recent transactions (date range approach)
+        if (!payment) {
+          console.log(
+            "🔄 Searching through recent transactions by date range..."
+          );
+
+          try {
+            // Search transactions from last 30 days
+            const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            const toDate = new Date();
+
+            console.log(
+              `📅 Searching from ${fromDate.toISOString().split("T")[0]} to ${
+                toDate.toISOString().split("T")[0]
+              }`
+            );
+
+            const recentTransactions = await flw.Transaction.fetch({
+              from: fromDate.toISOString().split("T")[0],
+              to: toDate.toISOString().split("T")[0],
+              status: "successful",
+            });
+
+            if (recentTransactions.data && recentTransactions.data.length > 0) {
+              console.log(
+                `📦 Found ${recentTransactions.data.length} recent successful transactions`
+              );
+
+              // Search with multiple criteria
+              const foundPayment = recentTransactions.data.find(
+                (tx) =>
+                  tx.flw_ref === flutterwave_ref.trim() ||
+                  tx.id.toString() === flutterwave_ref.trim() ||
+                  tx.id === parseInt(flutterwave_ref.trim()) ||
+                  tx.tx_ref === flutterwave_ref.trim()
+              );
+
+              if (foundPayment) {
+                payment = foundPayment;
+                console.log(
+                  "✅ Found payment in recent transactions:",
+                  payment.id
+                );
+                console.log(
+                  "🎯 Matched by:",
+                  foundPayment.flw_ref === flutterwave_ref
+                    ? "flw_ref"
+                    : foundPayment.id.toString() === flutterwave_ref
+                    ? "transaction_id"
+                    : foundPayment.tx_ref === flutterwave_ref
+                    ? "tx_ref"
+                    : "unknown"
+                );
+              } else {
+                console.log("❌ Payment not found in recent transactions");
+                // Log a few sample references for debugging
+                console.log(
+                  "Sample references found:",
+                  recentTransactions.data.slice(0, 3).map((tx) => ({
+                    flw_ref: tx.flw_ref,
+                    id: tx.id,
+                    tx_ref: tx.tx_ref,
+                  }))
+                );
+              }
+            } else {
+              console.log("❌ No recent successful transactions found");
+            }
+          } catch (searchError) {
+            console.error(
+              "❌ Recent transactions search failed:",
+              searchError.message
+            );
+          }
+        }
+
+        // METHOD 3: Try alternative search methods
+        if (!payment) {
+          console.log("🔄 Trying alternative search methods...");
+
+          try {
+            // Try searching without date range (all transactions)
+            console.log("🔄 Searching all transactions...");
+            const allTransactions = await flw.Transaction.fetch({
+              status: "successful",
+            });
+
+            if (allTransactions.data && allTransactions.data.length > 0) {
+              console.log(
+                `📦 Found ${allTransactions.data.length} total successful transactions`
+              );
+
+              const foundPayment = allTransactions.data.find(
+                (tx) =>
+                  tx.flw_ref === flutterwave_ref.trim() ||
+                  tx.id.toString() === flutterwave_ref.trim() ||
+                  tx.id === parseInt(flutterwave_ref.trim()) ||
+                  tx.tx_ref === flutterwave_ref.trim()
+              );
+
+              if (foundPayment) {
+                payment = foundPayment;
+                console.log(
+                  "✅ Found payment in all transactions:",
+                  payment.id
+                );
+              } else {
+                console.log("❌ Payment not found in all transactions");
+              }
+            }
+          } catch (altError) {
+            console.error("❌ Alternative search failed:", altError.message);
+          }
+        }
+
+        if (!payment) {
+          console.log(
+            "❌ No payment found with provided reference:",
+            flutterwave_ref
+          );
+        }
+      } catch (error) {
+        console.error("Flutterwave Reference search failed:", error.message);
+        console.error("Full error:", error);
+      }
+    }
+
+    if (!payment) {
+      return res.status(404).json({
+        error: "No successful payment found with the provided details",
+        debug: {
+          transaction_ref_provided: transaction_ref,
+          flutterwave_ref_provided: flutterwave_ref,
+          search_method_used: searchMethod,
+          reference_type: referenceUsed.startsWith("JayyTech_")
+            ? "flw_ref"
+            : /^\d+$/.test(referenceUsed)
+            ? "transaction_id"
+            : "unknown",
+        },
+        tips: [
+          "Make sure the Transaction Reference starts with ECOSTORE-",
+          "For Flutterwave Reference, use the exact reference from dashboard",
+          "Check if the payment status is 'successful' in Flutterwave",
+          "Try using the Transaction Reference (ECOSTORE-xxx) first",
+          "Verify the customer email matches the payment email",
+        ],
+      });
+    }
+
+    // ✅ Check if order already exists
+    const existingOrder = await Order.findOne({
+      $or: [
+        { flutterwaveTransactionId: payment.id },
+        { flutterwaveRef: payment.tx_ref },
+      ],
+    });
+
+    if (existingOrder) {
+      console.log("🔄 Order already exists:", existingOrder.orderNumber);
+
+      const user = await User.findById(existingOrder.user);
+      return res.status(400).json({
+        error: "Order already exists in system",
+        orderDetails: {
+          orderNumber: existingOrder.orderNumber,
+          status: existingOrder.status,
+          createdAt: existingOrder.createdAt,
+          totalAmount: existingOrder.totalAmount,
+          customer: user ? `${user.firstname} ${user.lastname}` : "Unknown",
+          customerEmail: user?.email,
+        },
+        action: "Check the existing order in the orders list",
+      });
+    }
+
+    // ✅ EXTRACT PRODUCT INFORMATION
+    let recoveredProducts = [];
+    let subtotal = payment.amount;
+
+    console.log("📦 Payment metadata:", payment.meta);
+    console.log("📦 Payment customizations:", payment.customer);
+
+    // Process products from metadata
+    if (payment.meta) {
+      console.log("🔍 Processing payment metadata...");
+
+      let productsData = null;
+
+      if (payment.meta.products) {
+        console.log("📦 Found products in payment.meta.products");
+        console.log("📦 Type of products:", typeof payment.meta.products);
+
+        try {
+          if (typeof payment.meta.products === "string") {
+            console.log("🔄 Parsing products as JSON string...");
+            productsData = JSON.parse(payment.meta.products);
+          } else if (Array.isArray(payment.meta.products)) {
+            console.log("🔄 Products is already an array");
+            productsData = payment.meta.products;
+          } else if (typeof payment.meta.products === "object") {
+            console.log("🔄 Products is an object, converting to array");
+            productsData = [payment.meta.products];
+          }
+        } catch (parseError) {
+          console.error("❌ Error parsing products:", parseError.message);
         }
       }
 
-      if (!payment) {
-        return res.status(404).json({
-          error: "No successful payment found with the provided details",
-          searchMethodsTried: [
-            flutterwave_ref ? "Flutterwave Reference" : null,
-            transaction_ref ? "Transaction Reference" : null,
-          ].filter(Boolean),
-          tips: [
-            "For Flutterwave Reference: Use the exact reference from webhook logs (starts with JayyTech_)",
-            "For Transaction Reference: Use the ECOSTORE- reference from customer receipt",
-            "Verify the exact amount charged",
-            'Confirm payment status is "successful"',
-          ],
-        });
+      if (!productsData && Array.isArray(payment.meta)) {
+        console.log("📦 Payment.meta is an array, searching for products...");
+        const productsMeta = payment.meta.find((item) => item.products);
+        if (productsMeta && productsMeta.products) {
+          console.log("📦 Found products in meta array");
+          try {
+            if (typeof productsMeta.products === "string") {
+              productsData = JSON.parse(productsMeta.products);
+            } else if (Array.isArray(productsMeta.products)) {
+              productsData = productsMeta.products;
+            }
+          } catch (parseError) {
+            console.error(
+              "❌ Error parsing products from meta array:",
+              parseError.message
+            );
+          }
+        }
       }
 
-      // ✅ Check if order already exists
-      const existingOrder = await Order.findOne({
-        $or: [
-          { flutterwaveTransactionId: payment.id },
-          { flutterwaveRef: payment.tx_ref },
-        ],
-      });
+      if (productsData) {
+        console.log("✅ Products data to process:", productsData);
 
-      if (existingOrder) {
-        console.log("🔄 Order already exists:", {
-          orderNumber: existingOrder.orderNumber,
-          transactionId: existingOrder.flutterwaveTransactionId,
-          transactionRef: existingOrder.flutterwaveRef,
-          status: existingOrder.status,
-          createdAt: existingOrder.createdAt,
-        });
-
-        // Get user details for better context
-        const user = await User.findById(existingOrder.user);
-
-        return res.status(400).json({
-          error: "Order already exists in system",
-          orderDetails: {
-            orderNumber: existingOrder.orderNumber,
-            status: existingOrder.status,
-            createdAt: existingOrder.createdAt,
-            totalAmount: existingOrder.totalAmount,
-            customer: user ? `${user.firstname} ${user.lastname}` : "Unknown",
-            customerEmail: user?.email,
-            products: existingOrder.products?.map((p) => p.name) || [],
-          },
-          paymentDetails: {
-            transactionReference: existingOrder.flutterwaveRef,
-            flutterwaveTransactionId: existingOrder.flutterwaveTransactionId,
-            amount: existingOrder.totalAmount,
-          },
-          action: "No recovery needed - check order status or contact customer",
-        });
+        if (Array.isArray(productsData) && productsData.length > 0) {
+          recoveredProducts = productsData.map((product, index) => {
+            console.log(`📦 Processing product ${index + 1}:`, product);
+            return {
+              product: product._id || product.productId || null,
+              name: product.name || "Recovered Product",
+              image: product.images?.[0] || product.image || "/placeholder.png",
+              price: product.price || payment.amount / (product.quantity || 1),
+              quantity: product.quantity || 1,
+              selectedSize: product.size || null,
+              selectedColor: product.color || null,
+              selectedCategory: product.category || null,
+            };
+          });
+          console.log(
+            `✅ Successfully recovered ${recoveredProducts.length} products`
+          );
+        }
       }
-
-      // ✅ Find or create user
-      let user = await User.findOne({ email: customer_email });
-      if (!user) {
-        user = await User.create({
-          email: customer_email,
-          firstname: payment.customer?.firstname || "Recovery",
-          lastname: payment.customer?.lastname || "Customer",
-          phones: payment.customer?.phone_number
-            ? [{ number: payment.customer.phone_number }]
-            : [],
-        });
-        console.log("✅ Created new user for recovery:", user.email);
-      }
-
-      // ✅ Create the recovered order
-      const order = new Order({
-        user: user._id,
-        products: [], // Support will add products manually
-        orderNumber: generateOrderNumber(),
-        subtotal: amount || payment.amount,
-        totalAmount: amount || payment.amount,
-        deliveryAddress: "To be confirmed by customer",
-        phone: payment.customer?.phone_number || "To be confirmed",
-        flutterwaveRef: payment.tx_ref,
-        flutterwaveTransactionId: payment.id,
-        paymentStatus: "paid",
-        status: "Pending",
-        paymentMethod: {
-          method: payment.payment_type || "card",
-          status: "PAID",
-          ...(payment.card
-            ? {
-                card: {
-                  brand: payment.card.type || "Unknown",
-                  last4: payment.card.last_4digits || null,
-                  issuer: payment.card.issuer || null,
-                },
-              }
-            : {}),
-        },
-        isProcessed: true,
-        notes: `MANUALLY RECOVERED - Found via ${searchMethod}. 
-              Flutterwave Ref: ${payment.flw_ref}
-              Transaction Ref: ${payment.tx_ref}
-              Recovered on: ${new Date().toLocaleString()}`,
-      });
-
-      await order.save();
-      console.log("✅ Order recovered successfully:", order.orderNumber);
-
-      res.json({
-        success: true,
-        message: `Order recovered successfully via ${searchMethod.replace(
-          "_",
-          " "
-        )}!`,
-        orderNumber: order.orderNumber,
-        orderId: order._id,
-        customerEmail: customer_email,
-        amount: order.totalAmount,
-        searchMethod: searchMethod.replace("_", " "),
-        paymentDetails: {
-          transactionReference: payment.tx_ref,
-          flutterwaveReference: payment.flw_ref,
-          flutterwaveTransactionId: payment.id,
-          amount: payment.amount,
-          paidAt: payment.created_at,
-          paymentType: payment.payment_type,
-        },
-        nextSteps: [
-          "Contact customer with order number",
-          "Add products to the order manually",
-          "Confirm delivery address with customer",
-          "Update order status as needed",
-        ],
-      });
-    } catch (error) {
-      console.error("❌ Order recovery failed:", error);
-      res.status(500).json({
-        error: "Order recovery failed: " + error.message,
-      });
     }
-  };
 
+    // If no products found in metadata, create generic entry
+    if (recoveredProducts.length === 0) {
+      console.log("📦 No product metadata found, creating generic product");
+      recoveredProducts = [
+        {
+          name: "Recovered Order - Products to be confirmed",
+          image: "/placeholder.png",
+          price: payment.amount,
+          quantity: 1,
+          selectedSize: null,
+          selectedColor: null,
+          selectedCategory: null,
+        },
+      ];
+    }
+
+    // ✅ Find or create user
+    let user = await User.findOne({ email: customer_email });
+    if (!user) {
+      user = await User.create({
+        email: customer_email,
+        firstname: payment.customer?.firstname || "Recovery",
+        lastname: payment.customer?.lastname || "Customer",
+        phones: payment.customer?.phone_number
+          ? [{ number: payment.customer.phone_number, isDefault: true }]
+          : [],
+      });
+      console.log("✅ Created new user for recovery:", user.email);
+    }
+
+    // ✅ Extract delivery address and phone from metadata
+    const deliveryAddress =
+      payment.meta?.deliveryAddress ||
+      payment.meta?.delivery_address ||
+      "To be confirmed by customer";
+    const phone =
+      payment.meta?.phoneNumber ||
+      payment.meta?.phone_number ||
+      payment.customer?.phone_number ||
+      "To be confirmed";
+
+    // ✅ Create the recovered order
+    const order = new Order({
+      user: user._id,
+      products: recoveredProducts,
+      orderNumber: generateOrderNumber(),
+      subtotal: subtotal,
+      totalAmount: payment.amount,
+      deliveryAddress: deliveryAddress,
+      phone: phone,
+      flutterwaveRef: payment.tx_ref,
+      flutterwaveTransactionId: payment.id,
+      paymentStatus: "paid",
+      status: "Pending",
+      paymentMethod: {
+        method: payment.payment_type || "card",
+        status: "PAID",
+        ...(payment.card
+          ? {
+              card: {
+                brand: payment.card.type || "Unknown",
+                last4: payment.card.last_4digits || null,
+                issuer: payment.card.issuer || null,
+              },
+            }
+          : {}),
+      },
+      isProcessed: true,
+      notes: `AUTO-RECOVERED - Found via ${searchMethod}. 
+            Reference Used: ${referenceUsed}
+            Flutterwave Ref: ${payment.flw_ref}
+            Transaction Ref: ${payment.tx_ref}
+            Transaction ID: ${payment.id}
+            Amount: ${payment.currency} ${payment.amount}
+            Customer: ${payment.customer?.name || "N/A"}
+            Products: ${recoveredProducts.length} items
+            Recovered on: ${new Date().toLocaleString()}`,
+    });
+
+    await order.save();
+    console.log("✅ Order recovered successfully:", order.orderNumber);
+
+    res.json({
+      success: true,
+      message: `Order recovered successfully via ${searchMethod.replace(
+        "_",
+        " "
+      )}!`,
+      orderNumber: order.orderNumber,
+      orderId: order._id,
+      customerEmail: customer_email,
+      amount: payment.amount,
+      currency: payment.currency,
+      searchMethod: searchMethod.replace("_", " "),
+      referenceType: referenceUsed.startsWith("JayyTech_")
+        ? "Flutterwave Reference"
+        : /^\d+$/.test(referenceUsed)
+        ? "Transaction ID"
+        : "Reference",
+      recoveredDetails: {
+        productsCount: recoveredProducts.length,
+        transactionReference: payment.tx_ref,
+        flutterwaveReference: payment.flw_ref,
+        transactionId: payment.id,
+        paymentType: payment.payment_type,
+        paidAt: new Date(payment.created_at).toLocaleString(),
+        customerName:
+          payment.customer?.name ||
+          `${payment.customer?.firstname || ""} ${
+            payment.customer?.lastname || ""
+          }`.trim(),
+        deliveryAddress: deliveryAddress,
+        phone: phone,
+      },
+      products: recoveredProducts,
+      nextSteps: [
+        "Order automatically recovered with complete details!",
+        "Verify the products and delivery address match customer expectation",
+        "Update order status when ready to process",
+      ],
+    });
+  } catch (error) {
+    console.error("❌ Order recovery failed:", error);
+    console.error("❌ Error stack:", error.stack);
+    res.status(500).json({
+      error: "Order recovery failed: " + error.message,
+      details: "Check the server logs for more information",
+    });
+  }
+};
 export const getAllOrders = async (req, res) => {
   try {
     const { sortBy, sortOrder = "desc", search } = req.query;

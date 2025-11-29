@@ -1,13 +1,12 @@
-
 import React, { useState } from "react";
 import axios from "../lib/axios";
+
 const Support = () => {
   const [searchMethod, setSearchMethod] = useState("transaction_ref");
   const [formData, setFormData] = useState({
-    transaction_ref: "",
+    transaction_ref: "ECOSTORE-1764257590757", // Pre-fill with the working reference
     flutterwave_ref: "",
-    customer_email: "",
-    amount: "",
+    customer_email: "enofejeremiah5@gmail.com",
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -28,35 +27,33 @@ const Support = () => {
           type: "success",
           message: `✅ ${response.data.message}`,
           details: `
+🎉 ORDER RECOVERED SUCCESSFULLY!
+
 Order Number: ${response.data.orderNumber}
 Customer: ${response.data.customerEmail}
-Amount: ₦${response.data.amount}
-Search Method: ${response.data.searchMethod}
+Amount: ${response.data.currency} ${response.data.amount}
+Payment Method: ${response.data.recoveredDetails.paymentType}
+Paid: ${response.data.recoveredDetails.paidAt}
 
-Payment Details:
-• Transaction Ref: ${response.data.paymentDetails.transactionReference}
-• Flutterwave Ref: ${response.data.paymentDetails.flutterwaveReference}
-• Paid: ${new Date(response.data.paymentDetails.paidAt).toLocaleString()}
+📦 RECOVERED PRODUCTS (${response.data.products.length}):
+${response.data.products
+  .map(
+    (p, i) =>
+      `• ${p.name} - ${response.data.currency} ${p.price} × ${p.quantity}`
+  )
+  .join("\n")}
 
-Next Steps:
-• Contact customer with order number
-• Add products to the order
-• Confirm delivery address
+📍 NEXT STEPS:
+• Contact customer to confirm delivery address
+• Verify product details
+• Update order status as needed
           `,
-        });
-        // Clear form
-        setFormData({
-          transaction_ref: "",
-          flutterwave_ref: "",
-          customer_email: "",
-          amount: "",
         });
       }
     } catch (error) {
       console.error("Recovery error:", error);
 
       if (error.response?.data?.orderDetails) {
-        // Order already exists case
         setResult({
           type: "info",
           message: "🔄 Order Already Exists",
@@ -65,21 +62,28 @@ Order Number: ${error.response.data.orderDetails.orderNumber}
 Status: ${error.response.data.orderDetails.status}
 Customer: ${error.response.data.orderDetails.customer}
 Email: ${error.response.data.orderDetails.customerEmail}
-Created: ${new Date(
-            error.response.data.orderDetails.createdAt
-          ).toLocaleString()}
-Amount: ₦${error.response.data.orderDetails.totalAmount}
+Amount: ${error.response.data.orderDetails.totalAmount}
 
-${error.response.data.action}
+This order already exists in the system.
           `,
         });
       } else {
         setResult({
           type: "error",
           message: `❌ ${error.response?.data?.error || "Recovery failed"}`,
-          details: Array.isArray(error.response?.data?.tips)
-            ? "Tips:\n• " + error.response.data.tips.join("\n• ")
-            : error.response?.data?.details || error.message,
+          details: `
+Error: ${error.response?.data?.error || error.message}
+${
+  error.response?.data?.tips
+    ? `\nTips:\n• ${error.response.data.tips.join("\n• ")}`
+    : ""
+}
+${
+  error.response?.data?.debug
+    ? `\nDebug:\n${JSON.stringify(error.response.data.debug, null, 2)}`
+    : ""
+}
+          `,
         });
       }
     } finally {
@@ -90,8 +94,23 @@ ${error.response.data.action}
   return (
     <div className="max-w-2xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
-        🛠️ Advanced Order Recovery
+        🛠️ Automatic Order Recovery
       </h2>
+
+      {/* Reference Guide */}
+      <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+        <h3 className="font-semibold text-blue-800 mb-2">Reference Guide:</h3>
+        <div className="text-sm text-blue-700">
+          <div>
+            <strong>Transaction Reference:</strong> ECOSTORE-1764257590757 (from
+            customer receipt)
+          </div>
+          <div>
+            <strong>Flutterwave Reference:</strong> JayyTech_xxx (from
+            Flutterwave dashboard)
+          </div>
+        </div>
+      </div>
 
       {/* Search Method Selector */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
@@ -110,7 +129,7 @@ ${error.response.data.action}
             <span>
               <strong>Transaction Reference</strong>
               <div className="text-xs text-gray-500">
-                From customer receipt (ECOSTORE-...)
+                Use ECOSTORE-xxx from customer receipt
               </div>
             </span>
           </label>
@@ -125,7 +144,7 @@ ${error.response.data.action}
             <span>
               <strong>Flutterwave Reference</strong>
               <div className="text-xs text-gray-500">
-                From webhook logs (JayyTech_...)
+                Use JayyTech_xxx from Flutterwave dashboard
               </div>
             </span>
           </label>
@@ -147,10 +166,10 @@ ${error.response.data.action}
               }
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="ECOSTORE-1764348309107"
+              placeholder="ECOSTORE-1764257590757"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Found on customer's receipt or bank alert notification
+              Found on customer's payment receipt
             </p>
           </div>
         )}
@@ -169,50 +188,29 @@ ${error.response.data.action}
               }
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="JayyTech_PZBXZJ1764348466589204262"
+              placeholder="JayyTech_VTVIKF176425766668140070"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Found in Flutterwave dashboard or webhook logs (starts with
-              JayyTech_)
+              Found in Flutterwave dashboard under Transactions
             </p>
           </div>
         )}
 
-        {/* Common Fields */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Customer Email *
-            </label>
-            <input
-              type="email"
-              value={formData.customer_email}
-              onChange={(e) =>
-                setFormData({ ...formData, customer_email: e.target.value })
-              }
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="customer@example.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Amount Charged *
-            </label>
-            <input
-              type="number"
-              value={formData.amount}
-              onChange={(e) =>
-                setFormData({ ...formData, amount: e.target.value })
-              }
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              placeholder="500"
-              min="1"
-              step="0.01"
-            />
-          </div>
+        {/* Customer Email */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Customer Email *
+          </label>
+          <input
+            type="email"
+            value={formData.customer_email}
+            onChange={(e) =>
+              setFormData({ ...formData, customer_email: e.target.value })
+            }
+            required
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            placeholder="customer@example.com"
+          />
         </div>
 
         <button
@@ -220,7 +218,9 @@ ${error.response.data.action}
           disabled={loading}
           className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold"
         >
-          {loading ? "🔍 Searching Payments..." : " Recover Order"}
+          {loading
+            ? "🔍 Recovering Order..."
+            : "🔄 Recover Order Automatically"}
         </button>
       </form>
 
@@ -237,7 +237,7 @@ ${error.response.data.action}
         >
           <div className="font-semibold text-lg mb-2">{result.message}</div>
           {result.details && (
-            <div className="mt-2 text-sm whitespace-pre-line font-mono">
+            <div className="mt-2 text-sm whitespace-pre-line">
               {result.details}
             </div>
           )}
@@ -247,4 +247,5 @@ ${error.response.data.action}
   );
 };
 
-export default Support
+export default Support;
+
