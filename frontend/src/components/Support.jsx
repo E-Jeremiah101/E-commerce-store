@@ -25,9 +25,9 @@ const Support = () => {
       if (response.data.success) {
         setResult({
           type: "success",
-          message: `✅ ${response.data.message}`,
+          message: ` ${response.data.message}`,
           details: `
-🎉 ORDER RECOVERED SUCCESSFULLY!
+ ORDER RECOVERED SUCCESSFULLY!
 
 Order Number: ${response.data.orderNumber}
 Customer: ${response.data.customerEmail}
@@ -35,7 +35,7 @@ Amount: ${response.data.currency} ${response.data.amount}
 Payment Method: ${response.data.recoveredDetails.paymentType}
 Paid: ${response.data.recoveredDetails.paidAt}
 
-📦 RECOVERED PRODUCTS (${response.data.products.length}):
+RECOVERED PRODUCTS (${response.data.products.length}):
 ${response.data.products
   .map(
     (p, i) =>
@@ -43,7 +43,7 @@ ${response.data.products
   )
   .join("\n")}
 
-📍 NEXT STEPS:
+ NEXT STEPS:
 • Contact customer to confirm delivery address
 • Verify product details
 • Update order status as needed
@@ -56,7 +56,7 @@ ${response.data.products
       if (error.response?.data?.orderDetails) {
         setResult({
           type: "info",
-          message: "🔄 Order Already Exists",
+          message: "Order Already Exists",
           details: `
 Order Number: ${error.response.data.orderDetails.orderNumber}
 Status: ${error.response.data.orderDetails.status}
@@ -92,16 +92,16 @@ ${
   };
 
   return (
-    <div className="max-w-2xl mx-auto mt-8 p-6 bg-white rounded-lg shadow-md">
+    <div className="max-w-2xl mx-auto mt-5 p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-6 text-gray-800">
-        🛠️ Automatic Order Recovery
+         Automatic Order Recovery
       </h2>
 
       {/* Reference Guide */}
       <div className="mb-6 p-4 bg-blue-50 rounded-lg">
         <h3 className="font-semibold text-blue-800 mb-2">Reference Guide:</h3>
-        <div className="text-sm text-blue-700">
-          <div>
+        <div className="text-sm text-blue-700 ">
+          <div className="mb-2">
             <strong>Transaction Reference:</strong> ECOSTORE-1764257590757 (from
             customer receipt)
           </div>
@@ -114,9 +114,7 @@ ${
 
       {/* Search Method Selector */}
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Search Method:
-        </label>
+        
         <div className="flex space-x-4">
           <label className="flex items-center">
             <input
@@ -151,7 +149,7 @@ ${
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-7">
         {/* Transaction Reference Field */}
         {searchMethod === "transaction_ref" && (
           <div>
@@ -165,12 +163,10 @@ ${
                 setFormData({ ...formData, transaction_ref: e.target.value })
               }
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
               placeholder="ECOSTORE-1764257590757"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Found on customer's payment receipt
-            </p>
+          
           </div>
         )}
 
@@ -187,7 +183,7 @@ ${
                 setFormData({ ...formData, flutterwave_ref: e.target.value })
               }
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
               placeholder="JayyTech_VTVIKF176425766668140070"
             />
             <p className="text-xs text-gray-500 mt-1">
@@ -208,7 +204,7 @@ ${
               setFormData({ ...formData, customer_email: e.target.value })
             }
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
             placeholder="customer@example.com"
           />
         </div>
@@ -219,8 +215,8 @@ ${
           className="w-full bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold"
         >
           {loading
-            ? "🔍 Recovering Order..."
-            : "🔄 Recover Order Automatically"}
+            ? "Recovering Order..."
+            : "Recover Order "}
         </button>
       </form>
 

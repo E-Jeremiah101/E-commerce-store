@@ -1198,41 +1198,25 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     let data;
 
-    const isTestTransaction =
-      transaction_id === 285959875 ||
-      tx_ref.includes("TEST") ||
-      tx_ref.includes("ECOSTORE-");
+    console.log(
+      `Verifying real transaction with Flutterwave: ${transaction_id}`
+    );
+    const verifyResp = await flw.Transaction.verify({ id: transaction_id });
 
-    if (isTestTransaction) {
-      console.log(
-        "Test transaction detected - bypassing Flutterwave verification"
-      );
-      data = event.data;
-      data.payment_type = data.payment_type || "card";
-      data.amount = data.amount || 100;
-      data.currency = data.currency || "NGN";
-      console.log("Using webhook data directly for test transaction");
-    } else {
-      console.log(
-        `Verifying real transaction with Flutterwave: ${transaction_id}`
-      );
-      const verifyResp = await flw.Transaction.verify({ id: transaction_id });
+    if (!verifyResp?.data || verifyResp.data.status !== "successful") {
+      console.error(`Webhook verification failed for: ${transaction_id}`);
 
-      if (!verifyResp?.data || verifyResp.data.status !== "successful") {
-        console.error(`Webhook verification failed for: ${transaction_id}`);
-
-        // Release inventory if verification fails
-        const reservationId = event.data?.meta?.reservationId;
-        if (reservationId) {
-          await releaseInventory(reservationId);
-        }
-
-        return res.status(400).send("Payment verification failed");
+      // Release inventory if verification fails
+      const reservationId = event.data?.meta?.reservationId;
+      if (reservationId) {
+        await releaseInventory(reservationId);
       }
 
-      data = verifyResp.data;
-      console.log("Real transaction verified successfully");
+      return res.status(400).send("Payment verification failed");
     }
+
+    data = verifyResp.data;
+    console.log("Real transaction verified successfully");
 
     const meta_data = data.meta || event.meta_data || {};
 
