@@ -231,6 +231,8 @@ const AdminOrdersPage = () => {
                         ? "bg-green-600 text-white"
                         : order.status === "Cancelled"
                         ? "bg-red-600 text-white"
+                        : order.status === "Refunded" && "Partially Refunded"
+                        ? "bg-purple-600 text-white"
                         : "bg-yellow-500 text-white"
                     }`}
                   >

@@ -268,11 +268,13 @@ export const approveRefund = async (req, res) => {
          
         if (flutterwaveResponse.data?.id) {
           refund.flutterwaveRefundId = flutterwaveResponse.data.id;
-        }
-      } else {
-        throw new Error(flutterwaveResponse.message || "Flutterwave refund failed"); 
-      }
+        } 
 
+        refund.flutterwaveResponse = flutterwaveResponse.data;
+      } else {
+        throw new Error(flutterwaveResponse.message || "Flutterwave refund failed");
+      } 
+ 
     } catch (flutterwaveError) {
       console.error("Flutterwave refund error:", flutterwaveError);
       

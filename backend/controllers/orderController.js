@@ -618,6 +618,157 @@ export const supportRecoverOrder = async (req, res) => {
     });
   }
 };
+// export const getAllOrders = async (req, res) => {
+//   try {
+//     const { sortBy, sortOrder = "desc", search } = req.query;
+
+//     // Build search filter
+//     let searchFilter = {};
+//     if (search) {
+//       const isObjectId = /^[0-9a-fA-F]{24}$/.test(search); // check if search is a valid MongoDB ObjectId
+//       searchFilter = {
+//         $or: [
+//           { orderNumber: { $regex: search, $options: "i" } },
+//           { flutterwaveRef: { $regex: search, $options: "i" } },
+//           ...(isObjectId ? [{ _id: search }] : []),
+//           { "user.fistname": { $regex: search, $options: "i" } },
+//           { "user.lastname": { $regex: search, $options: "i" } },
+//         ],
+//       };
+//     }
+
+//     // Default mongo sort (used when not sorting by status)
+//     let sortOptions = {
+//       isProcessed: 1, // unprocessed first
+//       createdAt: -1, // newest first fallback
+//     };
+
+//     // If sorting by date or amount, merge into sortOptions
+//     if (sortBy === "date") {
+//       sortOptions = { isProcessed: 1, createdAt: sortOrder === "asc" ? 1 : -1 };
+//     } else if (sortBy === "totalAmount") {
+//       sortOptions = {
+//         isProcessed: 1,
+//         totalAmount: sortOrder === "asc" ? 1 : -1,
+//         createdAt: -1,
+//       };
+//     } else {
+//       // keep default isProcessed primary sort
+//       sortOptions = { ...sortOptions, createdAt: -1 };
+//     }
+
+//     // Fetch orders (do NOT ask Mongo to sort by custom status order)
+//     let orders = await Order.find(searchFilter)
+//       .populate("user", "firstname lastname email phone address")
+//       .populate("products.product", "name price image")
+//       .lean(); // use lean for faster in-memory sorting and to avoid mongoose docs
+
+//     // Handle status sorting manually (custom order)
+//     if (sortBy === "status") {
+//       const statusOrder = [
+//         "Pending",
+//         "Processing",
+//         "Shipped",
+//         "Delivered",
+//         "Cancelled",
+//       ];
+//       // Map status to index (unknown statuses get large index so they appear at end)
+//       const statusIndex = (s) => {
+//         const idx = statusOrder.indexOf(s);
+//         return idx === -1 ? statusOrder.length + 10 : idx;
+//       };
+
+//       orders.sort((a, b) => {
+//         const ai = statusIndex(a.status);
+//         const bi = statusIndex(b.status);
+//         // asc: Pending -> Cancelled, desc: Cancelled -> Pending
+//         return sortOrder === "asc" ? ai - bi : bi - ai;
+//       });
+ 
+//       // Still keep isProcessed unprocessed-first inside same status order:
+//       // stable sort: reorder so that within each status, isProcessed=false appear first
+//       orders = orders.sort((a, b) => {
+//         if (a.status === b.status) {
+//           // false (unprocessed) first
+//           return a.isProcessed === b.isProcessed ? 0 : a.isProcessed ? 1 : -1;
+//         }
+//         return 0; // keep relative order (status ordering already applied)
+//       });
+//     } else {
+//       // Not status-sorting: use Mongo-like sorting in-memory as fallback
+//       // This guarantees isProcessed primary sorting if present in sortOptions
+//       const mongoSortKeys = Object.keys(sortOptions);
+//       orders.sort((a, b) => {
+//         for (const key of mongoSortKeys) {
+//           const dir = sortOptions[key] === 1 ? 1 : -1;
+//           const va = a[key];
+//           const vb = b[key];
+//           if (va == null && vb == null) continue;
+//           if (va == null) return 1 * dir;
+//           if (vb == null) return -1 * dir;
+//           if (va < vb) return -1 * dir;
+//           if (va > vb) return 1 * dir;
+//         }
+//         return 0;
+//       });
+//     }
+
+//     // Map response (same shape you use)
+//     // Map response (same shape you use)
+//     res.status(200).json({
+//       success: true,
+//       count: orders.length,
+//       orders: orders.map((order) => {
+//         //  Compute refund status dynamically
+//         const totalProducts = order.products.length;
+//         const approvedCount =
+//           order.refunds?.filter((r) => r.status === "Approved").length || 0;
+
+//         let refundStatus = "No Refund";
+//         if (approvedCount > 0 && approvedCount < totalProducts) {
+//           refundStatus = "Partially Refunded";
+//         } else if (approvedCount === totalProducts) {
+//           refundStatus = "Refunded";
+//         }
+
+//         return {
+//           _id: order._id,
+//           orderNumber: order.orderNumber,
+//           user: order.user,
+//           status: order.status,
+//           refundStatus,
+//           isProcessed: order.isProcessed,
+//           deliveredAt: order.deliveredAt,
+//           updatedAt: order.updatedAt,
+//           totalAmount: order.totalAmount,
+//           subtotal: order.subtotal,
+//           discount: order.discount,
+//           coupon: order.coupon,
+//           deliveryAddress: order.deliveryAddress,
+//           phone: order.phone,
+//           createdAt: order.createdAt,
+//           products: (order.products || []).map((p) => ({
+//             _id: p._id,
+//             product: p.product || null,
+//             quantity: p.quantity,
+//             price: p.price,
+//             size: p.selectedSize || null,
+//             color: p.selectedColor || null,
+//             selectedCategory: p.selectedCategory || null,
+//             name: p.name || p.product?.name || "Unknown Product",
+//             image: p.image || "/placeholder.png", //here also
+//           })),
+//         };
+//       }),
+//     });
+//   } catch (error) {
+//     console.error("getAllOrders error:", error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
+// Update order status
+
 export const getAllOrders = async (req, res) => {
   try {
     const { sortBy, sortOrder = "desc", search } = req.query;
@@ -625,109 +776,84 @@ export const getAllOrders = async (req, res) => {
     // Build search filter
     let searchFilter = {};
     if (search) {
-      const isObjectId = /^[0-9a-fA-F]{24}$/.test(search); // check if search is a valid MongoDB ObjectId
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(search);
       searchFilter = {
         $or: [
           { orderNumber: { $regex: search, $options: "i" } },
           { flutterwaveRef: { $regex: search, $options: "i" } },
           ...(isObjectId ? [{ _id: search }] : []),
-          { "user.fistname": { $regex: search, $options: "i" } },
+          { "user.firstname": { $regex: search, $options: "i" } },
           { "user.lastname": { $regex: search, $options: "i" } },
         ],
       };
     }
 
-    // Default mongo sort (used when not sorting by status)
-    let sortOptions = {
-      isProcessed: 1, // unprocessed first
-      createdAt: -1, // newest first fallback
-    };
-
-    // If sorting by date or amount, merge into sortOptions
-    if (sortBy === "date") {
-      sortOptions = { isProcessed: 1, createdAt: sortOrder === "asc" ? 1 : -1 };
-    } else if (sortBy === "totalAmount") {
-      sortOptions = {
-        isProcessed: 1,
-        totalAmount: sortOrder === "asc" ? 1 : -1,
-        createdAt: -1,
-      };
-    } else {
-      // keep default isProcessed primary sort
-      sortOptions = { ...sortOptions, createdAt: -1 };
-    }
-
-    // Fetch orders (do NOT ask Mongo to sort by custom status order)
+    // Fetch all orders with basic sorting (newest first by default)
     let orders = await Order.find(searchFilter)
       .populate("user", "firstname lastname email phone address")
       .populate("products.product", "name price image")
-      .lean(); // use lean for faster in-memory sorting and to avoid mongoose docs
+      .sort({ createdAt: -1 }) // Newest orders first by default
+      .lean();
 
-    // Handle status sorting manually (custom order)
-    if (sortBy === "status") {
-      const statusOrder = [
-        "Pending",
-        "Processing",
-        "Shipped",
-        "Delivered",
-        "Cancelled",
-      ];
-      // Map status to index (unknown statuses get large index so they appear at end)
-      const statusIndex = (s) => {
-        const idx = statusOrder.indexOf(s);
-        return idx === -1 ? statusOrder.length + 10 : idx;
-      };
+    // Define priority: Pending orders always first, then sort by other criteria
+    const statusOrder = [
+      "Pending",
+      "Processing",
+      "Shipped",
+      "Delivered",
+      "Cancelled",
+      "Refunded",
+      "Partially Refunded",
+    ];
 
-      orders.sort((a, b) => {
-        const ai = statusIndex(a.status);
-        const bi = statusIndex(b.status);
-        // asc: Pending -> Cancelled, desc: Cancelled -> Pending
-        return sortOrder === "asc" ? ai - bi : bi - ai;
-      });
+    // Custom sorting function
+    orders.sort((a, b) => {
+      // 1. Pending orders ALWAYS come first (highest priority)
+      if (a.status === "Pending" && b.status !== "Pending") return -1;
+      if (b.status === "Pending" && a.status !== "Pending") return 1;
 
-      // Still keep isProcessed unprocessed-first inside same status order:
-      // stable sort: reorder so that within each status, isProcessed=false appear first
-      orders = orders.sort((a, b) => {
-        if (a.status === b.status) {
-          // false (unprocessed) first
-          return a.isProcessed === b.isProcessed ? 0 : a.isProcessed ? 1 : -1;
-        }
-        return 0; // keep relative order (status ordering already applied)
-      });
-    } else {
-      // Not status-sorting: use Mongo-like sorting in-memory as fallback
-      // This guarantees isProcessed primary sorting if present in sortOptions
-      const mongoSortKeys = Object.keys(sortOptions);
-      orders.sort((a, b) => {
-        for (const key of mongoSortKeys) {
-          const dir = sortOptions[key] === 1 ? 1 : -1;
-          const va = a[key];
-          const vb = b[key];
-          if (va == null && vb == null) continue;
-          if (va == null) return 1 * dir;
-          if (vb == null) return -1 * dir;
-          if (va < vb) return -1 * dir;
-          if (va > vb) return 1 * dir;
-        }
-        return 0;
-      });
-    }
+      // 2. If both are Pending, sort by creation date (newest first)
+      if (a.status === "Pending" && b.status === "Pending") {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      }
 
-    // Map response (same shape you use)
-    // Map response (same shape you use)
+      // 3. For non-Pending orders, apply the requested sorting
+      if (sortBy === "date") {
+        const dateA = new Date(a.createdAt);
+        const dateB = new Date(b.createdAt);
+        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+      }
+
+      if (sortBy === "totalAmount") {
+        return sortOrder === "asc"
+          ? a.totalAmount - b.totalAmount
+          : b.totalAmount - a.totalAmount;
+      }
+
+      if (sortBy === "status") {
+        const indexA = statusOrder.indexOf(a.status);
+        const indexB = statusOrder.indexOf(b.status);
+        return sortOrder === "asc" ? indexA - indexB : indexB - indexA;
+      }
+
+      // Default: newest non-Pending orders first
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+    // Map response
     res.status(200).json({
       success: true,
       count: orders.length,
       orders: orders.map((order) => {
-        //  Compute refund status dynamically
-        const totalProducts = order.products.length;
+        // Compute refund status
+        const totalProducts = order.products?.length || 0;
         const approvedCount =
           order.refunds?.filter((r) => r.status === "Approved").length || 0;
 
         let refundStatus = "No Refund";
         if (approvedCount > 0 && approvedCount < totalProducts) {
           refundStatus = "Partially Refunded";
-        } else if (approvedCount === totalProducts) {
+        } else if (approvedCount === totalProducts && totalProducts > 0) {
           refundStatus = "Refunded";
         }
 
@@ -737,13 +863,13 @@ export const getAllOrders = async (req, res) => {
           user: order.user,
           status: order.status,
           refundStatus,
-          isProcessed: order.isProcessed,
+          isProcessed: order.isProcessed || false, // Ensure it has a value
           deliveredAt: order.deliveredAt,
           updatedAt: order.updatedAt,
           totalAmount: order.totalAmount,
           subtotal: order.subtotal,
           discount: order.discount,
-          coupon: order.coupon,
+          couponCode: order.coupon?.code || order.couponCode, // Use couponCode
           deliveryAddress: order.deliveryAddress,
           phone: order.phone,
           createdAt: order.createdAt,
@@ -756,7 +882,7 @@ export const getAllOrders = async (req, res) => {
             color: p.selectedColor || null,
             selectedCategory: p.selectedCategory || null,
             name: p.name || p.product?.name || "Unknown Product",
-            image: p.image || "/placeholder.png", //here also
+            image: p.image || p.product?.image || "/placeholder.png",
           })),
         };
       }),
@@ -767,7 +893,6 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
-// Update order status
 export const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -778,6 +903,7 @@ export const updateOrderStatus = async (req, res) => {
 
     order.status = status;
     order.isProcessed = true;
+    
 
     if (status === "Delivered") order.deliveredAt = Date.now();
 
@@ -967,6 +1093,7 @@ export const createOrder = async (req, res) => {
       phone: defaultPhone?.number || "",
       deliveryAddress: defaultAddress?.address || "",
       status: "Pending",
+      isProcessed: false,
     });
 
     await order.save();
@@ -1013,3 +1140,4 @@ export const getOrderById = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+  
