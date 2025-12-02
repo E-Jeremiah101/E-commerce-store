@@ -94,7 +94,7 @@ const CartItem = ({ item }) => {
                   alt={item.name}
                   className="w-25 h-25 object-cover rounded"
                 />
-              </Link>
+              </Link> 
 
               {/* Product Info */}
               <div className="flex-1 space-y-1">

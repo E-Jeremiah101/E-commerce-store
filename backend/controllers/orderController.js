@@ -11,11 +11,13 @@ export const getUserOrders = async (req, res) => {
 
     const orders = await Order.find({ user: userId })
       .populate("products.product", "name image price")
+      .populate("refunds.product") 
       .sort({ createdAt: -1 })
       .lean();
 
     const formattedOrders = orders.map((order) => {
-      // 🔍 If any refund for this order has status "Approved"
+       const refunds = order.refunds || [];
+      //  If any refund for this order has status "Approved"
       const hasApprovedRefund = order.refunds?.some(
         (refund) => refund.status === "Approved"
       );
@@ -66,6 +68,7 @@ export const getUserOrders = async (req, res) => {
         phone: order.phone,
         createdAt: order.createdAt,
         products,
+        refunds: refunds,
       };
     });
     res.status(200).json({

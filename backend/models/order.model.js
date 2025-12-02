@@ -38,7 +38,7 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"],
+      enum: ["Pending", "Processing", "Shipped", "Delivered", "Refunded", "Partially Refunded", "Fully Refunded" ,"Cancelled"],
       default: "Pending",
     },
     isProcessed: { type: Boolean, default: false },
@@ -110,7 +110,7 @@ const orderSchema = new mongoose.Schema(
         reason: String, // user reason for refund
         status: {
           type: String,
-          enum: ["Pending", "Approved", "Rejected", "Completed"],
+          enum: ["Pending", "Processing", "Approved", "Rejected" ],
           default: "Pending",
         },
         requestedAt: { type: Date, default: Date.now },

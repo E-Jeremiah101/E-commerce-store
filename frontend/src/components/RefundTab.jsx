@@ -167,7 +167,7 @@ const RefundTab = () => {
                           className="w-20 h-20 object-cover rounded"
                         />
 
-                        <div className="flex-1 space-y-3">
+                        <div className="flex-1 space-y-2">
                           <div className="flex justify-between items-center">
                             <h3 className="text-gray-900 text-sm">
                               {item.name}
@@ -177,12 +177,17 @@ const RefundTab = () => {
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2 text-xs text-gray-900">
-                            <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
-                              Size: {item.size || "N/A"}
-                            </span>
-                            <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
-                              Color: {item.color || "N/A"}
-                            </span>
+                            {item.size && (
+                              <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
+                                Size: {item.size || "N/A"}
+                              </span>
+                            )}
+
+                            {item.color && (
+                              <span className="bg-gray-200  rounded tracking-widest">
+                                Color: {item.color || "N/A"}
+                              </span>
+                            )}
                           </div>
                           <div className="flex  justify-between text-sm text-gray-900">
                             <span className="bg-gray-200 px-2 py-1 rounded text-xs ">
@@ -190,7 +195,7 @@ const RefundTab = () => {
                             </span>
                             {item.quantity > 1 && (
                               <span className="text-gray-700 text-xs">
-                                ₦{item.price.toLocaleString()} 
+                                ₦{item.price.toLocaleString()}
                               </span>
                             )}
                             {item.refundStatus && (
@@ -209,36 +214,6 @@ const RefundTab = () => {
                                   ? "Refund Pending"
                                   : "Refund Rejected"}
                               </span>
-                            )}
-                            
-                            {order.status === "Delivered" && (
-                              <div className="flex-col items-center gap-2 mt-2">
-                                {/* Rating stars preview (greyed out before rating) */}
-
-                                {/* Rate button */}
-                                <Link
-                                  to={`/product/${
-                                    item.product?._id || item._id
-                                  }?rate=true&order=${order._id}`}
-                                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-yellow-500 text-white rounded-full hover:bg-yellow-600 transition duration-200"
-                                >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="w-3.5 h-3.5"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                  >
-                                    <path
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                      strokeWidth={2}
-                                      d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.967a1 1 0 00.95.69h4.174c.969 0 1.371 1.24.588 1.81l-3.379 2.455a1 1 0 00-.364 1.118l1.287 3.967c.3.921-.755 1.688-1.54 1.118L12 13.347l-3.374 2.455c-.785.57-1.84-.197-1.54-1.118l1.287-3.967a1 1 0 00-.364-1.118L4.63 9.394c-.783-.57-.38-1.81.588-1.81h4.174a1 1 0 00.95-.69l1.286-3.967z"
-                                    />
-                                  </svg>
-                                  Rate
-                                </Link>
-                              </div>
                             )}
                           </div>
                         </div>
@@ -273,14 +248,38 @@ const RefundTab = () => {
                   </div>
 
                   <div className="flex">
-                    {order.products.some(
-                      (p) => !p.refundStatus || p.refundStatus === "Rejected"
-                    ) && (
+                    {(function () {
+                      // If order is fully Refunded, never show button
+                      if (order.status === "Refunded") {
+                        return false;
+                      }
+
+                      // For Partially Refunded orders, check if any product has no refunds
+                      if (order.status === "Partially Refunded") {
+                        return order.products.some((product) => {
+                          const productRefunds =
+                            order.refunds?.filter((refund) => {
+                              const refundProductId =
+                                refund.product?.toString() ||
+                                refund.productSnapshot?._id;
+                              const currentProductId =
+                                product.product?._id?.toString();
+                              return refundProductId === currentProductId;
+                            }) || [];
+
+                          return productRefunds.length === 0;
+                        });
+                      }
+
+                      return false;
+                    })() && (
                       <button
                         onClick={() => handleRefundClick(order)}
-                        className="hover:text-red-600 text-red-500 px-2 py-2 rounded-lg text-xs"
+                        className="hover:text-red-600 text-red-500 px-2 py-2 rounded-lg text-xs cursor-pointer"
                       >
-                        Request Refund?
+                        <span className="bg-red-50 p-1 rounded">
+                          Request Refund
+                        </span>
                       </button>
                     )}
                   </div>

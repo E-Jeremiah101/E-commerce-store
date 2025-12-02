@@ -49,13 +49,18 @@ const Delivered = () => {
   };
 
   const handleRefundSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
 
     if (!refundData.productId || !refundData.reason.trim()) {
       toast.error("Please select product and provide a reason");
       return;
     }
 
+    if (!refundData.productId || !refundData.reason.trim()) {
+      toast.error("Please select product and provide a reason");
+      return;
+    }
+ 
     try {
       setSaving(true);
 
@@ -163,7 +168,7 @@ const Delivered = () => {
                             className="w-20 h-20 object-cover rounded"
                           />
 
-                          <div className="flex-1 space-y-3">
+                          <div className="flex-1 space-y-2">
                             <div className="flex justify-between items-center">
                               <h3 className="text-gray-900 text-sm">
                                 {item.name}
@@ -173,12 +178,17 @@ const Delivered = () => {
                               </p>
                             </div>
                             <div className="flex flex-wrap gap-2 text-xs text-gray-900">
-                              <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
-                                Size: {item.size || "N/A"}
-                              </span>
-                              <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
-                                Color: {item.color || "N/A"}
-                              </span>
+                              {item.size && (
+                                <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
+                                  Size: {item.size || "N/A"}
+                                </span>
+                              )}
+
+                              {item.color && (
+                                <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
+                                  Color: {item.color || "N/A"}
+                                </span>
+                              )}
                               <div className="flex  justify-between text-sm text-gray-900">
                                 <span className="bg-gray-200 px-2 py-1 rounded text-xs ">
                                   Qty: {item.quantity}
@@ -190,19 +200,47 @@ const Delivered = () => {
                                 )}
                               </div>
                             </div>
-                            {item.refundStatus && (
-                              <span
-                                className={`inline-block mt-1 px-2 py-1 text-xs rounded ${
-                                  item.refundStatus === "Pending"
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : "bg-red-100 text-red-700"
-                                }`}
-                              >
-                                {item.refundStatus === "Pending"
-                                  ? "Refund Pending"
-                                  : "Refund Rejected"}
-                              </span>
-                            )}
+                            {order.refunds &&
+                              order.refunds.map((refund, index) => {
+                                const refundedProduct = order.products.find(
+                                  (p) =>
+                                    p.product?.toString() ===
+                                    refund.product?.toString()
+                                );
+
+                                if (refundedProduct) {
+                                  return (
+                                    <div
+                                      key={index}
+                                      className="mt-2 p-2 rounded"
+                                    >
+                                      <span
+                                        className={`inline-block px-2 py-1 text-xs rounded ${
+                                          refund.status === "Approved" ||
+                                          refund.status === "Refunded"
+                                            ? "bg-green-100 text-green-700"
+                                            : refund.status === "Processing"
+                                            ? "bg-blue-100 text-blue-700"
+                                            : refund.status === "Rejected"
+                                            ? "bg-red-100 text-red-700"
+                                            : "bg-yellow-100 text-yellow-700"
+                                        }`}
+                                      >
+                                        {refund.status === "Approved" ||
+                                        refund.status === "Refunded"
+                                          ? "Refunded"
+                                          : refund.status === "Processing"
+                                          ? "Refund Processing"
+                                          : refund.status === "Rejected"
+                                          ? "Refund Rejected"
+                                          : "Refund Pending"}{" "}
+                                        {/* This will show for "Pending" status */}
+                                      </span>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })}
                           </div>
                         </li>
                       </span>
@@ -267,15 +305,37 @@ const Delivered = () => {
                   </div>
 
                   <div className="flex">
-                    {order.products.some(
-                      (p) => !p.refundStatus || p.refundStatus === "Rejected"
-                    ) && (
+                    {order.products.some((product) => {
+                      const productRefunds =
+                        order.refunds?.filter((refund) => {
+                          // Multiple ways to extract the refund product ID
+                          let refundProductId;
+
+                          if (refund.product) {
+                            if (typeof refund.product === "object") {
+                              refundProductId = refund.product._id?.toString();
+                            } else {
+                              refundProductId = refund.product.toString();
+                            }
+                          } else if (refund.productSnapshot?._id) {
+                            refundProductId = refund.productSnapshot._id;
+                          }
+
+                          const currentProductId =
+                            product.product?._id?.toString();
+
+                          return refundProductId === currentProductId;
+                        }) || [];
+
+                      return productRefunds.length === 0;
+                    }) && (
                       <button
                         onClick={() => handleRefundClick(order)}
-                        className="hover:text-red-600 text-red-500 px-2 py-2 rounded-lg text-xs cursor-pointer "
+                        className="hover:text-red-600 text-red-500 px-2 py-2 rounded-lg text-xs cursor-pointer"
                       >
-                        <span className="bg-red-50 p-1 rounded">Request Refund</span>
-                        
+                        <span className="bg-red-50 p-1 rounded">
+                          Request Refund
+                        </span>
                       </button>
                     )}
                   </div>
@@ -304,14 +364,12 @@ const Delivered = () => {
                     Select product
                   </option>
                   {selectedOrder.products.map((p) => {
-                    //  Generate the same ID format as backend
+                    // Convert ObjectId to string
                     const productId =
-                      p.product?._id ||
+                      p.product?._id?.toString() ||
                       getDeletedProductId(p, selectedOrder._id);
-
                     const productName =
                       p.product?.name || p.name || "Deleted Product";
-
                     const productPrice = p.product?.price || p.price || 0;
 
                     return (

@@ -109,12 +109,17 @@ const CanceledTab = () => {
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2 text-xs text-gray-900">
-                            <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
-                              Size: {item.size || "N/A"}
-                            </span>
-                            <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
-                              Color: {item.color || "N/A"}
-                            </span>
+                            {item.size && (
+                              <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
+                                Size: {item.size || "N/A"}
+                              </span>
+                            )}
+
+                            {item.color && (
+                              <span className="bg-gray-200  rounded tracking-widest">
+                                Color: {item.color || "N/A"}
+                              </span>
+                            )}
                           </div>
                           <div className="flex  justify-between text-sm text-gray-900">
                             <span className="bg-gray-200 px-2 py-1 rounded text-xs ">

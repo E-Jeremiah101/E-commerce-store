@@ -169,7 +169,7 @@ const Ongoing = () => {
                           className="w-20 h-20 object-cover rounded"
                         />
 
-                        <div className="flex-1 space-y-3">
+                        <div className="flex-1 space-y-2">
                           <div className="flex justify-between items-center">
                             <h3 className="text-gray-900 text-sm">
                               {item.name}
@@ -179,12 +179,18 @@ const Ongoing = () => {
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2 text-xs text-gray-900">
-                            <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
+                            {item.size && (
+                              <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
                               Size: {item.size || "N/A"}
                             </span>
-                            <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
+                            )}
+                            
+                            {item.color && (
+                              <span className="bg-gray-200  rounded tracking-widest">
                               Color: {item.color || "N/A"}
                             </span>
+                            )}
+                            
                           </div>
 
                           <div className="flex  justify-between text-sm text-gray-900">
@@ -195,24 +201,7 @@ const Ongoing = () => {
                               <span className="text-gray-700 text-xs">
                                 ₦{item.price.toLocaleString()}
                               </span>
-                            )}
-                            {item.refundStatus && (
-                              <span
-                                className={`inline-block mt-1 px-2 py-1 text-xs rounded ${
-                                  item.refundStatus === "Approved"
-                                    ? "bg-green-100 text-green-700"
-                                    : item.refundStatus === "Pending"
-                                    ? "bg-yellow-100 text-yellow-700"
-                                    : "bg-red-100 text-red-700"
-                                }`}
-                              >
-                                {item.refundStatus === "Approved"
-                                  ? "Refunded"
-                                  : item.refundStatus === "Pending"
-                                  ? "Refund Pending"
-                                  : "Refund Rejected"}
-                              </span>
-                            )}
+                            )}                       
                           </div>
                         </div>
                       </li>
@@ -262,160 +251,6 @@ const Ongoing = () => {
                 </span>
               </div>
             ))
-        )}
-
-        {/* Refund Modal */}
-        {showRefundModal && selectedOrder && (
-          <div className="fixed inset-0 flex no-scroll items-center justify-center bg-black/90 bg-opacity-700 z-50">
-            <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
-              <h3 className="text-lg font-semibold mb-4">Request Refund </h3>
-              <form onSubmit={handleRefundSubmit}>
-                <label className="block text-sm font-medium mb-2">
-                  Select Product
-                </label>
-                <select
-                  value={refundData.productId}
-                  onChange={(e) =>
-                    setRefundData({ ...refundData, productId: e.target.value })
-                  }
-                  className="w-full border border-gray-500 focus:outline-none rounded-lg p-2 mb-3"
-                >
-                  <option value="" disabled>
-                    Select product
-                  </option>
-                  {selectedOrder.products.map((p) => {
-                    //  Generate the same ID format as backend
-                    const productId =
-                      p.product?._id ||
-                      getDeletedProductId(p, selectedOrder._id);
-
-                    const productName =
-                      p.product?.name || p.name || "Deleted Product";
-
-                    const productPrice = p.product?.price || p.price || 0;
-
-                    return (
-                      <option key={productId} value={productId}>
-                        {`${productName} — ₦${productPrice.toLocaleString()}`}
-                      </option>
-                    );
-                  })}
-                </select>
-
-                <label className="block text-sm font-medium mb-2">
-                  Quantity
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max={
-                    selectedOrder.products.find(
-                      (p) => p.product?._id === refundData.productId
-                    )?.quantity || 1
-                  }
-                  value={refundData.quantity}
-                  onChange={(e) =>
-                    setRefundData({ ...refundData, quantity: e.target.value })
-                  }
-                  className="w-full border border-gray-500 focus:outline-none rounded-lg p-2 mb-3"
-                />
-
-                <label className="block text-sm font-medium mb-2">
-                  Reason for Refund
-                </label>
-                <textarea
-                  rows="3"
-                  value={refundData.reason}
-                  onChange={(e) =>
-                    setRefundData({ ...refundData, reason: e.target.value })
-                  }
-                  placeholder="Describe the issue..."
-                  className="w-full resize-none border-1 rounded-lg p-2 mb-3 focus:outline-none   border-gray-500"
-                ></textarea>
-
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowRefundModal(false)}
-                    className="px-4 py-2 border rounded-lg"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-60"
-                    disabled={saving}
-                  >
-                    {saving ? (
-                      <span className="flex items-center gap-2">
-                        <Loader className="animate-spin" size={15} />
-                        Submitting...
-                      </span>
-                    ) : (
-                      "Submit"
-                    )}
-                  </button>
-                </div>
-
-                <div className="mt-4 max-h-54 overflow-y-auto border border-gray-200 p-3 rounded-md text-gray-700 whitespace-pre-wrap no-scroll">
-                  <h1 className="text-lg font-bold mb-2">Refund Policy</h1>
-                  <span>
-                    At <span className="text-gray-900">Eco~Store</span>, we want
-                    you to be completely satisfied with your purchase. If you
-                    are not happy with your order, please review our refund
-                    policy below:
-                  </span>
-
-                  <ul className="list-disc list-inside mt-2 text-sm text-gray-700">
-                    <li>
-                      Refund requests must be made within 48 hours of receiving
-                      your order.
-                    </li>
-                    <li>
-                      Items must be unworn, unwashed, and returned in their
-                      original packaging with all tags attached.
-                    </li>
-                    <li>
-                      Certain items such as custom-made, personalized, or sale
-                      items may not be eligible for a refund.
-                    </li>
-                    <li>
-                      Refunds will be processed to your original payment method
-                      within 5–10 business days after approval.
-                    </li>
-                    <li>
-                      For defective or damaged items, please provide a photo as
-                      proof.
-                    </li>
-                  </ul>
-
-                  <ol className="list-decimal list-inside mt-2 text-sm text-gray-700">
-                    <li>
-                      Submit a refund request through this form selecting the
-                      product and quantity.
-                    </li>
-                    <li>
-                      You will receive an email confirmation upon request.
-                    </li>
-                    <li>Wait for confirmation from our support team.</li>
-                    <li>
-                      Ship the product back if required, using the instructions
-                      provided.
-                    </li>
-                    <li>
-                      Receive your refund once the returned item is received and
-                      approved.
-                    </li>
-                  </ol>
-
-                  <p className="text-sm text-gray-900 mt-2">
-                    Note: Shipping fees are non-refundable unless the item is
-                    incorrect.
-                  </p>
-                </div>
-              </form>
-            </div>
-          </div>
         )}
       </motion.div>
     </>
