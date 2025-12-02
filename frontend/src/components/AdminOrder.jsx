@@ -34,6 +34,16 @@ const AdminOrdersPage = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setOrders(data.orders);
+      console.log("Orders data:", data.orders);
+      console.log(
+        "Orders with isProcessed flag:",
+        data.orders.map((order) => ({
+          id: order._id,
+          orderNumber: order.orderNumber,
+          isProcessed: order.isProcessed,
+          status: order.status,
+        }))
+      );
     } catch (err) {
       console.error("Error fetching orders:", err);
     } finally {
@@ -176,10 +186,16 @@ const AdminOrdersPage = () => {
                     <option value="Processing">Processing</option>
                     <option value="Shipped">Shipped</option>
                     <option value="Delivered">Delivered</option>
-                    <option value="Partially Refunded">
-                      Partially Refunded
-                    </option>
-                    <option value="Refunded">Refunded</option>
+                    {order.status === "Partially Refunded" && (
+                      <option value="Partially Refunded">
+                        Partially Refunded
+                      </option>
+                    )}
+
+                    {order.status === "Refunded" && (
+                      <option value="Refunded">Refunded</option>
+                    )}
+
                     <option value="Cancelled">Cancelled</option>
                   </select>
                 </span>
@@ -248,12 +264,17 @@ const AdminOrdersPage = () => {
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2 text-xs text-gray-200">
-                        <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
-                          Size: {item.size || "N/A"}
-                        </span>
-                        <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
-                          Color: {item.color || "N/A"}
-                        </span>
+                        {item.size && (
+                          <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
+                            Size: {item.size || "N/A"}
+                          </span>
+                        )}
+                        {item.color && (
+                          <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
+                            Color: {item.color || "N/A"}
+                          </span>
+                        )}
+
                         <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
                           Category: {item.selectedCategory || "N/A"}
                         </span>
@@ -273,12 +294,10 @@ const AdminOrdersPage = () => {
               <div className="bg-gray-700 rounded-lg p-2 text-sm font-bold">
                 <p>Subtotal: ₦{order.subtotal.toLocaleString()}</p>
                 {order.discount > 0 && (
-                  <> 
+                  <>
                     <p>
                       Coupon Applied:{" "}
-                      <span className="text-green-500">
-                        {order.couponCode}
-                      </span>
+                      <span className="text-green-500">{order.couponCode}</span>
                     </p>
                     <p className="text-sm my-1 font-bold">
                       Discount:{" "}
