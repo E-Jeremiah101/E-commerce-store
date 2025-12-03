@@ -17,6 +17,7 @@ import axios from "../lib/axios.js";
 import AdminOrdersPage from "../components/AdminOrder.jsx";
 import AllUsers from "../components/AllUsers.jsx";
 import { useProductStore } from "../stores/useProductStore.jsx";
+import { useUserStore } from "../stores/useUserStore.js";
 import AdminRefundsTab from "../components/AdminRefundsTab.jsx";
 import GoBackButton from "../components/GoBackButton";
 import Support from "../components/Support.jsx";
@@ -43,13 +44,14 @@ const clearCache = async () => {
 const AdminPage = () => {
   const [activeTab, setActiveTab] = useState("products");
   const { fetchAllProducts } = useProductStore();
+  const {user} = useUserStore()
 
   useEffect(() => {
     fetchAllProducts();
   }, [fetchAllProducts]);
   return (
     <>
-      <motion.div
+      {/* <motion.div
         className="sm:mx-auto  fixed top-0 left-0 right-0   z-90  "
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -60,18 +62,18 @@ const AdminPage = () => {
             <GoBackButton />
           </div>
           <span className=" flex  text-center text-xl  text-gray-900 tracking-widest">
-            Admin Dashboard
+            Welcome Back, {user.firstname}
           </span>
-          {/* <button
+          <button
             onClick={clearCache}
             className="bg-red-500 text-white p-2 rounded"
           >
             Clear Featured Cache
-          </button> */}
+          </button>
         </div>
-      </motion.div>
-      <div className="  bg-gradient-to-br from-white via-gray-100 to-gray-300  flex-2 md:flex md:h-[100vh] md:w-full px-2 md:mx-auto   md:overflow-hidden -10          min-h-screen  mt-19">
-        <div className="hidden md:flex  w-1/6 bg-gray-100  flex-shrink-0 ">
+      </motion.div> */}
+      <div className="bg-gradient-to-br from-white via-gray-100 to-gray-300  flex-2  md:flex md:h-[100vh] md:w-full p md:mx-auto md:overflow-hidden -10 min-h-screen ">
+        <div className="hidden md:flex  w-1/6 bg-gray-700 py-7 flex-shrink-0 ">
           <ul className="hidden space-y-5 md:flex flex-col">
             {tabs.map((tab) => (
               <li
@@ -80,7 +82,7 @@ const AdminPage = () => {
                 className={`flex items-center px-2 py-2 mx-2 rounded-md transition-colors duration-200 cursor-pointer ${
                   activeTab === tab.id
                     ? "bg-yellow-700 text-white"
-                    : "bg-gray-700 text-white hover:bg-gray-600"
+                    : " text-white hover:bg-yellow-700"
                 }`}
               >
                 <tab.icon className="mr-2 h-5 w-5" />
@@ -91,8 +93,9 @@ const AdminPage = () => {
         </div>
 
         {/* Mobile view */}
-        <div className=" md:hidden relative z-10 container mx-auto px-4 py-16">
-          <div className="md:hidden flex justify-center mb-8 overflow-auto no-scroll">
+        <div className=" md:hidden relative z-10 container mx-auto px-4 py-8">
+          <div className="md:hidden flex justify-center  overflow-auto no-scroll">
+            
             {tabs.map((tab) => (
               <button
                 key={tab.id}

@@ -6,6 +6,7 @@ import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import toast from "react-hot-toast";
 import axios from "../lib/axios.js";
+import { useUserStore } from "../stores/useUserStore.js";
 
 const fallbackCategories = [
   "bottoms",
@@ -35,6 +36,7 @@ const CreateProductForm = () => {
   });
 
   const { createProduct, loading } = useProductStore();
+  const {user} = useUserStore()
 
   // Fetch categories from backend
   useEffect(() => {
@@ -249,6 +251,18 @@ const CreateProductForm = () => {
   ];
 
   return (
+    <>
+    <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className=" flex justify-center align-middle text-black py-5 ">
+              <h1 className="text-3xl font-bold">
+                Welcome👋 {user?.firstname || "Admin"}
+              </h1>
+            </div>
+          </motion.div>
     <motion.div
       className="bg-gray-800 shadow-lg rounded-lg p-8 mb-8 max-w-4xl mx-auto"
       initial={{ opacity: 0, y: 20 }}
@@ -500,6 +514,7 @@ const CreateProductForm = () => {
         </button>
       </form>
     </motion.div>
+    </>
   );
 };
 

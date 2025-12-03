@@ -60,13 +60,7 @@ const OtherFeatures = () => {
         <div className="box">
           {displayItems.map((item, index) => (
             <span key={item._id} style={{ "--i": index + 1 }}>
-              <Link
-                to={
-                  item._id.startsWith("fallback")
-                    ? "#"
-                    : `/products/${item._id}`
-                }
-              >
+              
                 <img
                   src={item.images?.[0]}
                   alt={item.name || `feature-${index + 1}`}
@@ -75,7 +69,7 @@ const OtherFeatures = () => {
                     e.target.src = fallbackImages[index] || "/placeholder.jpg";
                   }}
                 />
-              </Link>
+             
             </span>
           ))}
         </div>

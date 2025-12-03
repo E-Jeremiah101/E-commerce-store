@@ -3,6 +3,7 @@ import { Trash, Star } from "lucide-react";
 import { useProductStore } from "../stores/useProductStore.jsx";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { useUserStore } from "../stores/useUserStore.js";
 
 const ProductsList = () => {
   const {
@@ -33,6 +34,7 @@ const ProductsList = () => {
     startIndex + productsPerPage
   );
 
+  const {user} = useUserStore();
   const handlePrev = () => setCurrentPage((p) => Math.max(p - 1, 1));
   const handleNext = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
   const handlePageClick = (pageNum) => setCurrentPage(pageNum);
@@ -106,47 +108,58 @@ const ProductsList = () => {
 
   return (
     <>
+    <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className=" flex justify-center align-middle text-black py-5 ">
+              <h1 className="text-3xl font-bold">
+                Welcome👋 {user?.firstname || "Admin"}
+              </h1>
+            </div>
+          </motion.div>
       <motion.div
-        className="bg-gray-800 shadow-lg rounded-lg flex flex-col justify-center max-w-5xl mx-auto overflow-x-auto scrollbar-hide"
+        className=" shadow-lg rounded-lg flex flex-col justify-center max-w-5xl mx-auto overflow-x-auto scrollbar-hide"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
         {/* Table */}
         <table className="min-w-full divide-y divide-gray-700">
-          <thead className="bg-gray-700">
+          <thead className="">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Product
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Price
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Sizes
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Colors
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 In-Stock
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Variants
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Category
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Featured
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                 Action
               </th>
             </tr>
           </thead>
 
-          <tbody className="bg-gray-800 divide-y divide-gray-700">
+          <tbody className=" divide-y divide-gray-700">
             {displayedProducts?.map((product) => (
               <tr
                 key={product._id}
@@ -160,28 +173,28 @@ const ProductsList = () => {
                       alt={product.name}
                     />
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-white">
+                      <div className="text-sm font-medium text-black">
                         {product.name}
                       </div>
                     </div>
                   </div>
                 </td>
 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                   ₦
                   {product.price.toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                   })}
                 </td>
 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                   {product.sizes?.join(", ") || "N/A"}
                 </td>
 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                   {product.colors?.join(", ") || "N/A"}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                   <div className="flex items-center gap-2">
                     <span>{product.countInStock}</span>
                     <button
@@ -204,7 +217,7 @@ const ProductsList = () => {
                   )}
                 </td>
 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
                   {product.category}
                 </td>
 

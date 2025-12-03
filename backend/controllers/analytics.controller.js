@@ -11,6 +11,7 @@ export const getAnalytics = async (range = "weekly") => {
   const analyticsData = await getAnalyticsData(startDate, endDate);
   const salesData = await getSalesDataByRange(range, startDate, endDate);
   const statusCharts = await getStatusTrendsByRange(range, startDate, endDate);
+  const topProducts = await getTopSellingProducts(5, startDate, endDate);
   // visitorsTrend and ordersTrend should respect the selected range (or include all when startDate is null)
   const visitorFormat =
     range === "yearly"
@@ -83,6 +84,7 @@ export const getAnalytics = async (range = "weekly") => {
     salesData,
     statusCharts,
     visitorsTrend,
+    topProducts,
     usersTrend,
     ordersTrend,
     refundTrend,
@@ -293,4 +295,128 @@ function getStartDate(range, endDate) {
       start.setDate(endDate.getDate() - 7);
   }
   return start;
+}
+
+
+
+// Add this function after getStatusTrendsByRange function
+// Replace your current getTopSellingProducts function with this:
+async function getTopSellingProducts(limit = 5, startDate, endDate) {
+  try {
+    console.log("🔍 Getting top selling products...");
+    
+    const matchStage = {
+      status: { $nin: ["Cancelled"] },
+      ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {})
+    };
+
+    console.log("📊 Match stage:", matchStage);
+    
+    const topProducts = await Order.aggregate([
+      { $match: matchStage },
+      { $unwind: "$products" },
+      {
+        $group: {
+          _id: "$products.product",
+          productId: { $first: "$products.product" },
+          name: { $first: "$products.name" },
+          totalSold: { $sum: "$products.quantity" },
+          totalRevenue: { 
+            $sum: { 
+              $multiply: ["$products.price", "$products.quantity"] 
+            } 
+          },
+          orderCount: { $sum: 1 }
+        }
+      },
+      { $match: { totalSold: { $gt: 0 } } }, // Only products that were sold
+      { $sort: { totalSold: -1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "_id",
+          as: "productDetails"
+        }
+      },
+      { $unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true } },
+      {
+        $project: {
+          _id: 1,
+          productId: 1,
+          name: { $ifNull: ["$productDetails.name", "$name"] },
+          totalSold: 1,
+          totalRevenue: 1,
+          orderCount: 1,
+          image: { $ifNull: ["$productDetails.images.0", "$products.image"] }
+        }
+      }
+    ]);
+
+    console.log("✅ Found top products:", topProducts.length);
+    console.log("📦 Top products data:", JSON.stringify(topProducts, null, 2));
+    
+    return topProducts;
+  } catch (error) {
+    console.error("❌ Error getting top selling products:", error);
+    console.error("Error stack:", error.stack);
+    return []; // Return empty array on error
+  }
+}
+
+// OR if you want to fetch directly from Product model with order counts:
+async function getTopSellingProductsAlt(limit = 5, startDate, endDate) {
+  const dateFilter = startDate ? { 
+    createdAt: { $gte: startDate, $lte: endDate } 
+  } : {};
+
+  const topProducts = await Product.aggregate([
+    {
+      $lookup: {
+        from: "orderitems", // or "orders" if you have different structure
+        localField: "_id",
+        foreignField: "items.productId",
+        pipeline: [
+          {
+            $lookup: {
+              from: "orders",
+              localField: "orderId",
+              foreignField: "_id",
+              as: "order"
+            }
+          },
+          { $unwind: "$order" },
+          { $match: { "order.status": { $nin: ["Cancelled"] }, ...dateFilter } }
+        ],
+        as: "orderItems"
+      }
+    },
+    {
+      $addFields: {
+        totalSold: { $sum: "$orderItems.quantity" },
+        totalRevenue: { 
+          $sum: { 
+            $multiply: ["$orderItems.price", "$orderItems.quantity"] 
+          } 
+        }
+      }
+    },
+    { $match: { totalSold: { $gt: 0 } } },
+    { $sort: { totalSold: -1 } },
+    { $limit: limit },
+    {
+      $project: {
+        _id: 1,
+        name: 1,
+        price: 1,
+        images: 1,
+        sku: 1,
+        totalSold: 1,
+        totalRevenue: 1
+      }
+    }
+  ]);
+
+  return topProducts;
 }

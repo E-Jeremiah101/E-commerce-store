@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "../lib/axios";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useUserStore } from "../stores/useUserStore";
 
 const AdminOrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -25,6 +26,7 @@ const AdminOrdersPage = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
+  const {user} = useUserStore()
   // Fetch orders
   const fetchOrders = async () => {
     try {
@@ -93,18 +95,28 @@ const AdminOrdersPage = () => {
     );
 
   return (
+    <>
+    <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className=" flex justify-center align-middle text-black py-5 ">
+              <h1 className="text-3xl font-bold">
+                Welcome👋 {user?.firstname || "Admin"}
+              </h1>
+            </div>
+          </motion.div>
     <motion.div
       className="px-4 lg:px-28"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
     >
-      {/* <div className="text-2xl font-bold flex justify-center mb-6">
-        All Orders
-      </div> */}
+      
 
       {/* Search & Sort */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-19">
         <input
           type="text"
           placeholder="Search by ORD/EC0STORE/Id"
@@ -364,6 +376,7 @@ const AdminOrdersPage = () => {
         </div>
       )}
     </motion.div>
+    </>
   );
 };
 
