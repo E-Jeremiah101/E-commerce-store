@@ -1,4 +1,4 @@
-// In OrderSummary.js - Fixed version with one-click protection
+// In OrderSummary.js - Fixed version
 import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { useCartStore } from "../stores/useCartStore";
@@ -47,27 +47,60 @@ const OrderSummary = () => {
         defaultAddressObj.state || ""
       }`
     : "";
-useEffect(() => {
-  console.log("🛒 Current cart items:", cart);
-  console.log(
-    "🛒 Cart item details:",
-    cart.map((item) => ({
-      id: item._id,
-      name: item.name,
-      size: item.size,
-      color: item.color,
-      quantity: item.quantity,
-      countInStock: item.countInStock,
-    }))
-  );
-}, [cart]);
-  // Check cart availability when cart changes
+
   useEffect(() => {
-    // Just set as available since backend will handle the real check
+    console.log("🛒 Current cart items:", cart);
+    console.log(
+      "🛒 Cart item details:",
+      cart.map((item) => ({
+        id: item._id,
+        name: item.name,
+        size: item.size,
+        color: item.color,
+        quantity: item.quantity,
+        countInStock: item.countInStock,
+      }))
+    );
+  }, [cart]);
+
+  // FIXED: Check cart availability when cart changes
+  useEffect(() => {
     if (cart.length > 0) {
+      // Debug log to see what's in cart
+      console.log("🔍 Checking cart availability:", cart);
+
+      // Check if ALL items are out of stock - more defensive check
+      const allOutOfStock = cart.every((item) => {
+        // Handle various possible stock properties
+        const stock =
+          item.countInStock || item.stock || item.quantityAvailable || 0;
+        return stock === 0 || stock === "0" || !stock;
+      });
+
+      // Check if any items are out of stock
+      const unavailableItems = cart.filter((item) => {
+        const stock =
+          item.countInStock || item.stock || item.quantityAvailable || 0;
+        return stock === 0 || stock === "0" || !stock;
+      });
+
+      console.log("📊 Stock check results:", {
+        cartLength: cart.length,
+        allOutOfStock,
+        unavailableItemsCount: unavailableItems.length,
+        firstItem: cart[0]
+          ? {
+              name: cart[0].name,
+              hasCountInStock: "countInStock" in cart[0],
+              countInStock: cart[0].countInStock,
+              allKeys: Object.keys(cart[0]),
+            }
+          : null,
+      });
+
       setAvailabilityCheck({
-        allAvailable: true,
-        unavailableItems: [],
+        allAvailable: !allOutOfStock, // true if NOT all items are out of stock
+        unavailableItems,
         checked: true,
       });
     } else {
@@ -78,7 +111,6 @@ useEffect(() => {
       });
     }
   }, [cart]);
-
   // Reset processing state when component unmounts or cart changes
   useEffect(() => {
     return () => {
@@ -96,6 +128,14 @@ useEffect(() => {
     if (!defaultPhone || !defaultAddress) {
       alert(
         "Please provide a phone number and address before checkout. Please update your Profile Page."
+      );
+      return;
+    }
+
+    // FIXED: Prevent checkout when ALL items are out of stock
+    if (availabilityCheck.checked && !availabilityCheck.allAvailable) {
+      toast.error(
+        "All items in your cart are out of stock. Please remove them before checkout."
       );
       return;
     }
@@ -143,11 +183,10 @@ useEffect(() => {
     }
   };
 
-  // Fix the logic here - only show unavailable if we have checked AND there are actually unavailable items
+  // FIXED: hasUnavailableItems should be true when ALL items are out of stock
+  // (not when SOME items are out of stock - which your requirement allows)
   const hasUnavailableItems =
-    availabilityCheck.checked &&
-    !availabilityCheck.allAvailable &&
-    availabilityCheck.unavailableItems.length > 0;
+    availabilityCheck.checked && !availabilityCheck.allAvailable; // This means ALL items are out of stock
 
   console.log("🔄 Availability state:", {
     hasUnavailableItems,
@@ -155,6 +194,11 @@ useEffect(() => {
     unavailableCount: availabilityCheck.unavailableItems.length,
     checked: availabilityCheck.checked,
     cartLength: cart.length,
+    cartDetails: cart.map((item) => ({
+      name: item.name,
+      inStock: item.countInStock > 0,
+      countInStock: item.countInStock,
+    })),
   });
 
   const savings = subtotal - total;
@@ -169,12 +213,49 @@ useEffect(() => {
   });
 
   // Determine if button should be disabled
-  const isButtonDisabled =
-    hasUnavailableItems ||
-    !defaultPhone ||
-    !defaultAddress ||
-    loading ||
-    isProcessing.current;
+const isButtonDisabled = () => {
+  // If no items in cart
+  if (cart.length === 0) {
+    console.log("❌ Button disabled: Cart is empty");
+    return true;
+  }
+
+  // If availability check says all items are out of stock
+  if (availabilityCheck.checked && !availabilityCheck.allAvailable) {
+    console.log("❌ Button disabled: All items out of stock");
+    return true;
+  }
+
+  // If missing contact info
+  if (!defaultPhone || !defaultAddress) {
+    console.log("❌ Button disabled: Missing contact info");
+    return true;
+  }
+
+  // If loading
+  if (loading || isProcessing.current) {
+    console.log("❌ Button disabled: Processing");
+    return true;
+  }
+
+  // Safety check: manually verify ALL items are actually out of stock
+  const allItemsOutOfStock = cart.every((item) => {
+    const stock =
+      item.countInStock || item.stock || item.quantityAvailable || 0;
+    return stock === 0 || stock === "0" || !stock;
+  });
+
+  if (allItemsOutOfStock) {
+    console.log("❌ Button disabled: Manual check - all items out of stock");
+    return true;
+  }
+
+  console.log("✅ Button enabled");
+  return false;
+};
+
+// Use the function
+const buttonDisabled = isButtonDisabled();
 
   return (
     <motion.div
@@ -226,24 +307,41 @@ useEffect(() => {
           </dl>
         </div>
 
+        {/* FIXED: Show warning if SOME items are out of stock (but not all) */}
+        {availabilityCheck.checked &&
+          availabilityCheck.unavailableItems.length > 0 &&
+          availabilityCheck.allAvailable && (
+            <div className="flex items-center gap-2 p-3 bg-yellow-50 text-yellow-800 rounded-md text-sm">
+              <AlertTriangle size={16} />
+              <span>
+                Some items in your cart are out of stock. Please remove to
+                proceed
+              </span>
+            </div>
+          )}
+
         <motion.button
           className={`flex w-full items-center justify-center rounded-lg px-5 py-2.5 text-sm font-medium text-white ${
-            isButtonDisabled
+            buttonDisabled
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-black/90 hover:bg-black/80"
           } disabled:opacity-50`}
-          whileHover={!isButtonDisabled ? { scale: 1.05 } : {}}
-          whileTap={!isButtonDisabled ? { scale: 0.95 } : {}}
+          whileHover={!buttonDisabled ? { scale: 1.05 } : {}}
+          whileTap={!buttonDisabled ? { scale: 0.95 } : {}}
           onClick={handlePayment}
-          disabled={isButtonDisabled}
+          disabled={buttonDisabled}
         >
           {loading || isProcessing.current ? (
             <>
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
               Processing...
             </>
-          ) : hasUnavailableItems ? (
-            <>Unavailable Items in Cart</>
+          ) : cart.length === 0 ? (
+            <>Cart is Empty</>
+          ) : buttonDisabled && !defaultPhone && !defaultAddress ? (
+            <>Proceed to Checkout</>
+          ) : buttonDisabled ? (
+            <>All Items Out of Stock</>
           ) : (
             <>
               Proceed to Checkout
@@ -254,14 +352,19 @@ useEffect(() => {
 
         {(!defaultPhone || !defaultAddress) && (
           <>
-            <div className="text-black p-3 rounded-md text-sm mb-3">
-              Please provide a <strong>valid phone number</strong> and{" "}
-              <strong>address</strong> before checkout.
-              <br />
+            <div className="flex items-center gap-2 p-3 bg-yellow-50 text-yellow-800 rounded-md text-sm">
+              <AlertTriangle size={16} />
+              <Link
+              to="/Personal-info"
+              className=" underline"
+            >
+              <span>
+                Please provide a <strong>valid phone number</strong> and{" "}
+                <strong>address</strong> before checkout.
+              </span>
+              </Link>
             </div>
-            <Link to="/Personal-info" className="text-black underline">
-              Update your Profile
-            </Link>
+            
           </>
         )}
 
