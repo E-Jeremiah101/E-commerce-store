@@ -360,7 +360,9 @@ export const getVariantStock = async (req, res) => {
 
 export const getAllProducts = async (req, res) => {
   try {
-    const products = await Product.find({ archived: { $ne: true } }); // find all products and exclude archived
+    const products = await Product.find({
+      archived: { $ne: true },
+    }); // find all products and exclude archived
     res.json({ products });
   } catch (error) {
     console.log("Error in getAllProducts controller", error.message);
@@ -550,6 +552,7 @@ export const getRecommendedProducts = async (req, res) => {
         $match: {
           archived: { $ne: true }, //  Exclude archived products
           isActive: { $ne: false }, //  Also exclude inactive products
+          countInStock: { $gt: 0 },
         },
       },
       {
@@ -580,7 +583,10 @@ export const getProductsByCategory = async (req, res) => {
   const { category } = req.params;
   const {size, color} = req.query
   try {
-    let filter = { category, archived: { $ne: true } };
+    let filter = {
+      category,
+      archived: { $ne: true },
+    };
     if (size) filter.sizes = size; 
     if (color) filter.colors = color;
     const products = await Product.find( filter );

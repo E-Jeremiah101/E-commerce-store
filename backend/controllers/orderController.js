@@ -80,7 +80,7 @@ export const getUserOrders = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+ 
 // Simple order recovery for support team
 export const supportRecoverOrder = async (req, res) => {
   function generateOrderNumber() {
