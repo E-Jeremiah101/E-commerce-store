@@ -520,7 +520,7 @@ function getStartDate(range, endDate) {
 
 // Add this function after getStatusTrendsByRange function
 // Replace your current getTopSellingProducts function with this:
-async function getTopSellingProducts(limit = 5, startDate, endDate) {
+async function getTopSellingProducts(limit = 7, startDate, endDate) {
   try {
     console.log("🔍 Getting top selling products...");
     
@@ -599,7 +599,7 @@ async function getTopSellingProducts(limit = 5, startDate, endDate) {
 }
 
 // OR if you want to fetch directly from Product model with order counts:
-async function getTopSellingProductsAlt(limit = 5, startDate, endDate) {
+async function getTopSellingProductsAlt(limit = 7, startDate, endDate) {
   const dateFilter = startDate ? { 
     createdAt: { $gte: startDate, $lte: endDate } 
   } : {};

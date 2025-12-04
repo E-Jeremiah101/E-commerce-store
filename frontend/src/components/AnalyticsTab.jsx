@@ -434,7 +434,7 @@ const percentage =
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Average Order Value Section */}
               <div className="bg-gray-50 rounded-xl p-4">
                 <p className="text-gray-600 text-sm mb-2">
@@ -471,7 +471,7 @@ const percentage =
             
                 {/* Most Selling Products Section */}
                 <div className="bg-gray-50 rounded-xl p-4">
-                  <p className="text-gray-600 text-sm mb-2">
+                  <p className="text-gray-800 text-sm mb-2">
                     Most Selling Products
                   </p>
                   <div className="space-y-3 mt-3">
@@ -526,7 +526,7 @@ const percentage =
                                 {product.name}
                               </p>
                               <p className="text-gray-500 text-xs">
-                                ID: {product.id?.slice(-6) || "N/A"}
+                                ID: {product.id?.slice(-10) || "N/A"}
                               </p>                             
                             </div>
                           </div>
@@ -775,9 +775,6 @@ const percentage =
               <div className="flex gap-2">
                 <button className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg">
                   Revenue
-                </button>
-                <button className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700">
-                  Orders
                 </button>
               </div>
             </div>
