@@ -261,10 +261,7 @@ async function getAnalyticsData(startDate, endDate) {
   if (startDate && endDate) {
     dateFilter.createdAt = { $gte: startDate, $lte: endDate };
   }
-
-  console.log("📅 Date filter for getAnalyticsData:", dateFilter);
-  console.log("📅 Start date:", startDate);
-  console.log("📅 End date:", endDate);
+const totalOrdersAllStatuses = await Order.countDocuments(dateFilter);
 
   const [totalUsers, totalProducts, allOrders, visitors] = await Promise.all([
     // Users: Filter by date if dates provided
@@ -361,6 +358,7 @@ async function getAnalyticsData(startDate, endDate) {
     users: totalUsers,
     products: totalProducts,
     allOrders,
+    totalOrdersAllStatuses,
     visitors,
     pendingOrders,
     processingOrders,

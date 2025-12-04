@@ -224,8 +224,8 @@ const AnalyticsTab = () => {
       >
         {/* Header with range selector */}
         <div className="bg-white rounded-xl p-6 mb-6 shadow-sm border border-gray-200">
-          <p className="text-gray-600 text-center mb-4">
-            Analytics overview for the {selectedRange}.
+          <p className="text-gray-600 text-center mb-4 capitalize">
+            <strong>{selectedRange}</strong> Analytics overview
           </p>
 
           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -553,12 +553,7 @@ const AnalyticsTab = () => {
                   color: "bg-red-100 text-red-800",
                   icon: XCircle,
                 },
-                {
-                  title: "Approved Refunds",
-                  value: analyticsData.canceledOrders || 0,
-                  color: "bg-red-100 text-red-800",
-                  icon: XCircle,
-                },
+              
               ].map((item) => (
                 <div
                   key={item.title}
@@ -584,10 +579,13 @@ const AnalyticsTab = () => {
                       className={`px-2 py-1 rounded-full text-xs ${item.color}`}
                     >
                       <span>
-                        {(
-                          (item.value / (analyticsData.allOrders || 1)) *
-                          100
-                        ).toFixed(1)}
+                        {analyticsData.totalOrdersAllStatuses > 0
+                          ? (
+                              (item.value /
+                                analyticsData.totalOrdersAllStatuses) *
+                              100
+                            ).toFixed(1)
+                          : "0.0"}
                         %
                       </span>
                     </div>
