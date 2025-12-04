@@ -793,6 +793,7 @@ export const getAllOrders = async (req, res) => {
       .populate("user", "firstname lastname email phone address")
       .populate("products.product", "name price image")
       .sort({ createdAt: -1 }) // Newest orders first by default
+      .populate("refunds.product", "name image")
       .lean();
 
     // Define priority: Pending orders always first, then sort by other criteria
@@ -873,6 +874,7 @@ export const getAllOrders = async (req, res) => {
           deliveryAddress: order.deliveryAddress,
           phone: order.phone,
           createdAt: order.createdAt,
+          refunds: order.refunds || [],
           products: (order.products || []).map((p) => ({
             _id: p._id,
             product: p.product || null,

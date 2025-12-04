@@ -491,6 +491,12 @@ const AnalyticsTab = () => {
                   color: "bg-red-100 text-red-800",
                   icon: XCircle,
                 },
+                {
+                  title: "Approved Refunds",
+                  value: analyticsData.canceledOrders || 0,
+                  color: "bg-red-100 text-red-800",
+                  icon: XCircle,
+                },
               ].map((item) => (
                 <div
                   key={item.title}

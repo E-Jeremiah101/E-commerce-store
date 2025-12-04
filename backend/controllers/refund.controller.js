@@ -21,7 +21,6 @@ export const requestRefund = async (req, res) => {
       return res.status(403).json({ message: "Not authorized" });
     }
 
-
     const allowedStatuses = ["Delivered", "Partially Refunded"];
     if (!allowedStatuses.includes(order.status)) {
       return res.status(400).json({
@@ -66,7 +65,6 @@ export const requestRefund = async (req, res) => {
       });
     }
 
-
     if (!refundProduct) {
       return res.status(404).json({ message: "Product not found in order" });
     }
@@ -83,20 +81,39 @@ export const requestRefund = async (req, res) => {
       });
     }
 
-    // Check for existing pending refund
-    const existingRefund = order.refunds.find((refund) => {
-      const refundProductId = refund.product?.toString
-        ? refund.product.toString()
-        : refund.product;
-      const currentProductId = refundProduct.product?._id?.toString();
-      return (
-        refundProductId === currentProductId && refund.status === "Pending"
-      );
+    
+    // Check for ANY existing refund for this product (all statuses)
+    const hasExistingRefund = order.refunds.some((refund) => {
+      const refundProductId =
+        refund.product?.toString() ||
+        refund.product?._id?.toString() ||
+        refund.productSnapshot?._id;
+
+      const currentProductId =
+        refundProduct.product?._id?.toString() ||
+        refundProduct.product?.toString();
+
+      return refundProductId === currentProductId;
     });
 
-    if (existingRefund) {
+    if (hasExistingRefund) {
+      // Find the existing refund to get its status
+      const existingRefund = order.refunds.find((refund) => {
+        const refundProductId =
+          refund.product?.toString() ||
+          refund.product?._id?.toString() ||
+          refund.productSnapshot?._id;
+
+        const currentProductId =
+          refundProduct.product?._id?.toString() ||
+          refundProduct.product?.toString();
+
+        return refundProductId === currentProductId;
+      });
+
       return res.status(400).json({
-        message: "Refund already pending for this product",
+        message: `Cannot submit another refund request for this product. A refund is already ${existingRefund.status.toLowerCase()}.`,
+        existingStatus: existingRefund.status,
       });
     }
 

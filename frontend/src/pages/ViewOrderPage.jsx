@@ -193,7 +193,7 @@ const ViewOrderPage = () => {
               >
                 <li
                   key={item._id}
-                  className="flex gap-4 p-4 bg-gray-100 rounded-lg shadow mt-1"
+                  className="flex gap-4 p-4 bg-gray-100 rounded-lg shadow mt-2"
                 >
                   {" "}
                   <img
@@ -211,15 +211,20 @@ const ViewOrderPage = () => {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2 text-xs text-gray-900">
-                      <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
+                      {item.selectedSize &&(
+                        <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
                         Size: {item.selectedSize || "NA"}
                       </span>
-                      <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
+                      )}
+                      {item.selectedColor && (
+                        <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
                         Color: {item.selectedColor || "N/A"}
                       </span>
+                      )}
+                      
                     </div>
                     <div className="flex  justify-between text-sm text-gray-900">
-                      <span className="bg-gray-200 px-2 py-1 rounded text-xs ">
+                      <span className="bg-gray-200 px-2 py-1 rounded text-xs h-fit">
                         Qty: {item.quantity}
                       </span>
                       {item.quantity > 1 && (
@@ -227,6 +232,66 @@ const ViewOrderPage = () => {
                           ₦{item.price.toLocaleString()} each
                         </span>
                       )}
+                      <div className="inline-block  justify-between text-sm text-gray-900">
+                        {(() => {
+                          // Find refunds that belong to this specific product
+                          const productRefunds =
+                            order.refunds?.filter((refund) => {
+                              // Get the product ID from the refund
+                              let refundProductId;
+
+                              if (refund.product) {
+                                if (typeof refund.product === "object") {
+                                  refundProductId =
+                                    refund.product._id?.toString();
+                                } else {
+                                  refundProductId = refund.product.toString();
+                                }
+                              } else if (refund.productSnapshot?._id) {
+                                // Handle deleted products
+                                refundProductId = refund.productSnapshot._id;
+                              }
+
+                              // Get the product ID from the current item
+                              const currentProductId =
+                                item.product?._id?.toString();
+
+                              // Compare IDs
+                              return refundProductId === currentProductId;
+                            }) || [];
+
+                          // If this product has refunds, show them
+                          if (productRefunds.length > 0) {
+                            return productRefunds.map((refund, index) => (
+                              <div key={index} className="mt-2 p-2 rounded">
+                                <span
+                                  className={`inline-block px-2 py-1 text-xs rounded ${
+                                    refund.status === "Approved" ||
+                                    refund.status === "Refunded"
+                                      ? "bg-green-100 text-green-700"
+                                      : refund.status === "Processing"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : refund.status === "Rejected"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-yellow-100 text-yellow-700"
+                                  }`}
+                                >
+                                  {refund.status === "Approved" ||
+                                  refund.status === "Refunded"
+                                    ? "Refunded"
+                                    : refund.status === "Processing"
+                                    ? "Refund Processing"
+                                    : refund.status === "Rejected"
+                                    ? "Refund Rejected"
+                                    : "Refund Pending"}
+                                </span>
+                              </div>
+                            ));
+                          }
+
+                          return null;
+                        })()}
+                      </div>
                     </div>
                   </div>
                 </li>
