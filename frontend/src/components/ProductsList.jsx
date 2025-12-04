@@ -108,183 +108,186 @@ const ProductsList = () => {
 
   return (
     <>
-    <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className=" flex justify-center align-middle text-black py-5 ">
-              <h1 className="text-3xl font-bold">
-                Welcome👋 {user?.firstname || "Admin"}
-              </h1>
-            </div>
-          </motion.div>
-      <motion.div
-        className=" shadow-lg rounded-lg flex flex-col justify-center max-w-5xl mx-auto overflow-x-auto scrollbar-hide"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        {/* Table */}
-        <table className="min-w-full divide-y divide-gray-700">
-          <thead className="">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                Product
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                Price
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                Sizes
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                Colors
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                In-Stock
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                Variants
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                Category
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                Featured
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                Action
-              </th>
-            </tr>
-          </thead>
+      <div className="bg-white">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <div className=" flex justify-center align-middle text-black py-5 ">
+            <h1 className="text-3xl font-bold">
+              Welcome👋 {user?.firstname || "Admin"}
+            </h1>
+          </div>
+        </motion.div>
 
-          <tbody className=" divide-y divide-gray-700">
-            {displayedProducts?.map((product) => (
-              <tr
-                key={product._id}
-                className="hover:bg-gray-700 transition-colors"
-              >
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <img
-                      className="h-10 w-10 rounded-full object-cover"
-                      src={product.images?.[0]}
-                      alt={product.name}
-                    />
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-black">
-                        {product.name}
+        <motion.div
+          className=" shadow-lg rounded-lg flex flex-col justify-center max-w-5xl mx-auto overflow-x-auto scrollbar-hide"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          {/* Table */}
+          <table className="min-w-full divide-y divide-gray-700 ">
+            <thead className="">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                  Product
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                  Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                  Sizes
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                  Colors
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                  In-Stock
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                  Variants
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                  Featured
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                  Action
+                </th>
+              </tr>
+            </thead>
+
+            <tbody className=" divide-y divide-gray-700">
+              {displayedProducts?.map((product) => (
+                <tr
+                  key={product._id}
+                  className="hover:bg-gray-100 transition-colors"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <img
+                        className="h-10 w-10 rounded-full object-cover"
+                        src={product.images?.[0]}
+                        alt={product.name}
+                      />
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-black ">
+                          {product.name}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </td>
+                  </td>
 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                  ₦
-                  {product.price.toLocaleString(undefined, {
-                    minimumFractionDigits: 0,
-                  })}
-                </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-medium">
+                    ₦
+                    {product.price.toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                    })}
+                  </td>
 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                  {product.sizes?.join(", ") || "N/A"}
-                </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-medium">
+                    {product.sizes?.join(", ") || "N/A"}
+                  </td>
 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                  {product.colors?.join(", ") || "N/A"}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                  <div className="flex items-center gap-2">
-                    <span>{product.countInStock}</span>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-medium">
+                    {product.colors?.join(", ") || "N/A"}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-medium">
+                    <div className="flex items-center gap-2">
+                      <span>{product.countInStock}</span>
+                      <button
+                        onClick={() => handleReduceStockClick(product)}
+                        disabled={product.countInStock === 0}
+                        className={`px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50`}
+                      >
+                        Reduce Stock
+                      </button>
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-medium">
+                    {product.variants?.length > 0 ? (
+                      <span className="bg-green-800 px-2 py-1 rounded text-xs">
+                        {product.variants.length} variants
+                      </span>
+                    ) : (
+                      "No variants"
+                    )}
+                  </td>
+
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-medium">
+                    {product.category}
+                  </td>
+
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <button
-                      onClick={() => handleReduceStockClick(product)}
-                      disabled={product.countInStock === 0}
-                      className={`px-2 py-1 rounded bg-red-600 text-white hover:bg-red-500 disabled:opacity-50`}
+                      onClick={() => toggleFeaturedProduct(product._id)}
+                      className={`p-1 rounded-full ${
+                        product.isFeatured
+                          ? "bg-yellow-500 text-black font-bold"
+                          : "bg-yellow-100 text-yellow-500"
+                      } hover:bg-yellow-500 hover:text-black transition-colors duration-200`}
                     >
-                      Reduce Stock
+                      <Star className="h-5 w-5" />
                     </button>
-                  </div>
-                </td>
+                  </td>
 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  {product.variants?.length > 0 ? (
-                    <span className="bg-blue-600 px-2 py-1 rounded text-xs">
-                      {product.variants.length} variants
-                    </span>
-                  ) : (
-                    "No variants"
-                  )}
-                </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold">
+                    <button
+                      onClick={() => deleteProduct(product._id)}
+                      className=" text-red-600  hover:text-red-300"
+                    >
+                      <Trash className="h-5 w-5 " />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-black">
-                  {product.category}
-                </td>
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center space-x-3 py-8">
+              <button
+                onClick={handlePrev}
+                disabled={currentPage === 1}
+                className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
+              >
+                Prev
+              </button>
 
-                <td className="px-6 py-4 whitespace-nowrap">
+              {[...Array(totalPages).keys()].map((num) => {
+                const page = num + 1;
+                return (
                   <button
-                    onClick={() => toggleFeaturedProduct(product._id)}
-                    className={`p-1 rounded-full ${
-                      product.isFeatured
-                        ? "bg-yellow-400 text-gray-900"
-                        : "bg-gray-600 text-gray-300"
-                    } hover:bg-yellow-500 transition-colors duration-200`}
+                    key={page}
+                    onClick={() => handlePageClick(page)}
+                    className={`px-4 py-2 text-sm rounded ${
+                      currentPage === page
+                        ? "bg-yellow-700 text-white"
+                        : "bg-gray-700 text-white hover:bg-gray-600"
+                    }`}
                   >
-                    <Star className="h-5 w-5" />
+                    {page}
                   </button>
-                </td>
+                );
+              })}
 
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => deleteProduct(product._id)}
-                    className="text-red-400 hover:text-red-300"
-                  >
-                    <Trash className="h-5 w-5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {/* Pagination Controls */}
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center space-x-3 py-8">
-            <button
-              onClick={handlePrev}
-              disabled={currentPage === 1}
-              className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
-            >
-              Prev
-            </button>
-
-            {[...Array(totalPages).keys()].map((num) => {
-              const page = num + 1;
-              return (
-                <button
-                  key={page}
-                  onClick={() => handlePageClick(page)}
-                  className={`px-4 py-2 text-sm rounded ${
-                    currentPage === page
-                      ? "bg-yellow-700 text-white"
-                      : "bg-gray-700 text-white hover:bg-gray-600"
-                  }`}
-                >
-                  {page}
-                </button>
-              );
-            })}
-
-            <button
-              onClick={handleNext}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
-            >
-              Next
-            </button>
-          </div>
-        )}
-      </motion.div>
+              <button
+                onClick={handleNext}
+                disabled={currentPage === totalPages}
+                className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </motion.div>
+      </div>
 
       {/* Variant Selection Modal */}
       {showVariantModal && selectedProduct && (
