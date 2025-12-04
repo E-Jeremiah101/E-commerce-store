@@ -13,6 +13,7 @@ import {
   Truck,
   TrendingUp,
   TrendingDown,
+  Scissors,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -553,7 +554,18 @@ const AnalyticsTab = () => {
                   color: "bg-red-100 text-red-800",
                   icon: XCircle,
                 },
-              
+                {
+                  title: "Refunded",
+                  value: analyticsData.refundedOrders, // Or get this from backend: analyticsData.refundedOrders
+                  color: "bg-purple-100 text-purple-800",
+                  icon: DollarSign, // Or use a refund icon
+                },
+                {
+                  title: "Partial Refund",
+                  value: analyticsData.partiallyRefundedOrders, // 
+                  color: "bg-purple-100 text-purple-800",
+                  icon: Scissors, // Or use a refund icon
+                },
               ].map((item) => (
                 <div
                   key={item.title}

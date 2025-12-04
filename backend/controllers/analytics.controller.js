@@ -307,6 +307,14 @@ const totalOrdersAllStatuses = await Order.countDocuments(dateFilter);
     ...dateFilter,
     status: "Cancelled" 
   });
+  const refundedOrders = await Order.countDocuments({
+    ...dateFilter,
+    status: "Refunded", 
+  });
+  const partiallyRefundedOrders = await Order.countDocuments({
+    ...dateFilter,
+    status: "Partially Refunded", 
+  });
 
   // Revenue calculation with date filtering
   const revenue = await Order.aggregate([
@@ -365,6 +373,8 @@ const totalOrdersAllStatuses = await Order.countDocuments(dateFilter);
     shippedOrders,
     deliveredOrders,
     canceledOrders,
+    partiallyRefundedOrders:partiallyRefundedOrders,
+    refundedOrders: refundedOrders,
     grossRevenue: grossRevenue,
     totalRefunded: totalRefunded,
     netRevenue: netRevenue,
