@@ -66,6 +66,8 @@ const AnalyticsTab = () => {
         } = res.data;
 
         setAnalyticsData(analyticsData);
+        
+           
 
         // Handle top products with better error handling
         if (
@@ -166,6 +168,7 @@ const AnalyticsTab = () => {
 
         setVisitorsCharts(filledVisitors);
 
+
         // Process users data
         const filledUsers = labels.length
           ? labels.map((name, idx) => {
@@ -195,6 +198,21 @@ const AnalyticsTab = () => {
 
     fetchAnalyticsData();
   }, [selectedRange]);
+  
+  const pending = analyticsData.refundsPending || 0;
+  const approved = analyticsData.refundsApproved || 0;
+  const rejected = analyticsData.refundsRejected || 0;
+  const totalRefunds = pending + approved + rejected;
+
+      
+const percentage =
+  totalRefunds > 0
+    ? {
+        pending: (pending / totalRefunds) * 100,
+        approved: (approved / totalRefunds) * 100,
+        rejected: (rejected / totalRefunds) * 100,
+      }
+    : { pending: 0, approved: 0, rejected: 0 };
 
   if (isLoading)
     return (
@@ -562,7 +580,7 @@ const AnalyticsTab = () => {
                 },
                 {
                   title: "Partial Refund",
-                  value: analyticsData.partiallyRefundedOrders, // 
+                  value: analyticsData.partiallyRefundedOrders, //
                   color: "bg-purple-100 text-purple-800",
                   icon: Scissors, // Or use a refund icon
                 },
@@ -752,6 +770,7 @@ const AnalyticsTab = () => {
         </div>
 
         {/* Additional Analytics Cards */}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <AnalyticsCard
             title="Pending Refunds"
@@ -761,6 +780,7 @@ const AnalyticsTab = () => {
             borderColor="border-yellow-100"
             iconColor="text-yellow-600"
             iconBg="bg-yellow-100"
+            subtitle={`${percentage.pending.toFixed(1)}%`}
           />
           <AnalyticsCard
             title="Approved Refunds"
@@ -770,6 +790,7 @@ const AnalyticsTab = () => {
             borderColor="border-green-100"
             iconColor="text-green-600"
             iconBg="bg-green-100"
+            subtitle={`${percentage.approved.toFixed(1)}%`}
           />
           <AnalyticsCard
             title="Rejected Refunds"
@@ -779,6 +800,7 @@ const AnalyticsTab = () => {
             borderColor="border-red-100"
             iconColor="text-red-600"
             iconBg="bg-red-100"
+            subtitle={`${percentage.rejected.toFixed(1)}% `}
           />
           <AnalyticsCard
             title="Refund Status"
@@ -821,7 +843,7 @@ const AnalyticsCard = ({
       <div>
         <p className="text-gray-600 text-sm font-medium">{title}</p>
         <h3 className="text-2xl font-bold text-gray-900 mt-1">{value}</h3>
-        {subtitle && <p className="text-gray-500 text-xs mt-1">{subtitle}</p>}
+        {subtitle && <p className="text-green-500 text-xs mt-1">{subtitle}</p>}
       </div>
       <div className={`p-3 rounded-xl ${iconBg}`}>
         <Icon className={`h-6 w-6 ${iconColor}`} />
