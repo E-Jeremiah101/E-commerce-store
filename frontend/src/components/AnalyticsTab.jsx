@@ -44,13 +44,15 @@ const AnalyticsTab = () => {
         setIsLoading(true);
         const res = await axios.get(`/analytics?range=${selectedRange}`);
 
-        // Debug: Check API response
-        console.log("📊 Full API Response:", res.data);
-        console.log("🛍️ Top Products in API:", res.data.topProducts);
-        console.log("=== API RESPONSE DEBUG ===");
-        console.log("Full response keys:", Object.keys(res.data));
-        console.log("Full response data:", JSON.stringify(res.data, null, 2));
-        console.log("=== END DEBUG ===");
+        // DEBUG: Check what percentage changes are coming from API
+        console.log("📊 API Response analyticsData:", res.data.analyticsData);
+        console.log("📈 Percentage Changes from API:", {
+          productsChange: res.data.analyticsData?.productsChange,
+          usersChange: res.data.analyticsData?.usersChange,
+          ordersChange: res.data.analyticsData?.ordersChange,
+          visitorsChange: res.data.analyticsData?.visitorsChange,
+          aovChange: res.data.analyticsData?.aovChange,
+        });
 
         const {
           analyticsData,
@@ -257,6 +259,7 @@ const AnalyticsTab = () => {
 
         {/* Main Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Total Products Card */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 shadow-sm border border-blue-100">
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -272,12 +275,24 @@ const AnalyticsTab = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              <span className="text-green-600 font-medium">+16.9%</span>
-              <span className="text-gray-500 text-sm ml-1">(+43.21%)</span>
+              {analyticsData.productsChange >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-red-500" />
+              )}
+              <span
+                className={`font-medium ${
+                  analyticsData.productsChange >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
+                {analyticsData.productsChange >= 0 ? "+" : ""}
+                {analyticsData.productsChange?.toFixed(1) || "0.0"}%
+              </span>
             </div>
           </div>
-
+          {/* Total Users Card */}
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 shadow-sm border border-green-100">
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -291,14 +306,24 @@ const AnalyticsTab = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              <span className="text-green-600 font-medium">+48.8%</span>
-              <span className="text-gray-500 text-sm ml-1">
-                from last period
+              {analyticsData.usersChange >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-red-500" />
+              )}
+              <span
+                className={`font-medium ${
+                  analyticsData.usersChange >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
+                {analyticsData.usersChange >= 0 ? "+" : ""}
+                {analyticsData.usersChange?.toFixed(1) || "0.0"}%
               </span>
             </div>
           </div>
-
+          {/* Total Orders Card */}
           <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-6 shadow-sm border border-purple-100">
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -314,12 +339,24 @@ const AnalyticsTab = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              <span className="text-green-600 font-medium">+25.4%</span>
-              <span className="text-gray-500 text-sm ml-1">(+30.11%)</span>
+              {analyticsData.ordersChange >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-red-500" />
+              )}
+              <span
+                className={`font-medium ${
+                  analyticsData.ordersChange >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
+                {analyticsData.ordersChange >= 0 ? "+" : ""}
+                {analyticsData.ordersChange?.toFixed(1) || "0.0"}%
+              </span>
             </div>
           </div>
-
+          {/* Total Visitors Card */}
           <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 shadow-sm border border-orange-100">
             <div className="flex justify-between items-start mb-4">
               <div>
@@ -335,9 +372,21 @@ const AnalyticsTab = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-green-500" />
-              <span className="text-green-600 font-medium">+32.2%</span>
-              <span className="text-gray-500 text-sm ml-1">(+5.94%)</span>
+              {analyticsData.visitorsChange >= 0 ? (
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              ) : (
+                <TrendingDown className="h-4 w-4 text-red-500" />
+              )}
+              <span
+                className={`font-medium ${
+                  analyticsData.visitorsChange >= 0
+                    ? "text-green-600"
+                    : "text-red-600"
+                }`}
+              >
+                {analyticsData.visitorsChange >= 0 ? "+" : ""}
+                {analyticsData.visitorsChange?.toFixed(1) || "0.0"}%
+              </span>
             </div>
           </div>
         </div>
@@ -369,24 +418,37 @@ const AnalyticsTab = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-6">
+              {/* Average Order Value Section */}
               <div className="bg-gray-50 rounded-xl p-4">
                 <p className="text-gray-600 text-sm mb-2">
                   Average Order Value
                 </p>
                 <h4 className="text-2xl font-bold text-gray-900">
-                  ₦
-                  {analyticsData.grossRevenue && analyticsData.allOrders
-                    ? (
-                        analyticsData.grossRevenue / analyticsData.allOrders
-                      ).toLocaleString(undefined, {
+                  {analyticsData.aov
+                    ? `₦${analyticsData.aov.toLocaleString(undefined, {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
-                      })
-                    : "0.00"}
+                      })}`
+                    : "₦0.00"}
                 </h4>
                 <div className="flex items-center gap-1 mt-2">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  <span className="text-green-600 text-sm">+12.62%</span>
+                  {analyticsData.aovChange > 0 ? (
+                    <>
+                      <TrendingUp className="h-4 w-4 text-green-500" />
+                      <span className="text-green-600 text-sm">
+                        +{analyticsData.aovChange?.toFixed(2) || "0.00"}%
+                      </span>
+                    </>
+                  ) : analyticsData.aovChange < 0 ? (
+                    <>
+                      <TrendingDown className="h-4 w-4 text-red-500" />
+                      <span className="text-red-600 text-sm">
+                        {analyticsData.aovChange?.toFixed(2) || "0.00"}%
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-gray-500 text-sm">No trend data</span>
+                  )}
                 </div>
               </div>
 
@@ -542,6 +604,7 @@ const AnalyticsTab = () => {
             Revenue Analytics
           </h3>
 
+          {/* Revenue Cards Section */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-100">
               <div className="flex items-center gap-3 mb-3">
@@ -554,9 +617,21 @@ const AnalyticsTab = () => {
                 ₦{analyticsData.grossRevenue?.toLocaleString() || "0"}
               </h3>
               <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-green-500" />
-                <span className="text-green-600 text-sm">
-                  +24.3% from last period
+                {analyticsData.revenueChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span
+                  className={`text-sm ${
+                    analyticsData.revenueChange >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {analyticsData.revenueChange >= 0 ? "+" : ""}
+                  {analyticsData.revenueChange?.toFixed(1) || "0.0"}% from last
+                  period
                 </span>
               </div>
             </div>
@@ -572,9 +647,21 @@ const AnalyticsTab = () => {
                 ₦{analyticsData.totalRefunded?.toLocaleString() || "0"}
               </h3>
               <div className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-red-500" />
-                <span className="text-red-600 text-sm">
-                  -8.7% from last period
+                {analyticsData.refundedChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span
+                  className={`text-sm ${
+                    analyticsData.refundedChange >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {analyticsData.refundedChange >= 0 ? "+" : ""}
+                  {analyticsData.refundedChange?.toFixed(1) || "0.0"}% from last
+                  period
                 </span>
               </div>
             </div>
@@ -590,9 +677,21 @@ const AnalyticsTab = () => {
                 ₦{analyticsData.netRevenue?.toLocaleString() || "0"}
               </h3>
               <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-green-500" />
-                <span className="text-green-600 text-sm">
-                  +18.9% from last period
+                {analyticsData.netRevenueChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span
+                  className={`text-sm ${
+                    analyticsData.netRevenueChange >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {analyticsData.netRevenueChange >= 0 ? "+" : ""}
+                  {analyticsData.netRevenueChange?.toFixed(1) || "0.0"}% from
+                  last period
                 </span>
               </div>
             </div>
