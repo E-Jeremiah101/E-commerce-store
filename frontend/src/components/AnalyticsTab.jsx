@@ -315,7 +315,7 @@ const percentage =
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 shadow-sm border border-green-100">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <p className="text-gray-600 text-sm font-medium">Total Users</p>
+                <p className="text-gray-600 text-sm font-medium">New Users</p>
                 <h3 className="text-2xl font-bold text-gray-900 mt-1">
                   {analyticsData.users || 0}
                 </h3>
@@ -346,9 +346,7 @@ const percentage =
           <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-6 shadow-sm border border-purple-100">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <p className="text-gray-600 text-sm font-medium">
-                  Total Orders
-                </p>
+                <p className="text-gray-600 text-sm font-medium">New Orders</p>
                 <h3 className="text-2xl font-bold text-gray-900 mt-1">
                   {analyticsData.allOrders || 0}
                 </h3>
@@ -380,7 +378,7 @@ const percentage =
             <div className="flex justify-between items-start mb-4">
               <div>
                 <p className="text-gray-600 text-sm font-medium">
-                  Total Visitors
+                  New Visitors
                 </p>
                 <h3 className="text-2xl font-bold text-gray-900 mt-1">
                   {analyticsData.visitors || 0}
@@ -470,40 +468,85 @@ const percentage =
                   )}
                 </div>
               </div>
+            
+                {/* Most Selling Products Section */}
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <p className="text-gray-600 text-sm mb-2">
+                    Most Selling Products
+                  </p>
+                  <div className="space-y-3 mt-3">
+                    {topProducts.length > 0 ? (
+                      topProducts.map((product) => (
+                        <div
+                          key={product.id}
+                          className="flex items-center justify-between p-3 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            {/* Product Image */}
+                            <div className="relative">
+                              {product.image ? (
+                                <>
+                                  <img
+                                    src={product.image}
+                                    alt={product.name}
+                                    className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+                                    onError={(e) => {
+                                      console.error(
+                                        "❌ Image failed to load:",
+                                        product.image
+                                      );
+                                      e.target.style.display = "none";
+                                      e.target.parentElement.innerHTML = `
+                        <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                          <Package className="h-6 w-6 text-blue-600" />
+                        </div>
+                      `;
+                                    }}
+                                    onLoad={(e) => {
+                                      console.log(
+                                        "✅ Image loaded successfully:",
+                                        product.image
+                                      );
+                                    }}
+                                  />
+                                  <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                                    {product.sales}
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                                  <Package className="h-6 w-6 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
 
-              <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-gray-600 text-sm mb-2">
-                  Most Selling Products
-                </p>
-                <div className="space-y-3 mt-3">
-                  {topProducts.length > 0 ? (
-                    topProducts.map((product) => (
-                      <div
-                        key={product.id}
-                        className="flex justify-between items-center"
-                      >
-                        <div>
-                          <p className="font-medium text-gray-800">
-                            {product.name}
-                          </p>
-                          <p className="text-gray-500 text-xs">
-                            ID: {product.id?.slice(-6) || "N/A"}
-                          </p>
+                            {/* Product Info */}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-800 truncate">
+                                {product.name}
+                              </p>
+                              <p className="text-gray-500 text-xs">
+                                ID: {product.id?.slice(-6) || "N/A"}
+                              </p>                             
+                            </div>
+                          </div>
+
+                          {/* Sales Count */}
+                          <div className="bg-blue-50 px-3 py-1 rounded-full">
+                            <span className="text-blue-700 font-medium">
+                              {product.sales} Sales
+                            </span>
+                          </div>
                         </div>
-                        <div className="bg-blue-50 px-3 py-1 rounded-full">
-                          <span className="text-blue-700 font-medium">
-                            {product.sales} Sales
-                          </span>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-gray-500">
+                        No sales data available
                       </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-4 text-gray-500">
-                      No sales data available
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
+              
             </div>
 
             {/* Mini Chart */}

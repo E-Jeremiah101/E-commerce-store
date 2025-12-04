@@ -568,7 +568,21 @@ async function getTopSellingProducts(limit = 5, startDate, endDate) {
           totalSold: 1,
           totalRevenue: 1,
           orderCount: 1,
-          image: { $ifNull: ["$productDetails.images.0", "$products.image"] }
+          image: {
+      $let: {
+        vars: {
+          imagesArray: "$productDetails.images"
+        },
+        in: {
+          $cond: {
+            if: { $gt: [{ $size: "$$imagesArray" }, 0] },
+            then: { $arrayElemAt: ["$$imagesArray", 0] },
+            else: null
+          }
+        }
+      }
+    }
+  
         }
       }
     ]);
