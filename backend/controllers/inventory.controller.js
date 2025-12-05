@@ -309,88 +309,73 @@ export const getLowStockAlerts = async (req, res) => {
 
     const products = await Product.find({
       archived: { $ne: true },
-      $or: [
-        // Main product low stock
-        { countInStock: { $lte: lowStockThreshold, $gt: 0 } },
-        // OR products with low stock variants
-        { "variants.countInStock": { $lte: lowStockThreshold, $gt: 0 } }
-      ]
+      // Only look for products with variants that have low stock
+      "variants.countInStock": { $lte: lowStockThreshold },
     }).select("name price countInStock category images variants sku");
 
     const alerts = [];
 
     products.forEach((product) => {
-      // Check main product stock
-      if (product.countInStock <= lowStockThreshold && product.countInStock > 0) {
-        alerts.push({
-          id: product._id,
-          name: product.name,
-          image: product.images?.[0] || "",
-          category: product.category,
-          currentStock: product.countInStock,
-          threshold: lowStockThreshold,
-          status: product.countInStock === 0 ? "out" : "low",
-          price: product.price,
-          valueAtRisk: product.price * product.countInStock,
-          type: "main", // Add this to identify main vs variant
-          variantId: null,
-          variantInfo: null
-        });
-      }
-
-      // Check variant stock
+      // ONLY check variant stock - NO main product checks
       if (product.variants && product.variants.length > 0) {
         product.variants.forEach((variant) => {
-          if (variant.countInStock <= lowStockThreshold && variant.countInStock > 0) {
+          // Check low stock variants (stock > 0 but <= threshold)
+          if (
+            variant.countInStock <= lowStockThreshold &&
+            variant.countInStock > 0
+          ) {
             alerts.push({
               id: `${product._id}-${variant._id}`, // Unique ID for variant
               productId: product._id,
               name: product.name,
-              variantName: `${variant.color || 'Default'} - ${variant.size || 'One Size'}`,
+              variantName: `${variant.color || "Default"} - ${
+                variant.size || "One Size"
+              }`,
               image: product.images?.[0] || "",
               category: product.category,
               currentStock: variant.countInStock,
               threshold: lowStockThreshold,
-              status: variant.countInStock === 0 ? "out" : "low",
+              status: "low",
               price: variant.price || product.price,
-              valueAtRisk: (variant.price || product.price) * variant.countInStock,
-              type: "variant", // Add this
+              valueAtRisk:
+                (variant.price || product.price) * variant.countInStock,
+              type: "variant",
               variantId: variant._id,
               variantInfo: {
                 color: variant.color,
                 size: variant.size,
-                sku: variant.sku
-              }
+                sku: variant.sku,
+              },
+            });
+          }
+
+          // Check out of stock variants
+          if (variant.countInStock === 0) {
+            alerts.push({
+              id: `${product._id}-${variant._id}-out`,
+              productId: product._id,
+              name: product.name,
+              variantName: `${variant.color || "Default"} - ${
+                variant.size || "One Size"
+              }`,
+              image: product.images?.[0] || "",
+              category: product.category,
+              currentStock: 0,
+              threshold: lowStockThreshold,
+              status: "out",
+              price: variant.price || product.price,
+              valueAtRisk: 0,
+              type: "variant",
+              variantId: variant._id,
+              variantInfo: {
+                color: variant.color,
+                size: variant.size,
+                sku: variant.sku,
+              },
             });
           }
         });
       }
-
-      // Check out of stock variants
-      product.variants?.forEach((variant) => {
-        if (variant.countInStock === 0) {
-          alerts.push({
-            id: `${product._id}-${variant._id}-out`,
-            productId: product._id,
-            name: product.name,
-            variantName: `${variant.color || 'Default'} - ${variant.size || 'One Size'}`,
-            image: product.images?.[0] || "",
-            category: product.category,
-            currentStock: 0,
-            threshold: lowStockThreshold,
-            status: "out",
-            price: variant.price || product.price,
-            valueAtRisk: 0,
-            type: "variant",
-            variantId: variant._id,
-            variantInfo: {
-              color: variant.color,
-              size: variant.size,
-              sku: variant.sku
-            }
-          });
-        }
-      });
     });
 
     // Sort by urgency (out of stock first, then lowest stock)
@@ -405,8 +390,7 @@ export const getLowStockAlerts = async (req, res) => {
       summary: {
         totalLowStock: alerts.length,
         totalValueAtRisk: alerts.reduce((sum, a) => sum + a.valueAtRisk, 0),
-        mainProductAlerts: alerts.filter(a => a.type === "main").length,
-        variantAlerts: alerts.filter(a => a.type === "variant").length,
+        variantAlerts: alerts.filter((a) => a.type === "variant").length,
         mostUrgent: alerts.slice(0, 3),
       },
     });

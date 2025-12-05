@@ -177,7 +177,7 @@ const handleAdjustStock = (product) => {
     category: product.category,
     price: product.price,
     variants: product.variants || [],
-    mainStock: product.mainStock || product.currentStock || 0,
+    
   });
 
   setAdjustmentData({
@@ -533,7 +533,7 @@ const StockLevelsView = ({
     totalPages: 1,
     hasNextPage: false,
     hasPrevPage: false,
-  }, // Add default
+  },
   onPageChange,
 }) => {
   const [expandedProducts, setExpandedProducts] = useState({});
@@ -612,7 +612,7 @@ const StockLevelsView = ({
             <tbody className="bg-white divide-y divide-gray-200">
               {stockLevels.map((product) => (
                 <React.Fragment key={product.id}>
-                  {/* Main Product Row */}
+                  {/* Main Product Row - Now just shows product info with expand button */}
                   <tr className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -627,7 +627,7 @@ const StockLevelsView = ({
                           <div className="text-sm font-medium text-gray-900">
                             {product.name}
                           </div>
-
+                          {/* Show variants count but no main stock */}
                           {product.variants && product.variants.length > 0 && (
                             <button
                               onClick={() => toggleProductExpand(product.id)}
@@ -646,29 +646,31 @@ const StockLevelsView = ({
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {product.totalStock}
-                      </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-sm text-gray-500 italic">
+                        {/* No main stock - only variants */}
                         {product.variantsCount > 0 &&
                           `${product.variantsCount} variants`}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <StockStatusBadge status={product.status} />
+                      <span className="text-sm text-gray-500">
+                        {/* Status based on worst variant status */}
+                        {product.variantsCount > 0 && "See variants"}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        ₦{(product.price * product.totalStock).toLocaleString()}
+                      <div className="text-sm text-gray-500">
+                        {/* Calculate total value from all variants */}₦
+                        {product.totalValue?.toLocaleString() || "0"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {/* Adjust button for the entire product (will show all variants in modal) */}
                       <button
                         onClick={() =>
                           onAdjust({
                             ...product,
                             variants: product.variants || [],
-                            mainStock: product.mainStock,
                           })
                         }
                         className="text-blue-600 hover:text-blue-900 mr-3"
@@ -767,28 +769,31 @@ const StockLevelsView = ({
         </div>
       )}
 
-      <button
-        onClick={() => onPageChange(pagination.currentPage - 1)}
-        disabled={!pagination.hasPrevPage}
-        className={`px-3 py-1 rounded ${
-          pagination.hasPrevPage
-            ? "bg-gray-200 hover:bg-gray-300"
-            : "bg-gray-100 text-gray-400 cursor-not-allowed"
-        }`}
-      >
-        Previous
-      </button>
-      <button
-        onClick={() => onPageChange(pagination.currentPage + 1)}
-        disabled={!pagination.hasNextPage}
-        className={`px-3 py-1 rounded ${
-          pagination.hasNextPage
-            ? "bg-gray-200 hover:bg-gray-300"
-            : "bg-gray-100 text-gray-400 cursor-not-allowed"
-        }`}
-      >
-        Next
-      </button>
+      {/* Pagination */}
+      <div className="flex justify-center gap-2 p-4 border-t">
+        <button
+          onClick={() => onPageChange(pagination.currentPage - 1)}
+          disabled={!pagination.hasPrevPage}
+          className={`px-3 py-1 rounded ${
+            pagination.hasPrevPage
+              ? "bg-gray-200 hover:bg-gray-300"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
+          }`}
+        >
+          Previous
+        </button>
+        <button
+          onClick={() => onPageChange(pagination.currentPage + 1)}
+          disabled={!pagination.hasNextPage}
+          className={`px-3 py-1 rounded ${
+            pagination.hasNextPage
+              ? "bg-gray-200 hover:bg-gray-300"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
+          }`}
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 };
@@ -962,9 +967,9 @@ const LowStockView = ({ alerts, onAdjust }) => {
 
   // Calculate urgency level for each product
   const calculateProductUrgency = (alerts) => {
-    if (alerts.some(a => a.status === "out")) return "critical";
-    if (alerts.some(a => a.currentStock <= 2)) return "high";
-    if (alerts.some(a => a.status === "low")) return "medium";
+    if (alerts.some((a) => a.status === "out")) return "critical";
+    if (alerts.some((a) => a.currentStock <= 2)) return "high";
+    if (alerts.some((a) => a.status === "low")) return "medium";
     return "low";
   };
 
@@ -974,7 +979,7 @@ const LowStockView = ({ alerts, onAdjust }) => {
       critical: "bg-gradient-to-r from-red-500 to-red-600",
       high: "bg-gradient-to-r from-orange-500 to-orange-600",
       medium: "bg-gradient-to-r from-yellow-500 to-yellow-600",
-      low: "bg-gradient-to-r from-blue-500 to-blue-600"
+      low: "bg-gradient-to-r from-blue-500 to-blue-600",
     };
     return colors[urgency] || colors.medium;
   };
@@ -993,22 +998,31 @@ const LowStockView = ({ alerts, onAdjust }) => {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Stock Alert Dashboard</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Stock Alert Dashboard
+            </h1>
             <p className="text-gray-600 mt-2">
-              Manage inventory levels across {Object.keys(groupedAlerts).length} products
+              Manage inventory levels across {Object.keys(groupedAlerts).length}{" "}
+              products
             </p>
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-right">
               <p className="text-sm text-gray-500">Priority Items</p>
               <p className="text-2xl font-bold text-red-600">
-                {alerts.filter(a => a.status === "out" || a.currentStock <= 2).length}
+                {
+                  alerts.filter(
+                    (a) => a.status === "out" || a.currentStock <= 2
+                  ).length
+                }
               </p>
             </div>
             <div className="h-8 w-px bg-gray-300"></div>
             <div className="text-right">
               <p className="text-sm text-gray-500">Total Alerts</p>
-              <p className="text-2xl font-bold text-gray-900">{alerts.length}</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {alerts.length}
+              </p>
             </div>
           </div>
         </div>
@@ -1017,13 +1031,18 @@ const LowStockView = ({ alerts, onAdjust }) => {
       {/* Filter Tabs */}
       <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
         <button className="px-4 py-2 rounded-full bg-red-100 text-red-700 font-medium text-sm">
-          Out of Stock ({alerts.filter(a => a.status === "out").length})
+          Out of Stock ({alerts.filter((a) => a.status === "out").length})
         </button>
         <button className="px-4 py-2 rounded-full bg-orange-100 text-orange-700 font-medium text-sm">
-          Critical ({alerts.filter(a => a.currentStock <= 2).length})
+          Critical ({alerts.filter((a) => a.currentStock <= 2).length})
         </button>
         <button className="px-4 py-2 rounded-full bg-yellow-100 text-yellow-700 font-medium text-sm">
-          Low Stock ({alerts.filter(a => a.status === "low" && a.currentStock > 2).length})
+          Low Stock (
+          {
+            alerts.filter((a) => a.status === "low" && a.currentStock > 2)
+              .length
+          }
+          )
         </button>
         <button className="px-4 py-2 rounded-full bg-blue-100 text-blue-700 font-medium text-sm">
           All Products ({Object.keys(groupedAlerts).length})
@@ -1034,170 +1053,174 @@ const LowStockView = ({ alerts, onAdjust }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {sortedProducts.map((group) => {
           const urgency = calculateProductUrgency(group.alerts);
-          const outOfStockVariants = group.alerts.filter(a => a.status === "out");
-          const lowStockVariants = group.alerts.filter(a => a.status === "low" && a.currentStock > 0);
-          
+          const outOfStockVariants = group.alerts.filter(
+            (a) => a.status === "out"
+          );
+          const lowStockVariants = group.alerts.filter(
+            (a) => a.status === "low" && a.currentStock > 0
+          );
+
           return (
             <div
               key={group.productId}
               className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200 flex flex-col justify-between p-5"
             >
               {/* Urgency Indicator */}
-              <div className={`h-2 rounded-b-full mb-2 ${getUrgencyColor(urgency)}`}></div>
+              <div
+                className={`h-2 rounded-b-full mb-2 ${getUrgencyColor(
+                  urgency
+                )}`}
+              ></div>
 
-             
-                {/* Product Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-start space-x-4">
-                    <div className="relative">
-                      {group.image ? (
-                        <img
-                          src={group.image}
-                          alt={group.name}
-                          className="h-16 w-16 rounded-xl object-cover border"
-                        />
-                      ) : (
-                        <div className="h-16 w-16 rounded-xl bg-gray-100 flex items-center justify-center">
-                          <Package className="h-8 w-8 text-gray-400" />
-                        </div>
-                      )}
-                      {urgency === "critical" && (
-                        <div className="absolute -top-1 -right-1">
-                          <AlertCircle className="h-5 w-5 text-red-500 fill-red-100" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 line-clamp-1">
-                        {group.name}
-                      </h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {group.category}
-                      </p>
-                      <div className="flex items-center mt-2">
-                        <div
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            urgency === "critical"
-                              ? "bg-red-100 text-red-700"
-                              : urgency === "high"
-                              ? "bg-orange-100 text-orange-700"
-                              : "bg-yellow-100 text-yellow-700"
-                          }`}
-                        >
-                          {urgency === "critical"
-                            ? "Out of Stock"
+              {/* Product Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-start space-x-4">
+                  <div className="relative">
+                    {group.image ? (
+                      <img
+                        src={group.image}
+                        alt={group.name}
+                        className="h-16 w-16 rounded-xl object-cover border"
+                      />
+                    ) : (
+                      <div className="h-16 w-16 rounded-xl bg-gray-100 flex items-center justify-center">
+                        <Package className="h-8 w-8 text-gray-400" />
+                      </div>
+                    )}
+                    {urgency === "critical" && (
+                      <div className="absolute -top-1 -right-1">
+                        <AlertCircle className="h-5 w-5 text-red-500 fill-red-100" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 line-clamp-1">
+                      {group.name}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {group.category}
+                    </p>
+                    <div className="flex items-center mt-2">
+                      <div
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          urgency === "critical"
+                            ? "bg-red-100 text-red-700"
                             : urgency === "high"
-                            ? "Critical"
-                            : "Low Stock"}
-                        </div>
-                        <span className="text-xs text-gray-400 mx-2">•</span>
-                        <span className="text-xs text-gray-500">
-                          {group.alerts.length} variant
-                          {group.alerts.length !== 1 ? "s" : ""}
+                            ? "bg-orange-100 text-orange-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {urgency === "critical"
+                          ? "Out of Stock"
+                          : urgency === "high"
+                          ? "Critical"
+                          : "Low Stock"}
+                      </div>
+                      <span className="text-xs text-gray-400 mx-2">•</span>
+                      <span className="text-xs text-gray-500">
+                        {group.alerts.length} variant
+                        {group.alerts.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Stock Status Visualization */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700">
+                    Stock Levels
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {outOfStockVariants.length} out, {lowStockVariants.length}{" "}
+                    low
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {group.alerts.map((alert, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center">
+                        <div
+                          className={`w-3 h-3 rounded-full mr-3 ${
+                            alert.status === "out"
+                              ? "bg-red-500"
+                              : alert.currentStock <= 2
+                              ? "bg-orange-500"
+                              : "bg-yellow-500"
+                          }`}
+                        ></div>
+                        <span className="text-sm text-gray-700">
+                          {alert.variantName ||
+                            (alert.variantInfo
+                              ? `${alert.variantInfo.color || ""} - ${
+                                  alert.variantInfo.size || ""
+                                }`
+                              : "Variant")}
                         </span>
                       </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Stock Status Visualization */}
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium text-gray-700">
-                      Stock Levels
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {outOfStockVariants.length} out, {lowStockVariants.length}{" "}
-                      low
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    {group.alerts.map((alert, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center">
-                          <div
-                            className={`w-3 h-3 rounded-full mr-3 ${
-                              alert.status === "out"
-                                ? "bg-red-500"
-                                : alert.currentStock <= 2
-                                ? "bg-orange-500"
-                                : "bg-yellow-500"
-                            }`}
-                          ></div>
-                          <span className="text-sm text-gray-700">
-                            {alert.type === "variant"
-                              ? alert.variantName
-                              : "Main Product"}
+                      <div className="flex items-center space-x-2">
+                        {alert.status === "out" ? (
+                          <span className="text-xs font-medium text-red-600">
+                            OUT
                           </span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {alert.status === "out" ? (
-                            <span className="text-xs font-medium text-red-600">
-                              OUT
-                            </span>
-                          ) : (
-                            <div className="flex items-center">
-                              <div className="relative w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div
-                                  className={`absolute h-full ${
-                                    alert.currentStock <= 2
-                                      ? "bg-orange-500"
-                                      : "bg-yellow-500"
-                                  }`}
-                                  style={{
-                                    width: `${Math.min(
-                                      100,
-                                      (alert.currentStock / 10) * 100
-                                    )}%`,
-                                  }}
-                                ></div>
-                              </div>
-                              <span className="text-xs font-medium text-gray-700 ml-2 min-w-[2rem]">
-                                {alert.currentStock}
-                              </span>
+                        ) : (
+                          <div className="flex items-center">
+                            <div className="relative w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`absolute h-full ${
+                                  alert.currentStock <= 2
+                                    ? "bg-orange-500"
+                                    : "bg-yellow-500"
+                                }`}
+                                style={{
+                                  width: `${Math.min(
+                                    100,
+                                    (alert.currentStock / 10) * 100
+                                  )}%`,
+                                }}
+                              ></div>
                             </div>
-                          )}
-                        </div>
+                            <span className="text-xs font-medium text-gray-700 ml-2 min-w-[2rem]">
+                              {alert.currentStock}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
+              </div>
 
-                {/* Action Button */}
-                <div>
-                  <button
-                    onClick={() =>
-                      onAdjust({
-                        id: group.productId,
-                        name: group.name,
-                        image: group.image,
-                        category: group.category,
-                        price: group.price,
-                        variants: group.alerts
-                          .filter((a) => a.type === "variant")
-                          .map((a) => ({
-                            _id: a.variantId,
-                            color: a.variantInfo?.color,
-                            size: a.variantInfo?.size,
-                            countInStock: a.currentStock,
-                            sku: a.variantInfo?.sku,
-                          })),
-                        mainStock:
-                          group.alerts.find((a) => a.type === "main")
-                            ?.currentStock || 0,
-                      })
-                    }
-                    className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-medium transition-all duration-200 flex items-center justify-center"
-                  >
-                    <Plus className="h-5 w-5 mr-2" />
-                    Restock Product
-                  </button>
-                </div>
-              
+              {/* Action Button */}
+              <div>
+                <button
+                  onClick={() =>
+                    onAdjust({
+                      id: group.productId,
+                      name: group.name,
+                      image: group.image,
+                      category: group.category,
+                      price: group.price,
+                      variants: group.alerts.map((a) => ({
+                        _id: a.variantId,
+                        color: a.variantInfo?.color,
+                        size: a.variantInfo?.size,
+                        countInStock: a.currentStock,
+                        sku: a.variantInfo?.sku,
+                      })),
+                    })
+                  }
+                  className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-medium transition-all duration-200 flex items-center justify-center"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Restock Product
+                </button>
+              </div>
             </div>
           );
         })}
@@ -1209,7 +1232,9 @@ const LowStockView = ({ alerts, onAdjust }) => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
             <CheckCircle className="h-8 w-8 text-green-600" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">All Stock Levels Are Healthy!</h3>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">
+            All Stock Levels Are Healthy!
+          </h3>
           <p className="text-gray-600 max-w-md mx-auto">
             No products are currently low on stock. You're doing great!
           </p>
@@ -1220,18 +1245,20 @@ const LowStockView = ({ alerts, onAdjust }) => {
       <div className="mt-8 pt-6 border-t border-gray-200">
         <div className="flex flex-wrap justify-center gap-6 text-center">
           <div>
-            <div className="text-2xl font-bold text-gray-900">{alerts.length}</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {alerts.length}
+            </div>
             <div className="text-sm text-gray-600">Total Alerts</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-red-600">
-              {alerts.filter(a => a.status === "out").length}
+              {alerts.filter((a) => a.status === "out").length}
             </div>
             <div className="text-sm text-gray-600">Out of Stock</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-orange-600">
-              {alerts.filter(a => a.currentStock <= 2).length}
+              {alerts.filter((a) => a.currentStock <= 2).length}
             </div>
             <div className="text-sm text-gray-600">Critical Items</div>
           </div>
@@ -1243,7 +1270,6 @@ const LowStockView = ({ alerts, onAdjust }) => {
           </div>
         </div>
       </div>
-      
     </div>
   );
 };
@@ -1513,53 +1539,68 @@ const UrgencyBadge = ({ urgency }) => {
 const AdjustStockModal = ({ product, data, onChange, onSubmit, onClose }) => {
   const [selectedVariant, setSelectedVariant] = useState("main");
 
-  // Determine available options
-  const hasMainProduct = product.mainStock !== undefined;
-  const hasVariants = product.variants && product.variants.length > 0;
+  // Only show variants - no main product option
+  const options = (product.variants || []).map((variant) => ({
+    id: variant._id,
+    label: `${variant.color || "Default"} - ${variant.size || "One Size"}`,
+    description: `Current stock: ${variant.countInStock || 0}`,
+    currentStock: variant.countInStock || 0,
+    variantInfo: variant,
+  }));
 
-  const options = [];
-
-  if (hasMainProduct) {
-    options.push({
-      id: "main",
-      label: "Main Product",
-      description: `Current stock: ${product.mainStock || 0}`,
-      currentStock: product.mainStock || 0,
-    });
-  }
-
-  if (hasVariants) {
-    product.variants.forEach((variant) => {
-      options.push({
-        id: variant._id,
-        label: `${variant.color || "Default"} - ${variant.size || "One Size"}`,
-        description: `Current stock: ${variant.countInStock || 0}`,
-        currentStock: variant.countInStock || 0,
-        variantInfo: variant,
-      });
-    });
-  }
-
-  // Set default selection
+  // Auto-select first variant if none selected
   useEffect(() => {
     if (options.length > 0 && !selectedVariant) {
-      // Auto-select first low stock option if available
-      const lowStockOption =
-        options.find((opt) => opt.currentStock < 10) || options[0];
-      setSelectedVariant(lowStockOption.id);
+      setSelectedVariant(options[0].id);
     }
   }, [options, selectedVariant]);
 
   const handleSubmit = () => {
-    const isMainProduct = selectedVariant === "main";
+    if (!selectedVariant) {
+      toast.error("Please select a variant");
+      return;
+    }
+
     const submitData = {
       ...data,
-      variantId: isMainProduct ? null : selectedVariant,
+      variantId: selectedVariant,
     };
     onSubmit(submitData);
   };
 
   const selectedOption = options.find((opt) => opt.id === selectedVariant);
+
+  if (options.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+        >
+          <div className="p-6">
+            <div className="text-center py-8">
+              <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                No Variants Available
+              </h3>
+              <p className="text-gray-600">
+                This product has no variants to adjust.
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={onClose}
+                className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -1576,7 +1617,7 @@ const AdjustStockModal = ({ product, data, onChange, onSubmit, onClose }) => {
                 Restock: {product.name}
               </h3>
               <p className="text-sm text-gray-500 mt-1">
-                Select what to restock
+                Select variant to restock
               </p>
             </div>
             <button
