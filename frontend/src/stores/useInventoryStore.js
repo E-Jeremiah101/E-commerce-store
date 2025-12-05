@@ -30,7 +30,7 @@ export const useInventoryStore = create((set, get) => ({
   },
 
   // Actions
-  
+
   // 📊 Get Dashboard Data
   fetchDashboard: async () => {
     set({ loading: true });
@@ -57,7 +57,12 @@ export const useInventoryStore = create((set, get) => ({
         ...get().filters,
       };
 
+      console.log("📡 Fetching stock levels with params:", params);
+
       const res = await axios.get("/inventory/stock-levels", { params });
+
+      console.log("✅ Stock levels response:", res.data);
+      console.log("📦 First product in response:", res.data.stockLevels[0]);
 
       set({
         stockLevels: res.data.stockLevels,
@@ -67,12 +72,13 @@ export const useInventoryStore = create((set, get) => ({
 
       return res.data;
     } catch (error) {
-      console.error("Error fetching stock levels:", error);
+      console.error("❌ Error fetching stock levels:", error);
       toast.error("Failed to load stock levels");
       set({ loading: false });
       throw error;
     }
   },
+  // In your store, rename fetchLowStockAlerts to fetchAllAlerts
 
   // 🚨 Get Low Stock Alerts
   fetchLowStockAlerts: async (threshold = 10) => {
@@ -174,7 +180,7 @@ export const useInventoryStore = create((set, get) => ({
   },
 
   // 📋 Get Reorder Suggestions
-  fetchReorderSuggestions: async (threshold = 10) => {
+  fetchReorderSuggestions: async (threshold = 15) => {
     set({ loading: true });
     try {
       const res = await axios.get("/inventory/reorder-suggestions", {

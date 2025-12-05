@@ -75,6 +75,7 @@ export const getStockLevels = async (req, res) => {
       search = "",
       category = "",
       lowStock = false,
+      includeVariants = true,
     } = req.query;
 
     const skip = (page - 1) * limit;
@@ -97,7 +98,7 @@ export const getStockLevels = async (req, res) => {
     }
 
     const products = await Product.find(filter)
-      .select("name price countInStock category images variants")
+      .select("name price countInStock category images variants sku sizes and colors")
       .skip(skip)
       .limit(parseInt(limit))
       .sort({ countInStock: 1 });
@@ -114,6 +115,17 @@ export const getStockLevels = async (req, res) => {
       if (totalStock === 0) status = "out";
       else if (totalStock <= 10) status = "low";
 
+
+      const transformedVariants = (product.variants || []).map((variant) => ({
+        _id: variant._id,
+        id: variant._id.toString(),
+        size: variant.size,
+        color: variant.color,
+        countInStock: variant.countInStock || 0,
+        sku: variant.sku || product.sku,
+        price: variant.price || product.price,
+      }));
+
       return {
         id: product._id,
         name: product.name,
@@ -126,6 +138,9 @@ export const getStockLevels = async (req, res) => {
         totalStock: totalStock,
         status: status,
         variantsCount: product.variants?.length || 0,
+        variants: transformedVariants,
+        sizes: product.sizes || [],
+        colors: product.colors || [],
         lastUpdated: product.updatedAt,
       };
     });
@@ -146,36 +161,111 @@ export const getStockLevels = async (req, res) => {
   }
 };
 
-// 3. 🚨 LOW STOCK ALERTS
+
 export const getLowStockAlerts = async (req, res) => {
   try {
     const lowStockThreshold = req.query.threshold || 10;
 
     const products = await Product.find({
       archived: { $ne: true },
-      countInStock: { $lte: lowStockThreshold, $gt: 0 },
-    }).select("name price countInStock category images variants");
+      $or: [
+        // Main product low stock
+        { countInStock: { $lte: lowStockThreshold, $gt: 0 } },
+        // OR products with low stock variants
+        { "variants.countInStock": { $lte: lowStockThreshold, $gt: 0 } }
+      ]
+    }).select("name price countInStock category images variants sku");
 
-    const alerts = products.map((product) => ({
-      id: product._id,
-      name: product.name,
-      image: product.images?.[0] || "",
-      category: product.category,
-      currentStock: product.countInStock,
-      threshold: lowStockThreshold,
-      status: product.countInStock === 0 ? "out" : "low",
-      price: product.price,
-      valueAtRisk: product.price * product.countInStock,
-    }));
+    const alerts = [];
 
-    // Sort by urgency
-    alerts.sort((a, b) => a.currentStock - b.currentStock);
+    products.forEach((product) => {
+      // Check main product stock
+      if (product.countInStock <= lowStockThreshold && product.countInStock > 0) {
+        alerts.push({
+          id: product._id,
+          name: product.name,
+          image: product.images?.[0] || "",
+          category: product.category,
+          currentStock: product.countInStock,
+          threshold: lowStockThreshold,
+          status: product.countInStock === 0 ? "out" : "low",
+          price: product.price,
+          valueAtRisk: product.price * product.countInStock,
+          type: "main", // Add this to identify main vs variant
+          variantId: null,
+          variantInfo: null
+        });
+      }
+
+      // Check variant stock
+      if (product.variants && product.variants.length > 0) {
+        product.variants.forEach((variant) => {
+          if (variant.countInStock <= lowStockThreshold && variant.countInStock > 0) {
+            alerts.push({
+              id: `${product._id}-${variant._id}`, // Unique ID for variant
+              productId: product._id,
+              name: product.name,
+              variantName: `${variant.color || 'Default'} - ${variant.size || 'One Size'}`,
+              image: product.images?.[0] || "",
+              category: product.category,
+              currentStock: variant.countInStock,
+              threshold: lowStockThreshold,
+              status: variant.countInStock === 0 ? "out" : "low",
+              price: variant.price || product.price,
+              valueAtRisk: (variant.price || product.price) * variant.countInStock,
+              type: "variant", // Add this
+              variantId: variant._id,
+              variantInfo: {
+                color: variant.color,
+                size: variant.size,
+                sku: variant.sku
+              }
+            });
+          }
+        });
+      }
+
+      // Check out of stock variants
+      product.variants?.forEach((variant) => {
+        if (variant.countInStock === 0) {
+          alerts.push({
+            id: `${product._id}-${variant._id}-out`,
+            productId: product._id,
+            name: product.name,
+            variantName: `${variant.color || 'Default'} - ${variant.size || 'One Size'}`,
+            image: product.images?.[0] || "",
+            category: product.category,
+            currentStock: 0,
+            threshold: lowStockThreshold,
+            status: "out",
+            price: variant.price || product.price,
+            valueAtRisk: 0,
+            type: "variant",
+            variantId: variant._id,
+            variantInfo: {
+              color: variant.color,
+              size: variant.size,
+              sku: variant.sku
+            }
+          });
+        }
+      });
+    });
+
+    // Sort by urgency (out of stock first, then lowest stock)
+    alerts.sort((a, b) => {
+      if (a.status === "out" && b.status !== "out") return -1;
+      if (b.status === "out" && a.status !== "out") return 1;
+      return a.currentStock - b.currentStock;
+    });
 
     res.json({
       alerts,
       summary: {
         totalLowStock: alerts.length,
         totalValueAtRisk: alerts.reduce((sum, a) => sum + a.valueAtRisk, 0),
+        mainProductAlerts: alerts.filter(a => a.type === "main").length,
+        variantAlerts: alerts.filter(a => a.type === "variant").length,
         mostUrgent: alerts.slice(0, 3),
       },
     });
@@ -185,7 +275,7 @@ export const getLowStockAlerts = async (req, res) => {
   }
 };
 
-// 4. 🔄 STOCK ADJUSTMENTS
+
 export const adjustStock = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -203,6 +293,7 @@ export const adjustStock = async (req, res) => {
     }
 
     let oldStock, newStock;
+    let variantName = null;
 
     if (variantId) {
       // Adjust variant stock
@@ -212,6 +303,7 @@ export const adjustStock = async (req, res) => {
       }
 
       oldStock = variant.countInStock;
+      variantName = `${variant.color || 'Default'} - ${variant.size || 'One Size'}`;
 
       switch (adjustmentType) {
         case "add":
@@ -237,11 +329,12 @@ export const adjustStock = async (req, res) => {
 
       variant.countInStock = newStock;
 
-      // Update main product stock (sum of variants)
-      product.countInStock = product.variants.reduce(
-        (sum, v) => sum + v.countInStock,
+      // Update main product stock (sum of main stock + all variants)
+      const variantsTotal = product.variants.reduce(
+        (sum, v) => sum + (v.countInStock || 0),
         0
       );
+      product.countInStock = variantsTotal;
     } else {
       // Adjust main product stock
       oldStock = product.countInStock;
@@ -277,6 +370,7 @@ export const adjustStock = async (req, res) => {
     const inventoryLog = new InventoryLog({
       productId: product._id,
       variantId: variantId,
+      variantName: variantName,
       adjustmentType,
       quantity: Math.abs(quantity),
       oldStock,
@@ -288,6 +382,10 @@ export const adjustStock = async (req, res) => {
 
     await inventoryLog.save();
 
+    // Return updated product data with variants
+    const updatedProduct = await Product.findById(productId)
+      .select("name price countInStock variants");
+
     res.json({
       message: "Stock adjusted successfully",
       product: {
@@ -295,7 +393,9 @@ export const adjustStock = async (req, res) => {
         name: product.name,
         mainStock: product.countInStock,
         variantStock: variantId ? newStock : null,
+        variantName: variantName,
         updatedAt: product.updatedAt,
+        variants: updatedProduct.variants || []
       },
       adjustment: {
         type: adjustmentType,
@@ -309,7 +409,6 @@ export const adjustStock = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 // 5. 📈 STOCK HISTORY
 export const getStockHistory = async (req, res) => {
   try {
@@ -434,7 +533,7 @@ export const getReorderSuggestions = async (req, res) => {
     const products = await Product.find({
       archived: { $ne: true },
       countInStock: { $lte: reorderThreshold },
-    }).select("name price countInStock category");
+    }).select("name price countInStock category images");
 
     const suggestions = products.map((product) => {
       const suggestedOrder = Math.max(
@@ -462,6 +561,7 @@ export const getReorderSuggestions = async (req, res) => {
         leadTime: "7 days",
         urgency,
         supplier: "Default Supplier",
+        image: product.images?.[0] || "",
       };
     });
 
@@ -716,3 +816,4 @@ export const searchInventory = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+// Rename getLowStockAlerts to getAllAlerts in backend

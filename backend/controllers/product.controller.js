@@ -362,7 +362,7 @@ export const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find({
       archived: { $ne: true },
-    }); // find all products and exclude archived
+    }); // find all products a nd exclude archived
     res.json({ products });
   } catch (error) {
     console.log("Error in getAllProducts controller", error.message);

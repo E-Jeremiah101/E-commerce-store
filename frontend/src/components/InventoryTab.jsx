@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { ShoppingBag, Layers} from "lucide-react";
 import { useUserStore } from "../stores/useUserStore";
 import { useInventoryStore } from "../stores/useInventoryStore.js";
 import {
@@ -29,6 +30,8 @@ import {
   Settings,
   Eye,
   MoreVertical,
+  AlertCircle,
+
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -63,7 +66,48 @@ const InventoryTab = () => {
     // Computed
     pagination,
     filters,
+    
   } = useInventoryStore();
+  useEffect(() => {
+    console.log("🔍 Stock Levels Data:", stockLevels);
+    console.log("🔍 First Product:", stockLevels[0]);
+    console.log("🔍 First Product Variants:", stockLevels[0]?.variants);
+  }, [stockLevels]);
+
+  const handleRefresh = () => {
+    toast.loading("Refreshing data...");
+    switch (activeTab) {
+      case "dashboard":
+        fetchDashboard();
+        break;
+      case "stock-levels":
+        fetchStockLevels(pagination.currentPage, filters);
+        break;
+      case "low-stock":
+        fetchLowStockAlerts(10);
+        break;
+      case "reorder":
+        fetchReorderSuggestions(10);
+        break;
+      case "valuation":
+        fetchInventoryValuation();
+        break;
+      case "history":
+        fetchStockHistory();
+        break;
+      case "locations":
+        fetchInventoryByLocation();
+        break;
+      default:
+        fetchDashboard();
+    }
+
+    // Dismiss loading toast after 1 second
+    setTimeout(() => {
+      toast.dismiss();
+      toast.success("Data refreshed successfully!");
+    }, 1000);
+  };
 
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -115,40 +159,53 @@ const InventoryTab = () => {
     }
   };
 
-  const handleAdjustStock = (product) => {
-    setSelectedProduct(product);
-    setAdjustmentData({
-      adjustmentType: "add",
-      quantity: 1,
-      reason: "restock",
-      notes: "",
-    });
-    setShowAdjustModal(true);
-  };
+const handleAdjustStock = (product) => {
+  console.log("🔄 Adjusting product:", product);
 
-  const submitAdjustment = async () => {
-    if (!selectedProduct) return;
+  setSelectedProduct({
+    id: product.id,
+    name: product.name,
+    image: product.image,
+    category: product.category,
+    price: product.price,
+    variants: product.variants || [],
+    mainStock: product.mainStock || product.currentStock || 0,
+  });
 
-    try {
-      await adjustStock(selectedProduct.id, adjustmentData);
-      toast.success("Stock adjusted successfully");
-      setShowAdjustModal(false);
-      setSelectedProduct(null);
+  setAdjustmentData({
+    adjustmentType: "add",
+    quantity: 1,
+    reason: "restock",
+    notes: "",
+  });
+  setShowAdjustModal(true);
+};
 
-      // Refresh current view
-      if (activeTab === "stock-levels") {
-        fetchStockLevels(pagination.currentPage, filters);
-      }
-      if (activeTab === "low-stock") {
-        fetchLowStockAlerts(10);
-      }
-      if (activeTab === "dashboard") {
-        fetchDashboard();
-      }
-    } catch (error) {
-      // Error is handled in store
-    }
-  };
+ // Update the submitAdjustment function to pass variantId
+ const submitAdjustment = async (adjustmentDataWithVariant) => {
+   if (!selectedProduct) return;
+
+   try {
+     await adjustStock(selectedProduct.id, adjustmentDataWithVariant);
+     setShowAdjustModal(false);
+     setSelectedProduct(null);
+
+     // Refresh current view
+     if (activeTab === "stock-levels") {
+       fetchStockLevels(pagination.currentPage, filters);
+     }
+     if (activeTab === "low-stock") {
+       fetchLowStockAlerts(10);
+     }
+     if (activeTab === "dashboard") {
+       fetchDashboard();
+     }
+   } catch (error) {
+     // Error is handled in store
+   }
+ };
+
+ 
 
   const handleSearch = (e) => {
     const searchValue = e.target.value;
@@ -199,7 +256,7 @@ const InventoryTab = () => {
                 Export Report
               </button>
               <button
-                onClick={fetchDashboard}
+                onClick={handleRefresh}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <RefreshCw className="h-4 w-4" />
@@ -457,55 +514,243 @@ const StockLevelsView = ({
   loading,
   onSearch,
   filters,
-}) => (
-  <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-    <div className="p-6 border-b">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-semibold text-gray-800">Stock Levels</h2>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search products..."
-              className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={filters.search || ""}
-              onChange={onSearch}
-            />
+  updateFilters,
+  clearFilters,
+}) => {
+  const [expandedProducts, setExpandedProducts] = useState({});
+
+  const toggleProductExpand = (productId) => {
+    setExpandedProducts((prev) => ({
+      ...prev,
+      [productId]: !prev[productId],
+    }));
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div className="p-6 border-b">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-xl font-semibold text-gray-800">Stock Levels</h2>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={filters.search || ""}
+                onChange={onSearch}
+              />
+            </div>
+            <select
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={filters.category || ""}
+              onChange={(e) => updateFilters({ category: e.target.value })}
+            >
+              <option value="">All Categories</option>
+              <option value="electronics">Electronics</option>
+              <option value="fashion">Fashion</option>
+              <option value="home">Home</option>
+            </select>
+            <button
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              onClick={() => clearFilters()}
+            >
+              <Filter className="h-4 w-4" />
+            </button>
           </div>
-          <select
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            value={filters.category || ""}
-            onChange={(e) => updateFilters({ category: e.target.value })}
-          >
-            <option value="">All Categories</option>
-            <option value="electronics">Electronics</option>
-            <option value="fashion">Fashion</option>
-            <option value="home">Home</option>
-          </select>
-          <button
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-            onClick={() => clearFilters()}
-          >
-            <Filter className="h-4 w-4" />
-          </button>
         </div>
       </div>
-    </div>
 
-    {loading ? (
-      <div className="flex justify-center items-center p-12">
-        <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
-      </div>
-    ) : (
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          {/* ... existing table code ... */}
-        </table>
-      </div>
-    )}
-  </div>
-);
+      {loading ? (
+        <div className="flex justify-center items-center p-12">
+          <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Product
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Stock
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Value
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {stockLevels.map((product) => (
+                <React.Fragment key={product.id}>
+                  {/* Main Product Row */}
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {product.image && (
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="h-10 w-10 rounded object-cover mr-3"
+                          />
+                        )}
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {product.name}
+                          </div>
+                          
+                          {product.variants && product.variants.length > 0 && (
+                            <button
+                              onClick={() => toggleProductExpand(product.id)}
+                              className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                            >
+                              {expandedProducts[product.id] ? "Hide" : "Show"}{" "}
+                              {product.variants.length} variants
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                        {product.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {product.totalStock}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {product.variantsCount > 0 &&
+                          `${product.variantsCount} variants`}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <StockStatusBadge status={product.status} />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        ₦{(product.price * product.totalStock).toLocaleString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() =>
+                          onAdjust({
+                            ...product,
+                            variants: product.variants || [],
+                            mainStock: product.mainStock,
+                          })
+                        }
+                        className="text-blue-600 hover:text-blue-900 mr-3"
+                      >
+                        Adjust
+                      </button>
+                      <button className="text-gray-600 hover:text-gray-900">
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+
+                  {/* Variant Rows (if expanded) */}
+                  {expandedProducts[product.id] &&
+                    product.variants &&
+                    product.variants.length > 0 && (
+                      <>
+                        {product.variants.map((variant) => (
+                          <tr
+                            key={variant._id}
+                            className="bg-gray-50 hover:bg-gray-100"
+                          >
+                            <td className="px-6 py-3 pl-10">
+                              <div className="flex items-center">
+                                <div className="ml-2">
+                                  <div className="text-sm text-gray-900 flex items-center gap-2">
+                                    <span className="font-medium">
+                                      {variant.color || "Default"}
+                                    </span>
+                                    <span className="text-gray-500">-</span>
+                                    <span className="font-medium">
+                                      {variant.size || "One Size"}
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    SKU: {variant.sku || product.sku}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-3">
+                              <span className="text-xs text-gray-500">
+                                Variant
+                              </span>
+                            </td>
+                            <td className="px-6 py-3">
+                              <div className="text-sm font-medium text-gray-900">
+                                {variant.countInStock}
+                              </div>
+                            </td>
+                            <td className="px-6 py-3">
+                              <StockStatusBadge
+                                status={
+                                  variant.countInStock === 0
+                                    ? "out"
+                                    : variant.countInStock <= 5
+                                    ? "low"
+                                    : "healthy"
+                                }
+                              />
+                            </td>
+                            <td className="px-6 py-3">
+                              <div className="text-sm text-gray-900">
+                                ₦
+                                {(
+                                  (variant.price || product.price) *
+                                  variant.countInStock
+                                ).toLocaleString()}
+                              </div>
+                            </td>
+                            <td className="px-6 py-3 text-sm font-medium">
+                              <button
+                                onClick={() =>
+                                  onAdjust({
+                                    ...product,
+                                    variantId: variant._id,
+                                    variantName: `${
+                                      variant.color || "Default"
+                                    } - ${variant.size || "One Size"}`,
+                                    currentStock: variant.countInStock,
+                                  })
+                                }
+                                className="text-blue-600 hover:text-blue-900 text-xs"
+                              >
+                                Adjust Variant
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </>
+                    )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Sub-components
 const DashboardView = ({ data }) => (
@@ -656,118 +901,315 @@ const DashboardView = ({ data }) => (
 );
 
 
-const LowStockView = ({ alerts, onAdjust }) => (
-  <div className="space-y-6">
-    {/* Summary Cards */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6">
+const LowStockView = ({ alerts, onAdjust }) => {
+  // Group alerts by product for better organization
+  const groupedAlerts = alerts.reduce((groups, alert) => {
+    const productId = alert.productId || alert.id.split("-")[0];
+    if (!groups[productId]) {
+      groups[productId] = {
+        productId,
+        name: alert.name,
+        image: alert.image,
+        category: alert.category,
+        price: alert.price,
+        alerts: [],
+      };
+    }
+    groups[productId].alerts.push(alert);
+    return groups;
+  }, {});
+
+  // Calculate urgency level for each product
+  const calculateProductUrgency = (alerts) => {
+    if (alerts.some(a => a.status === "out")) return "critical";
+    if (alerts.some(a => a.currentStock <= 2)) return "high";
+    if (alerts.some(a => a.status === "low")) return "medium";
+    return "low";
+  };
+
+  // Get urgency color
+  const getUrgencyColor = (urgency) => {
+    const colors = {
+      critical: "bg-gradient-to-r from-red-500 to-red-600",
+      high: "bg-gradient-to-r from-orange-500 to-orange-600",
+      medium: "bg-gradient-to-r from-yellow-500 to-yellow-600",
+      low: "bg-gradient-to-r from-blue-500 to-blue-600"
+    };
+    return colors[urgency] || colors.medium;
+  };
+
+  // Sort products by urgency
+  const sortedProducts = Object.values(groupedAlerts).sort((a, b) => {
+    const urgencyA = calculateProductUrgency(a.alerts);
+    const urgencyB = calculateProductUrgency(b.alerts);
+    const urgencyOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    return urgencyOrder[urgencyA] - urgencyOrder[urgencyB];
+  });
+
+  return (
+    <div className="p-6">
+      {/* Header */}
+      <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-yellow-800">
-              Total Low Stock
-            </p>
-            <p className="text-2xl font-bold text-yellow-900 mt-1">
-              {alerts.length}
+            <h1 className="text-3xl font-bold text-gray-900">Stock Alert Dashboard</h1>
+            <p className="text-gray-600 mt-2">
+              Manage inventory levels across {Object.keys(groupedAlerts).length} products
             </p>
           </div>
-          <AlertTriangle className="h-8 w-8 text-yellow-600" />
+          <div className="flex items-center space-x-4">
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Priority Items</p>
+              <p className="text-2xl font-bold text-red-600">
+                {alerts.filter(a => a.status === "out" || a.currentStock <= 2).length}
+              </p>
+            </div>
+            <div className="h-8 w-px bg-gray-300"></div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Total Alerts</p>
+              <p className="text-2xl font-bold text-gray-900">{alerts.length}</p>
+            </div>
+          </div>
         </div>
-        <p className="text-sm text-yellow-700 mt-2">
-          Items need immediate attention
-        </p>
       </div>
-    </div>
 
-    {/* Alerts List */}
-    <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-      <div className="p-6 border-b">
-        <h2 className="text-xl font-semibold text-gray-800">
-          Low Stock Alerts
-        </h2>
-        <p className="text-gray-600 mt-1">
-          Products with stock below threshold
-        </p>
+      {/* Filter Tabs */}
+      <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
+        <button className="px-4 py-2 rounded-full bg-red-100 text-red-700 font-medium text-sm">
+          Out of Stock ({alerts.filter(a => a.status === "out").length})
+        </button>
+        <button className="px-4 py-2 rounded-full bg-orange-100 text-orange-700 font-medium text-sm">
+          Critical ({alerts.filter(a => a.currentStock <= 2).length})
+        </button>
+        <button className="px-4 py-2 rounded-full bg-yellow-100 text-yellow-700 font-medium text-sm">
+          Low Stock ({alerts.filter(a => a.status === "low" && a.currentStock > 2).length})
+        </button>
+        <button className="px-4 py-2 rounded-full bg-blue-100 text-blue-700 font-medium text-sm">
+          All Products ({Object.keys(groupedAlerts).length})
+        </button>
       </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Product
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Current Stock
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Threshold
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Urgency
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Value at Risk
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {alerts.map((alert) => (
-              <tr key={alert.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">
-                  <div className="flex items-center">
-                    {alert.image && (
-                      <img
-                        src={alert.image}
-                        alt={alert.name}
-                        className="h-10 w-10 rounded object-cover mr-3"
-                      />
-                    )}
+
+      {/* Product Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {sortedProducts.map((group) => {
+          const urgency = calculateProductUrgency(group.alerts);
+          const outOfStockVariants = group.alerts.filter(a => a.status === "out");
+          const lowStockVariants = group.alerts.filter(a => a.status === "low" && a.currentStock > 0);
+          
+          return (
+            <div
+              key={group.productId}
+              className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200 flex flex-col justify-between p-5"
+            >
+              {/* Urgency Indicator */}
+              <div className={`h-2 rounded-t-full mb-2 ${getUrgencyColor(urgency)}`}></div>
+
+             
+                {/* Product Header */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-start space-x-4">
+                    <div className="relative">
+                      {group.image ? (
+                        <img
+                          src={group.image}
+                          alt={group.name}
+                          className="h-16 w-16 rounded-xl object-cover border"
+                        />
+                      ) : (
+                        <div className="h-16 w-16 rounded-xl bg-gray-100 flex items-center justify-center">
+                          <Package className="h-8 w-8 text-gray-400" />
+                        </div>
+                      )}
+                      {urgency === "critical" && (
+                        <div className="absolute -top-1 -right-1">
+                          <AlertCircle className="h-5 w-5 text-red-500 fill-red-100" />
+                        </div>
+                      )}
+                    </div>
                     <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {alert.name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {alert.category}
+                      <h3 className="font-semibold text-gray-900 line-clamp-1">
+                        {group.name}
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {group.category}
+                      </p>
+                      <div className="flex items-center mt-2">
+                        <div
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            urgency === "critical"
+                              ? "bg-red-100 text-red-700"
+                              : urgency === "high"
+                              ? "bg-orange-100 text-orange-700"
+                              : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          {urgency === "critical"
+                            ? "Out of Stock"
+                            : urgency === "high"
+                            ? "Critical"
+                            : "Low Stock"}
+                        </div>
+                        <span className="text-xs text-gray-400 mx-2">•</span>
+                        <span className="text-xs text-gray-500">
+                          {group.alerts.length} variant
+                          {group.alerts.length !== 1 ? "s" : ""}
+                        </span>
                       </div>
                     </div>
                   </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-lg font-bold text-red-600">
-                    {alert.currentStock}
+                </div>
+
+                {/* Stock Status Visualization */}
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      Stock Levels
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {outOfStockVariants.length} out, {lowStockVariants.length}{" "}
+                      low
+                    </span>
                   </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm text-gray-900">{alert.threshold}</div>
-                </td>
-                <td className="px-6 py-4">
-                  <UrgencyBadge
-                    urgency={alert.status === "out" ? "critical" : "high"}
-                  />
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-sm font-medium text-gray-900">
-                    ₦{alert.valueAtRisk?.toLocaleString()}
+
+                  <div className="space-y-2">
+                    {group.alerts.map((alert, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex items-center">
+                          <div
+                            className={`w-3 h-3 rounded-full mr-3 ${
+                              alert.status === "out"
+                                ? "bg-red-500"
+                                : alert.currentStock <= 2
+                                ? "bg-orange-500"
+                                : "bg-yellow-500"
+                            }`}
+                          ></div>
+                          <span className="text-sm text-gray-700">
+                            {alert.type === "variant"
+                              ? alert.variantName
+                              : "Main Product"}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {alert.status === "out" ? (
+                            <span className="text-xs font-medium text-red-600">
+                              OUT
+                            </span>
+                          ) : (
+                            <div className="flex items-center">
+                              <div className="relative w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div
+                                  className={`absolute h-full ${
+                                    alert.currentStock <= 2
+                                      ? "bg-orange-500"
+                                      : "bg-yellow-500"
+                                  }`}
+                                  style={{
+                                    width: `${Math.min(
+                                      100,
+                                      (alert.currentStock / 10) * 100
+                                    )}%`,
+                                  }}
+                                ></div>
+                              </div>
+                              <span className="text-xs font-medium text-gray-700 ml-2 min-w-[2rem]">
+                                {alert.currentStock}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </td>
-                <td className="px-6 py-4">
+                </div>
+
+                {/* Action Button */}
+                <div>
                   <button
-                    onClick={() => onAdjust(alert)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                    onClick={() =>
+                      onAdjust({
+                        id: group.productId,
+                        name: group.name,
+                        image: group.image,
+                        category: group.category,
+                        price: group.price,
+                        variants: group.alerts
+                          .filter((a) => a.type === "variant")
+                          .map((a) => ({
+                            _id: a.variantId,
+                            color: a.variantInfo?.color,
+                            size: a.variantInfo?.size,
+                            countInStock: a.currentStock,
+                            sku: a.variantInfo?.sku,
+                          })),
+                        mainStock:
+                          group.alerts.find((a) => a.type === "main")
+                            ?.currentStock || 0,
+                      })
+                    }
+                    className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-medium transition-all duration-200 flex items-center justify-center"
                   >
-                    Restock
+                    <Plus className="h-5 w-5 mr-2" />
+                    Restock Product
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Empty State */}
+      {sortedProducts.length === 0 && (
+        <div className="text-center py-16">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+            <CheckCircle className="h-8 w-8 text-green-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">All Stock Levels Are Healthy!</h3>
+          <p className="text-gray-600 max-w-md mx-auto">
+            No products are currently low on stock. You're doing great!
+          </p>
+        </div>
+      )}
+
+      {/* Stats Footer */}
+      <div className="mt-8 pt-6 border-t border-gray-200">
+        <div className="flex flex-wrap justify-center gap-6 text-center">
+          <div>
+            <div className="text-2xl font-bold text-gray-900">{alerts.length}</div>
+            <div className="text-sm text-gray-600">Total Alerts</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-red-600">
+              {alerts.filter(a => a.status === "out").length}
+            </div>
+            <div className="text-sm text-gray-600">Out of Stock</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-orange-600">
+              {alerts.filter(a => a.currentStock <= 2).length}
+            </div>
+            <div className="text-sm text-gray-600">Critical Items</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-blue-600">
+              {Object.keys(groupedAlerts).length}
+            </div>
+            <div className="text-sm text-gray-600">Affected Products</div>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
+
+// Add these icon imports at the top
+// import { Package, AlertCircle, Plus, CheckCircle } from 'lucide-react';
+// 
+
 
 const ReorderView = ({ suggestions }) => (
   <div className="space-y-6">
@@ -816,34 +1258,49 @@ const ReorderView = ({ suggestions }) => (
           <tbody className="bg-white divide-y divide-gray-200">
             {suggestions.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4">
-                  <div className="font-medium text-gray-900">{item.name}</div>
-                  <div className="text-sm text-gray-500">{item.category}</div>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    {item.image && (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="h-10 w-10 rounded object-cover mr-3"
+                      />
+                    )}
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {item.name}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {item.category}
+                      </div>
+                    </div>
+                  </div>
                 </td>
-                <td className="px-6 py-4">
-                  <div className="font-medium text-gray-900">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
                     {item.currentStock}
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 whitespace-nowrap">
                   <div className="font-bold text-blue-600">
                     {item.suggestedOrder}
                   </div>
                 </td>
-                <td className="px-6 py-4">
-                  <div className="text-gray-900">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">
                     ₦{item.unitPrice?.toLocaleString()}
                   </div>
                 </td>
-                <td className="px-6 py-4">
-                  <div className="font-semibold text-gray-900">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-semibold text-gray-900">
                     ₦{item.estimatedCost?.toLocaleString()}
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 whitespace-nowrap">
                   <UrgencyBadge urgency={item.urgency} />
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex gap-2">
                     <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
                       Order
@@ -861,7 +1318,6 @@ const ReorderView = ({ suggestions }) => (
     </div>
   </div>
 );
-
 const ValuationView = ({ data }) => (
   <div className="space-y-6">
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1012,124 +1468,294 @@ const UrgencyBadge = ({ urgency }) => {
   );
 };
 
-const AdjustStockModal = ({ product, data, onChange, onSubmit, onClose }) => (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      className="bg-white rounded-xl shadow-xl max-w-md w-full"
-    >
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-semibold text-gray-800">
-            Adjust Stock: {product.name}
-          </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <XCircle className="h-5 w-5" />
-          </button>
-        </div>
+const AdjustStockModal = ({ product, data, onChange, onSubmit, onClose }) => {
+  const [selectedVariant, setSelectedVariant] = useState("main");
 
-        <div className="space-y-4">
-          {/* Adjustment Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Adjustment Type
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { value: "add", label: "Add Stock", icon: Plus },
-                { value: "remove", label: "Remove", icon: Minus },
-                { value: "set", label: "Set Stock", icon: RefreshCw },
-              ].map((type) => (
-                <button
-                  key={type.value}
-                  type="button"
-                  onClick={() =>
-                    onChange({ ...data, adjustmentType: type.value })
+  // Determine available options
+  const hasMainProduct = product.mainStock !== undefined;
+  const hasVariants = product.variants && product.variants.length > 0;
+
+  const options = [];
+
+  if (hasMainProduct) {
+    options.push({
+      id: "main",
+      label: "Main Product",
+      description: `Current stock: ${product.mainStock || 0}`,
+      currentStock: product.mainStock || 0,
+    });
+  }
+
+  if (hasVariants) {
+    product.variants.forEach((variant) => {
+      options.push({
+        id: variant._id,
+        label: `${variant.color || "Default"} - ${variant.size || "One Size"}`,
+        description: `Current stock: ${variant.countInStock || 0}`,
+        currentStock: variant.countInStock || 0,
+        variantInfo: variant,
+      });
+    });
+  }
+
+  // Set default selection
+  useEffect(() => {
+    if (options.length > 0 && !selectedVariant) {
+      // Auto-select first low stock option if available
+      const lowStockOption =
+        options.find((opt) => opt.currentStock < 10) || options[0];
+      setSelectedVariant(lowStockOption.id);
+    }
+  }, [options, selectedVariant]);
+
+  const handleSubmit = () => {
+    const isMainProduct = selectedVariant === "main";
+    const submitData = {
+      ...data,
+      variantId: isMainProduct ? null : selectedVariant,
+    };
+    onSubmit(submitData);
+  };
+
+  const selectedOption = options.find((opt) => opt.id === selectedVariant);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+      >
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Restock: {product.name}
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Select what to restock
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 p-1"
+            >
+              <XCircle className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="space-y-6">
+            {/* Selection Options */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-700">
+                Select what to restock
+              </label>
+              <div className="space-y-2">
+                {options.map((option) => (
+                  <div
+                    key={option.id}
+                    className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                      selectedVariant === option.id
+                        ? "border-blue-500 bg-blue-50 shadow-sm"
+                        : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+                    }`}
+                    onClick={() => setSelectedVariant(option.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-gray-900">
+                          {option.label}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          {option.description}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {/* Stock indicator */}
+                        <div
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            option.currentStock === 0
+                              ? "bg-red-100 text-red-800"
+                              : option.currentStock <= 5
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
+                        >
+                          {option.currentStock === 0
+                            ? "OUT"
+                            : option.currentStock <= 5
+                            ? "LOW"
+                            : "OK"}
+                        </div>
+                        {selectedVariant === option.id && (
+                          <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center">
+                            <CheckCircle className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Adjustment Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Adjustment Type
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  {
+                    value: "add",
+                    label: "Add Stock",
+                    icon: Plus,
+                    color: "bg-green-50 border-green-200 text-green-700",
+                  },
+                  {
+                    value: "remove",
+                    label: "Remove",
+                    icon: Minus,
+                    color: "bg-red-50 border-red-200 text-red-700",
+                  },
+                  {
+                    value: "set",
+                    label: "Set Exact",
+                    icon: RefreshCw,
+                    color: "bg-blue-50 border-blue-200 text-blue-700",
+                  },
+                ].map((type) => (
+                  <button
+                    key={type.value}
+                    type="button"
+                    onClick={() =>
+                      onChange({ ...data, adjustmentType: type.value })
+                    }
+                    className={`p-4 rounded-lg border flex flex-col items-center gap-2 transition-all ${
+                      data.adjustmentType === type.value
+                        ? `${type.color} ring-2 ring-offset-1 ring-opacity-30`
+                        : "border-gray-300 hover:bg-gray-50"
+                    }`}
+                  >
+                    <type.icon className="h-5 w-5" />
+                    <span className="text-sm font-medium">{type.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Quantity */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Quantity
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="number"
+                  min="1"
+                  value={data.quantity}
+                  onChange={(e) =>
+                    onChange({
+                      ...data,
+                      quantity: parseInt(e.target.value) || 1,
+                    })
                   }
-                  className={`p-3 rounded-lg border flex flex-col items-center gap-2 ${
-                    data.adjustmentType === type.value
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  <type.icon className="h-5 w-5" />
-                  <span className="text-sm font-medium">{type.label}</span>
-                </button>
-              ))}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <div className="text-sm text-gray-500 min-w-[120px]">
+                  Current: {selectedOption?.currentStock || 0}
+                </div>
+              </div>
+            </div>
+
+            {/* Reason */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reason
+              </label>
+              <select
+                value={data.reason}
+                onChange={(e) => onChange({ ...data, reason: e.target.value })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="restock">Restock</option>
+                <option value="sale">Sale</option>
+                <option value="return">Return</option>
+                <option value="damage">Damage/Loss</option>
+                <option value="adjustment">Manual Adjustment</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Notes (Optional)
+              </label>
+              <textarea
+                value={data.notes}
+                onChange={(e) => onChange({ ...data, notes: e.target.value })}
+                rows="2"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Add any notes about this adjustment..."
+              />
+            </div>
+
+            {/* Summary */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="text-sm font-medium text-gray-700 mb-2">
+                Summary
+              </h4>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Selected:</span>
+                  <span className="font-medium">{selectedOption?.label}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Action:</span>
+                  <span className="font-medium capitalize">
+                    {data.adjustmentType} stock
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Quantity:</span>
+                  <span className="font-medium">{data.quantity} units</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">New stock will be:</span>
+                  <span className="font-medium text-blue-600">
+                    {data.adjustmentType === "add"
+                      ? (selectedOption?.currentStock || 0) + data.quantity
+                      : data.adjustmentType === "remove"
+                      ? (selectedOption?.currentStock || 0) - data.quantity
+                      : data.quantity}{" "}
+                    units
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Quantity */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Quantity
-            </label>
-            <input
-              type="number"
-              min="1"
-              value={data.quantity}
-              onChange={(e) =>
-                onChange({ ...data, quantity: parseInt(e.target.value) || 1 })
-              }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Reason */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Reason
-            </label>
-            <select
-              value={data.reason}
-              onChange={(e) => onChange({ ...data, reason: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          {/* Actions */}
+          <div className="flex justify-end gap-3 mt-8 pt-6 border-t">
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
             >
-              <option value="restock">Restock</option>
-              <option value="sale">Sale</option>
-              <option value="return">Return</option>
-              <option value="damage">Damage/Loss</option>
-              <option value="adjustment">Manual Adjustment</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          {/* Notes */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Notes (Optional)
-            </label>
-            <textarea
-              value={data.notes}
-              onChange={(e) => onChange({ ...data, notes: e.target.value })}
-              rows="3"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Add any additional notes..."
-            />
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+            >
+              Apply Restock
+            </button>
           </div>
         </div>
-
-        <div className="flex justify-end gap-3 mt-8">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onSubmit}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Apply Adjustment
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  </div>
-);
+      </motion.div>
+    </div>
+  );
+};
 
 export default InventoryTab;

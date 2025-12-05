@@ -12,7 +12,7 @@ const AllUsers = () => {
   const [loading, setLoading] = useState(false);
   const {user} = useUserStore();
 
-  const fetchUsers = async () => {
+  const fetchUsers = async () => { 
     try {
       setLoading(true);
       const res = await axios.get(

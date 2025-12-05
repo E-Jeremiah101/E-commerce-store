@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Trash, Star } from "lucide-react";
 import { useProductStore } from "../stores/useProductStore.jsx";
@@ -6,6 +7,7 @@ import toast from "react-hot-toast";
 import { useUserStore } from "../stores/useUserStore.js";
 
 const ProductsList = () => {
+  const { fetchAllProducts, loading } = useProductStore();
   const {
     deleteProduct,
     toggleFeaturedProduct,
@@ -15,7 +17,9 @@ const ProductsList = () => {
     fetchVariantStock,
     fetchProductById,
   } = useProductStore();
-  const {loading} = useProductStore()
+ useEffect(() => {
+   fetchAllProducts(); 
+ }, []);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -23,6 +27,7 @@ const ProductsList = () => {
   const [reduceQuantity, setReduceQuantity] = useState(1);
   const [showVariantModal, setShowVariantModal] = useState(false);
   const productsPerPage = 15;
+  // const [isloading,  setIsLoading] = useState(false)
    
 
   // Pagination logic
@@ -33,6 +38,15 @@ const ProductsList = () => {
     startIndex,
     startIndex + productsPerPage
   );
+
+  // useEffect(() => {
+  //   setIsLoading(true);
+
+  //   // simulate a delay (optional)
+  //   setTimeout(() => {
+  //     setIsLoading(false);
+  //   }, 1000);
+  // }, []);
 
   const {user} = useUserStore();
   const handlePrev = () => setCurrentPage((p) => Math.max(p - 1, 1));
@@ -144,9 +158,6 @@ const ProductsList = () => {
                   Colors
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
-                  In-Stock
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                   Variants
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
@@ -196,18 +207,7 @@ const ProductsList = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-medium">
                     {product.colors?.join(", ") || "N/A"}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-medium">
-                    <div className="flex items-center gap-2">
-                      <span>{product.countInStock}</span>
-                      <button
-                        onClick={() => handleReduceStockClick(product)}
-                        disabled={product.countInStock === 0}
-                        className={`px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50`}
-                      >
-                        Reduce Stock
-                      </button>
-                    </div>
-                  </td>
+                
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-medium">
                     {product.variants?.length > 0 ? (
