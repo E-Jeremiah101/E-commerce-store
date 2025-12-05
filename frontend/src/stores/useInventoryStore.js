@@ -53,6 +53,7 @@ export const useInventoryStore = create((set, get) => ({
       const params = {
         page,
         limit: 20,
+        includeVariants: "true",
         ...filters,
         ...get().filters,
       };
@@ -298,6 +299,35 @@ export const useInventoryStore = create((set, get) => ({
   },
 
   // 📋 Calculate Stats
+  // getInventoryStats: () => {
+  //   const { stockLevels, lowStockAlerts } = get();
+
+  //   const totalStockValue = stockLevels.reduce((sum, product) => {
+  //     return sum + product.price * product.totalStock;
+  //   }, 0);
+
+  //   const outOfStockCount = stockLevels.filter(
+  //     (p) => p.status === "out"
+  //   ).length;
+  //   const lowStockCount = stockLevels.filter((p) => p.status === "low").length;
+  //   const healthyStockCount = stockLevels.filter(
+  //     (p) => p.status === "healthy"
+  //   ).length;
+
+  //   const urgentAlerts = lowStockAlerts.filter(
+  //     (a) => a.status === "out" || (a.status === "low" && a.currentStock <= 5)
+  //   ).length;
+
+  //   return {
+  //     totalStockValue,
+  //     outOfStockCount,
+  //     lowStockCount,
+  //     healthyStockCount,
+  //     urgentAlerts,
+  //     totalProducts: stockLevels.length,
+  //   };
+  // },
+  // Updated getInventoryStats in your store:
   getInventoryStats: () => {
     const { stockLevels, lowStockAlerts } = get();
 
@@ -305,9 +335,16 @@ export const useInventoryStore = create((set, get) => ({
       return sum + product.price * product.totalStock;
     }, 0);
 
-    const outOfStockCount = stockLevels.filter(
+    // Count products where status === "out"
+    const outOfStockProductsCount = stockLevels.filter(
       (p) => p.status === "out"
     ).length;
+
+    // Count all out of stock items (including variants) from alerts
+    const outOfStockAlertsCount = lowStockAlerts.filter(
+      (a) => a.status === "out"
+    ).length;
+
     const lowStockCount = stockLevels.filter((p) => p.status === "low").length;
     const healthyStockCount = stockLevels.filter(
       (p) => p.status === "healthy"
@@ -319,7 +356,8 @@ export const useInventoryStore = create((set, get) => ({
 
     return {
       totalStockValue,
-      outOfStockCount,
+      outOfStockCount: outOfStockAlertsCount, // Use alerts count for consistency
+      outOfStockProductsCount, // Keep original count if needed elsewhere
       lowStockCount,
       healthyStockCount,
       urgentAlerts,

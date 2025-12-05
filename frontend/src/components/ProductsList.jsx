@@ -158,6 +158,9 @@ const ProductsList = () => {
                   Colors
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
+                  In-Stock
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
                   Variants
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">
@@ -207,7 +210,18 @@ const ProductsList = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-medium">
                     {product.colors?.join(", ") || "N/A"}
                   </td>
-                
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-black font-medium">
+                    <div className="flex items-center gap-2">
+                      <span>{product.countInStock}</span>
+                      <button
+                        onClick={() => handleReduceStockClick(product)}
+                        disabled={product.countInStock === 0}
+                        className={`px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50`}
+                      >
+                        Reduce Stock
+                      </button>
+                    </div>
+                  </td>
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-white font-medium">
                     {product.variants?.length > 0 ? (

@@ -109,6 +109,8 @@ const InventoryTab = () => {
     }, 1000);
   };
 
+  
+
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [adjustmentData, setAdjustmentData] = useState({
@@ -124,6 +126,12 @@ const InventoryTab = () => {
   useEffect(() => {
     fetchDashboard();
   }, []);
+  useEffect(() => {
+    console.log("📊 Current pagination:", pagination);
+    console.log("📦 Stock levels count:", stockLevels.length);
+    console.log("🔍 Has next page?", pagination.hasNextPage);
+    console.log("🔍 Has prev page?", pagination.hasPrevPage);
+  }, [pagination, stockLevels]);
 
   // Load data based on active tab
   useEffect(() => {
@@ -332,6 +340,10 @@ const handleAdjustStock = (product) => {
             loading={loading}
             onSearch={handleSearch}
             filters={filters}
+            updateFilters={updateFilters} // Add this
+            clearFilters={clearFilters} // Add this
+            pagination={pagination} // Add this
+            onPageChange={(page) => fetchStockLevels(page, filters)}
           />
         )}
 
@@ -516,6 +528,13 @@ const StockLevelsView = ({
   filters,
   updateFilters,
   clearFilters,
+  pagination = {
+    currentPage: 1,
+    totalPages: 1,
+    hasNextPage: false,
+    hasPrevPage: false,
+  }, // Add default
+  onPageChange,
 }) => {
   const [expandedProducts, setExpandedProducts] = useState({});
 
@@ -561,7 +580,6 @@ const StockLevelsView = ({
           </div>
         </div>
       </div>
-
       {loading ? (
         <div className="flex justify-center items-center p-12">
           <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
@@ -609,7 +627,7 @@ const StockLevelsView = ({
                           <div className="text-sm font-medium text-gray-900">
                             {product.name}
                           </div>
-                          
+
                           {product.variants && product.variants.length > 0 && (
                             <button
                               onClick={() => toggleProductExpand(product.id)}
@@ -748,6 +766,29 @@ const StockLevelsView = ({
           </table>
         </div>
       )}
+
+      <button
+        onClick={() => onPageChange(pagination.currentPage - 1)}
+        disabled={!pagination.hasPrevPage}
+        className={`px-3 py-1 rounded ${
+          pagination.hasPrevPage
+            ? "bg-gray-200 hover:bg-gray-300"
+            : "bg-gray-100 text-gray-400 cursor-not-allowed"
+        }`}
+      >
+        Previous
+      </button>
+      <button
+        onClick={() => onPageChange(pagination.currentPage + 1)}
+        disabled={!pagination.hasNextPage}
+        className={`px-3 py-1 rounded ${
+          pagination.hasNextPage
+            ? "bg-gray-200 hover:bg-gray-300"
+            : "bg-gray-100 text-gray-400 cursor-not-allowed"
+        }`}
+      >
+        Next
+      </button>
     </div>
   );
 };
@@ -1002,7 +1043,7 @@ const LowStockView = ({ alerts, onAdjust }) => {
               className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200 flex flex-col justify-between p-5"
             >
               {/* Urgency Indicator */}
-              <div className={`h-2 rounded-t-full mb-2 ${getUrgencyColor(urgency)}`}></div>
+              <div className={`h-2 rounded-b-full mb-2 ${getUrgencyColor(urgency)}`}></div>
 
              
                 {/* Product Header */}
@@ -1202,6 +1243,7 @@ const LowStockView = ({ alerts, onAdjust }) => {
           </div>
         </div>
       </div>
+      
     </div>
   );
 };

@@ -266,18 +266,18 @@ const totalOrdersAllStatuses = await Order.countDocuments(dateFilter);
   const [totalUsers, totalProducts, allOrders, visitors] = await Promise.all([
     // Users: Filter by date if dates provided
     User.countDocuments(dateFilter),
-    
+
     // Products: Usually shouldn't be filtered by date (products exist regardless of when created)
     // But if you want products created in this period, use:
     // Product.countDocuments(dateFilter),
-    Product.countDocuments(),
-    
+    Product.countDocuments({ archived: { $ne: true } }),
+
     // Orders: Filter by date AND status
     Order.countDocuments({
       ...dateFilter,
-      status: { $nin: ["Cancelled"] }
+      status: { $nin: ["Cancelled"] },
     }),
-    
+
     // Visitors: Filter by date
     Visitor.countDocuments(dateFilter),
   ]);

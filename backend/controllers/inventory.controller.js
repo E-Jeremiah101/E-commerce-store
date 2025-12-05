@@ -67,6 +67,103 @@ export const getInventoryDashboard = async (req, res) => {
 };
 
 // 2. 📦 STOCK LEVELS
+// export const getStockLevels = async (req, res) => {
+//   try {
+//     const {
+//       page = 1,
+//       limit = 20,
+//       search = "",
+//       category = "",
+//       lowStock = false,
+//       includeVariants = true,
+//     } = req.query;
+
+//     const skip = (page - 1) * limit;
+
+//     let filter = { archived: { $ne: true } };
+
+//     // Search by name
+//     if (search) {
+//       filter.name = { $regex: search, $options: "i" };
+//     }
+
+//     // Filter by category
+//     if (category) {
+//       filter.category = category;
+//     }
+
+//     // Low stock filter
+//     if (lowStock === "true") {
+//       filter.countInStock = { $lte: 10, $gt: 0 };
+//     }
+//     if (includeVariants === "true") {
+//       selectFields += " variants";
+//     }
+
+//     const products = await Product.find(filter)
+//       .select("name price countInStock category images variants sku sizes and colors")
+//       .skip(skip)
+//       .limit(parseInt(limit))
+//       .sort({ countInStock: 1 });
+
+//     const total = await Product.countDocuments(filter);
+
+//     // Transform data for frontend
+//     const stockLevels = products.map((product) => {
+//       const variantsStock =
+//         product.variants?.reduce((sum, v) => sum + v.countInStock, 0) || 0;
+//       const totalStock = product.countInStock + variantsStock;
+
+//       let status = "healthy";
+//       if (totalStock === 0) status = "out";
+//       else if (totalStock <= 10) status = "low";
+
+
+//       const transformedVariants = (product.variants || []).map((variant) => ({
+//         _id: variant._id,
+//         id: variant._id.toString(),
+//         size: variant.size,
+//         color: variant.color,
+//         countInStock: variant.countInStock || 0,
+//         sku: variant.sku || product.sku,
+//         price: variant.price || product.price,
+//       }));
+
+//       return {
+//         id: product._id,
+//         name: product.name,
+//         image: product.images?.[0] || "",
+//         sku: product.sku || "N/A",
+//         category: product.category,
+//         price: product.price,
+//         mainStock: product.countInStock,
+//         variantsStock: variantsStock,
+//         totalStock: totalStock,
+//         status: status,
+//         variantsCount: product.variants?.length || 0,
+//         variants: transformedVariants,
+//         variants: transformedVariants,
+//         sizes: product.sizes || [],
+//         colors: product.colors || [],
+//         lastUpdated: product.updatedAt,
+//       };
+//     });
+
+//     res.json({
+//       stockLevels,
+//       pagination: {
+//         currentPage: parseInt(page),
+//         totalPages: Math.ceil(total / limit),
+//         totalProducts: total,
+//         hasNextPage: page * limit < total,
+//         hasPrevPage: page > 1,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("Error getting stock levels:", error);
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
 export const getStockLevels = async (req, res) => {
   try {
     const {
@@ -75,8 +172,17 @@ export const getStockLevels = async (req, res) => {
       search = "",
       category = "",
       lowStock = false,
-      includeVariants = true,
+      includeVariants = "true", // Default to string "true"
     } = req.query;
+
+    console.log("📡 [BACKEND] getStockLevels called with:", {
+      page,
+      limit,
+      search,
+      category,
+      lowStock,
+      includeVariants,
+    });
 
     const skip = (page - 1) * limit;
 
@@ -97,32 +203,49 @@ export const getStockLevels = async (req, res) => {
       filter.countInStock = { $lte: 10, $gt: 0 };
     }
 
-    const products = await Product.find(filter)
-      .select("name price countInStock category images variants sku sizes and colors")
-      .skip(skip)
-      .limit(parseInt(limit))
-      .sort({ countInStock: 1 });
+    // Build query
+    let query = Product.find(filter);
 
+    // Select fields - ALWAYS include variants for now to fix the issue
+    // We'll filter them in the response if needed
+    query = query.select(
+      "name price countInStock category images variants sku sizes colors"
+    );
+
+    // Apply pagination
+    query = query.skip(skip).limit(parseInt(limit)).sort({ countInStock: 1 });
+
+    console.log("📡 [BACKEND] MongoDB query - skip:", skip, "limit:", limit);
+
+    const products = await query;
     const total = await Product.countDocuments(filter);
+
+    console.log(
+      "✅ [BACKEND] Found products:",
+      products.length,
+      "Total:",
+      total
+    );
 
     // Transform data for frontend
     const stockLevels = products.map((product) => {
       const variantsStock =
-        product.variants?.reduce((sum, v) => sum + v.countInStock, 0) || 0;
+        product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
+        0;
       const totalStock = product.countInStock + variantsStock;
 
       let status = "healthy";
       if (totalStock === 0) status = "out";
       else if (totalStock <= 10) status = "low";
 
-
+      // Always include variants data
       const transformedVariants = (product.variants || []).map((variant) => ({
         _id: variant._id,
-        id: variant._id.toString(),
-        size: variant.size,
-        color: variant.color,
+        id: variant._id?.toString() || variant.id,
+        size: variant.size || "",
+        color: variant.color || "",
         countInStock: variant.countInStock || 0,
-        sku: variant.sku || product.sku,
+        sku: variant.sku || product.sku || "N/A",
         price: variant.price || product.price,
       }));
 
@@ -145,19 +268,37 @@ export const getStockLevels = async (req, res) => {
       };
     });
 
-    res.json({
+    const response = {
       stockLevels,
       pagination: {
         currentPage: parseInt(page),
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / parseInt(limit)),
         totalProducts: total,
         hasNextPage: page * limit < total,
         hasPrevPage: page > 1,
+        limit: parseInt(limit),
+        skip: skip,
       },
+    };
+
+    console.log(
+      "✅ [BACKEND] Sending response with pagination:",
+      response.pagination
+    );
+    console.log("📊 First product in response:", {
+      name: stockLevels[0]?.name,
+      variants: stockLevels[0]?.variants,
+      variantsCount: stockLevels[0]?.variantsCount,
     });
+
+    res.json(response);
   } catch (error) {
-    console.error("Error getting stock levels:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("❌ Error getting stock levels:", error);
+    res.status(500).json({
+      message: "Server error",
+      error: error.message,
+      stack: error.stack,
+    });
   }
 };
 
@@ -817,3 +958,4 @@ export const searchInventory = async (req, res) => {
   }
 };
 // Rename getLowStockAlerts to getAllAlerts in backend
+ 
