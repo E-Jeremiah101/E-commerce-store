@@ -20,14 +20,16 @@ import { useProductStore } from "../stores/useProductStore.jsx";
 import { useUserStore } from "../stores/useUserStore.js";
 import AdminRefundsTab from "../components/AdminRefundsTab.jsx";
 import GoBackButton from "../components/GoBackButton";
+import InventoryTab from "../components/InventoryTab.jsx"
 import Support from "../components/Support.jsx";
 const tabs = [
   { id: "create", label: "Create Product", icon: PlusCircle },
-  { id: "products", label: "Products", icon: ShoppingBasket },
+  { id: "products", label: "Product List", icon: ShoppingBasket },
+  { id: "inventory", label: "Manage Inventory", icon: ShoppingBasket },
   { id: "analytics", label: "Analytics", icon: BarChart },
   { id: "AdminOrder", label: "Orders", icon: Package },
   { id: "AdminRefunds", label: "Refund ", icon: RotateCcw },
-  { id: "AllUsers", label: "Users", icon: User },
+  { id: "AllUsers", label: "User Managemant", icon: User },
   { id: "Support", label: "Support", icon: Headset },
 ];
 const clearCache = async () => {
@@ -95,7 +97,6 @@ const AdminPage = () => {
         {/* Mobile view */}
         <div className=" md:hidden relative z-10 container mx-auto px-4 py-8">
           <div className="md:hidden flex justify-center  overflow-auto no-scroll">
-            
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -116,6 +117,7 @@ const AdminPage = () => {
         <div className="flex-1 overflow-y-auto no-scroll">
           {activeTab === "create" && <CreateProductForm />}
           {activeTab === "products" && <ProductsList />}
+          {activeTab === "inventory" && <InventoryTab />}
           {activeTab === "analytics" && <AnalyticsTab />}
           {activeTab === "AdminOrder" && <AdminOrdersPage />}
           {activeTab === "AdminRefunds" && <AdminRefundsTab />}

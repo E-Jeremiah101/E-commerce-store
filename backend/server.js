@@ -21,6 +21,7 @@ import refundRoutes from "./routes/refund.routes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
 import Product from "./models/product.model.js";
 import savedProductRoutes from "./routes/savedProduct.routes.js"; 
+import inventoryRoutes from "./routes/inventory.routes.js"
 
 
 dotenv.config();
@@ -111,7 +112,7 @@ app.use("/api", categoryRoutes)
 app.use("/api/categories", categoryRoutes);
 
 app.use("/api/saved-products", savedProductRoutes);
-
+app.use("/api/inventory", inventoryRoutes);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
