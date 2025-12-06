@@ -12,6 +12,7 @@ export const useInventoryStore = create((set, get) => ({
   reorderSuggestions: [],
   inventoryValuation: null,
   stockHistory: [],
+  inventoryAging: [],
   inventoryByLocation: [],
   pagination: {
     currentPage: 1,
@@ -20,7 +21,7 @@ export const useInventoryStore = create((set, get) => ({
     hasNextPage: false,
     hasPrevPage: false,
   },
-  filters: { 
+  filters: {
     search: "",
     category: "",
     lowStock: false,
@@ -28,7 +29,7 @@ export const useInventoryStore = create((set, get) => ({
     sortBy: "name",
     sortOrder: "asc",
   },
- 
+
   // Actions
 
   // 📊 Get Dashboard Data
@@ -98,6 +99,23 @@ export const useInventoryStore = create((set, get) => ({
     } catch (error) {
       console.error("Error fetching low stock alerts:", error);
       toast.error("Failed to load low stock alerts");
+      set({ loading: false });
+      throw error;
+    }
+  },
+
+  fetchInventoryAging: async () => {
+    set({ loading: true });
+    try {
+      const res = await axios.get("/inventory/aging-report");
+      set({
+        inventoryAging: res.data,
+        loading: false,
+      });
+      return res.data;
+    } catch (error) {
+      console.error("Error fetching inventory aging:", error);
+      toast.error("Failed to load aging report");
       set({ loading: false });
       throw error;
     }
@@ -298,36 +316,6 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  // 📋 Calculate Stats
-  // getInventoryStats: () => {
-  //   const { stockLevels, lowStockAlerts } = get();
-
-  //   const totalStockValue = stockLevels.reduce((sum, product) => {
-  //     return sum + product.price * product.totalStock;
-  //   }, 0);
-
-  //   const outOfStockCount = stockLevels.filter(
-  //     (p) => p.status === "out"
-  //   ).length;
-  //   const lowStockCount = stockLevels.filter((p) => p.status === "low").length;
-  //   const healthyStockCount = stockLevels.filter(
-  //     (p) => p.status === "healthy"
-  //   ).length;
-
-  //   const urgentAlerts = lowStockAlerts.filter(
-  //     (a) => a.status === "out" || (a.status === "low" && a.currentStock <= 5)
-  //   ).length;
-
-  //   return {
-  //     totalStockValue,
-  //     outOfStockCount,
-  //     lowStockCount,
-  //     healthyStockCount,
-  //     urgentAlerts,
-  //     totalProducts: stockLevels.length,
-  //   };
-  // },
-  // Updated getInventoryStats in your store:
   getInventoryStats: () => {
     const { stockLevels, lowStockAlerts } = get();
 

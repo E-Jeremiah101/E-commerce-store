@@ -47,6 +47,8 @@ const InventoryTab = () => {
     inventoryValuation,
     stockHistory,
     inventoryByLocation,
+    inventoryAging,
+    fetchInventoryAging,
 
     // Actions
     fetchDashboard,
@@ -67,12 +69,11 @@ const InventoryTab = () => {
     // Computed
     pagination,
     filters,
-    
   } = useInventoryStore();
   useEffect(() => {
-    console.log("🔍 Stock Levels Data:", stockLevels);
-    console.log("🔍 First Product:", stockLevels[0]);
-    console.log("🔍 First Product Variants:", stockLevels[0]?.variants);
+    console.log(" Stock Levels Data:", stockLevels);
+    console.log(" First Product:", stockLevels[0]);
+    console.log(" First Product Variants:", stockLevels[0]?.variants);
   }, [stockLevels]);
 
   const handleRefresh = () => {
@@ -145,6 +146,9 @@ const InventoryTab = () => {
     if (activeTab === "reorder") {
       fetchReorderSuggestions(10);
     }
+     if (activeTab === "valuation") {
+       fetchInventoryAging();
+     }
     if (activeTab === "valuation") {
       fetchInventoryValuation();
     }
@@ -154,7 +158,8 @@ const InventoryTab = () => {
     if (activeTab === "locations") {
       fetchInventoryByLocation();
     }
-    // Add similar calls for adjustments when you implement it
+    
+    
   }, [activeTab]);
 
   // Get stats for display
@@ -378,6 +383,7 @@ const handleAdjustStock = (product) => {
         {activeTab === "reorder" && (
           <ReorderView suggestions={reorderSuggestions} />
         )}
+        {activeTab === "valuation" && <AgingReportView data={inventoryAging} />}
 
         {activeTab === "valuation" && inventoryValuation && (
           <ValuationView data={inventoryValuation} />
@@ -1381,7 +1387,246 @@ const LowStockView = ({ alerts, onAdjust }) => {
     </div>
   );
 };
+const AgingReportView = ({ data }) => {
+  if (!data) return null;
 
+  const getBucketColor = (bucketLabel) => {
+    if (bucketLabel.includes("Fresh")) return "bg-green-500";
+    if (bucketLabel.includes("Aging")) return "bg-yellow-500";
+    if (bucketLabel.includes("Stale")) return "bg-orange-500";
+    return "bg-red-500";
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Aging Score</p>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="text-2xl font-bold text-gray-900">
+                  {data.summary?.agingScore}/5
+                </div>
+                <div
+                  className={`w-3 h-3 rounded-full ${
+                    data.summary?.agingScore <= 2
+                      ? "bg-green-500"
+                      : data.summary?.agingScore <= 3
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}
+                ></div>
+              </div>
+            </div>
+            <TrendingDown className="h-8 w-8 text-gray-300" />
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            {data.summary?.agingScore <= 2
+              ? "Excellent turnover"
+              : data.summary?.agingScore <= 3
+              ? "Good turnover"
+              : "Needs attention"}
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Fresh Stock</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">
+                {data.summary?.freshPercentage}%
+              </p>
+            </div>
+            <Package className="h-8 w-8 text-green-300" />
+          </div>
+          <p className="text-xs text-gray-500 mt-2">Last 30 days</p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Stale Stock</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">
+                {data.summary?.stalePercentage}%
+              </p>
+            </div>
+            <AlertTriangle className="h-8 w-8 text-orange-300" />
+          </div>
+          <p className="text-xs text-gray-500 mt-2">Over 90 days</p>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Items</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {data.summary?.totalItems?.toLocaleString()}
+              </p>
+            </div>
+            <Layers className="h-8 w-8 text-blue-300" />
+          </div>
+          <p className="text-xs text-gray-500 mt-2">All stock units</p>
+        </div>
+      </div>
+
+      {/* Aging Buckets Visualization */}
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          Inventory Age Distribution
+        </h3>
+
+        <div className="space-y-6">
+          {data.agingBuckets?.map((bucket, index) => (
+            <div key={index} className="space-y-3">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-3 h-3 rounded-full ${getBucketColor(
+                      bucket.label
+                    )}`}
+                  ></div>
+                  <span className="font-medium text-gray-800">
+                    {bucket.label}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-gray-900">
+                    ₦{bucket.totalValue?.toLocaleString()}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {bucket.totalItems} units •{" "}
+                    {Math.round(
+                      (bucket.totalValue / data.summary.totalValue) * 100
+                    )}
+                    %
+                  </p>
+                </div>
+              </div>
+
+              <div className="w-full bg-gray-200 rounded-full h-3">
+                <div
+                  className={`h-3 rounded-full ${getBucketColor(bucket.label)}`}
+                  style={{
+                    width: `${Math.round(
+                      (bucket.totalValue / data.summary.totalValue) * 100
+                    )}%`,
+                  }}
+                ></div>
+              </div>
+
+              {/* Sample items in this bucket */}
+              {bucket.products.length > 0 && (
+                <div className="pl-4 border-l-2 border-gray-200 ml-2">
+                  <p className="text-xs text-gray-500 mb-2">Sample items:</p>
+                  <div className="space-y-2">
+                    {bucket.products.map((item, idx) => (
+                      <div key={idx} className="flex justify-between text-sm">
+                        <span className="text-gray-700 truncate">
+                          {item.name} ({item.variantName})
+                        </span>
+                        <span className="text-gray-900 font-medium">
+                          {item.ageInDays}d • {item.stock} units
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Slow Movers */}
+      {data.slowMovers && data.slowMovers.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Slow Moving Items
+              </h3>
+              <p className="text-gray-600 text-sm">
+                Highest value items aging in inventory
+              </p>
+            </div>
+            <AlertTriangle className="h-5 w-5 text-yellow-500" />
+          </div>
+
+          <div className="space-y-3">
+            {data.slowMovers.map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg"
+              >
+                <div>
+                  <p className="font-medium text-gray-800">{item.name}</p>
+                  <p className="text-sm text-gray-600">{item.variantName}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-gray-900">
+                    ₦{item.totalValue?.toLocaleString()}
+                  </p>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <span>{item.ageInDays} days old</span>
+                    <span>•</span>
+                    <span>{item.stock} units</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recommendations */}
+      {data.recommendations && data.recommendations.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            Recommendations
+          </h3>
+
+          <div className="space-y-4">
+            {data.recommendations.map((rec, index) => (
+              <div
+                key={index}
+                className={`p-4 rounded-lg ${
+                  rec.type === "urgent"
+                    ? "bg-red-50 border border-red-200"
+                    : rec.type === "warning"
+                    ? "bg-yellow-50 border border-yellow-200"
+                    : rec.type === "success"
+                    ? "bg-green-50 border border-green-200"
+                    : "bg-blue-50 border border-blue-200"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  {rec.type === "urgent" && (
+                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                  )}
+                  {rec.type === "warning" && (
+                    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                  )}
+                  {rec.type === "success" && (
+                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-800">{rec.title}</h4>
+                    <p className="text-gray-600 text-sm mt-1">{rec.message}</p>
+                    <button className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-800">
+                      {rec.action} →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 
 
@@ -1494,88 +1739,336 @@ const ReorderView = ({ suggestions }) => (
 );
 const ValuationView = ({ data }) => (
   <div className="space-y-6">
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    {/* Summary Stats Cards */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Summary</h3>
-        {data.valuation?.summary ? (
-          <div className="space-y-4">
-            <div>
-              <p className="text-sm text-gray-600">Total Inventory Value</p>
-              <p className="text-3xl font-bold text-gray-900">
-                ₦{data.valuation.summary.totalValue?.toLocaleString()}
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Total Items</p>
-                <p className="text-xl font-semibold text-gray-900">
-                  {data.valuation.summary.totalItems}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Avg. Value per Item</p>
-                <p className="text-xl font-semibold text-gray-900">
-                  ₦{data.valuation.summary.averageValuePerItem?.toFixed(2)}
-                </p>
-              </div>
-            </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600">Total Inventory Value</p>
+            <p className="text-2xl font-bold text-gray-900 mt-1">
+              ₦{data.valuation?.summary?.totalValue?.toLocaleString() || "0"}
+            </p>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {data.valuation?.map((group) => (
-              <div
-                key={group.category || group.label}
-                className="p-3 border rounded-lg"
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">
-                    {group.category || group.label}
-                  </span>
-                  <span className="font-bold">
-                    ₦{group.totalValue?.toLocaleString()}
-                  </span>
-                </div>
-                <div className="text-sm text-gray-500 mt-1">
-                  {group.totalItems} items
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+          <DollarSign className="h-8 w-8 text-blue-500" />
+        </div>
       </div>
 
-      <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          Most Valuable Items
-        </h3>
-        <div className="space-y-3">
-          {data.valuation?.mostValuable?.map((item, index) => (
-            <div
-              key={index}
-              className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-gray-500 font-medium">{index + 1}.</span>
-                <div>
-                  <p className="font-medium text-gray-800">{item.name}</p>
-                  <p className="text-sm text-gray-500">{item.stock} in stock</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="font-semibold text-gray-900">
-                  ₦{item.totalValue?.toLocaleString()}
-                </p>
-                <p className="text-sm text-gray-500">
-                  ₦{item.unitValue?.toLocaleString()} each
-                </p>
-              </div>
-            </div>
-          ))}
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600">Total Products</p>
+            <p className="text-2xl font-bold text-gray-900 mt-1">
+              {data.valuation?.summary?.totalProducts || "0"}
+            </p>
+          </div>
+          <Package className="h-8 w-8 text-green-500" />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600">Total Variants</p>
+            <p className="text-2xl font-bold text-gray-900 mt-1">
+              {data.valuation?.summary?.totalVariants || "0"}
+            </p>
+          </div>
+          <Layers className="h-8 w-8 text-purple-500" />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600">Avg. Value per Unit</p>
+            <p className="text-2xl font-bold text-gray-900 mt-1">
+              ₦{data.valuation?.summary?.averageValuePerItem?.toFixed(0) || "0"}
+            </p>
+          </div>
+          <TrendingUp className="h-8 w-8 text-orange-500" />
         </div>
       </div>
     </div>
+
+    {/* Category Valuation Table */}
+    <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div className="p-6 border-b">
+        <h3 className="text-lg font-semibold text-gray-800">
+          Inventory Value by Category
+        </h3>
+        <p className="text-gray-600 text-sm mt-1">
+          Distribution of inventory value across product categories
+        </p>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Category
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Products
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Variants
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Stock Units
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Total Value
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                % of Total
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Avg. Unit Value
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {data.valuation?.map((category, index) => {
+              const totalStock =
+                category.products?.reduce(
+                  (sum, p) => sum + (p.totalStock || 0),
+                  0
+                ) || 0;
+              const avgUnitValue =
+                totalStock > 0 ? category.totalValue / totalStock : 0;
+              const percentage = data.valuation?.summary?.totalValue
+                ? (
+                    (category.totalValue / data.valuation.summary.totalValue) *
+                    100
+                  ).toFixed(1)
+                : "0.0";
+
+              return (
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <span className="text-sm font-medium text-gray-900">
+                        {category.category || "Uncategorized"}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-900">
+                      {category.totalProducts}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-900">
+                      {category.totalVariants}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-900">
+                      {totalStock.toLocaleString()}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm font-semibold text-gray-900">
+                      ₦{category.totalValue?.toLocaleString()}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-3">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full"
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-medium text-gray-900">
+                        {percentage}%
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-900">
+                      ₦{avgUnitValue.toFixed(0)}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+
+            {/* Total Row */}
+            {data.valuation?.summary && (
+              <tr className="bg-gray-50 font-semibold">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm font-bold text-gray-900">TOTAL</span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm font-bold text-gray-900">
+                    {data.valuation.summary.totalProducts}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm font-bold text-gray-900">
+                    {data.valuation.summary.totalVariants}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm font-bold text-gray-900">
+                    {data.valuation.summary.totalStock?.toLocaleString()}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm font-bold text-gray-900">
+                    ₦{data.valuation.summary.totalValue?.toLocaleString()}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm font-bold text-gray-900">100%</span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="text-sm font-bold text-gray-900">
+                    ₦{data.valuation.summary.averageValuePerItem?.toFixed(0)}
+                  </span>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Empty State */}
+      {(!data.valuation || data.valuation.length === 0) && (
+        <div className="text-center py-12">
+          <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">No valuation data available</p>
+        </div>
+      )}
+    </div>
+
+    {/* Top Categories Summary */}
+    {data.valuation && data.valuation.length > 0 && (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h4 className="text-sm font-medium text-gray-700 mb-4">
+            Top 3 Categories by Value
+          </h4>
+          <div className="space-y-3">
+            {data.valuation.slice(0, 3).map((category, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-3 h-3 rounded-full ${
+                      index === 0
+                        ? "bg-yellow-500"
+                        : index === 1
+                        ? "bg-gray-400"
+                        : "bg-orange-500"
+                    }`}
+                  ></div>
+                  <span className="text-sm text-gray-600">
+                    {category.category}
+                  </span>
+                </div>
+                <span className="text-sm font-medium text-gray-900">
+                  {Math.round(
+                    (category.totalValue /
+                      data.valuation.reduce(
+                        (sum, c) => sum + c.totalValue,
+                        0
+                      )) *
+                      100
+                  )}
+                  %
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h4 className="text-sm font-medium text-gray-700 mb-4">
+            Value Concentration
+          </h4>
+          <div className="text-sm text-gray-600">
+            <p className="mb-2">
+              Top 3 categories hold{" "}
+              <span className="font-semibold text-gray-900">
+                {data.valuation
+                  .slice(0, 3)
+                  .reduce(
+                    (sum, c) =>
+                      sum +
+                      Math.round(
+                        (c.totalValue /
+                          data.valuation.reduce(
+                            (total, cat) => total + cat.totalValue,
+                            0
+                          )) *
+                          100
+                      ),
+                    0
+                  )}
+                %
+              </span>{" "}
+              of total value
+            </p>
+            <p className="text-xs text-gray-500">
+              {data.valuation
+                .slice(0, 3)
+                .reduce(
+                  (sum, c) =>
+                    sum +
+                    Math.round(
+                      (c.totalValue /
+                        data.valuation.reduce(
+                          (total, cat) => total + cat.totalValue,
+                          0
+                        )) *
+                        100
+                    ),
+                  0
+                ) > 80
+                ? "High concentration - consider diversifying"
+                : "Good diversification"}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <h4 className="text-sm font-medium text-gray-700 mb-4">
+            Highest Value per Unit
+          </h4>
+          <div className="space-y-2">
+            {data.valuation
+              .map((category) => {
+                const totalStock =
+                  category.products?.reduce(
+                    (sum, p) => sum + (p.totalStock || 0),
+                    0
+                  ) || 0;
+                return {
+                  ...category,
+                  avgUnitValue:
+                    totalStock > 0 ? category.totalValue / totalStock : 0,
+                };
+              })
+              .sort((a, b) => b.avgUnitValue - a.avgUnitValue)
+              .slice(0, 3)
+              .map((category, index) => (
+                <div key={index} className="flex justify-between text-sm">
+                  <span className="text-gray-600">{category.category}</span>
+                  <span className="font-medium text-gray-900">
+                    ₦{category.avgUnitValue.toFixed(0)}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
+      </div>
+    )}
   </div>
 );
+// Add this to your InventoryTab.js
+
 
 // Helper Components
 const StatCard = ({ title, value, icon: Icon, trend, color }) => {

@@ -936,7 +936,6 @@ export const getReorderSuggestions = async (req, res) => {
   }
 };
 
-// 8. 💰 INVENTORY VALUATION
 export const getInventoryValuation = async (req, res) => {
   try {
     const { groupBy = "category" } = req.query;
@@ -946,14 +945,16 @@ export const getInventoryValuation = async (req, res) => {
       "name price category variants"
     );
 
+    console.log(`📊 Found ${products.length} products for valuation`);
+
     let valuation;
 
     if (groupBy === "category") {
-      // Group by category - CORRECTED
+      // Group by category - CORRECTED TO COUNT PRODUCTS, NOT VARIANTS
       valuation = products.reduce((acc, product) => {
         const category = product.category || "Uncategorized";
 
-        // Calculate total value and items from VARIANTS
+        // Calculate total value from variants
         const productValue = (product.variants || []).reduce(
           (vSum, variant) => {
             const variantPrice = variant.price || product.price;
@@ -962,29 +963,29 @@ export const getInventoryValuation = async (req, res) => {
           0
         );
 
-        const productItems = (product.variants || []).reduce(
-          (vSum, variant) => {
-            return vSum + (variant.countInStock || 0);
-          },
-          0
-        );
-
+        // Count THIS PRODUCT (not variants)
         if (!acc[category]) {
           acc[category] = {
             category,
             totalValue: 0,
-            totalItems: 0,
+            totalProducts: 0, // Changed from totalItems
+            totalVariants: 0,
             products: [],
           };
         }
 
         acc[category].totalValue += productValue;
-        acc[category].totalItems += productItems;
+        acc[category].totalProducts += 1; // Count the product
+        acc[category].totalVariants += (product.variants || []).length; // Track variants separately
 
         if (productValue > 0) {
           acc[category].products.push({
             name: product.name,
-            stock: productItems,
+            variantsCount: (product.variants || []).length,
+            totalStock: (product.variants || []).reduce(
+              (sum, v) => sum + (v.countInStock || 0),
+              0
+            ),
             unitValue: product.price,
             totalValue: productValue,
           });
@@ -1009,7 +1010,12 @@ export const getInventoryValuation = async (req, res) => {
         );
       }, 0);
 
-      const totalItems = products.reduce((sum, product) => {
+      const totalProducts = products.length; // Count products
+      const totalVariants = products.reduce((sum, product) => {
+        return sum + (product.variants || []).length;
+      }, 0);
+
+      const totalStock = products.reduce((sum, product) => {
         return (
           sum +
           (product.variants || []).reduce((vSum, variant) => {
@@ -1018,7 +1024,7 @@ export const getInventoryValuation = async (req, res) => {
         );
       }, 0);
 
-      const averageValuePerItem = totalItems > 0 ? totalValue / totalItems : 0;
+      const averageValuePerItem = totalStock > 0 ? totalValue / totalStock : 0;
 
       // Most valuable items (products with highest total variant value)
       const mostValuable = products
@@ -1031,7 +1037,7 @@ export const getInventoryValuation = async (req, res) => {
             0
           );
 
-          const productItems = (product.variants || []).reduce(
+          const productStock = (product.variants || []).reduce(
             (vSum, variant) => {
               return vSum + (variant.countInStock || 0);
             },
@@ -1040,7 +1046,9 @@ export const getInventoryValuation = async (req, res) => {
 
           return {
             name: product.name,
-            stock: productItems,
+            category: product.category,
+            variantsCount: (product.variants || []).length,
+            stock: productStock,
             unitValue: product.price,
             totalValue: productValue,
           };
@@ -1052,13 +1060,27 @@ export const getInventoryValuation = async (req, res) => {
       valuation = {
         summary: {
           totalValue,
-          totalItems,
+          totalProducts, // Changed from totalItems
+          totalVariants, // Added variants count
+          totalStock, // Added total stock units
           averageValuePerItem,
-          totalProducts: products.length,
         },
         mostValuable,
       };
     }
+
+    // Log for debugging
+    console.log("📊 Valuation summary:", {
+      totalProducts:
+        valuation.summary?.totalProducts ||
+        valuation.reduce((sum, g) => sum + g.totalProducts, 0),
+      totalVariants:
+        valuation.summary?.totalVariants ||
+        valuation.reduce((sum, g) => sum + g.totalVariants, 0),
+      totalValue:
+        valuation.summary?.totalValue ||
+        valuation.reduce((sum, g) => sum + g.totalValue, 0),
+    });
 
     res.json({
       valuation,
@@ -1210,5 +1232,147 @@ export const searchInventory = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-// Rename getLowStockAlerts to getAllAlerts in backend
+
+
+export const getInventoryAgingReport = async (req, res) => {
+  try {
+    const products = await Product.find({ 
+      archived: { $ne: true },
+      "variants.0": { $exists: true }
+    }).select("name category price variants createdAt updatedAt");
+
+    const now = new Date();
+    const agingBuckets = {
+      fresh: { label: "Fresh (0-30 days)", days: 30, totalValue: 0, totalItems: 0, products: [] },
+      aging: { label: "Aging (31-90 days)", days: 90, totalValue: 0, totalItems: 0, products: [] },
+      stale: { label: "Stale (91-180 days)", days: 180, totalValue: 0, totalItems: 0, products: [] },
+      old: { label: "Old (180+ days)", days: 365, totalValue: 0, totalItems: 0, products: [] }
+    };
+
+    // Process each product's variants
+    products.forEach(product => {
+      const productVariants = product.variants || [];
+      
+      productVariants.forEach(variant => {
+        const variantAge = Math.floor((now - new Date(variant.createdAt || product.createdAt)) / (1000 * 60 * 60 * 24));
+        const variantPrice = variant.price || product.price;
+        const variantStock = variant.countInStock || 0;
+        const variantValue = variantPrice * variantStock;
+
+        if (variantStock > 0) { // Only count items in stock
+          let bucket;
+          
+          if (variantAge <= 30) {
+            bucket = agingBuckets.fresh;
+          } else if (variantAge <= 90) {
+            bucket = agingBuckets.aging;
+          } else if (variantAge <= 180) {
+            bucket = agingBuckets.stale;
+          } else {
+            bucket = agingBuckets.old;
+          }
+
+          bucket.totalValue += variantValue;
+          bucket.totalItems += variantStock;
+
+          // Add to product list (limit to top 5 per bucket)
+          if (bucket.products.length < 5) {
+            bucket.products.push({
+              productId: product._id,
+              name: product.name,
+              variantName: `${variant.color || 'Default'} - ${variant.size || 'One Size'}`,
+              ageInDays: variantAge,
+              stock: variantStock,
+              unitPrice: variantPrice,
+              totalValue: variantValue,
+              lastMovement: variant.updatedAt || product.updatedAt
+            });
+          }
+        }
+      });
+    });
+
+    // Calculate totals
+    const totalValue = Object.values(agingBuckets).reduce((sum, bucket) => sum + bucket.totalValue, 0);
+    const totalItems = Object.values(agingBuckets).reduce((sum, bucket) => sum + bucket.totalItems, 0);
+
+    // Sort buckets by age (fresh to old)
+    const bucketsArray = Object.values(agingBuckets);
+
+    // Find slow movers (highest value in old/stale buckets)
+    const slowMovers = [...agingBuckets.stale.products, ...agingBuckets.old.products]
+      .sort((a, b) => b.totalValue - a.totalValue)
+      .slice(0, 5);
+
+    // Calculate aging score (lower is better)
+    const agingScore = Math.round(
+      (agingBuckets.fresh.totalValue * 1 + 
+       agingBuckets.aging.totalValue * 2 + 
+       agingBuckets.stale.totalValue * 3 + 
+       agingBuckets.old.totalValue * 4) / totalValue
+    );
+
+    res.json({
+      summary: {
+        totalValue,
+        totalItems,
+        agingScore: Math.min(agingScore, 5), // Scale to 1-5
+        freshPercentage: Math.round((agingBuckets.fresh.totalValue / totalValue) * 100),
+        stalePercentage: Math.round(((agingBuckets.stale.totalValue + agingBuckets.old.totalValue) / totalValue) * 100),
+        reportDate: now
+      },
+      agingBuckets: bucketsArray,
+      slowMovers,
+      recommendations: generateAgingRecommendations(agingBuckets, totalValue)
+    });
+  } catch (error) {
+    console.error("Error getting inventory aging report:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+// Helper function for aging recommendations
+const generateAgingRecommendations = (buckets, totalValue) => {
+  const recommendations = [];
+  const staleOldValue = buckets.stale.totalValue + buckets.old.totalValue;
+  const staleOldPercentage = Math.round((staleOldValue / totalValue) * 100);
+
+  if (staleOldPercentage > 30) {
+    recommendations.push({
+      type: "urgent",
+      title: "High Aging Inventory",
+      message: `${staleOldPercentage}% of your inventory value is over 90 days old. Consider promotions or markdowns.`,
+      action: "Create clearance sale"
+    });
+  }
+
+  if (buckets.old.totalValue > totalValue * 0.15) {
+    recommendations.push({
+      type: "warning",
+      title: "Old Stock Detected",
+      message: "Significant inventory is over 6 months old. This may become obsolete.",
+      action: "Review oldest items"
+    });
+  }
+
+  if (buckets.fresh.totalValue < totalValue * 0.3) {
+    recommendations.push({
+      type: "info",
+      title: "Low Fresh Inventory",
+      message: "Consider bringing in new merchandise to keep assortment fresh.",
+      action: "Plan new arrivals"
+    });
+  }
+
+  if (recommendations.length === 0) {
+    recommendations.push({
+      type: "success",
+      title: "Healthy Inventory Age",
+      message: "Your inventory age distribution looks good. Keep up the good work!",
+      action: "Maintain current turnover"
+    });
+  }
+
+  return recommendations;
+};
  
