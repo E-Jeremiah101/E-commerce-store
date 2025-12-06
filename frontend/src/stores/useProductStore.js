@@ -29,31 +29,7 @@ export const useProductStore = create((set, get) => ({
       return false;
     }
   },
-  reduceStock: async (productId, quantity = 1) => {
-    try {
-      const product = get().products.find((p) => p._id === productId);
-      if (!product || product.countInStock <= 0) {
-        throw new Error("No stock left");
-      }
 
-      const res = await axios.put(`/products/${productId}/reduce-stock`, {
-        quantity: 1, // reduce by 1
-      });
-
-      set((state) => ({
-        products: state.products.map((p) =>
-          p._id === productId
-            ? { ...p, countInStock: res.data.countInStock }
-            : p
-        ),
-      }));
-
-      return res.data;
-    } catch (error) {
-      console.error(error);
-      throw error;
-    }
-  },
   fetchAllProducts: async () => {
     set({ loading: true });
     try {
@@ -61,7 +37,6 @@ export const useProductStore = create((set, get) => ({
       set({ products: response.data.products, loading: false });
     } catch (error) {
       console.error("Error fetching products:", error);
-      // Suppress noisy toast for background product fetch failures.
       console.debug("Unable to load products.", error?.message || error);
       set({ loading: false });
     }

@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
-import { useProductStore } from "../stores/useProductStore.jsx";
+import { useProductStore } from "../stores/useProductStore.js";
 import Ongoing from "../components/Ongoing.jsx";
 import Delivered from "../components/Delivered.jsx";
 import RefundTab from "../components/RefundTab.jsx";

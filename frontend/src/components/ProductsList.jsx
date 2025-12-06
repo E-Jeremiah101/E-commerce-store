@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Trash, Star } from "lucide-react";
-import { useProductStore } from "../stores/useProductStore.jsx";
+import { useProductStore } from "../stores/useProductStore.js";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useUserStore } from "../stores/useUserStore.js";

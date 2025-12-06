@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useProductStore } from "../stores/useProductStore";
+import { useProductStore } from "../stores/useProductStore.js";
 import toast from "react-hot-toast";
 import { ShoppingCart, Heart } from "lucide-react"; // Import both Heart icons
 import { useCartStore } from "../stores/useCartStore";

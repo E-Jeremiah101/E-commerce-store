@@ -40,7 +40,7 @@ router.get("/history", getStockHistory);
 router.get("/locations", getInventoryByLocation);
 
 // 📋 Reorder Management
-router.get("/reorder-suggestions", getReorderSuggestions);
+router.get("/reorder-suggestions", getReorderSuggestions); 
 
 // 💰 Inventory Valuation
 router.get("/valuation", getInventoryValuation);

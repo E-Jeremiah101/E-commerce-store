@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
-import { useCartStore } from "../stores/useCartStore";
+import { useCartStore } from "../stores/useCartStore.js";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
 import ScrollReveal from "./ScrollReveal.jsx";

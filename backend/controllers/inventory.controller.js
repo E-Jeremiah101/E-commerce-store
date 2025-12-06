@@ -161,21 +161,81 @@ export const syncInventoryWithStoreOrders = async () => {
   }
 };
 
-// 1. 📊 STOCK DASHBOARD
+// 1. 📊 STOCK DASHBOARD - VARIANT-ONLY VERSION
 export const getInventoryDashboard = async (req, res) => {
   try {
-    const products = await Product.find({ archived: { $ne: true } });
+    // Fetch products WITH variants ONLY
+    const products = await Product.find({ 
+      archived: { $ne: true },
+      "variants.0": { $exists: true } // Only products with variants
+    }).select("name price category images variants");
 
-    const totalProducts = products.length;
-    const totalStockValue = products.reduce((sum, product) => {
-      return sum + product.price * product.countInStock;
-    }, 0);
+    console.log(`📊 Found ${products.length} products with variants for dashboard`);
 
+    // Calculate totals from VARIANTS ONLY
+    let totalStockValue = 0;
+    let totalVariantStock = 0;
     const lowStockThreshold = 10;
-    const lowStockProducts = products.filter(
-      (p) => p.countInStock <= lowStockThreshold && p.countInStock > 0
-    );
-    const outOfStockProducts = products.filter((p) => p.countInStock === 0);
+    
+    const lowStockProducts = [];
+    const outOfStockProducts = [];
+    
+    // Process each product's variants
+    products.forEach((product) => {
+      const productVariants = product.variants || [];
+      
+      // Calculate product-level totals
+      let productTotalStock = 0;
+      let productTotalValue = 0;
+      let hasLowStock = false;
+      let hasOutOfStock = false;
+      
+      productVariants.forEach((variant) => {
+        const variantStock = variant.countInStock || 0;
+        const variantPrice = variant.price || product.price;
+        const variantValue = variantPrice * variantStock;
+        
+        productTotalStock += variantStock;
+        productTotalValue += variantValue;
+        
+        // Check for low stock
+        if (variantStock > 0 && variantStock <= lowStockThreshold) {
+          hasLowStock = true;
+        }
+        
+        // Check for out of stock
+        if (variantStock === 0) {
+          hasOutOfStock = true;
+        }
+      });
+      
+      // Add to global totals
+      totalVariantStock += productTotalStock;
+      totalStockValue += productTotalValue;
+      
+      // Add to alert lists if needed
+      if (hasLowStock) {
+        lowStockProducts.push({
+          id: product._id,
+          name: product.name,
+          image: product.images?.[0] || null,
+          category: product.category,
+          currentStock: productTotalStock,
+          threshold: lowStockThreshold,
+        });
+      }
+      
+      if (hasOutOfStock) {
+        outOfStockProducts.push({
+          id: product._id,
+          name: product.name,
+          image: product.images?.[0] || null,
+          category: product.category,
+          currentStock: 0,
+          threshold: lowStockThreshold,
+        });
+      }
+    });
 
     // Get top selling products from orders (LAST 30 DAYS)
     const topSellingProducts = await getTopSellingProducts(5);
@@ -220,7 +280,8 @@ export const getInventoryDashboard = async (req, res) => {
     );
 
     // For demo - you'll need actual order data for real turnover
-    const inventoryTurnover = 4.2; // Example value - you can calculate this properly later
+    const inventoryTurnover = totalVariantStock > 0 ? 
+      (totalUnitsSoldLast30Days / totalVariantStock).toFixed(2) : 0;
 
     // Prepare fast moving products - USE ACTUAL ORDER DATA
     let fastMovingProducts = [];
@@ -242,24 +303,39 @@ export const getInventoryDashboard = async (req, res) => {
         source: "orders",
       }));
     } else {
-      // Fallback to original logic if no order data
-      fastMovingProducts = products
-        .filter((p) => p.countInStock > 0 && p.countInStock <= 20)
-        .slice(0, 10)
-        .map((p) => ({
-          id: p._id,
-          name: p.name,
-          currentStock: p.countInStock,
-          value: p.price * p.countInStock,
-          category: p.category,
-          image: p.images?.[0] || null,
-          source: "stock_levels",
-        }));
+      // Fallback: Find products with the most variant stock
+      const productsWithStock = products
+        .map(product => {
+          const productStock = product.variants.reduce(
+            (sum, variant) => sum + (variant.countInStock || 0),
+            0
+          );
+          const productValue = product.variants.reduce((sum, variant) => {
+            const variantPrice = variant.price || product.price;
+            return sum + (variantPrice * (variant.countInStock || 0));
+          }, 0);
+          
+          return {
+            id: product._id,
+            name: product.name,
+            currentStock: productStock,
+            value: productValue,
+            category: product.category,
+            price: product.price,
+            image: product.images?.[0] || null,
+            source: "stock_levels",
+          };
+        })
+        .filter(p => p.currentStock > 0)
+        .sort((a, b) => b.currentStock - a.currentStock)
+        .slice(0, 10);
+      
+      fastMovingProducts = productsWithStock;
     }
 
     res.json({
       summary: {
-        totalProducts,
+        totalProducts: products.length,
         totalStockValue,
         lowStockCount: lowStockProducts.length,
         outOfStockCount: outOfStockProducts.length,
@@ -270,25 +346,12 @@ export const getInventoryDashboard = async (req, res) => {
         totalRevenueLast30Days: stats.totalRevenue,
         totalSalesLast30Days: totalUnitsSoldLast30Days,
         hasOrderData: hasOrderData,
+        totalVariantStock, // Add this for debugging
       },
       fastMovingProducts,
       alerts: {
-        lowStock: lowStockProducts.slice(0, 7).map((p) => ({
-          id: p._id,
-          name: p.name,
-          image: p.images?.[0] || null,
-          category: p.category,
-          currentStock: p.countInStock,
-          threshold: lowStockThreshold,
-        })),
-        outOfStock: outOfStockProducts.slice(0, 7).map((p) => ({
-          id: p._id,
-          name: p.name,
-          image: p.images?.[0] || null,
-          category: p.category,
-          currentStock: p.countInStock,
-          threshold: lowStockThreshold,
-        })),
+        lowStock: lowStockProducts.slice(0, 7),
+        outOfStock: outOfStockProducts.slice(0, 7),
       },
     });
   } catch (error) {
@@ -417,21 +480,16 @@ export const getStockLevels = async (req, res) => {
       search = "",
       category = "",
       lowStock = false,
-      includeVariants = "true",
     } = req.query;
 
-    console.log("📡 [BACKEND] getStockLevels called with:", {
-      page,
-      limit,
-      search,
-      category,
-      lowStock,
-      includeVariants,
-    });
+    console.log("📡 [BACKEND] getStockLevels called");
 
     const skip = (page - 1) * limit;
 
-    let filter = { archived: { $ne: true } };
+    let filter = {
+      archived: { $ne: true },
+      "variants.0": { $exists: true }, // Only products with variants
+    };
 
     // Search by name
     if (search) {
@@ -443,50 +501,39 @@ export const getStockLevels = async (req, res) => {
       filter.category = category;
     }
 
-    // Only include products that have variants
-    filter["variants.0"] = { $exists: true };
-
     // Build query
     let query = Product.find(filter);
 
-    // Select fields
-    query = query.select(
-      "name price category images variants sku sizes colors"
-    );
+    // Select fields - REMOVED main product stock fields
+    query = query.select("name price category images variants");
 
     // Apply pagination
     query = query.skip(skip).limit(parseInt(limit)).sort({ createdAt: -1 });
 
-    console.log("📡 [BACKEND] MongoDB query - skip:", skip, "limit:", limit);
-
     const products = await query;
     const total = await Product.countDocuments(filter);
 
-    console.log(
-      "✅ [BACKEND] Found products:",
-      products.length,
-      "Total:",
-      total
-    );
+    console.log(`✅ Found ${products.length} products with variants`);
 
-    // Transform data for frontend - VARIANT-ONLY SYSTEM
+    // Transform data for VARIANT-ONLY SYSTEM
     const stockLevels = products.map((product) => {
-      // Calculate totals from variants only
-      const variantsStock =
-        product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
-        0;
+      // Calculate totals from variants ONLY
+      const variantsStock = product.variants.reduce(
+        (sum, variant) => sum + (variant.countInStock || 0),
+        0
+      );
 
-      // Calculate total value from variants
-      const totalValue =
-        product.variants?.reduce((sum, variant) => {
-          const variantPrice = variant.price || product.price;
-          return sum + variantPrice * (variant.countInStock || 0);
-        }, 0) || 0;
+      // Calculate total value from variants ONLY
+      const totalValue = product.variants.reduce((sum, variant) => {
+        const variantPrice = variant.price || product.price;
+        const variantStock = variant.countInStock || 0;
+        return sum + variantPrice * variantStock;
+      }, 0);
 
       // Determine worst status among variants
       let status = "healthy";
-      const hasOutOfStock = product.variants?.some((v) => v.countInStock === 0);
-      const hasLowStock = product.variants?.some(
+      const hasOutOfStock = product.variants.some((v) => v.countInStock === 0);
+      const hasLowStock = product.variants.some(
         (v) => v.countInStock > 0 && v.countInStock <= 5
       );
 
@@ -497,13 +544,13 @@ export const getStockLevels = async (req, res) => {
       }
 
       // Transform variants
-      const transformedVariants = (product.variants || []).map((variant) => ({
+      const transformedVariants = product.variants.map((variant) => ({
         _id: variant._id,
-        id: variant._id?.toString() || variant.id,
+        id: variant._id?.toString(),
         size: variant.size || "",
         color: variant.color || "",
         countInStock: variant.countInStock || 0,
-        sku: variant.sku || product.sku || "N/A",
+        sku: variant.sku || "N/A",
         price: variant.price || product.price,
         variantValue:
           (variant.price || product.price) * (variant.countInStock || 0),
@@ -513,22 +560,26 @@ export const getStockLevels = async (req, res) => {
         id: product._id,
         name: product.name,
         image: product.images?.[0] || "",
-        sku: product.sku || "N/A",
         category: product.category,
-        price: product.price, // base price
+        price: product.price,
         variantsStock: variantsStock,
-        totalStock: variantsStock, // Same as variantsStock since no main stock
+        totalStock: variantsStock, // Same as variantsStock
         status: status,
-        variantsCount: product.variants?.length || 0,
+        variantsCount: product.variants.length,
         variants: transformedVariants,
         totalValue: totalValue,
-        sizes: product.sizes || [],
-        colors: product.colors || [],
         lastUpdated: product.updatedAt,
       };
     });
 
-    const response = {
+    // Log for debugging
+    const totalStockInResponse = stockLevels.reduce(
+      (sum, p) => sum + p.totalStock,
+      0
+    );
+    console.log(`📊 Total variant stock in response: ${totalStockInResponse}`);
+
+    res.json({
       stockLevels,
       pagination: {
         currentPage: parseInt(page),
@@ -536,24 +587,11 @@ export const getStockLevels = async (req, res) => {
         totalProducts: total,
         hasNextPage: page * limit < total,
         hasPrevPage: page > 1,
-        limit: parseInt(limit),
-        skip: skip,
       },
-    };
-
-    console.log(
-      "✅ [BACKEND] Sending response with pagination:",
-      response.pagination
-    );
-
-    res.json(response);
+    });
   } catch (error) {
     console.error("❌ Error getting stock levels:", error);
-    res.status(500).json({
-      message: "Server error",
-      error: error.message,
-      stack: error.stack,
-    });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -562,90 +600,88 @@ export const getLowStockAlerts = async (req, res) => {
   try {
     const lowStockThreshold = req.query.threshold || 10;
 
+    // Find products with variants that have low stock
     const products = await Product.find({
       archived: { $ne: true },
-      // Only look for products with variants that have low stock
+      "variants.0": { $exists: true }, // Has variants
       "variants.countInStock": { $lte: lowStockThreshold },
-    }).select("name price countInStock category images variants sku");
+    }).select("name price category images variants");
 
     const alerts = [];
 
     products.forEach((product) => {
-      // ONLY check variant stock - NO main product checks
-      if (product.variants && product.variants.length > 0) {
-        product.variants.forEach((variant) => {
-          // Check low stock variants (stock > 0 but <= threshold)
-          if (
-            variant.countInStock <= lowStockThreshold &&
-            variant.countInStock > 0
-          ) {
-            alerts.push({
-              id: `${product._id}-${variant._id}`, // Unique ID for variant
-              productId: product._id,
-              name: product.name,
-              variantName: `${variant.color || "Default"} - ${
-                variant.size || "One Size"
-              }`,
-              image: product.images?.[0] || "",
-              category: product.category,
-              currentStock: variant.countInStock,
-              threshold: lowStockThreshold,
-              status: "low",
-              price: variant.price || product.price,
-              valueAtRisk:
-                (variant.price || product.price) * variant.countInStock,
-              type: "variant",
-              variantId: variant._id,
-              variantInfo: {
-                color: variant.color,
-                size: variant.size,
-                sku: variant.sku,
-              },
-            });
-          }
+      product.variants.forEach((variant) => {
+        // Check low stock variants
+        if (
+          variant.countInStock <= lowStockThreshold &&
+          variant.countInStock > 0
+        ) {
+          alerts.push({
+            id: `${product._id}-${variant._id}`,
+            productId: product._id,
+            name: product.name,
+            variantName: `${variant.color || "Default"} - ${
+              variant.size || "One Size"
+            }`,
+            image: product.images?.[0] || "",
+            category: product.category,
+            currentStock: variant.countInStock,
+            threshold: lowStockThreshold,
+            status: "low",
+            price: variant.price || product.price,
+            valueAtRisk:
+              (variant.price || product.price) * variant.countInStock,
+            variantId: variant._id,
+            variantInfo: {
+              color: variant.color,
+              size: variant.size,
+              sku: variant.sku,
+            },
+          });
+        }
 
-          // Check out of stock variants
-          if (variant.countInStock === 0) {
-            alerts.push({
-              id: `${product._id}-${variant._id}-out`,
-              productId: product._id,
-              name: product.name,
-              variantName: `${variant.color || "Default"} - ${
-                variant.size || "One Size"
-              }`,
-              image: product.images?.[0] || "",
-              category: product.category,
-              currentStock: 0,
-              threshold: lowStockThreshold,
-              status: "out",
-              price: variant.price || product.price,
-              valueAtRisk: 0,
-              type: "variant",
-              variantId: variant._id,
-              variantInfo: {
-                color: variant.color,
-                size: variant.size,
-                sku: variant.sku,
-              },
-            });
-          }
-        });
-      }
+        // Check out of stock variants
+        if (variant.countInStock === 0) {
+          alerts.push({
+            id: `${product._id}-${variant._id}-out`,
+            productId: product._id,
+            name: product.name,
+            variantName: `${variant.color || "Default"} - ${
+              variant.size || "One Size"
+            }`,
+            image: product.images?.[0] || "",
+            category: product.category,
+            currentStock: 0,
+            threshold: lowStockThreshold,
+            status: "out",
+            price: variant.price || product.price,
+            valueAtRisk: 0,
+            variantId: variant._id,
+            variantInfo: {
+              color: variant.color,
+              size: variant.size,
+              sku: variant.sku,
+            },
+          });
+        }
+      });
     });
 
-    // Sort by urgency (out of stock first, then lowest stock)
+    // Sort by urgency
     alerts.sort((a, b) => {
       if (a.status === "out" && b.status !== "out") return -1;
       if (b.status === "out" && a.status !== "out") return 1;
       return a.currentStock - b.currentStock;
     });
 
+    console.log(`🚨 Found ${alerts.length} variant alerts`);
+
     res.json({
       alerts,
       summary: {
         totalLowStock: alerts.length,
         totalValueAtRisk: alerts.reduce((sum, a) => sum + a.valueAtRisk, 0),
-        variantAlerts: alerts.filter((a) => a.type === "variant").length,
+        variantAlerts: alerts.length, // All alerts are variants
         mostUrgent: alerts.slice(0, 3),
       },
     });
@@ -871,44 +907,70 @@ export const getInventoryByLocation = async (req, res) => {
   }
 };
 
-// 7. 📋 REORDER MANAGEMENT
+// 7. 📋 REORDER MANAGEMENT - VARIANT-LEVEL SUGGESTIONS
 export const getReorderSuggestions = async (req, res) => {
   try {
     const reorderThreshold = req.query.threshold || 10;
 
+    // Find products with variants
     const products = await Product.find({
       archived: { $ne: true },
-      countInStock: { $lte: reorderThreshold },
-    }).select("name price countInStock category images");
+      "variants.0": { $exists: true }
+    }).select("name price category images variants");
 
-    const suggestions = products.map((product) => {
-      const suggestedOrder = Math.max(
-        reorderThreshold * 2 - product.countInStock,
-        10
-      );
+    const suggestions = [];
 
-      const estimatedCost = suggestedOrder * product.price;
-      const urgency =
-        product.countInStock === 0
-          ? "critical"
-          : product.countInStock <= 5
-          ? "high"
-          : "medium";
+    products.forEach((product) => {
+      product.variants.forEach((variant) => {
+        const variantStock = variant.countInStock || 0;
+        
+        // Only create suggestion for low/out of stock variants
+        if (variantStock <= reorderThreshold) {
+          const variantName = `${variant.color || "Default"} - ${variant.size || "One Size"}`;
+          const variantPrice = variant.price || product.price;
+          
+          // Calculate suggested order quantity
+          let suggestedOrder = 0;
+          let urgency = "medium";
+          
+          if (variantStock === 0) {
+            suggestedOrder = reorderThreshold * 3; // More for out of stock
+            urgency = "critical";
+          } else if (variantStock <= 5) {
+            suggestedOrder = reorderThreshold * 2 - variantStock;
+            urgency = "high";
+          } else {
+            suggestedOrder = reorderThreshold * 2 - variantStock;
+            urgency = "medium";
+          }
+          
+          // Ensure minimum order
+          suggestedOrder = Math.max(suggestedOrder, 10);
+          
+          const estimatedCost = suggestedOrder * variantPrice;
 
-      return {
-        id: product._id,
-        name: product.name,
-        category: product.category,
-        currentStock: product.countInStock,
-        reorderThreshold,
-        suggestedOrder,
-        unitPrice: product.price,
-        estimatedCost,
-        leadTime: "7 days",
-        urgency,
-        supplier: "Default Supplier",
-        image: product.images?.[0] || "",
-      };
+          suggestions.push({
+            id: `${product._id}-${variant._id}`,
+            productId: product._id,
+            variantId: variant._id,
+            name: product.name,
+            variantName: variantName,
+            category: product.category,
+            currentStock: variantStock,
+            reorderThreshold,
+            suggestedOrder,
+            unitPrice: variantPrice,
+            estimatedCost,
+            leadTime: "7 days",
+            urgency,
+            supplier: "Default Supplier",
+            image: product.images?.[0] || "",
+            size: variant.size,
+            color: variant.color,
+            sku: variant.sku || product.sku || "N/A"
+          });
+        }
+      });
     });
 
     // Sort by urgency
@@ -919,15 +981,16 @@ export const getReorderSuggestions = async (req, res) => {
 
     const totalCost = suggestions.reduce((sum, s) => sum + s.estimatedCost, 0);
 
+    console.log(`📋 Generated ${suggestions.length} reorder suggestions (variant-level)`);
+
     res.json({
       suggestions,
       summary: {
         totalSuggestions: suggestions.length,
         totalEstimatedCost: totalCost,
-        criticalCount: suggestions.filter((s) => s.urgency === "critical")
-          .length,
-        highPriorityCount: suggestions.filter((s) => s.urgency === "high")
-          .length,
+        criticalCount: suggestions.filter((s) => s.urgency === "critical").length,
+        highPriorityCount: suggestions.filter((s) => s.urgency === "high").length,
+        variantSuggestions: suggestions.length, // All are variant-level
       },
     });
   } catch (error) {
@@ -940,54 +1003,78 @@ export const getInventoryValuation = async (req, res) => {
   try {
     const { groupBy = "category" } = req.query;
 
-    // Fetch products WITH variants
-    const products = await Product.find({ archived: { $ne: true } }).select(
-      "name price category variants"
+    // Fetch products WITH variants ONLY
+    const products = await Product.find({
+      archived: { $ne: true },
+      "variants.0": { $exists: true }, // Only products with variants
+    }).select("name price category variants");
+
+    console.log(
+      `📊 Found ${products.length} products with variants for valuation`
     );
 
-    console.log(`📊 Found ${products.length} products for valuation`);
-
-    let valuation;
+    // DEBUG: Calculate total variant stock
+    let totalVariantStockDebug = 0;
+    products.forEach((product) => {
+      const productVariantStock = product.variants.reduce((sum, variant) => {
+        return sum + (variant.countInStock || 0);
+      }, 0);
+      totalVariantStockDebug += productVariantStock;
+    });
+    console.log(
+      `🔍 DEBUG: Total variant stock from all products: ${totalVariantStockDebug}`
+    );
 
     if (groupBy === "category") {
-      // Group by category - CORRECTED TO COUNT PRODUCTS, NOT VARIANTS
-      valuation = products.reduce((acc, product) => {
+      // Group by category - VARIANT-ONLY SYSTEM
+      const categoryGroups = products.reduce((acc, product) => {
         const category = product.category || "Uncategorized";
+        const productVariants = product.variants || [];
 
-        // Calculate total value from variants
-        const productValue = (product.variants || []).reduce(
-          (vSum, variant) => {
-            const variantPrice = variant.price || product.price;
-            return vSum + variantPrice * (variant.countInStock || 0);
-          },
+        // Calculate stock and value from variants ONLY
+        const productStock = productVariants.reduce(
+          (sum, variant) => sum + (variant.countInStock || 0),
           0
         );
 
-        // Count THIS PRODUCT (not variants)
+        const productValue = productVariants.reduce((vSum, variant) => {
+          const variantPrice = variant.price || product.price;
+          const variantStock = variant.countInStock || 0;
+          return vSum + variantPrice * variantStock;
+        }, 0);
+
+        // Initialize category if not exists
         if (!acc[category]) {
           acc[category] = {
             category,
             totalValue: 0,
-            totalProducts: 0, // Changed from totalItems
+            totalProducts: 0,
             totalVariants: 0,
+            totalStock: 0,
             products: [],
           };
         }
 
+        // Add to category totals
         acc[category].totalValue += productValue;
-        acc[category].totalProducts += 1; // Count the product
-        acc[category].totalVariants += (product.variants || []).length; // Track variants separately
+        acc[category].totalProducts += 1;
+        acc[category].totalVariants += productVariants.length;
+        acc[category].totalStock += productStock;
 
-        if (productValue > 0) {
+        // Only add product if it has variant stock
+        if (productStock > 0) {
           acc[category].products.push({
             name: product.name,
-            variantsCount: (product.variants || []).length,
-            totalStock: (product.variants || []).reduce(
-              (sum, v) => sum + (v.countInStock || 0),
-              0
-            ),
+            variantsCount: productVariants.length,
+            totalStock: productStock,
             unitValue: product.price,
             totalValue: productValue,
+            variants: productVariants.map((v) => ({
+              color: v.color,
+              size: v.size,
+              stock: v.countInStock || 0,
+              price: v.price || product.price,
+            })),
           });
         }
 
@@ -995,104 +1082,118 @@ export const getInventoryValuation = async (req, res) => {
       }, {});
 
       // Convert to array and sort
-      valuation = Object.values(valuation).sort(
+      const valuationData = Object.values(categoryGroups).sort(
         (a, b) => b.totalValue - a.totalValue
       );
+
+      // Calculate summary stats from VARIANTS ONLY
+      const totalValue = valuationData.reduce(
+        (sum, cat) => sum + cat.totalValue,
+        0
+      );
+      const totalProducts = valuationData.reduce(
+        (sum, cat) => sum + cat.totalProducts,
+        0
+      );
+      const totalVariants = valuationData.reduce(
+        (sum, cat) => sum + cat.totalVariants,
+        0
+      );
+      const totalStock = valuationData.reduce(
+        (sum, cat) => sum + cat.totalStock,
+        0
+      );
+
+      console.log("✅ FINAL CALCULATION:", {
+        totalStockCalculated: totalStock,
+        totalValueCalculated: totalValue,
+        averageValue: totalStock > 0 ? totalValue / totalStock : 0,
+      });
+
+      res.json({
+        valuation: {
+          summary: {
+            totalValue,
+            totalProducts,
+            totalVariants,
+            totalStock,
+            averageValuePerItem: totalStock > 0 ? totalValue / totalStock : 0,
+          },
+          categories: valuationData,
+        },
+        timestamp: new Date(),
+      });
     } else {
-      // Overall valuation - CORRECTED
+      // Overall valuation - VARIANT-ONLY
       const totalValue = products.reduce((sum, product) => {
-        return (
-          sum +
-          (product.variants || []).reduce((vSum, variant) => {
-            const variantPrice = variant.price || product.price;
-            return vSum + variantPrice * (variant.countInStock || 0);
-          }, 0)
-        );
+        const productValue = product.variants.reduce((vSum, variant) => {
+          const variantPrice = variant.price || product.price;
+          const variantStock = variant.countInStock || 0;
+          return vSum + variantPrice * variantStock;
+        }, 0);
+        return sum + productValue;
       }, 0);
 
-      const totalProducts = products.length; // Count products
+      const totalProducts = products.length;
       const totalVariants = products.reduce((sum, product) => {
-        return sum + (product.variants || []).length;
+        return sum + product.variants.length;
       }, 0);
 
       const totalStock = products.reduce((sum, product) => {
-        return (
-          sum +
-          (product.variants || []).reduce((vSum, variant) => {
-            return vSum + (variant.countInStock || 0);
-          }, 0)
-        );
+        const productStock = product.variants.reduce((vSum, variant) => {
+          return vSum + (variant.countInStock || 0);
+        }, 0);
+        return sum + productStock;
       }, 0);
 
       const averageValuePerItem = totalStock > 0 ? totalValue / totalStock : 0;
 
-      // Most valuable items (products with highest total variant value)
+      // Most valuable items
       const mostValuable = products
         .map((product) => {
-          const productValue = (product.variants || []).reduce(
-            (vSum, variant) => {
-              const variantPrice = variant.price || product.price;
-              return vSum + variantPrice * (variant.countInStock || 0);
-            },
-            0
-          );
+          const productVariants = product.variants;
+          const productValue = productVariants.reduce((vSum, variant) => {
+            const variantPrice = variant.price || product.price;
+            const variantStock = variant.countInStock || 0;
+            return vSum + variantPrice * variantStock;
+          }, 0);
 
-          const productStock = (product.variants || []).reduce(
-            (vSum, variant) => {
-              return vSum + (variant.countInStock || 0);
-            },
-            0
-          );
+          const productStock = productVariants.reduce((vSum, variant) => {
+            return vSum + (variant.countInStock || 0);
+          }, 0);
 
           return {
             name: product.name,
             category: product.category,
-            variantsCount: (product.variants || []).length,
+            variantsCount: productVariants.length,
             stock: productStock,
             unitValue: product.price,
             totalValue: productValue,
           };
         })
-        .filter((item) => item.totalValue > 0) // Only include items with stock
+        .filter((item) => item.totalValue > 0)
         .sort((a, b) => b.totalValue - a.totalValue)
         .slice(0, 10);
 
-      valuation = {
-        summary: {
-          totalValue,
-          totalProducts, // Changed from totalItems
-          totalVariants, // Added variants count
-          totalStock, // Added total stock units
-          averageValuePerItem,
+      res.json({
+        valuation: {
+          summary: {
+            totalValue,
+            totalProducts,
+            totalVariants,
+            totalStock,
+            averageValuePerItem,
+          },
+          mostValuable,
         },
-        mostValuable,
-      };
+        timestamp: new Date(),
+      });
     }
-
-    // Log for debugging
-    console.log("📊 Valuation summary:", {
-      totalProducts:
-        valuation.summary?.totalProducts ||
-        valuation.reduce((sum, g) => sum + g.totalProducts, 0),
-      totalVariants:
-        valuation.summary?.totalVariants ||
-        valuation.reduce((sum, g) => sum + g.totalVariants, 0),
-      totalValue:
-        valuation.summary?.totalValue ||
-        valuation.reduce((sum, g) => sum + g.totalValue, 0),
-    });
-
-    res.json({
-      valuation,
-      timestamp: new Date(),
-    });
   } catch (error) {
     console.error("Error getting inventory valuation:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
-// BULK STOCK UPDATE
 export const bulkUpdateStock = async (req, res) => {
   try {
     const { updates } = req.body;
@@ -1331,7 +1432,7 @@ export const getInventoryAgingReport = async (req, res) => {
   }
 };
 
-// Helper function for aging recommendations
+// Helper function for aging  recommendations
 const generateAgingRecommendations = (buckets, totalValue) => {
   const recommendations = [];
   const staleOldValue = buckets.stale.totalValue + buckets.old.totalValue;

@@ -4,6 +4,7 @@ import Product from "../models/product.model.js";
 import {optimizeCloudinaryUrl} from "../lib/optimizeCloudinaryUrl.js";
 import Category from "../models/categoy.model.js";
 
+
 export const clearFeaturedCache = async (req, res) => {
   try {
     await redis.del("featured_products");
@@ -14,28 +15,31 @@ export const clearFeaturedCache = async (req, res) => {
   }
 };
 
-// In product.controller.js - Add these functions
-
-// Check variant availability
+// Check variant availability - VARIANT-ONLY VERSION
 export const checkVariantAvailability = async (req, res) => {
   try {
     const { productId } = req.params;
     const { size, color, quantity = 1 } = req.query;
 
-    console.log("🔍 checkVariantAvailability called:", { productId, size, color, quantity });
+    console.log("🔍 checkVariantAvailability called:", {
+      productId,
+      size,
+      color,
+      quantity,
+    });
 
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ 
-        available: false, 
+      return res.status(404).json({
+        available: false,
         availableStock: 0,
-        message: 'Product not found'
+        message: "Product not found",
       });
     }
 
-    let availableStock = product.countInStock;
-    
-    // Check variant stock with FLEXIBLE matching
+    // VARIANT-ONLY: Only check variant stock
+    let availableStock = 0;
+
     if (product.variants?.length > 0) {
       const variant = product.variants.find((v) => {
         const sizeMatches = size
@@ -46,9 +50,18 @@ export const checkVariantAvailability = async (req, res) => {
           : !v.color || v.color === "" || v.color === "Standard";
         return sizeMatches && colorMatches;
       });
-      
+
       availableStock = variant ? variant.countInStock : 0;
       console.log("📊 Variant stock found:", availableStock);
+    } else {
+      // If no variants exist, product has 0 stock
+      return res.json({
+        available: false,
+        availableStock: 0,
+        requestedQuantity: parseInt(quantity),
+        productName: product.name,
+        message: "No variants available",
+      });
     }
 
     const isAvailable = availableStock >= parseInt(quantity);
@@ -57,63 +70,69 @@ export const checkVariantAvailability = async (req, res) => {
       available: isAvailable,
       availableStock,
       requestedQuantity: parseInt(quantity),
-      productName: product.name
+      productName: product.name,
     });
   } catch (error) {
-    console.error('Error checking availability:', error);
-    res.status(500).json({ 
-      available: false, 
+    console.error("Error checking availability:", error);
+    res.status(500).json({
+      available: false,
       availableStock: 0,
-      message: 'Error checking availability'
+      message: "Error checking availability",
     });
   }
 };
-// In product.controller.js - Add this test function
+
+// Debug function - VARIANT-ONLY
 export const debugProductStock = async (req, res) => {
   try {
     const { productId } = req.params;
-    
-    console.log('🔍 Debugging product stock for:', productId);
-    
+
+    console.log("🔍 Debugging product stock for:", productId);
+
     const product = await Product.findById(productId);
     if (!product) {
-      return res.status(404).json({ error: 'Product not found' });
+      return res.status(404).json({ error: "Product not found" });
     }
-    
+
     const debugInfo = {
       id: product._id,
       name: product.name,
-      mainStock: product.countInStock,
-      variants: product.variants?.map(v => ({
-        size: v.size,
-        color: v.color,
-        stock: v.countInStock
-      })) || [],
-      totalVariants: product.variants?.length || 0
+      // REMOVED: mainStock: product.countInStock,
+      variants:
+        product.variants?.map((v) => ({
+          size: v.size,
+          color: v.color,
+          stock: v.countInStock,
+        })) || [],
+      totalVariants: product.variants?.length || 0,
+      totalVariantStock:
+        product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
+        0,
     };
-    
-    console.log('📊 Product debug info:', debugInfo);
+
+    console.log("📊 Product debug info:", debugInfo);
     res.json(debugInfo);
   } catch (error) {
-    console.error('Debug error:', error);
+    console.error("Debug error:", error);
     res.status(500).json({ error: error.message });
   }
 };
 
+// Check cart availability - VARIANT-ONLY
 export const checkCartAvailability = async (req, res) => {
   try {
     const { cartItems } = req.body;
-    
-    console.log('🔍 [START] Checking cart availability');
-    console.log('📦 Cart items received:', JSON.stringify(cartItems, null, 2));
-    
+
+    console.log("🔍 [START] Checking cart availability");
+    console.log("📦 Cart items received:", JSON.stringify(cartItems, null, 2));
+
     // If cart is empty, return all available
     if (!cartItems || cartItems.length === 0) {
-      console.log('🛒 Cart is empty, returning all available');
+      console.log("🛒 Cart is empty, returning all available");
       return res.json({
         allAvailable: true,
         unavailableItems: [],
-        availabilityResults: []
+        availabilityResults: [],
       });
     }
 
@@ -127,9 +146,9 @@ export const checkCartAvailability = async (req, res) => {
         name: item.name,
         quantity: item.quantity,
         size: item.size,
-        color: item.color
+        color: item.color,
       });
-      
+
       const product = await Product.findById(item._id);
       if (!product) {
         console.log(`❌ Product not found in database: ${item._id}`);
@@ -137,45 +156,77 @@ export const checkCartAvailability = async (req, res) => {
           productId: item._id,
           available: false,
           availableStock: 0,
-          message: 'Product not found'
+          message: "Product not found",
         });
         allAvailable = false;
         unavailableItems.push({
           ...item,
           availableStock: 0,
-          message: 'Product not found'
+          message: "Product not found",
         });
         continue;
       }
 
-      console.log(`✅ Product found: ${product.name}, Main stock: ${product.countInStock}`);
+      console.log(`✅ Product found: ${product.name}`);
       console.log(`📊 Product variants:`, product.variants);
 
       let availableStock = 0;
-      let stockSource = 'main';
-      
-      // Check variant stock
-      if (item.size && item.color && product.variants?.length > 0) {
-        const variant = product.variants.find(
-          v => v.size === item.size && v.color === item.color
+
+      // VARIANT-ONLY: Only check variant stock
+      if (product.variants?.length === 0) {
+        console.log(`❌ Product has no variants: ${product.name}`);
+        availabilityResults.push({
+          productId: item._id,
+          available: false,
+          availableStock: 0,
+          requestedQuantity: item.quantity,
+          productName: product.name,
+          message: "Product has no variants",
+        });
+        allAvailable = false;
+        unavailableItems.push({
+          ...item,
+          availableStock: 0,
+          message: "Product has no variants",
+        });
+        continue;
+      }
+
+      // Find the variant
+      const variant = product.variants.find(
+        (v) => v.size === item.size && v.color === item.color
+      );
+
+      if (variant) {
+        availableStock = variant.countInStock;
+        console.log(
+          `✅ Found variant: ${item.size}/${item.color}, Stock: ${availableStock}`
         );
-        
-        if (variant) {
-          availableStock = variant.countInStock;
-          stockSource = 'variant';
-          console.log(`✅ Found variant: ${item.size}/${item.color}, Stock: ${availableStock}`);
-        } else {
-          console.log(`❌ Variant not found: ${item.size}/${item.color}, using main stock`);
-          availableStock = product.countInStock;
-        }
       } else {
-        // Check simple product stock
-        availableStock = product.countInStock;
-        console.log(`📊 Using main product stock: ${availableStock}`);
+        console.log(`❌ Variant not found: ${item.size}/${item.color}`);
+        availabilityResults.push({
+          productId: item._id,
+          available: false,
+          availableStock: 0,
+          requestedQuantity: item.quantity,
+          productName: product.name,
+          message: "Variant not found",
+        });
+        allAvailable = false;
+        unavailableItems.push({
+          ...item,
+          availableStock: 0,
+          message: "Variant not found",
+        });
+        continue;
       }
 
       const isAvailable = availableStock >= item.quantity;
-      console.log(`📋 Availability check: ${isAvailable ? '✅ AVAILABLE' : '❌ UNAVAILABLE'} (Requested: ${item.quantity}, Available: ${availableStock}, Source: ${stockSource})`);
+      console.log(
+        `📋 Availability check: ${
+          isAvailable ? "✅ AVAILABLE" : "❌ UNAVAILABLE"
+        } (Requested: ${item.quantity}, Available: ${availableStock})`
+      );
 
       availabilityResults.push({
         productId: item._id,
@@ -183,7 +234,7 @@ export const checkCartAvailability = async (req, res) => {
         availableStock,
         requestedQuantity: item.quantity,
         productName: product.name,
-        stockSource
+        variantId: variant._id,
       });
 
       if (!isAvailable) {
@@ -192,7 +243,7 @@ export const checkCartAvailability = async (req, res) => {
           ...item,
           name: product.name,
           availableStock,
-          message: `Only ${availableStock} available`
+          message: `Only ${availableStock} available`,
         });
         console.log(`🚫 Marking as unavailable: ${product.name}`);
       } else {
@@ -203,33 +254,31 @@ export const checkCartAvailability = async (req, res) => {
     console.log(`\n🎯 [FINAL RESULT]`, {
       allAvailable,
       unavailableItemsCount: unavailableItems.length,
-      unavailableItems: unavailableItems.map(item => ({
+      unavailableItems: unavailableItems.map((item) => ({
         name: item.name,
         requested: item.quantity,
-        available: item.availableStock
+        available: item.availableStock,
       })),
-      totalItems: cartItems.length
+      totalItems: cartItems.length,
     });
 
-    console.log('🔍 [END] Availability check complete\n');
-    
+    console.log("🔍 [END] Availability check complete\n");
+
     res.json({
       allAvailable,
       unavailableItems,
-      availabilityResults
+      availabilityResults,
     });
   } catch (error) {
-    console.error('❌ [ERROR] Checking cart availability:', error);
-    // Return all available on error to avoid blocking users
-    res.json({ 
-      allAvailable: true, 
+    console.error("❌ [ERROR] Checking cart availability:", error);
+    res.json({
+      allAvailable: true,
       unavailableItems: [],
       availabilityResults: [],
-      message: 'Error checking availability, defaulting to available'
+      message: "Error checking availability, defaulting to available",
     });
   }
 };
-// Add these new functions to your product.controller.js
 
 // Get product variants
 export const getProductVariants = async (req, res) => {
@@ -238,10 +287,13 @@ export const getProductVariants = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    
+
     res.json({
       variants: product.variants || [],
-      totalVariants: product.variants?.length || 0
+      totalVariants: product.variants?.length || 0,
+      totalVariantStock:
+        product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
+        0,
     });
   } catch (error) {
     console.log("Error in getProductVariants controller", error.message);
@@ -249,12 +301,12 @@ export const getProductVariants = async (req, res) => {
   }
 };
 
-// Update variant stock
+// Update variant stock - VARIANT-ONLY
 export const updateVariantStock = async (req, res) => {
   try {
     const { variants } = req.body;
     const product = await Product.findById(req.params.id);
-    
+
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
@@ -262,11 +314,10 @@ export const updateVariantStock = async (req, res) => {
     // Update variants
     if (variants && Array.isArray(variants)) {
       product.variants = variants;
-      
-      // Recalculate total stock
-      product.countInStock = variants.reduce((total, variant) => 
-        total + (variant.countInStock || 0), 0
-      );
+
+      // In variant-only system, main product stock is always 0
+      // Or you can remove countInStock from Product model entirely
+      product.countInStock = 0; // Set to 0 for variant-only system
     }
 
     await product.save();
@@ -277,7 +328,7 @@ export const updateVariantStock = async (req, res) => {
   }
 };
 
-// Add this to your product.controller.js
+// Update variant inventory - VARIANT-ONLY
 export const updateVariantInventory = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
@@ -301,24 +352,24 @@ export const updateVariantInventory = async (req, res) => {
     }
 
     variant.countInStock = newStock;
-    
-    // Update main product stock (sum of all variants)
-    product.countInStock = product.variants.reduce((total, v) => total + v.countInStock, 0);
+
+    // In variant-only system, main product stock is 0
+    product.countInStock = 0; // Always 0
 
     await product.save();
 
     res.json({
-      message: 'Variant stock updated successfully',
+      message: "Variant stock updated successfully",
       countInStock: variant.countInStock,
-      productStock: product.countInStock
+      // productStock: product.countInStock // Always 0
     });
   } catch (error) {
-    console.error('Error updating variant inventory:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error("Error updating variant inventory:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-// Get variant stock specifically - FIXED VERSION
+// Get variant stock specifically - VARIANT-ONLY
 export const getVariantStock = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -331,12 +382,11 @@ export const getVariantStock = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    let stock = product.countInStock;
+    let stock = 0; // Always 0 for main product in variant-only system
 
-    // If variants exist, find specific variant with FLEXIBLE matching (same as addToCart)
+    // If variants exist, find specific variant with FLEXIBLE matching
     if (product.variants && product.variants.length > 0) {
       const variant = product.variants.find((v) => {
-        // Use the SAME flexible matching logic as addToCart
         const sizeMatches = size
           ? v.size === size
           : !v.size || v.size === "" || v.size === "Standard";
@@ -356,14 +406,32 @@ export const getVariantStock = async (req, res) => {
     console.log("Error in getVariantStock controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
-}; 
+};
 
 export const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find({
       archived: { $ne: true },
-    }); // find all products a nd exclude archived
-    res.json({ products });
+    }).select(
+      "name description price images category sizes colors variants isFeatured archived createdAt"
+    ); // Add variants to selection
+
+    // Transform products for frontend - VARIANT-ONLY
+    const transformedProducts = products.map((product) => {
+      // Calculate total stock from variants
+      const totalVariantStock = product.variants.reduce(
+        (sum, v) => sum + (v.countInStock || 0),
+        0
+      );
+
+      return {
+        ...product.toObject(),
+        countInStock: totalVariantStock, // Use variant stock total
+        variants: product.variants || [],
+      };
+    });
+
+    res.json({ products: transformedProducts });
   } catch (error) {
     console.log("Error in getAllProducts controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -378,24 +446,32 @@ export const getFeaturedProducts = async (req, res) => {
     }
 
     // if not in redis, fetch from mongodb
-    // .lean() is gonna return a plain javascript object instead of a mongodb document
-    // which is good for performance
     featuredProducts = await Product.find({
       isFeatured: true,
       archived: { $ne: true },
     })
-      .select("name price images category sizes colors")
+      .select("name price images category sizes colors variants") // Add variants
       .lean();
 
     if (!featuredProducts.length === 0) {
       return res.status(404).json({ message: "No featured products found" });
     }
 
+    // Transform for variant-only system
+    const transformedFeatured = featuredProducts.map((product) => {
+      const totalVariantStock =
+        product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
+        0;
+      return {
+        ...product,
+        countInStock: totalVariantStock,
+      };
+    });
+
     // store in redis for future quick access
+    await redis.set("featured_products", JSON.stringify(transformedFeatured));
 
-    await redis.set("featured_products", JSON.stringify(featuredProducts));
-
-    res.json(featuredProducts);
+    res.json(transformedFeatured);
   } catch (error) {
     console.log("Error in getFeaturedProducts controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -412,8 +488,8 @@ export const createProduct = async (req, res) => {
       category,
       sizes,
       colors,
-      countInStock,
-      variants, // ADD this new field
+      countInStock, // This should be ignored in variant-only system
+      variants, // All stock comes from variants
     } = req.body;
 
     let uploadedImages = [];
@@ -428,10 +504,10 @@ export const createProduct = async (req, res) => {
       );
     }
 
-    // Calculate total stock from variants if provided
-    const totalStock = variants
+    // VARIANT-ONLY: Calculate total stock from variants
+    const totalVariantStock = variants
       ? variants.reduce((sum, variant) => sum + (variant.countInStock || 0), 0)
-      : countInStock;
+      : 0;
 
     const product = await Product.create({
       name,
@@ -441,8 +517,8 @@ export const createProduct = async (req, res) => {
       category,
       sizes: sizes || [],
       colors: colors || [],
-      countInStock: totalStock, // Set total from variants
-      variants: variants || [], // ADD variants
+      countInStock: 0, // Always 0 in variant-only system
+      variants: variants || [], // All stock is in variants
     });
 
     // Automatically create category if it doesn't exist
@@ -463,7 +539,7 @@ export const createProduct = async (req, res) => {
   }
 };
 
-export const reduceProduct =  async (req, res) => {
+export const reduceProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const { quantity } = req.body;
@@ -474,55 +550,23 @@ export const reduceProduct =  async (req, res) => {
     const product = await Product.findById(id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    if (product.countInStock < quantity)
-      return res.status(400).json({ message: "Not enough stock" });
-
-    product.countInStock -= quantity;
-    await product.save();
-
-    res.json({ message: "Stock updated", countInStock: product.countInStock });
+    // In variant-only system, main product should not have stock
+    // This function should not be used
+    return res.status(400).json({
+      message:
+        "This function is disabled in variant-only system. Use variant-specific endpoints instead.",
+    });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
-// export const deleteProduct = async (req, res) => {
-//   try {
-//     const product = await Product.findById(req.params.id);
-//     if (!product) return res.status(404).json({ message: "Product not found" });
-
-//     // delete all images from Cloudinary
-//     if (product.images?.length > 0) {
-//       for (const url of product.images) {
-//         const publicId = url.split("/").pop().split(".")[0];
-//         await cloudinary.uploader.destroy(`products/${publicId}`);
-//       }
-//     }
-
-//     await product.deleteOne();
-
-//     await updateFeaturedProductsCache();
-//     res.json({ message: "Product deleted successfully" });
-//   } catch (error) {
-//     console.log("Error in deleteProduct controller", error.message);
-//     res.status(500).json({ message: "Server error", error: error.message });
-//   }
-// };
 export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    // ✅ DON'T DELETE IMAGES FROM CLOUDINARY - JUST ARCHIVE THE PRODUCT
-    // ❌ REMOVE THIS WHOLE BLOCK:
-    // if (product.images?.length > 0) {
-    //   for (const url of product.images) {
-    //     const publicId = url.split("/").pop().split(".")[0];
-    //     await cloudinary.uploader.destroy(`products/${publicId}`);
-    //   }
-    // }
-
-    // ✅ INSTEAD: Just mark as archived (soft delete)
+    // Just mark as archived (soft delete)
     product.archived = true;
     product.isActive = false;
     await product.save();
@@ -550,15 +594,15 @@ export const getRecommendedProducts = async (req, res) => {
     const products = await Product.aggregate([
       {
         $match: {
-          archived: { $ne: true }, //  Exclude archived products
-          isActive: { $ne: false }, //  Also exclude inactive products
-          countInStock: { $gt: 0 },
+          archived: { $ne: true },
+          isActive: { $ne: false },
+          // Check if any variant has stock > 0
+          "variants.countInStock": { $gt: 0 },
         },
       },
       {
         $sample: { size: 16 },
       },
-
       {
         $project: {
           _id: 1,
@@ -568,6 +612,11 @@ export const getRecommendedProducts = async (req, res) => {
           price: 1,
           sizes: 1,
           colors: 1,
+          variants: 1,
+          // Calculate total variant stock
+          countInStock: {
+            $sum: "$variants.countInStock",
+          },
         },
       },
     ]);
@@ -581,16 +630,29 @@ export const getRecommendedProducts = async (req, res) => {
 
 export const getProductsByCategory = async (req, res) => {
   const { category } = req.params;
-  const {size, color} = req.query
+  const { size, color } = req.query;
   try {
     let filter = {
       category,
       archived: { $ne: true },
     };
-    if (size) filter.sizes = size; 
+    if (size) filter.sizes = size;
     if (color) filter.colors = color;
-    const products = await Product.find( filter );
-    res.json({ products });
+    const products = await Product.find(filter);
+
+    // Transform for variant-only system
+    const transformedProducts = products.map((product) => {
+      const totalVariantStock = product.variants.reduce(
+        (sum, v) => sum + (v.countInStock || 0),
+        0
+      );
+      return {
+        ...product.toObject(),
+        countInStock: totalVariantStock,
+      };
+    });
+
+    res.json({ products: transformedProducts });
   } catch (error) {
     console.log("Error in getProductsByCategory controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -617,18 +679,29 @@ export const toggleFeaturedProduct = async (req, res) => {
 async function updateFeaturedProductsCache() {
   try {
     const featuredProducts = await Product.find({ isFeatured: true })
-      .select("name price images category sizes colors")
+      .select("name price images category sizes colors variants")
       .lean();
 
+    // Transform for variant-only system
+    const transformedFeatured = featuredProducts.map((product) => {
+      const totalVariantStock =
+        product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
+        0;
+      return {
+        ...product,
+        countInStock: totalVariantStock,
+      };
+    });
+
     // Set with expiration to prevent stale data
-   await redis.set("featured_products", JSON.stringify(featuredProducts), {
-     EX: 3600, // Set expiration in seconds (1 hour)
-   });
+    await redis.set("featured_products", JSON.stringify(transformedFeatured), {
+      EX: 3600, // Set expiration in seconds (1 hour)
+    });
     console.log("✅ Featured products cache updated");
   } catch (error) {
     console.log("Error updating featured products cache:", error.message);
   }
-} 
+}
 
 export const searchProducts = async (req, res) => {
   const query = req.query.q?.trim(); // remove spaces at the ends
@@ -677,9 +750,21 @@ export const searchProducts = async (req, res) => {
     };
 
     // Perform MongoDB search
-    const products = (await Product.find(queryConditions));
+    const products = await Product.find(queryConditions);
 
-    res.status(200).json(products);
+    // Transform for variant-only system
+    const transformedProducts = products.map((product) => {
+      const totalVariantStock = product.variants.reduce(
+        (sum, v) => sum + (v.countInStock || 0),
+        0
+      );
+      return {
+        ...product.toObject(),
+        countInStock: totalVariantStock,
+      };
+    });
+
+    res.status(200).json(transformedProducts);
   } catch (error) {
     console.error("Search error:", error);
     res.status(500).json({ message: "Server error" });
@@ -731,7 +816,18 @@ export const getProductById = async (req, res) => {
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
-    res.status(200).json({product});
+
+    // Transform for variant-only system
+    const totalVariantStock = product.variants.reduce(
+      (sum, v) => sum + (v.countInStock || 0),
+      0
+    );
+    const transformedProduct = {
+      ...product.toObject(),
+      countInStock: totalVariantStock,
+    };
+
+    res.status(200).json({ product: transformedProduct });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
@@ -742,7 +838,20 @@ export const getProductById = async (req, res) => {
 export const getArchivedProducts = async (req, res) => {
   try {
     const products = await Product.find({ archived: true });
-    res.json({ products });
+
+    // Transform for variant-only system
+    const transformedProducts = products.map((product) => {
+      const totalVariantStock = product.variants.reduce(
+        (sum, v) => sum + (v.countInStock || 0),
+        0
+      );
+      return {
+        ...product.toObject(),
+        countInStock: totalVariantStock,
+      };
+    });
+
+    res.json({ products: transformedProducts });
   } catch (error) {
     console.log("Error in getArchivedProducts controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -783,10 +892,11 @@ export const permanentDeleteProduct = async (req, res) => {
 
     await product.deleteOne();
     await updateFeaturedProductsCache();
-    
+
     res.json({ message: "Product permanently deleted" });
   } catch (error) {
     console.log("Error in permanentDeleteProduct controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+

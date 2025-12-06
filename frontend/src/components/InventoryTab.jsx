@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ShoppingBag, Layers} from "lucide-react";
-import { useUserStore } from "../stores/useUserStore";
+import { useUserStore } from "../stores/useUserStore.js";
 import { useInventoryStore } from "../stores/useInventoryStore.js";
 import axios from "../lib/axios.js";
 import {
@@ -32,6 +32,7 @@ import {
   Eye,
   Clock,
   MoreVertical,
+  ChevronDown,
   AlertCircle,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -75,6 +76,7 @@ const InventoryTab = () => {
     console.log(" First Product:", stockLevels[0]);
     console.log(" First Product Variants:", stockLevels[0]?.variants);
   }, [stockLevels]);
+  const [expandedBuckets, setExpandedBuckets] = useState({});
 
   const handleRefresh = () => {
     toast.loading("Refreshing data...");
@@ -1387,14 +1389,40 @@ const LowStockView = ({ alerts, onAdjust }) => {
     </div>
   );
 };
+
+
 const AgingReportView = ({ data }) => {
+  const [expandedBuckets, setExpandedBuckets] = useState({});
+
   if (!data) return null;
 
   const getBucketColor = (bucketLabel) => {
-    if (bucketLabel.includes("Fresh")) return "bg-green-500";
-    if (bucketLabel.includes("Aging")) return "bg-yellow-500";
-    if (bucketLabel.includes("Stale")) return "bg-orange-500";
-    return "bg-red-500";
+    if (bucketLabel.includes("Fresh")) return "bg-gradient-to-r from-green-500 to-green-600";
+    if (bucketLabel.includes("Aging")) return "bg-gradient-to-r from-yellow-500 to-yellow-600";
+    if (bucketLabel.includes("Stale")) return "bg-gradient-to-r from-orange-500 to-orange-600";
+    return "bg-gradient-to-r from-red-500 to-red-600";
+  };
+
+  const handleExportReport = () => {
+    // Add your export logic here
+    console.log("Exporting aging report...");
+  };
+
+  const handleCreateActionPlan = () => {
+    // Add your action plan logic here
+    console.log("Creating action plan...");
+  };
+
+  const handleRefreshData = () => {
+    // Add your refresh logic here
+    console.log("Refreshing data...");
+  };
+
+  const handleToggleExpand = (bucketId) => {
+    setExpandedBuckets(prev => ({
+      ...prev,
+      [bucketId]: !prev[bucketId]
+    }));
   };
 
   return (
@@ -1407,7 +1435,7 @@ const AgingReportView = ({ data }) => {
               <p className="text-sm text-gray-600">Aging Score</p>
               <div className="flex items-center gap-2 mt-1">
                 <div className="text-2xl font-bold text-gray-900">
-                  {data.summary?.agingScore}/5
+                  {data.summary?.agingScore || 0}/5
                 </div>
                 <div
                   className={`w-3 h-3 rounded-full ${
@@ -1436,7 +1464,7 @@ const AgingReportView = ({ data }) => {
             <div>
               <p className="text-sm text-gray-600">Fresh Stock</p>
               <p className="text-2xl font-bold text-green-600 mt-1">
-                {data.summary?.freshPercentage}%
+                {data.summary?.freshPercentage || 0}%
               </p>
             </div>
             <Package className="h-8 w-8 text-green-300" />
@@ -1449,7 +1477,7 @@ const AgingReportView = ({ data }) => {
             <div>
               <p className="text-sm text-gray-600">Stale Stock</p>
               <p className="text-2xl font-bold text-orange-600 mt-1">
-                {data.summary?.stalePercentage}%
+                {data.summary?.stalePercentage || 0}%
               </p>
             </div>
             <AlertTriangle className="h-8 w-8 text-orange-300" />
@@ -1462,7 +1490,7 @@ const AgingReportView = ({ data }) => {
             <div>
               <p className="text-sm text-gray-600">Total Items</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                {data.summary?.totalItems?.toLocaleString()}
+                {data.summary?.totalItems?.toLocaleString() || 0}
               </p>
             </div>
             <Layers className="h-8 w-8 text-blue-300" />
@@ -1472,70 +1500,298 @@ const AgingReportView = ({ data }) => {
       </div>
 
       {/* Aging Buckets Visualization */}
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">
-          Inventory Age Distribution
-        </h3>
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+          <div>
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900">
+              Inventory Age Distribution
+            </h3>
+            <p className="text-gray-600 mt-2 max-w-2xl">
+              Visual breakdown of inventory based on how long items have been in
+              stock
+            </p>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
+            <Calendar className="h-4 w-4 text-blue-600" />
+            <span className="text-sm font-medium text-blue-700">
+              As of {new Date().toLocaleDateString()}
+            </span>
+          </div>
+        </div>
 
-        <div className="space-y-6">
-          {data.agingBuckets?.map((bucket, index) => (
-            <div key={index} className="space-y-3">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-3 h-3 rounded-full ${getBucketColor(
-                      bucket.label
-                    )}`}
-                  ></div>
-                  <span className="font-medium text-gray-800">
-                    {bucket.label}
-                  </span>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-900">
-                    ₦{bucket.totalValue?.toLocaleString()}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {bucket.totalItems} units •{" "}
-                    {Math.round(
-                      (bucket.totalValue / data.summary.totalValue) * 100
-                    )}
-                    %
-                  </p>
-                </div>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">
+                  Fresh Stock
+                </p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {data.agingBuckets?.find((b) => b.label.includes("Fresh"))
+                    ?.totalItems || 0}
+                </p>
+                <p className="text-sm text-blue-600 mt-1">Last 30 days</p>
               </div>
-
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className={`h-3 rounded-full ${getBucketColor(bucket.label)}`}
-                  style={{
-                    width: `${Math.round(
-                      (bucket.totalValue / data.summary.totalValue) * 100
-                    )}%`,
-                  }}
-                ></div>
+              <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                <Package className="h-5 w-5 text-blue-600" />
               </div>
+            </div>
+          </div>
 
-              {/* Sample items in this bucket */}
-              {bucket.products.length > 0 && (
-                <div className="pl-4 border-l-2 border-gray-200 ml-2">
-                  <p className="text-xs text-gray-500 mb-2">Sample items:</p>
-                  <div className="space-y-2">
-                    {bucket.products.map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-sm">
-                        <span className="text-gray-700 truncate">
-                          {item.name} ({item.variantName})
-                        </span>
-                        <span className="text-gray-900 font-medium">
-                          {item.ageInDays}d • {item.stock} units
-                        </span>
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-yellow-700 uppercase tracking-wide">
+                  Aging Stock
+                </p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {data.agingBuckets?.find((b) => b.label.includes("Aging"))
+                    ?.totalItems || 0}
+                </p>
+                <p className="text-sm text-yellow-600 mt-1">31-90 days</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-yellow-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-orange-700 uppercase tracking-wide">
+                  Stale Stock
+                </p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {data.agingBuckets?.find((b) => b.label.includes("Stale"))
+                    ?.totalItems || 0}
+                </p>
+                <p className="text-sm text-orange-600 mt-1">91-180 days</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-orange-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-red-700 uppercase tracking-wide">
+                  Old Stock
+                </p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {data.agingBuckets?.find((b) => b.label.includes("Old"))
+                    ?.totalItems || 0}
+                </p>
+                <p className="text-sm text-red-600 mt-1">180+ days</p>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Visualization */}
+        <div className="space-y-6 md:space-y-8">
+          {data.agingBuckets?.map((bucket, index) => {
+            const percentage = Math.round(
+              (bucket.totalValue / data.summary.totalValue) * 100
+            );
+            const bucketColor = getBucketColor(bucket.label);
+            const bucketId = `bucket-${index}`;
+            const isExpanded = expandedBuckets[bucketId];
+
+            return (
+              <div
+                key={index}
+                className="group hover:bg-gray-50 transition-all duration-200 p-4 rounded-xl border border-gray-200"
+              >
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className={`w-12 h-12 rounded-xl ${
+                        bucketColor.includes('gradient') 
+                          ? 'bg-gradient-to-br from-green-500/20 to-green-600/20' 
+                          : `${bucketColor} bg-opacity-20`
+                      } flex items-center justify-center`}
+                    >
+                      <div
+                        className={`w-6 h-6 rounded-full ${bucketColor}`}
+                      ></div>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-900 text-lg">
+                        {bucket.label}
+                      </h4>
+                      <p className="text-gray-600 text-sm mt-1">
+                        {bucket.totalItems} units • ₦
+                        {bucket.totalValue?.toLocaleString()} value
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
+                      <div className="text-2xl font-bold text-gray-900">
+                        {percentage}%
                       </div>
-                    ))}
+                      <div className="text-sm text-gray-600">
+                        of total value
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
-          ))}
+
+                {/* Progress Bar */}
+                <div className="relative mb-6">
+                  <div className="flex justify-between text-sm text-gray-600 mb-2">
+                    <span>0%</span>
+                    <span className="font-medium">{percentage}%</span>
+                    <span>100%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${bucketColor}`}
+                      style={{ width: `${percentage}%` }}
+                    >
+                      <div className="h-full w-full rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sample Items with Expand/Collapse */}
+                {bucket.products.length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h5 className="font-medium text-gray-700 flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        {isExpanded ? "All Items" : "Top Items"} in this Category
+                      </h5>
+                      <span className="text-xs text-gray-500">
+                        {isExpanded
+                          ? `${bucket.products.length} items`
+                          : `Showing ${Math.min(
+                              bucket.products.length,
+                              3
+                            )} of ${bucket.products.length}`}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {(isExpanded
+                        ? bucket.products
+                        : bucket.products.slice(0, 3)
+                      ).map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900 text-sm truncate">
+                                {item.name}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {item.variantName}
+                              </p>
+                              <div className="flex items-center gap-3 mt-3">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3 text-gray-400" />
+                                  <span className="text-xs font-medium text-gray-700">
+                                    {item.ageInDays}d old
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Package className="h-3 w-3 text-gray-400" />
+                                  <span className="text-xs font-medium text-gray-700">
+                                    {item.stock} units
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="ml-3">
+                              <div className="px-2 py-1 bg-gray-100 rounded text-xs font-medium text-gray-700">
+                                ₦
+                                {Math.round(
+                                  item.totalValue
+                                ).toLocaleString()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {bucket.products.length > 3 && (
+                      <div className="mt-4 text-center">
+                        <button
+                          onClick={() => handleToggleExpand(bucketId)}
+                          className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center justify-center gap-1 mx-auto"
+                        >
+                          <span>
+                            {isExpanded
+                              ? "Show less"
+                              : `View all ${bucket.products.length} items`}
+                          </span>
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform duration-200 ${
+                              isExpanded ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Legend */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <h5 className="font-medium text-gray-700 mb-4">Color Legend</h5>
+          <div className="flex flex-wrap gap-4">
+            {[
+              { label: "Fresh (0-30 days)", color: "bg-green-500" },
+              { label: "Aging (31-90 days)", color: "bg-yellow-500" },
+              { label: "Stale (91-180 days)", color: "bg-orange-500" },
+              { label: "Old (180+ days)", color: "bg-red-500" },
+            ].map((item, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
+                <span className="text-sm text-gray-600">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="mt-8 flex flex-col sm:flex-row gap-3">
+          <button 
+            onClick={handleExportReport}
+            className="px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export Aging Report
+          </button>
+          <button 
+            onClick={handleCreateActionPlan}
+            className="px-5 py-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 rounded-xl font-medium hover:from-gray-200 hover:to-gray-300 transition-all duration-200 flex items-center justify-center gap-2"
+          >
+            <AlertTriangle className="h-4 w-4" />
+            Create Action Plan
+          </button>
+          <button 
+            onClick={handleRefreshData}
+            className="px-5 py-3 bg-gradient-to-r from-green-100 to-green-200 text-green-800 rounded-xl font-medium hover:from-green-200 hover:to-green-300 transition-all duration-200 flex items-center justify-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh Data
+          </button>
         </div>
       </div>
 
@@ -1558,11 +1814,16 @@ const AgingReportView = ({ data }) => {
             {data.slowMovers.map((item, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg"
+                className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors duration-200"
               >
-                <div>
-                  <p className="font-medium text-gray-800">{item.name}</p>
-                  <p className="text-sm text-gray-600">{item.variantName}</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                    <Package className="h-4 w-4 text-yellow-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-800">{item.name}</p>
+                    <p className="text-sm text-gray-600">{item.variantName}</p>
+                  </div>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-gray-900">
@@ -1591,31 +1852,32 @@ const AgingReportView = ({ data }) => {
             {data.recommendations.map((rec, index) => (
               <div
                 key={index}
-                className={`p-4 rounded-lg ${
+                className={`p-4 rounded-lg border transition-all duration-200 hover:shadow-sm ${
                   rec.type === "urgent"
-                    ? "bg-red-50 border border-red-200"
+                    ? "bg-red-50 border-red-200 hover:bg-red-100"
                     : rec.type === "warning"
-                    ? "bg-yellow-50 border border-yellow-200"
+                    ? "bg-yellow-50 border-yellow-200 hover:bg-yellow-100"
                     : rec.type === "success"
-                    ? "bg-green-50 border border-green-200"
-                    : "bg-blue-50 border border-blue-200"
+                    ? "bg-green-50 border-green-200 hover:bg-green-100"
+                    : "bg-blue-50 border-blue-200 hover:bg-blue-100"
                 }`}
               >
                 <div className="flex items-start gap-3">
                   {rec.type === "urgent" && (
-                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                    <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
                   )}
                   {rec.type === "warning" && (
-                    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
                   )}
                   {rec.type === "success" && (
-                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                   )}
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-800">{rec.title}</h4>
                     <p className="text-gray-600 text-sm mt-1">{rec.message}</p>
-                    <button className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-800">
-                      {rec.action} →
+                    <button className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                      {rec.action}
+                      <span className="transition-transform duration-200 group-hover:translate-x-1">→</span>
                     </button>
                   </div>
                 </div>
@@ -1630,295 +1892,411 @@ const AgingReportView = ({ data }) => {
 
 
 
-const ReorderView = ({ suggestions }) => (
-  <div className="space-y-6">
-    <div className="bg-white rounded-xl shadow-sm border p-6">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-800">
-            Reorder Suggestions
-          </h2>
-          <p className="text-gray-600 mt-1">
-            Smart suggestions to optimize your inventory
-          </p>
-        </div>
-        <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-          Create Purchase Order
-        </button>
-      </div>
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Product
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Current Stock
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Suggested Order
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Unit Cost
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Total Cost
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Urgency
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Action
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {suggestions.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    {item.image && (
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="h-10 w-10 rounded object-cover mr-3"
-                      />
-                    )}
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {item.name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {item.category}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">
-                    {item.currentStock}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="font-bold text-blue-600">
-                    {item.suggestedOrder}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    ₦{item.unitPrice?.toLocaleString()}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-semibold text-gray-900">
-                    ₦{item.estimatedCost?.toLocaleString()}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <UrgencyBadge urgency={item.urgency} />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex gap-2">
-                    <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-                      Order
-                    </button>
-                    <button className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300">
-                      Skip
-                    </button>
-                  </div>
-                </td>
+
+const ReorderView = ({ suggestions }) => {
+  if (!suggestions || suggestions.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="text-center py-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              All Stock Levels Are Healthy!
+            </h3>
+            <p className="text-gray-600 max-w-md mx-auto">
+              No reorder suggestions at this time. Your inventory is
+              well-stocked.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800">
+              Reorder Suggestions
+            </h2>
+            <p className="text-gray-600 mt-1">
+              Smart suggestions to optimize your inventory
+            </p>
+          </div>
+          <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+            Create Purchase Order
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Product & Variant
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Current Stock
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Suggested Order
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Unit Cost
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total Cost
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Urgency
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Action
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-);
-const ValuationView = ({ data }) => (
-  <div className="space-y-6">
-    {/* Summary Stats Cards */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-600">Total Inventory Value</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">
-              ₦{data.valuation?.summary?.totalValue?.toLocaleString() || "0"}
-            </p>
-          </div>
-          <DollarSign className="h-8 w-8 text-blue-500" />
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-600">Total Products</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">
-              {data.valuation?.summary?.totalProducts || "0"}
-            </p>
-          </div>
-          <Package className="h-8 w-8 text-green-500" />
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-600">Total Variants</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">
-              {data.valuation?.summary?.totalVariants || "0"}
-            </p>
-          </div>
-          <Layers className="h-8 w-8 text-purple-500" />
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-600">Avg. Value per Unit</p>
-            <p className="text-2xl font-bold text-gray-900 mt-1">
-              ₦{data.valuation?.summary?.averageValuePerItem?.toFixed(0) || "0"}
-            </p>
-          </div>
-          <TrendingUp className="h-8 w-8 text-orange-500" />
-        </div>
-      </div>
-    </div>
-
-    {/* Category Valuation Table */}
-    <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-      <div className="p-6 border-b">
-        <h3 className="text-lg font-semibold text-gray-800">
-          Inventory Value by Category
-        </h3>
-        <p className="text-gray-600 text-sm mt-1">
-          Distribution of inventory value across product categories
-        </p>
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Category
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Products
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Variants
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Stock Units
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Total Value
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                % of Total
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Avg. Unit Value
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {data.valuation?.map((category, index) => {
-              const totalStock =
-                category.products?.reduce(
-                  (sum, p) => sum + (p.totalStock || 0),
-                  0
-                ) || 0;
-              const avgUnitValue =
-                totalStock > 0 ? category.totalValue / totalStock : 0;
-              const percentage = data.valuation?.summary?.totalValue
-                ? (
-                    (category.totalValue / data.valuation.summary.totalValue) *
-                    100
-                  ).toFixed(1)
-                : "0.0";
-
-              return (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {suggestions.map((item) => (
+                <tr key={item.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
                     <div className="flex items-center">
-                      <span className="text-sm font-medium text-gray-900">
-                        {category.category || "Uncategorized"}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">
-                      {category.totalProducts}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">
-                      {category.totalVariants}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">
-                      {totalStock.toLocaleString()}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-semibold text-gray-900">
-                      ₦{category.totalValue?.toLocaleString()}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-16 bg-gray-200 rounded-full h-2 mr-3">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full"
-                          style={{ width: `${percentage}%` }}
-                        ></div>
+                      {item.image && (
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="h-10 w-10 rounded object-cover mr-3"
+                        />
+                      )}
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {item.name}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {item.category}
+                        </div>
+                        {item.variantName && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            {item.variantName}
+                          </div>
+                        )}
+                        {item.sku && (
+                          <div className="text-xs text-gray-400">
+                            SKU: {item.sku}
+                          </div>
+                        )}
                       </div>
-                      <span className="text-sm font-medium text-gray-900">
-                        {percentage}%
-                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">
-                      ₦{avgUnitValue.toFixed(0)}
-                    </span>
+                    <div className="text-sm font-medium text-gray-900">
+                      {item.currentStock}
+                    </div>
+                    {item.currentStock === 0 && (
+                      <div className="text-xs text-red-600">Out of stock</div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="font-bold text-blue-600">
+                      {item.suggestedOrder}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      ₦{item.unitPrice?.toLocaleString()}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-semibold text-gray-900">
+                      ₦{item.estimatedCost?.toLocaleString()}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <UrgencyBadge urgency={item.urgency} />
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex gap-2">
+                      <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                        Order
+                      </button>
+                      <button className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300">
+                        Skip
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              );
-            })}
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-            {/* Total Row */}
-            {data.valuation?.summary && (
+        {/* Summary Footer */}
+        {suggestions.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-gray-600">
+                  Total estimated cost:{" "}
+                  <span className="font-bold text-gray-900">
+                    ₦
+                    {suggestions
+                      .reduce((sum, s) => sum + s.estimatedCost, 0)
+                      .toLocaleString()}
+                  </span>
+                </p>
+                <p className="text-xs text-gray-500">
+                  {suggestions.filter((s) => s.urgency === "critical").length}{" "}
+                  critical items •{" "}
+                  {suggestions.filter((s) => s.urgency === "high").length} high
+                  priority
+                </p>
+              </div>
+              <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                Generate Purchase Order (PDF)
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+  // Updated ValuationView to work with your current backend structure:
+const ValuationView = ({ data }) => {
+  // Calculate summary from the array if summary doesn't exist
+  const valuationArray = data.valuation || [];
+  
+  const calculateSummary = () => {
+    if (data.valuation?.summary) {
+      return data.valuation.summary;
+    }
+    
+    // Calculate from array
+    const totalValue = valuationArray.reduce((sum, cat) => sum + (cat.totalValue || 0), 0);
+    const totalProducts = valuationArray.reduce((sum, cat) => sum + (cat.totalProducts || 0), 0);
+    const totalVariants = valuationArray.reduce((sum, cat) => sum + (cat.totalVariants || 0), 0);
+    const totalStock = valuationArray.reduce((sum, cat) => {
+      if (cat.totalStock) return sum + cat.totalStock;
+      // Calculate from products array
+      return sum + (cat.products?.reduce((pSum, p) => pSum + (p.totalStock || 0), 0) || 0);
+    }, 0);
+    
+    return {
+      totalValue,
+      totalProducts,
+      totalVariants,
+      totalStock,
+      averageValuePerItem: totalStock > 0 ? totalValue / totalStock : 0,
+    };
+  };
+
+  const summary = calculateSummary();
+  const displayValuation = data.valuation?.summary ? data.valuation.categories || [] : valuationArray;
+
+  return (
+    <div className="space-y-6 mt-10">
+      {/* Summary Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Inventory Value</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                ₦{summary.totalValue?.toLocaleString() || "0"}
+              </p>
+            </div>
+            <DollarSign className="h-8 w-8 text-blue-500" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Products</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {summary.totalProducts || "0"}
+              </p>
+            </div>
+            <Package className="h-8 w-8 text-green-500" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Variants</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {summary.totalVariants || "0"}
+              </p>
+            </div>
+            <Layers className="h-8 w-8 text-purple-500" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Avg. Value per Unit</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                ₦
+                {summary.averageValuePerItem
+                  ? summary.averageValuePerItem.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })
+                  : "0"}
+              </p>
+            </div>
+            <TrendingUp className="h-8 w-8 text-orange-500" />
+          </div>
+        </div>
+      </div>
+
+      {/* Category Valuation Table */}
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div className="p-6 border-b">
+          <h3 className="text-lg font-semibold text-gray-800">
+            Inventory Value by Category
+          </h3>
+          <p className="text-gray-600 text-sm mt-1">
+            Distribution of inventory value across product categories
+          </p>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Category
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Products
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Variants
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Stock Units
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total Value
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  % of Total
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Avg. Unit Value
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {displayValuation.map((category, index) => {
+                const totalStock =
+                  category.totalStock ||
+                  category.products?.reduce(
+                    (sum, p) => sum + (p.totalStock || 0),
+                    0
+                  ) ||
+                  0;
+                const avgUnitValue =
+                  totalStock > 0 ? category.totalValue / totalStock : 0;
+                const percentage =
+                  summary.totalValue > 0
+                    ? (
+                        (category.totalValue / summary.totalValue) *
+                        100
+                      ).toFixed(1)
+                    : "0.0";
+
+                return (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <span className="text-sm font-medium text-gray-900">
+                          {category.category || "Uncategorized"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-900">
+                        {category.totalProducts}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-900">
+                        {category.totalVariants}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-900">
+                        {totalStock.toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm font-semibold text-gray-900">
+                        ₦{category.totalValue?.toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-16 bg-gray-200 rounded-full h-2 mr-3">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{
+                              width: `${Math.min(
+                                100,
+                                parseFloat(percentage)
+                              )}%`,
+                            }}
+                          ></div>
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {percentage}%
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-900">
+                        ₦
+                        {avgUnitValue.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {/* Total Row */}
               <tr className="bg-gray-50 font-semibold">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm font-bold text-gray-900">TOTAL</span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm font-bold text-gray-900">
-                    {data.valuation.summary.totalProducts}
+                    {summary.totalProducts}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm font-bold text-gray-900">
-                    {data.valuation.summary.totalVariants}
+                    {summary.totalVariants}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm font-bold text-gray-900">
-                    {data.valuation.summary.totalStock?.toLocaleString()}
+                    {summary.totalStock?.toLocaleString()}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm font-bold text-gray-900">
-                    ₦{data.valuation.summary.totalValue?.toLocaleString()}
+                    ₦{summary.totalValue?.toLocaleString()}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -1926,147 +2304,131 @@ const ValuationView = ({ data }) => (
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm font-bold text-gray-900">
-                    ₦{data.valuation.summary.averageValuePerItem?.toFixed(0)}
+                    ₦
+                    {summary.averageValuePerItem?.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </span>
                 </td>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Empty State */}
-      {(!data.valuation || data.valuation.length === 0) && (
-        <div className="text-center py-12">
-          <Package className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">No valuation data available</p>
-        </div>
-      )}
-    </div>
-
-    {/* Top Categories Summary */}
-    {data.valuation && data.valuation.length > 0 && (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h4 className="text-sm font-medium text-gray-700 mb-4">
-            Top 3 Categories by Value
-          </h4>
-          <div className="space-y-3">
-            {data.valuation.slice(0, 3).map((category, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={`w-3 h-3 rounded-full ${
-                      index === 0
-                        ? "bg-yellow-500"
-                        : index === 1
-                        ? "bg-gray-400"
-                        : "bg-orange-500"
-                    }`}
-                  ></div>
-                  <span className="text-sm text-gray-600">
-                    {category.category}
+      {/* Top Categories Summary */}
+      {displayValuation.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h4 className="text-sm font-medium text-gray-700 mb-4">
+              Top 3 Categories by Value
+            </h4>
+            <div className="space-y-3">
+              {displayValuation.slice(0, 3).map((category, index) => (
+                <div key={index} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`w-3 h-3 rounded-full ${
+                        index === 0
+                          ? "bg-yellow-500"
+                          : index === 1
+                          ? "bg-gray-400"
+                          : "bg-orange-500"
+                      }`}
+                    ></div>
+                    <span className="text-sm text-gray-600">
+                      {category.category}
+                    </span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">
+                    {Math.round(
+                      (category.totalValue / summary.totalValue) * 100
+                    )}
+                    %
                   </span>
                 </div>
-                <span className="text-sm font-medium text-gray-900">
-                  {Math.round(
-                    (category.totalValue /
-                      data.valuation.reduce(
-                        (sum, c) => sum + c.totalValue,
-                        0
-                      )) *
-                      100
-                  )}
-                  %
-                </span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h4 className="text-sm font-medium text-gray-700 mb-4">
-            Value Concentration
-          </h4>
-          <div className="text-sm text-gray-600">
-            <p className="mb-2">
-              Top 3 categories hold{" "}
-              <span className="font-semibold text-gray-900">
-                {data.valuation
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h4 className="text-sm font-medium text-gray-700 mb-4">
+              Value Concentration
+            </h4>
+            <div className="text-sm text-gray-600">
+              <p className="mb-2">
+                Top 3 categories hold{" "}
+                <span className="font-semibold text-gray-900">
+                  {displayValuation
+                    .slice(0, 3)
+                    .reduce(
+                      (sum, c) =>
+                        sum +
+                        Math.round((c.totalValue / summary.totalValue) * 100),
+                      0
+                    )}
+                  %
+                </span>{" "}
+                of total value
+              </p>
+              <p className="text-xs text-gray-500">
+                {displayValuation
                   .slice(0, 3)
                   .reduce(
                     (sum, c) =>
                       sum +
-                      Math.round(
-                        (c.totalValue /
-                          data.valuation.reduce(
-                            (total, cat) => total + cat.totalValue,
-                            0
-                          )) *
-                          100
-                      ),
+                      Math.round((c.totalValue / summary.totalValue) * 100),
                     0
-                  )}
-                %
-              </span>{" "}
-              of total value
-            </p>
-            <p className="text-xs text-gray-500">
-              {data.valuation
-                .slice(0, 3)
-                .reduce(
-                  (sum, c) =>
-                    sum +
-                    Math.round(
-                      (c.totalValue /
-                        data.valuation.reduce(
-                          (total, cat) => total + cat.totalValue,
-                          0
-                        )) *
-                        100
-                    ),
-                  0
-                ) > 80
-                ? "High concentration - consider diversifying"
-                : "Good diversification"}
-            </p>
+                  ) > 80
+                  ? "High concentration - consider diversifying"
+                  : "Good diversification"}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <h4 className="text-sm font-medium text-gray-700 mb-4">
-            Highest Value per Unit
-          </h4>
-          <div className="space-y-2">
-            {data.valuation
-              .map((category) => {
-                const totalStock =
-                  category.products?.reduce(
-                    (sum, p) => sum + (p.totalStock || 0),
-                    0
-                  ) || 0;
-                return {
-                  ...category,
-                  avgUnitValue:
-                    totalStock > 0 ? category.totalValue / totalStock : 0,
-                };
-              })
-              .sort((a, b) => b.avgUnitValue - a.avgUnitValue)
-              .slice(0, 3)
-              .map((category, index) => (
-                <div key={index} className="flex justify-between text-sm">
-                  <span className="text-gray-600">{category.category}</span>
-                  <span className="font-medium text-gray-900">
-                    ₦{category.avgUnitValue.toFixed(0)}
-                  </span>
-                </div>
-              ))}
+          <div className="bg-white rounded-xl shadow-sm border p-6">
+            <h4 className="text-sm font-medium text-gray-700 mb-4">
+              Highest Value per Unit
+            </h4>
+            <div className="space-y-2">
+              {displayValuation
+                .map((category) => {
+                  const totalStock =
+                    category.totalStock ||
+                    category.products?.reduce(
+                      (sum, p) => sum + (p.totalStock || 0),
+                      0
+                    ) ||
+                    0;
+                  return {
+                    ...category,
+                    avgUnitValue:
+                      totalStock > 0 ? category.totalValue / totalStock : 0,
+                  };
+                })
+                .sort((a, b) => b.avgUnitValue - a.avgUnitValue)
+                .slice(0, 3)
+                .map((category, index) => (
+                  <div key={index} className="flex justify-between text-sm">
+                    <span className="text-gray-600">{category.category}</span>
+                    <span className="font-medium text-gray-900">
+                      ₦
+                      {category.avgUnitValue.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                ))}
+            </div>
           </div>
         </div>
-      </div>
-    )}
-  </div>
-);
+      )}
+    </div>
+  );
+};
+
 // Add this to your InventoryTab.js
 
 

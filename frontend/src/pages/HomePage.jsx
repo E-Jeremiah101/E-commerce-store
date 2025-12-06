@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useProductStore } from "../stores/useProductStore.jsx";
+import { useProductStore } from "../stores/useProductStore.js";
 import axios from "../lib/axios";
 import FeaturedProducts from "../components/FeaturedProducts.jsx";
 import { Link } from "react-router-dom";

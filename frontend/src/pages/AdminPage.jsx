@@ -16,7 +16,7 @@ import CreateProductForm from "../components/CreateProductForm.jsx";
 import axios from "../lib/axios.js";
 import AdminOrdersPage from "../components/AdminOrder.jsx";
 import AllUsers from "../components/AllUsers.jsx";
-import { useProductStore } from "../stores/useProductStore.jsx";
+import { useProductStore } from "../stores/useProductStore.js";
 import { useUserStore } from "../stores/useUserStore.js";
 import AdminRefundsTab from "../components/AdminRefundsTab.jsx";
 import GoBackButton from "../components/GoBackButton";

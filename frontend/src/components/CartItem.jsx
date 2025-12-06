@@ -1,7 +1,7 @@
 // In CartItem.js - Updated version
 import { Minus, Plus, Trash, AlertTriangle } from "lucide-react";
 import { useCartStore } from "../stores/useCartStore.js";
-import { useProductStore } from "../stores/useProductStore.jsx";
+import { useProductStore } from "../stores/useProductStore.js";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";

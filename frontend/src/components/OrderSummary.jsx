@@ -5,8 +5,8 @@ import { useCartStore } from "../stores/useCartStore";
 import { MoveRight, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import axios from "../lib/axios";
-import { useUserStore } from "../stores/useUserStore";
-import { useProductStore } from "../stores/useProductStore";
+import { useUserStore } from "../stores/useUserStore.js";
+import { useProductStore } from "../stores/useProductStore.js";
 import toast from "react-hot-toast";
 
 const OrderSummary = () => {
