@@ -35,17 +35,7 @@ const productSchema = new mongoose.Schema(
       min: 0,
       required: true,
     },
-    // REMOVED DUPLICATE countInStock FIELD
-    // countInStock: {
-    //   type: Number,
-    //   required: true,
-    //   default: 0, 
-    //   min: 0,
-    // },
-    // reserved: {
-    //   type: Number,
-    //   default: 0,
-    // }, 
+  
 
     variants: [productVariantSchema],
 

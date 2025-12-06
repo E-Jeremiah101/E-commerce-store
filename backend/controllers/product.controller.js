@@ -3,7 +3,8 @@ import cloudinary from "../lib/cloudinary.js";
 import Product from "../models/product.model.js";
 import {optimizeCloudinaryUrl} from "../lib/optimizeCloudinaryUrl.js";
 import Category from "../models/categoy.model.js";
-
+import AuditLogger from "../lib/auditLogger.js";
+import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
 
 export const clearFeaturedCache = async (req, res) => {
   try {
@@ -347,6 +348,27 @@ export const updateVariantInventory = async (req, res) => {
 
     // Update variant stock
     const newStock = variant.countInStock + quantityChange;
+
+     const requestInfo = AuditLogger.getRequestInfo(req);
+     await AuditLogger.log({
+       adminId: req.user._id,
+       adminName: `${req.user.firstname} ${req.user.lastname}`,
+       action: "UPDATE_INVENTORY",
+       entityType: ENTITY_TYPES.PRODUCT,
+       entityId: product._id,
+       entityName: product.name,
+       changes: {
+         variant: {
+           size: variant.size,
+           color: variant.color,
+           before: { countInStock: oldStock },
+           after: { countInStock: newStock },
+           change: quantityChange,
+         },
+       },
+       ...requestInfo,
+       additionalInfo: `Variant: ${variant.size}/${variant.color}`,
+     });
     if (newStock < 0) {
       return res.status(400).json({ message: "Insufficient stock" });
     }
@@ -521,6 +543,28 @@ export const createProduct = async (req, res) => {
       variants: variants || [], // All stock is in variants
     });
 
+    const requestInfo = AuditLogger.getRequestInfo(req);
+    await AuditLogger.log({
+      adminId: req.user._id,
+      adminName: `${req.user.firstname} ${req.user.lastname}`,
+      action: "CREATE_PRODUCT",
+      entityType: ENTITY_TYPES.PRODUCT,
+      entityId: product._id,
+      entityName: product.name,
+      changes: {
+        created: {
+          name: product.name,
+          price: product.price,
+          category: product.category,
+          variants: product.variants,
+        },
+      },
+      ...requestInfo,
+      additionalInfo: `Created product with ${
+        product.variants?.length || 0
+      } variants`,
+    });
+
     // Automatically create category if it doesn't exist
     if (category) {
       const existingCategory = await Category.findOne({ name: category });
@@ -565,6 +609,32 @@ export const deleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
+
+    const requestInfo = AuditLogger.getRequestInfo(req);
+    await AuditLogger.log({
+      adminId: req.user._id,
+      adminName: `${req.user.firstname} ${req.user.lastname}`,
+      action: "DELETE_PRODUCT",
+      entityType: ENTITY_TYPES.PRODUCT,
+      entityId: product._id,
+      entityName: product.name,
+      changes: {
+        before: {
+          archived: product.archived,
+          isActive: product.isActive,
+        },
+        after: {
+          archived: true,
+          isActive: false,
+        },
+      },
+      ...requestInfo,
+      additionalInfo: "Product archived (soft delete)",
+    });
+
+    product.archived = true;
+    product.isActive = false;
+    await product.save();
 
     // Just mark as archived (soft delete)
     product.archived = true;
@@ -663,9 +733,33 @@ export const toggleFeaturedProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (product) {
+      const wasFeatured = product.isFeatured; // Define here before using
+
+      // Log before toggling
+      const requestInfo = AuditLogger.getRequestInfo(req);
+      await AuditLogger.log({
+        adminId: req.user._id,
+        adminName: `${req.user.firstname} ${req.user.lastname}`,
+        action: "TOGGLE_FEATURED",
+        entityType: ENTITY_TYPES.PRODUCT,
+        entityId: product._id,
+        entityName: product.name,
+        changes: {
+          before: { isFeatured: wasFeatured },
+          after: { isFeatured: !wasFeatured },
+        },
+        ...requestInfo,
+        additionalInfo: wasFeatured
+          ? "Removed from featured"
+          : "Added to featured",
+      });
+
       product.isFeatured = !product.isFeatured;
       const updatedProduct = await product.save();
+
+      // Update cache
       await updateFeaturedProductsCache();
+
       res.json(updatedProduct);
     } else {
       res.status(404).json({ message: "Product not found" });
@@ -675,7 +769,6 @@ export const toggleFeaturedProduct = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 async function updateFeaturedProductsCache() {
   try {
     const featuredProducts = await Product.find({ isFeatured: true })
@@ -864,6 +957,27 @@ export const restoreProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
+    const requestInfo = AuditLogger.getRequestInfo(req);
+    await AuditLogger.log({
+      adminId: req.user._id,
+      adminName: `${req.user.firstname} ${req.user.lastname}`,
+      action: "RESTORE_PRODUCT",
+      entityType: ENTITY_TYPES.PRODUCT,
+      entityId: product._id,
+      entityName: product.name,
+      changes: {
+        before: {
+          archived: product.archived,
+          isActive: product.isActive,
+        },
+        after: {
+          archived: false,
+          isActive: true,
+        },
+      },
+      ...requestInfo,
+    });
+
     product.archived = false;
     product.isActive = true;
     product.archivedAt = null;
@@ -881,6 +995,25 @@ export const permanentDeleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
+
+     const requestInfo = AuditLogger.getRequestInfo(req);
+     await AuditLogger.log({
+       adminId: req.user._id,
+       adminName: `${req.user.firstname} ${req.user.lastname}`,
+       action: "PERMANENT_DELETE_PRODUCT",
+       entityType: ENTITY_TYPES.PRODUCT,
+       entityId: product._id,
+       entityName: product.name,
+       changes: {
+         deleted: {
+           name: product.name,
+           imagesCount: product.images?.length || 0,
+           variantsCount: product.variants?.length || 0,
+         },
+       },
+       ...requestInfo,
+       additionalInfo: "Product permanently deleted from database",
+     });
 
     // Only delete images if product is archived
     if (product.archived && product.images?.length > 0) {

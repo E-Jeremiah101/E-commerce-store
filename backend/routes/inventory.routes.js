@@ -7,7 +7,7 @@ import {
   getStockHistory,
   getInventoryByLocation,
   getReorderSuggestions,
-  getInventoryValuation,
+  getInventoryValuation, 
   bulkUpdateStock,
   syncOrdersWithInventory,
   getInventoryAgingReport,
