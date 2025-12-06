@@ -20,7 +20,7 @@ export const useInventoryStore = create((set, get) => ({
     hasNextPage: false,
     hasPrevPage: false,
   },
-  filters: {
+  filters: { 
     search: "",
     category: "",
     lowStock: false,
@@ -28,7 +28,7 @@ export const useInventoryStore = create((set, get) => ({
     sortBy: "name",
     sortOrder: "asc",
   },
-
+ 
   // Actions
 
   // 📊 Get Dashboard Data

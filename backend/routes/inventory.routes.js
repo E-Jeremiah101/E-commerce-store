@@ -9,7 +9,7 @@ import {
   getReorderSuggestions,
   getInventoryValuation,
   bulkUpdateStock,
-
+  syncOrdersWithInventory,
 } from "../controllers/inventory.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
@@ -43,7 +43,8 @@ router.get("/reorder-suggestions", getReorderSuggestions);
 
 // 💰 Inventory Valuation
 router.get("/valuation", getInventoryValuation);
-// Change from:
+
+router.post("/sync-orders", syncOrdersWithInventory);
 
 
 export default router;

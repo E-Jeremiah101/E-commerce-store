@@ -1,6 +1,165 @@
 import Product from "../models/product.model.js";
 import InventoryLog from "../models/inventoryLog.model.js";
 import mongoose from "mongoose";
+import Order from "../models/order.model.js";
+const getTopSellingProducts = async (
+  limit = 10,
+) => {
+  try {
+    console.log("🔍 Getting top selling products for inventory dashboard...");
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const today = new Date();
+
+    const matchStage = {
+      status: { $nin: ["Cancelled"] },
+      createdAt: { $gte: thirtyDaysAgo, $lte: today },
+    };
+
+    console.log("📊 Looking for orders in last 30 days");
+
+    const topProducts = await Order.aggregate([
+      { $match: matchStage },
+      { $unwind: "$products" },
+      {
+        $group: {
+          _id: "$products.product",
+          productId: { $first: "$products.product" },
+          name: { $first: "$products.name" },
+          totalSold: { $sum: "$products.quantity" },
+          totalRevenue: {
+            $sum: {
+              $multiply: ["$products.price", "$products.quantity"],
+            },
+          },
+          orderCount: { $sum: 1 },
+          lastOrderDate: { $max: "$createdAt" },
+        },
+      },
+      { $match: { totalSold: { $gt: 0 } } }, // Only products that were sold
+      { $sort: { totalSold: -1 } },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "_id",
+          as: "productDetails",
+        },
+      },
+      {
+        $unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true },
+      },
+      {
+        $project: {
+          _id: 1,
+          productId: 1,
+          name: { $ifNull: ["$productDetails.name", "$name"] },
+          category: "$productDetails.category",
+          totalSold: 1,
+          totalRevenue: 1,
+          orderCount: 1,
+          lastOrderDate: 1,
+          currentStock: { $ifNull: ["$productDetails.countInStock", 0] },
+          price: { $ifNull: ["$productDetails.price", 0] },
+          image: {
+            $let: {
+              vars: {
+                imagesArray: "$productDetails.images",
+              },
+              in: {
+                $cond: {
+                  if: { $gt: [{ $size: "$$imagesArray" }, 0] },
+                  then: { $arrayElemAt: ["$$imagesArray", 0] },
+                  else: null,
+                },
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    console.log(`✅ Found ${topProducts.length} top selling products`);
+    return topProducts;
+  } catch (error) {
+    console.error("❌ Error getting top selling products:", error);
+    return []; // Return empty array on error
+  }
+};
+
+// Helper to sync inventory when orders are delivered
+export const syncInventoryWithStoreOrders = async () => {
+  try {
+    console.log("🔄 Syncing inventory with store orders...");
+    
+    // Find orders that are delivered but not synced
+    const deliveredOrders = await Order.find({
+      status: "Pending",
+      isProcessed: false // Assuming this tracks if inventory was updated
+    }).limit(50); // Process in batches
+
+    let updatedCount = 0; 
+    
+    for (const order of deliveredOrders) {
+      try {
+        for (const item of order.products) {
+          const product = await Product.findById(item.product);
+          if (!product) continue;
+
+          // Find the specific variant
+          if (product.variants && product.variants.length > 0) {
+            const variant = product.variants.find(v => 
+              (v.size === item.selectedSize || (!v.size && !item.selectedSize)) &&
+              (v.color === item.selectedColor || (!v.color && !item.selectedColor))
+            );
+
+            if (variant) {
+              const oldStock = variant.countInStock;
+              
+              // Ensure we don't go negative
+              const newStock = Math.max(0, oldStock - item.quantity);
+              variant.countInStock = newStock;
+
+              // Log the inventory change
+              const inventoryLog = new InventoryLog({
+                productId: product._id,
+                variantId: variant._id,
+                variantName: `${variant.color || 'Default'} - ${variant.size || 'One Size'}`,
+                adjustmentType: "remove",
+                quantity: item.quantity,
+                oldStock,
+                newStock,
+                reason: "sale",
+                notes: `Order #${order.orderNumber}`,
+                adjustedBy: order.user,
+                referenceId: order._id
+              });
+
+              await inventoryLog.save();
+            }
+          }
+
+          await product.save();
+        }
+
+        // Mark order as processed for inventory
+        order.isProcessed = true;
+        await order.save();
+        
+        updatedCount++;
+        
+      } catch (error) {
+        console.error(`Error processing order ${order.orderNumber}:`, error);
+      }
+    }
+
+    console.log(`✅ Synced ${updatedCount} orders with inventory`);
+    return { synced: updatedCount };
+  } catch (error) {
+    console.error("❌ Error syncing inventory with orders:", error);
+    throw error;
+  }
+};
 
 // 1. 📊 STOCK DASHBOARD
 export const getInventoryDashboard = async (req, res) => {
@@ -18,19 +177,85 @@ export const getInventoryDashboard = async (req, res) => {
     );
     const outOfStockProducts = products.filter((p) => p.countInStock === 0);
 
-    // For demo - you'll need actual order data for real turnover
-    const inventoryTurnover = 4.2; // Example value
+    // Get top selling products from orders (LAST 30 DAYS)
+    const topSellingProducts = await getTopSellingProducts(5);
+    console.log(
+      "🛒 Top selling products from orders:",
+      topSellingProducts.length
+    );
 
-    // Get fast moving products (simplified - by lowest stock that's not zero)
-    const fastMovingProducts = products
-      .filter((p) => p.countInStock > 0 && p.countInStock <= 20)
-      .slice(0, 5)
-      .map((p) => ({
-        id: p._id,
-        name: p.name,
-        currentStock: p.countInStock,
-        value: p.price * p.countInStock,
+    // Get order stats for dashboard
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const orderStats = await Order.aggregate([
+      {
+        $match: {
+          status: { $nin: ["Cancelled"] },
+          createdAt: { $gte: thirtyDaysAgo },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: "$totalAmount" },
+          deliveredOrders: {
+            $sum: {
+              $cond: [{ $eq: ["$status", "Delivered"] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const stats = orderStats[0] || {
+      totalOrders: 0,
+      totalRevenue: 0,
+      deliveredOrders: 0,
+    };
+
+    // Calculate total units sold from top selling products
+    const totalUnitsSoldLast30Days = topSellingProducts.reduce(
+      (sum, product) => sum + (product.totalSold || 0),
+      0
+    );
+
+    // For demo - you'll need actual order data for real turnover
+    const inventoryTurnover = 4.2; // Example value - you can calculate this properly later
+
+    // Prepare fast moving products - USE ACTUAL ORDER DATA
+    let fastMovingProducts = [];
+    let hasOrderData = false;
+
+    if (topSellingProducts.length > 0) {
+      hasOrderData = true;
+      fastMovingProducts = topSellingProducts.map((product, index) => ({
+        id: product.productId || product._id,
+        name: product.name,
+        currentStock: product.currentStock || 0,
+        value: product.totalRevenue || 0,
+        orderCount: product.orderCount || 0,
+        totalQuantitySold: product.totalSold || 0,
+        lastOrderDate: product.lastOrderDate,
+        category: product.category,
+        price: product.price,
+        image: product.image,
+        source: "orders",
       }));
+    } else {
+      // Fallback to original logic if no order data
+      fastMovingProducts = products
+        .filter((p) => p.countInStock > 0 && p.countInStock <= 20)
+        .slice(0, 10)
+        .map((p) => ({
+          id: p._id,
+          name: p.name,
+          currentStock: p.countInStock,
+          value: p.price * p.countInStock,
+          category: p.category,
+          image: p.images?.[0] || null,
+          source: "stock_levels",
+        }));
+    }
 
     res.json({
       summary: {
@@ -39,10 +264,16 @@ export const getInventoryDashboard = async (req, res) => {
         lowStockCount: lowStockProducts.length,
         outOfStockCount: outOfStockProducts.length,
         inventoryTurnover,
+        // ORDER STATS - FROM ACTUAL ORDERS
+        totalOrdersLast30Days: stats.totalOrders,
+        deliveredOrdersLast30Days: stats.deliveredOrders,
+        totalRevenueLast30Days: stats.totalRevenue,
+        totalSalesLast30Days: totalUnitsSoldLast30Days,
+        hasOrderData: hasOrderData,
       },
       fastMovingProducts,
       alerts: {
-        lowStock: lowStockProducts.slice(0, 5).map((p) => ({
+        lowStock: lowStockProducts.slice(0, 7).map((p) => ({
           id: p._id,
           name: p.name,
           image: p.images?.[0] || null,
@@ -50,7 +281,7 @@ export const getInventoryDashboard = async (req, res) => {
           currentStock: p.countInStock,
           threshold: lowStockThreshold,
         })),
-        outOfStock: outOfStockProducts.slice(0, 5).map((p) => ({
+        outOfStock: outOfStockProducts.slice(0, 7).map((p) => ({
           id: p._id,
           name: p.name,
           image: p.images?.[0] || null,
@@ -65,6 +296,20 @@ export const getInventoryDashboard = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+export const syncOrdersWithInventory = async (req, res) => {
+  try {
+    const result = await syncInventoryWithStoreOrders();
+    res.json({
+      message: "Inventory sync completed",
+      ...result,
+    });
+  } catch (error) {
+    console.error("Error syncing orders:", error);
+    res.status(500).json({ message: "Sync failed", error: error.message });
+  }
+};
+// 1. 📊 STOCK DASHBOARD
+
 
 // 2. 📦 STOCK LEVELS
 // export const getStockLevels = async (req, res) => {
@@ -172,7 +417,7 @@ export const getStockLevels = async (req, res) => {
       search = "",
       category = "",
       lowStock = false,
-      includeVariants = "true", // Default to string "true"
+      includeVariants = "true",
     } = req.query;
 
     console.log("📡 [BACKEND] getStockLevels called with:", {
@@ -198,22 +443,19 @@ export const getStockLevels = async (req, res) => {
       filter.category = category;
     }
 
-    // Low stock filter
-    if (lowStock === "true") {
-      filter.countInStock = { $lte: 10, $gt: 0 };
-    }
+    // Only include products that have variants
+    filter["variants.0"] = { $exists: true };
 
     // Build query
     let query = Product.find(filter);
 
-    // Select fields - ALWAYS include variants for now to fix the issue
-    // We'll filter them in the response if needed
+    // Select fields
     query = query.select(
-      "name price countInStock category images variants sku sizes colors"
+      "name price category images variants sku sizes colors"
     );
 
     // Apply pagination
-    query = query.skip(skip).limit(parseInt(limit)).sort({ countInStock: 1 });
+    query = query.skip(skip).limit(parseInt(limit)).sort({ createdAt: -1 });
 
     console.log("📡 [BACKEND] MongoDB query - skip:", skip, "limit:", limit);
 
@@ -227,18 +469,34 @@ export const getStockLevels = async (req, res) => {
       total
     );
 
-    // Transform data for frontend
+    // Transform data for frontend - VARIANT-ONLY SYSTEM
     const stockLevels = products.map((product) => {
+      // Calculate totals from variants only
       const variantsStock =
         product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
         0;
-      const totalStock = product.countInStock + variantsStock;
 
+      // Calculate total value from variants
+      const totalValue =
+        product.variants?.reduce((sum, variant) => {
+          const variantPrice = variant.price || product.price;
+          return sum + variantPrice * (variant.countInStock || 0);
+        }, 0) || 0;
+
+      // Determine worst status among variants
       let status = "healthy";
-      if (totalStock === 0) status = "out";
-      else if (totalStock <= 10) status = "low";
+      const hasOutOfStock = product.variants?.some((v) => v.countInStock === 0);
+      const hasLowStock = product.variants?.some(
+        (v) => v.countInStock > 0 && v.countInStock <= 5
+      );
 
-      // Always include variants data
+      if (hasOutOfStock) {
+        status = "out";
+      } else if (hasLowStock) {
+        status = "low";
+      }
+
+      // Transform variants
       const transformedVariants = (product.variants || []).map((variant) => ({
         _id: variant._id,
         id: variant._id?.toString() || variant.id,
@@ -247,6 +505,8 @@ export const getStockLevels = async (req, res) => {
         countInStock: variant.countInStock || 0,
         sku: variant.sku || product.sku || "N/A",
         price: variant.price || product.price,
+        variantValue:
+          (variant.price || product.price) * (variant.countInStock || 0),
       }));
 
       return {
@@ -255,13 +515,13 @@ export const getStockLevels = async (req, res) => {
         image: product.images?.[0] || "",
         sku: product.sku || "N/A",
         category: product.category,
-        price: product.price,
-        mainStock: product.countInStock,
+        price: product.price, // base price
         variantsStock: variantsStock,
-        totalStock: totalStock,
+        totalStock: variantsStock, // Same as variantsStock since no main stock
         status: status,
         variantsCount: product.variants?.length || 0,
         variants: transformedVariants,
+        totalValue: totalValue,
         sizes: product.sizes || [],
         colors: product.colors || [],
         lastUpdated: product.updatedAt,
@@ -285,11 +545,6 @@ export const getStockLevels = async (req, res) => {
       "✅ [BACKEND] Sending response with pagination:",
       response.pagination
     );
-    console.log("📊 First product in response:", {
-      name: stockLevels[0]?.name,
-      variants: stockLevels[0]?.variants,
-      variantsCount: stockLevels[0]?.variantsCount,
-    });
 
     res.json(response);
   } catch (error) {
@@ -405,90 +660,60 @@ export const adjustStock = async (req, res) => {
   try {
     const { productId } = req.params;
     const {
-      adjustmentType, // "add", "remove", "set"
+      adjustmentType,
       quantity,
       reason,
       notes,
-      variantId = null,
+      variantId, // REQUIRED - variantId must be provided
     } = req.body;
+
+    // Validate that variantId is provided
+    if (!variantId) {
+      return res.status(400).json({
+        message: "variantId is required in variant-only system",
+      });
+    }
 
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    let oldStock, newStock;
-    let variantName = null;
-
-    if (variantId) {
-      // Adjust variant stock
-      const variant = product.variants.id(variantId);
-      if (!variant) {
-        return res.status(404).json({ message: "Variant not found" });
-      }
-
-      oldStock = variant.countInStock;
-      variantName = `${variant.color || 'Default'} - ${variant.size || 'One Size'}`;
-
-      switch (adjustmentType) {
-        case "add":
-          newStock = oldStock + quantity;
-          break;
-        case "remove":
-          newStock = oldStock - quantity;
-          if (newStock < 0) {
-            return res.status(400).json({ message: "Insufficient stock" });
-          }
-          break;
-        case "set":
-          newStock = quantity;
-          if (newStock < 0) {
-            return res
-              .status(400)
-              .json({ message: "Stock cannot be negative" });
-          }
-          break;
-        default:
-          return res.status(400).json({ message: "Invalid adjustment type" });
-      }
-
-      variant.countInStock = newStock;
-
-      // Update main product stock (sum of main stock + all variants)
-      const variantsTotal = product.variants.reduce(
-        (sum, v) => sum + (v.countInStock || 0),
-        0
-      );
-      product.countInStock = variantsTotal;
-    } else {
-      // Adjust main product stock
-      oldStock = product.countInStock;
-
-      switch (adjustmentType) {
-        case "add":
-          newStock = oldStock + quantity;
-          break;
-        case "remove":
-          newStock = oldStock - quantity;
-          if (newStock < 0) {
-            return res.status(400).json({ message: "Insufficient stock" });
-          }
-          break;
-        case "set":
-          newStock = quantity;
-          if (newStock < 0) {
-            return res
-              .status(400)
-              .json({ message: "Stock cannot be negative" });
-          }
-          break;
-        default:
-          return res.status(400).json({ message: "Invalid adjustment type" });
-      }
-
-      product.countInStock = newStock;
+    // Find the variant
+    const variant = product.variants.id(variantId);
+    if (!variant) {
+      return res.status(404).json({ message: "Variant not found" });
     }
 
+    const oldStock = variant.countInStock;
+    let newStock;
+    const variantName = `${variant.color || "Default"} - ${
+      variant.size || "One Size"
+    }`;
+
+    switch (adjustmentType) {
+      case "add":
+        newStock = oldStock + quantity;
+        break;
+      case "remove":
+        newStock = oldStock - quantity;
+        if (newStock < 0) {
+          return res.status(400).json({ message: "Insufficient stock" });
+        }
+        break;
+      case "set":
+        newStock = quantity;
+        if (newStock < 0) {
+          return res.status(400).json({ message: "Stock cannot be negative" });
+        }
+        break;
+      default:
+        return res.status(400).json({ message: "Invalid adjustment type" });
+    }
+
+    variant.countInStock = newStock;
+
+    // Save the product (this will save the variant changes)
     await product.save();
 
     // Log the adjustment
@@ -507,20 +732,16 @@ export const adjustStock = async (req, res) => {
 
     await inventoryLog.save();
 
-    // Return updated product data with variants
-    const updatedProduct = await Product.findById(productId)
-      .select("name price countInStock variants");
-
+    // Return updated variant data
     res.json({
       message: "Stock adjusted successfully",
       product: {
         id: product._id,
         name: product.name,
-        mainStock: product.countInStock,
-        variantStock: variantId ? newStock : null,
+        variantId: variantId,
         variantName: variantName,
+        newStock: newStock,
         updatedAt: product.updatedAt,
-        variants: updatedProduct.variants || []
       },
       adjustment: {
         type: adjustmentType,
@@ -720,17 +941,33 @@ export const getInventoryValuation = async (req, res) => {
   try {
     const { groupBy = "category" } = req.query;
 
+    // Fetch products WITH variants
     const products = await Product.find({ archived: { $ne: true } }).select(
-      "name price countInStock category"
+      "name price category variants"
     );
 
     let valuation;
 
     if (groupBy === "category") {
-      // Group by category
+      // Group by category - CORRECTED
       valuation = products.reduce((acc, product) => {
         const category = product.category || "Uncategorized";
-        const value = product.price * product.countInStock;
+
+        // Calculate total value and items from VARIANTS
+        const productValue = (product.variants || []).reduce(
+          (vSum, variant) => {
+            const variantPrice = variant.price || product.price;
+            return vSum + variantPrice * (variant.countInStock || 0);
+          },
+          0
+        );
+
+        const productItems = (product.variants || []).reduce(
+          (vSum, variant) => {
+            return vSum + (variant.countInStock || 0);
+          },
+          0
+        );
 
         if (!acc[category]) {
           acc[category] = {
@@ -741,42 +978,74 @@ export const getInventoryValuation = async (req, res) => {
           };
         }
 
-        acc[category].totalValue += value;
-        acc[category].totalItems += product.countInStock;
-        acc[category].products.push({
-          name: product.name,
-          stock: product.countInStock,
-          unitValue: product.price,
-          totalValue: value,
-        });
+        acc[category].totalValue += productValue;
+        acc[category].totalItems += productItems;
+
+        if (productValue > 0) {
+          acc[category].products.push({
+            name: product.name,
+            stock: productItems,
+            unitValue: product.price,
+            totalValue: productValue,
+          });
+        }
 
         return acc;
       }, {});
 
-      // Convert to array
+      // Convert to array and sort
       valuation = Object.values(valuation).sort(
         (a, b) => b.totalValue - a.totalValue
       );
     } else {
-      // Overall valuation
+      // Overall valuation - CORRECTED
       const totalValue = products.reduce((sum, product) => {
-        return sum + product.price * product.countInStock;
+        return (
+          sum +
+          (product.variants || []).reduce((vSum, variant) => {
+            const variantPrice = variant.price || product.price;
+            return vSum + variantPrice * (variant.countInStock || 0);
+          }, 0)
+        );
       }, 0);
 
       const totalItems = products.reduce((sum, product) => {
-        return sum + product.countInStock;
+        return (
+          sum +
+          (product.variants || []).reduce((vSum, variant) => {
+            return vSum + (variant.countInStock || 0);
+          }, 0)
+        );
       }, 0);
 
       const averageValuePerItem = totalItems > 0 ? totalValue / totalItems : 0;
 
-      // Top 10 most valuable items
+      // Most valuable items (products with highest total variant value)
       const mostValuable = products
-        .map((p) => ({
-          name: p.name,
-          stock: p.countInStock,
-          unitValue: p.price,
-          totalValue: p.price * p.countInStock,
-        }))
+        .map((product) => {
+          const productValue = (product.variants || []).reduce(
+            (vSum, variant) => {
+              const variantPrice = variant.price || product.price;
+              return vSum + variantPrice * (variant.countInStock || 0);
+            },
+            0
+          );
+
+          const productItems = (product.variants || []).reduce(
+            (vSum, variant) => {
+              return vSum + (variant.countInStock || 0);
+            },
+            0
+          );
+
+          return {
+            name: product.name,
+            stock: productItems,
+            unitValue: product.price,
+            totalValue: productValue,
+          };
+        })
+        .filter((item) => item.totalValue > 0) // Only include items with stock
         .sort((a, b) => b.totalValue - a.totalValue)
         .slice(0, 10);
 

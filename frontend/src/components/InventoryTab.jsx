@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ShoppingBag, Layers} from "lucide-react";
 import { useUserStore } from "../stores/useUserStore";
 import { useInventoryStore } from "../stores/useInventoryStore.js";
+import axios from "../lib/axios.js";
 import {
   Package,
   AlertTriangle,
@@ -29,9 +30,9 @@ import {
   Bell,
   Settings,
   Eye,
+  Clock,
   MoreVertical,
   AlertCircle,
-
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -189,6 +190,8 @@ const handleAdjustStock = (product) => {
   setShowAdjustModal(true);
 };
 
+
+
  // Update the submitAdjustment function to pass variantId
  const submitAdjustment = async (adjustmentDataWithVariant) => {
    if (!selectedProduct) return;
@@ -224,6 +227,20 @@ const handleAdjustStock = (product) => {
         () => fetchStockLevels(1, { ...filters, search: searchValue }),
         500
       );
+    }
+  };
+  const handleSyncOrders = async () => {
+    try {
+      toast.loading("Syncing orders with inventory...");
+      const res = await axios.post("/inventory/sync-orders");
+      toast.dismiss();
+      toast.success(`Synced ${res.data.synced || 0} orders successfully!`);
+
+      // Refresh dashboard data
+      fetchDashboard();
+    } catch (error) {
+      toast.dismiss();
+      toast.error("Failed to sync orders");
     }
   };
 
@@ -262,6 +279,13 @@ const handleAdjustStock = (product) => {
               >
                 <Download className="h-4 w-4" />
                 Export Report
+              </button>
+              <button
+                onClick={handleSyncOrders}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Sync Orders
               </button>
               <button
                 onClick={handleRefresh}
@@ -596,7 +620,7 @@ const StockLevelsView = ({
                   Category
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Stock
+                  Total Stock
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -612,7 +636,7 @@ const StockLevelsView = ({
             <tbody className="bg-white divide-y divide-gray-200">
               {stockLevels.map((product) => (
                 <React.Fragment key={product.id}>
-                  {/* Main Product Row - Now just shows product info with expand button */}
+                  {/* Product Summary Row */}
                   <tr className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -627,14 +651,16 @@ const StockLevelsView = ({
                           <div className="text-sm font-medium text-gray-900">
                             {product.name}
                           </div>
-                          {/* Show variants count but no main stock */}
-                          {product.variants && product.variants.length > 0 && (
+                          <div className="text-xs text-gray-500">
+                            {product.variantsCount} variants
+                          </div>
+                          {product.variantsCount > 0 && (
                             <button
                               onClick={() => toggleProductExpand(product.id)}
                               className="text-xs text-blue-600 hover:text-blue-800 mt-1"
                             >
                               {expandedProducts[product.id] ? "Hide" : "Show"}{" "}
-                              {product.variants.length} variants
+                              variants
                             </button>
                           )}
                         </div>
@@ -646,26 +672,19 @@ const StockLevelsView = ({
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500 italic">
-                        {/* No main stock - only variants */}
-                        {product.variantsCount > 0 &&
-                          `${product.variantsCount} variants`}
+                      <div className="text-sm font-medium text-gray-900">
+                        {product.totalStock || 0}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-500">
-                        {/* Status based on worst variant status */}
-                        {product.variantsCount > 0 && "See variants"}
-                      </span>
+                      <StockStatusBadge status={product.status} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
-                        {/* Calculate total value from all variants */}₦
-                        {product.totalValue?.toLocaleString() || "0"}
+                      <div className="text-sm font-medium text-gray-900">
+                        ₦{product.totalValue?.toLocaleString() || "0"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {/* Adjust button for the entire product (will show all variants in modal) */}
                       <button
                         onClick={() =>
                           onAdjust({
@@ -706,7 +725,7 @@ const StockLevelsView = ({
                                     </span>
                                   </div>
                                   <div className="text-xs text-gray-500">
-                                    SKU: {variant.sku || product.sku}
+                                    SKU: {variant.sku || "N/A"}
                                   </div>
                                 </div>
                               </div>
@@ -734,11 +753,7 @@ const StockLevelsView = ({
                             </td>
                             <td className="px-6 py-3">
                               <div className="text-sm text-gray-900">
-                                ₦
-                                {(
-                                  (variant.price || product.price) *
-                                  variant.countInStock
-                                ).toLocaleString()}
+                                ₦{variant.variantValue?.toLocaleString() || "0"}
                               </div>
                             </td>
                             <td className="px-6 py-3 text-sm font-medium">
@@ -799,10 +814,12 @@ const StockLevelsView = ({
 };
 
 // Sub-components
+// In your InventoryTab.js - Update the DashboardView component:
+
 const DashboardView = ({ data }) => (
   <div className="space-y-6">
-    {/* Stats Cards */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    {/* Stats Cards - SHOW ALL METRICS */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <StatCard
         title="Total Stock Value"
         value={`₦${data.summary?.totalStockValue?.toLocaleString() || "0"}`}
@@ -810,58 +827,150 @@ const DashboardView = ({ data }) => (
         trend="+12.5%"
         color="blue"
       />
+
+      {/* Second Row of Stats */}
+
       <StatCard
-        title="Low Stock Items"
+        title="Low Stock"
         value={data.summary?.lowStockCount || 0}
         icon={AlertTriangle}
         trend="+3"
         color="yellow"
       />
       <StatCard
-        title="Out of Stock"
-        value={data.summary?.outOfStockCount || 0}
-        icon={Package}
-        trend="-2"
-        color="red"
-      />
-      <StatCard
-        title="Turnover Rate"
-        value={`${data.summary?.inventoryTurnover || 0}x`}
-        icon={TrendingUp}
-        trend="+0.3x"
+        title="Total Products"
+        value={data.summary?.totalProducts || 0}
+        icon={Layers}
+        trend="+5"
         color="green"
       />
     </div>
 
-    {/* Fast Moving Products */}
+    {/* Fast Moving / Top Selling Products */}
     <div className="bg-white rounded-xl shadow-sm border p-6">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">
-        Fast Moving Products
-      </h3>
-      <div className="space-y-3">
-        {data.fastMovingProducts?.map((product, index) => (
-          <div
-            key={product.id}
-            className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-gray-500 font-medium">{index + 1}.</span>
-              <div>
-                <p className="font-medium text-gray-800">{product.name}</p>
-                <p className="text-sm text-gray-500">
-                  {product.currentStock} in stock
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800">
+            {data.summary?.hasOrderData
+              ? "Top Selling Products (Last 30 Days)"
+              : "Fast Moving Products"}
+          </h3>
+          <p className="text-gray-600 mt-1">
+            {data.summary?.hasOrderData
+              ? "Based on actual delivered orders"
+              : "Based on current stock levels"}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-gray-400" />
+          <span className="text-sm text-gray-500">Last 30 days</span>
+        </div>
+      </div>
+
+      {data.fastMovingProducts && data.fastMovingProducts.length > 0 ? (
+        <div className="space-y-4">
+          {data.fastMovingProducts.map((product, index) => (
+            <div
+              key={product.id}
+              className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg border border-gray-100"
+            >
+              <div className="flex items-center gap-4">
+                {/* Rank Badge */}
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    index === 0
+                      ? "bg-yellow-100 text-yellow-800 border-2 border-yellow-300"
+                      : index === 1
+                      ? "bg-gray-100 text-gray-800 border-2 border-gray-300"
+                      : index === 2
+                      ? "bg-orange-100 text-orange-800 border-2 border-orange-300"
+                      : "bg-blue-100 text-blue-800 border-2 border-blue-300"
+                  }`}
+                >
+                  <span className="font-bold text-sm">#{index + 1}</span>
+                </div>
+
+                {/* Product Image */}
+                <div className="relative">
+                  {product.image ? (
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="h-12 w-12 rounded-lg object-cover border"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded-lg bg-gray-100 border flex items-center justify-center">
+                      <Package className="h-6 w-6 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Product Info */}
+                <div>
+                  <p className="font-medium text-gray-900">{product.name}</p>
+                  <div className="flex items-center gap-3 mt-1">
+                    {product.category && (
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                        {product.category}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <ShoppingBag className="h-3 w-3 text-green-600" />
+                        <span className="text-sm font-medium text-green-700">
+                          {product.totalQuantitySold ||
+                            product.currentStock ||
+                            0}{" "}
+                          {product.source === "orders" ? "sold" : "in stock"}
+                        </span>
+                      </div>
+                      {product.orderCount > 0 && (
+                        <>
+                          <span className="text-xs text-gray-400">•</span>
+                          <span className="text-xs text-gray-500">
+                            {product.orderCount} orders
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Revenue/Value */}
+              <div className="text-right">
+                <p className="font-bold text-gray-900 text-lg">
+                  ₦{product.value?.toLocaleString() || "0"}
                 </p>
+                <p className="text-sm text-gray-500">
+                  {product.source === "orders" ? "Revenue" : "Stock Value"}
+                </p>
+
+                {/* Unit price */}
+                {product.price > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ₦{product.price?.toLocaleString()} each
+                  </p>
+                )}
               </div>
             </div>
-            <div className="text-right">
-              <p className="font-semibold text-gray-900">
-                ₦{product.value?.toLocaleString()}
-              </p>
-              <p className="text-sm text-gray-500">Value</p>
-            </div>
+          ))}
+        </div>
+      ) : (
+        /* Empty State */
+        <div className="text-center py-12">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-4">
+            <ShoppingBag className="h-8 w-8 text-blue-400" />
           </div>
-        ))}
-      </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No Sales Data Available
+          </h3>
+          <p className="text-gray-600 max-w-md mx-auto">
+            Top selling products will appear here once orders are delivered and
+            processed.
+          </p>
+        </div>
+      )}
     </div>
 
     {/* Alerts Summary */}
@@ -945,7 +1054,6 @@ const DashboardView = ({ data }) => (
     </div>
   </div>
 );
-
 
 const LowStockView = ({ alerts, onAdjust }) => {
   // Group alerts by product for better organization
@@ -1274,9 +1382,7 @@ const LowStockView = ({ alerts, onAdjust }) => {
   );
 };
 
-// Add these icon imports at the top
-// import { Package, AlertCircle, Plus, CheckCircle } from 'lucide-react';
-// 
+
 
 
 const ReorderView = ({ suggestions }) => (
@@ -1840,5 +1946,6 @@ const AdjustStockModal = ({ product, data, onChange, onSubmit, onClose }) => {
     </div>
   );
 };
+
 
 export default InventoryTab;
