@@ -4,6 +4,40 @@ import User from "../models/user.model.js";
 import Coupon from "../models/coupon.model.js";
 import Product from "../models/product.model.js";
 import { flw } from "../lib/flutterwave.js";
+import AuditLogger from "../lib/auditLogger.js";
+import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
+
+const logOrderAction = async (
+  req,
+  action,
+  orderId,
+  changes = {},
+  additionalInfo = ""
+) => {
+  try {
+    const order = await Order.findById(orderId).populate(
+      "user",
+      "firstname lastname email"
+    );
+    if (!order) return;
+
+    await AuditLogger.log({
+      adminId: req.user?._id,
+      adminName: req.user
+        ? `${req.user.firstname} ${req.user.lastname}`
+        : "System",
+      action,
+      entityType: ENTITY_TYPES.ORDER,
+      entityId: order._id,
+      entityName: `Order #${order.orderNumber}`,
+      changes,
+      ...AuditLogger.getRequestInfo(req),
+      additionalInfo,
+    });
+  } catch (error) {
+    console.error("Failed to log order action:", error);
+  }
+};
 
 export const getUserOrders = async (req, res) => {
   try {
@@ -80,7 +114,7 @@ export const getUserOrders = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
- 
+  
 // Simple order recovery for support team
 export const supportRecoverOrder = async (req, res) => {
   function generateOrderNumber() {
@@ -237,6 +271,26 @@ export const supportRecoverOrder = async (req, res) => {
 
         // METHOD 2: Search through recent transactions (date range approach)
         if (!payment) {
+          // Log failed recovery attempt
+          await AuditLogger.log({
+            adminId: req.user?._id,
+            adminName: req.user
+              ? `${req.user.firstname} ${req.user.lastname}`
+              : "System",
+            action: "ORDER_RECOVERY_ATTEMPT",
+            entityType: ENTITY_TYPES.ORDER,
+            entityId: null,
+            entityName: "Failed Recovery",
+            changes: {
+              attemptedWith: {
+                transaction_ref,
+                flutterwave_ref,
+                customer_email,
+              },
+            },
+            ...AuditLogger.getRequestInfo(req),
+            additionalInfo: "Order recovery failed - No payment found",
+          });
           console.log(
             "🔄 Searching through recent transactions by date range..."
           );
@@ -313,6 +367,27 @@ export const supportRecoverOrder = async (req, res) => {
 
         // METHOD 3: Try alternative search methods
         if (!payment) {
+          // Log failed recovery attempt
+          await AuditLogger.log({
+            adminId: req.user?._id,
+            adminName: req.user
+              ? `${req.user.firstname} ${req.user.lastname}`
+              : "System",
+            action: "ORDER_RECOVERY_ATTEMPT",
+            entityType: ENTITY_TYPES.ORDER,
+            entityId: null,
+            entityName: "Failed Recovery",
+            changes: {
+              attemptedWith: {
+                transaction_ref,
+                flutterwave_ref,
+                customer_email,
+              },
+            },
+            ...AuditLogger.getRequestInfo(req),
+            additionalInfo: "Order recovery failed - No payment found",
+          });
+          
           console.log("🔄 Trying alternative search methods...");
 
           try {
@@ -397,6 +472,26 @@ export const supportRecoverOrder = async (req, res) => {
       console.log("🔄 Order already exists:", existingOrder.orderNumber);
 
       const user = await User.findById(existingOrder.user);
+
+       await logOrderAction(
+         req,
+         "ORDER_RECOVERY_DUPLICATE",
+         existingOrder._id,
+         {
+           duplicateFound: {
+             orderNumber: existingOrder.orderNumber,
+             status: existingOrder.status,
+             existingTransactionId: existingOrder.flutterwaveTransactionId,
+           },
+           attemptedRecovery: {
+             transaction_ref,
+             flutterwave_ref,
+             customer_email,
+           },
+         },
+         "Duplicate order detected during recovery attempt"
+       );
+
       return res.status(400).json({
         error: "Order already exists in system",
         orderDetails: {
@@ -569,6 +664,27 @@ export const supportRecoverOrder = async (req, res) => {
 
     await order.save();
     console.log("✅ Order recovered successfully:", order.orderNumber);
+    await logOrderAction(
+      req,
+      "ORDER_RECOVERY_SUCCESS",
+      order._id,
+      {
+        recoveryDetails: {
+          searchMethod,
+          referenceUsed,
+          paymentId: payment.id,
+          amount: payment.amount,
+          currency: payment.currency,
+          recoveredProducts: recoveredProducts.length,
+          customerEmail: customer_email,
+          createdUser: !user.$isNew ? "Existing" : "New",
+        },
+      },
+      `Order recovered via ${searchMethod.replace(
+        "_",
+        " "
+      )} - Reference: ${referenceUsed}`
+    );
 
     res.json({
       success: true,
@@ -611,6 +727,28 @@ export const supportRecoverOrder = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Order recovery failed:", error);
+
+    await AuditLogger.log({
+      adminId: req.user?._id,
+      adminName: req.user
+        ? `${req.user.firstname} ${req.user.lastname}`
+        : "System",
+      action: "ORDER_RECOVERY_FAILED",
+      entityType: ENTITY_TYPES.ORDER,
+      entityId: null,
+      entityName: "Failed Recovery",
+      changes: {
+        error: error.message,
+        attemptedWith: {
+          transaction_ref: req.body.transaction_ref,
+          flutterwave_ref: req.body.flutterwave_ref,
+          customer_email: req.body.customer_email,
+        },
+      },
+      ...AuditLogger.getRequestInfo(req),
+      additionalInfo: "Order recovery process failed",
+    });
+
     console.error("❌ Error stack:", error.stack);
     res.status(500).json({
       error: "Order recovery failed: " + error.message,
@@ -903,6 +1041,28 @@ export const updateOrderStatus = async (req, res) => {
     const order = await Order.findById(orderId).populate("user");
     if (!order) return res.status(404).json({ message: "Order not found" });
 
+    const oldStatus = order.status;
+    const oldIsProcessed = order.isProcessed;
+
+    await logOrderAction(
+      req,
+      ACTIONS.UPDATE_ORDER_STATUS,
+      orderId,
+      {
+        before: {
+          status: oldStatus,
+          isProcessed: oldIsProcessed,
+          deliveredAt: order.deliveredAt,
+        },
+        after: {
+          status,
+          isProcessed: true,
+          deliveredAt: status === "Delivered" ? new Date() : order.deliveredAt,
+        },
+      },
+      `Status changed from "${oldStatus}" to "${status}"`
+    );
+
     order.status = status;
     order.isProcessed = true;
     
@@ -1100,6 +1260,26 @@ export const createOrder = async (req, res) => {
 
     await order.save();
 
+     await AuditLogger.log({
+       adminId: req.user._id,
+       adminName: `${req.user.firstname} ${req.user.lastname}`,
+       action: "CREATE_ORDER",
+       entityType: ENTITY_TYPES.ORDER,
+       entityId: order._id,
+       entityName: `Order #${order.orderNumber}`,
+       changes: {
+         created: {
+           orderNumber: order.orderNumber,
+           totalAmount: order.totalAmount,
+           productsCount: order.products.length,
+           subtotal: order.subtotal,
+           discount: order.discount,
+         },
+       },
+       ...AuditLogger.getRequestInfo(req),
+       additionalInfo: "User placed new order",
+     });
+
     // Clear cart after order
     user.cartItems = [];
     await user.save();
@@ -1134,6 +1314,20 @@ export const getOrderById = async (req, res) => {
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
+    }
+    // Log order view by admin (if admin is viewing)
+    if (req.user?.role === "admin") {
+      await AuditLogger.log({
+        adminId: req.user._id,
+        adminName: `${req.user.firstname} ${req.user.lastname}`,
+        action: "VIEW_ORDER_DETAILS",
+        entityType: ENTITY_TYPES.ORDER,
+        entityId: order._id,
+        entityName: `Order #${order.orderNumber}`,
+        changes: {},
+        ...AuditLogger.getRequestInfo(req),
+        additionalInfo: "Admin viewed order details",
+      });
     }
 
     res.json({ success: true, order });

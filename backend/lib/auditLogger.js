@@ -1,6 +1,7 @@
 import AuditLog from "../models/auditLog.model.js";
 import { ENTITY_TYPES } from "../constants/auditLog.constants.js";
 
+
 class AuditLogger {
   static async log({
     adminId,
@@ -37,7 +38,6 @@ class AuditLogger {
       return logEntry;
     } catch (error) {
       console.error("Failed to create audit log:", error);
-      // Don't throw error to avoid breaking main functionality
     }
   }
 
@@ -51,7 +51,5 @@ class AuditLogger {
     };
   }
 }
-
-
 
 export default AuditLogger;

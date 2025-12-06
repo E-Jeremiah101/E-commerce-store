@@ -1,4 +1,4 @@
-// models/auditLog.model.js
+
 import mongoose from "mongoose";
 
 const auditLogSchema = new mongoose.Schema(
@@ -41,7 +41,7 @@ const auditLogSchema = new mongoose.Schema(
     entityType: {
       type: String,
       required: true,
-      enum: ["Product", "Order", "User", "Category", "System", "Other"], // Match model names
+      enum: ["Product", "Order", "User", "Category", "System", "Other"],
     },
     entityId: {
       type: mongoose.Schema.Types.ObjectId,
