@@ -3,7 +3,7 @@ import axios from "../lib/axios";
 import { motion } from "framer-motion";
 import { useUserStore } from "../stores/useUserStore.js";
 
-const Support = () => {
+const Recovery = () => {
   const [searchMethod, setSearchMethod] = useState("transaction_ref");
   const [formData, setFormData] = useState({
     transaction_ref: "ECOSTORE-1764257590757", // Pre-fill with the working reference
@@ -259,5 +259,5 @@ ${
   );
 };
 
-export default Support;
+export default Recovery;
 

@@ -8,6 +8,7 @@ import {
   RotateCcw,
   User,
   FileText,
+  Warehouse,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
@@ -22,17 +23,17 @@ import { useUserStore } from "../stores/useUserStore.js";
 import AdminRefundsTab from "../components/AdminRefundsTab.jsx";
 import GoBackButton from "../components/GoBackButton";
 import InventoryTab from "../components/InventoryTab.jsx"
-import Support from "../components/Support.jsx";
+import Recovery from "../components/Recovery.jsx";
 import AuditLogsTab from "../components/AuditLogsTab.jsx";
 const tabs = [
   { id: "create", label: "Create Product", icon: PlusCircle },
   { id: "products", label: "Product List", icon: ShoppingBasket },
-  { id: "inventory", label: "Manage Inventory", icon: ShoppingBasket },
+  { id: "inventory", label: "Manage Inventory", icon: Warehouse },
   { id: "analytics", label: "Analytics", icon: BarChart },
   { id: "AdminOrder", label: "Orders", icon: Package },
   { id: "AdminRefunds", label: "Refund ", icon: RotateCcw },
   { id: "AllUsers", label: "User Managemant", icon: User },
-  { id: "Support", label: "Support", icon: Headset },
+  { id: "OrderRecovery", label: "Recovery", icon: Headset },
   { id: "audit", label: "Audit Logs", icon: FileText },
 ];
 const clearCache = async () => {
@@ -125,7 +126,7 @@ const AdminPage = () => {
           {activeTab === "AdminOrder" && <AdminOrdersPage />}
           {activeTab === "AdminRefunds" && <AdminRefundsTab />}
           {activeTab === "AllUsers" && <AllUsers />}
-          {activeTab === "Support" && <Support />}
+          {activeTab === "OrderRecovery" && <Recovery />}
           {activeTab === "audit" && <AuditLogsTab />}
         </div>
       </div>

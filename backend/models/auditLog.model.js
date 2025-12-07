@@ -46,6 +46,23 @@ const auditLogSchema = new mongoose.Schema(
         "REFUND_REJECTION_ERROR",
         "VIEW_REFUND_REQUESTS",
 
+        // Auth actions
+        "LOGIN",
+        "LOGOUT",
+        "LOGIN_FAILED",
+        "LOGIN_ERROR",
+        "LOGOUT_ERROR",
+        "SIGNUP_SUCCESS",
+        "SIGNUP_FAILED",
+        "SIGNUP_ERROR",
+        "FORGOT_PASSWORD_REQUEST",
+        "FORGOT_PASSWORD_ATTEMPT",
+        "FORGOT_PASSWORD_ERROR",
+        "RESET_PASSWORD",
+        "RESET_PASSWORD_FAILED",
+        "RESET_PASSWORD_ERROR",
+      
+
         // Order actions
         "UPDATE_ORDER_STATUS",
         "ORDER_RECOVERY_ATTEMPT",

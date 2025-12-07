@@ -25,7 +25,6 @@ import Welcome from "./pages/WelcomePage.jsx";
 import useTrackVisitors from "./stores/useTrackVisitors.js";
 import ViewOrderPage from "./pages/ViewOrderPage.jsx";
 import SavedProductsPage from "./pages/SavedProductsPage.jsx";
-import Support from "./components/Support.jsx";
 
 
 function App() {
@@ -120,7 +119,7 @@ function App() {
           element={user ? <OrderHistoryPage /> : <Navigate to="/login" />}
         />
         <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
-        <Route path="/admin/support/recovery" element={<Support />} />
+        
         <Route path="/vieworders/:id" element={<ViewOrderPage />} />
         <Route
           path="Personal-info"

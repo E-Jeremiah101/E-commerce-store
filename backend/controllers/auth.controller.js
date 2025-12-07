@@ -3,6 +3,8 @@ import User from "../models/user.model.js";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import {sendEmail} from "../lib/mailer.js";
+import AuditLogger from "../lib/auditLogger.js";
+import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
 
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET, {
@@ -42,12 +44,85 @@ const setCookies = (res, accessToken, refreshToken) => {
   });
 };
 
+// Helper for auth audit logging
+const logAuthAction = async (req, action, userId = null, changes = {}, additionalInfo = "") => {
+  try {
+    let user = null;
+    let userName = "Unknown User";
+    
+    if (userId) {
+      user = await User.findById(userId);
+      if (user) {
+        userName = `${user.firstname} ${user.lastname}`;
+      }
+    }
+
+    // For login/logout, we want to log for ALL users (including admins)
+    // We'll check if the user is admin to determine if it's an admin action
+    const isAdmin = user?.role === "admin";
+    
+    await AuditLogger.log({
+      adminId: userId,
+      adminName: userName,
+      action,
+      entityType: ENTITY_TYPES.USER,
+      entityId: userId,
+      entityName: userName,
+      changes: {
+        ...changes,
+        userRole: user?.role || "unknown",
+        isAdmin: isAdmin
+      },
+      ...AuditLogger.getRequestInfo(req),
+      additionalInfo
+    });
+  } catch (error) {
+    console.error("Failed to log auth action:", error);
+  }
+};
+
+// Helper for failed login attempts
+const logFailedLogin = async (req, email, reason) => {
+  try {
+    await AuditLogger.log({
+      adminId: null,
+      adminName: "Failed Login Attempt",
+      action: "LOGIN_FAILED",
+      entityType: ENTITY_TYPES.SYSTEM,
+      entityId: null,
+      entityName: "Authentication System",
+      changes: {
+        attemptedEmail: email,
+        reason: reason,
+        ipAddress: req.ip || req.headers["x-forwarded-for"],
+        userAgent: req.headers["user-agent"] || ""
+      },
+      ipAddress: req.ip || req.headers["x-forwarded-for"] || req.connection.remoteAddress,
+      userAgent: req.headers["user-agent"] || "",
+      additionalInfo: `Failed login attempt for ${email} - ${reason}`
+    });
+  } catch (error) {
+    console.error("Failed to log failed login:", error);
+  }
+};
+
 export const signup = async (req, res) => {
   const { firstname, lastname, email, password } = req.body;
   try {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
+       await logAuthAction(
+         req,
+         "SIGNUP_FAILED",
+         null,
+         {
+           attemptedEmail: email,
+           reason: "Email already exists",
+         },
+         "Signup failed - email already registered"
+       );
+
       return res.status(400).json({
         message: "User email already exists",
       });
@@ -60,6 +135,21 @@ export const signup = async (req, res) => {
       await storeRefreshToken(user._id, refreshToken);
 
       setCookies(res, accessToken, refreshToken);
+
+      await logAuthAction(
+        req,
+        "SIGNUP_SUCCESS",
+        user._id,
+        {
+          userCreated: {
+            firstname,
+            lastname,
+            email,
+            role: user.role,
+          },
+        },
+        "New user registered successfully"
+      );
 
       res.status(201).json({
         user: {
@@ -74,6 +164,16 @@ export const signup = async (req, res) => {
     }
   } catch (error) {
     console.log("Error in signup controller", error.message);
+    await logAuthAction(
+      req,
+      "SIGNUP_ERROR",
+      null,
+      {
+        attemptedEmail: req.body.email,
+        error: error.message,
+      },
+      "Signup process failed"
+    );
     res.status(400).json({ message: error.message });
   }
 };
@@ -89,6 +189,19 @@ export const login = async (req, res) => {
       await storeRefreshToken(user._id, refreshToken);
       setCookies(res, accessToken, refreshToken);
 
+      await logAuthAction(
+        req,
+        "LOGIN",
+        user._id,
+        {
+          loginDetails: {
+            method: "email/password",
+            timestamp: new Date().toISOString()
+          }
+        },
+        user.role === "admin" ? "Admin login successful" : "User login successful"
+      );
+
       res.json({
         _id: user._id,
         firstname: user.firstname,
@@ -97,34 +210,111 @@ export const login = async (req, res) => {
         role: user.role,
       });
     } else {
+      await logFailedLogin(
+        req,
+        email,
+        user ? "Invalid password" : "User not found"
+      );
+
       res.status(400).json({ message: "Invalid email or password" });
     }
   } catch (error) {
     console.log("Error in login controller", error.message);
+
+    await logAuthAction(
+      req,
+      "LOGIN_ERROR",
+      null,
+      {
+        attemptedEmail: req.body.email,
+        error: error.message,
+      },
+      "Login process failed"
+    );
+
     res.status(500).json({ message: error.message });
   }
 };
 
+// export const logout = async (req, res) => {
+//   try {
+//     const refreshToken = req.cookies.refreshToken;
+//     if (refreshToken) {
+//       const decoded = jwt.verify(
+//         refreshToken,
+//         process.env.REFRESH_TOKEN_SECRET
+//       );
+//       await redis.del(`refresh_token:${decoded.userId}`);
+//     }
+
+//     res.clearCookie("accessToken");
+//     res.clearCookie("refreshToken");
+//     res.json({ message: "Logged out successfully" });
+//   } catch (error) {
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
+
+//this will refresh/recreate the access token
+
 export const logout = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;
+    let userId = null;
+    let user = null;
+
     if (refreshToken) {
-      const decoded = jwt.verify(
-        refreshToken,
-        process.env.REFRESH_TOKEN_SECRET
-      );
-      await redis.del(`refresh_token:${decoded.userId}`);
+      try {
+        const decoded = jwt.verify(
+          refreshToken,
+          process.env.REFRESH_TOKEN_SECRET
+        );
+        userId = decoded.userId;
+        user = await User.findById(userId);
+        await redis.del(`refresh_token:${userId}`);
+      } catch (error) {
+        console.log("Token verification failed during logout:", error.message);
+      }
     }
 
     res.clearCookie("accessToken");
     res.clearCookie("refreshToken");
+
+    // Log logout action if we have user info
+    if (user) {
+      await logAuthAction(
+        req,
+        "LOGOUT",
+        user._id,
+        {
+          logoutDetails: {
+            timestamp: new Date().toISOString(),
+            initiatedBy: req.user ? "user" : "system",
+          },
+        },
+        user.role === "admin" ? "Admin logout" : "User logout"
+      );
+    }
+
     res.json({ message: "Logged out successfully" });
   } catch (error) {
+    console.log("Error in logout controller", error.message);
+
+    // Log logout error
+    await logAuthAction(
+      req,
+      "LOGOUT_ERROR",
+      null,
+      {
+        error: error.message,
+      },
+      "Logout process failed"
+    );
+
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-//this will refresh/recreate the access token
 export const refreshToken = async (req, res) => {
   try {
     const oldRefreshToken = req.cookies.refreshToken;
@@ -192,7 +382,19 @@ export const forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user){ 
+       await logAuthAction(
+         req,
+         "FORGOT_PASSWORD_ATTEMPT",
+         null,
+         {
+           attemptedEmail: email,
+           reason: "User not found",
+         },
+         "Password reset request for non-existent user"
+       );
+      return res.status(404).json({ message: "User not found" });
+    }
 
     // Generate reset token
     const resetToken = crypto.randomBytes(20).toString("hex");
@@ -245,10 +447,33 @@ export const forgotPassword = async (req, res) => {
     </div>
   `,
     });
+    await logAuthAction(
+      req,
+      "FORGOT_PASSWORD_REQUEST",
+      user._id,
+      {
+        passwordReset: {
+          tokenGenerated: true,
+          expiresAt: user.resetPasswordExpire,
+          emailSent: true,
+        },
+      },
+      "Password reset request sent successfully"
+    );
 
     res.json({ message: "Reset email sent" });
   } catch (error) {
     console.error("Forgot password error:", error);
+    await logAuthAction(
+      req,
+      "FORGOT_PASSWORD_ERROR",
+      null,
+      {
+        attemptedEmail: req.body.email,
+        error: error.message,
+      },
+      "Password reset request failed"
+    );
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -270,6 +495,16 @@ export const resetPassword = async (req, res) => {
     });
 
     if (!user) {
+      await logAuthAction(
+        req,
+        "RESET_PASSWORD_FAILED",
+        null,
+        {
+          tokenUsed: token.substring(0, 10) + "...", // Partial token for security
+          reason: "Invalid or expired token",
+        },
+        "Password reset attempt with invalid token"
+      );
       return res.status(400).json({ message: "Invalid or expired token" });
     }
 
@@ -278,9 +513,54 @@ export const resetPassword = async (req, res) => {
     user.resetPasswordExpire = undefined;
     await user.save();
 
+    await logAuthAction(
+      req,
+      "RESET_PASSWORD",
+      user._id,
+      {
+        passwordReset: {
+          tokenUsed: true,
+          passwordChanged: true,
+          timestamp: new Date().toISOString(),
+        },
+      },
+      "Password reset successfully"
+    );
+
+    (async () => {
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: "Password Reset Successful",
+          html: `
+            <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto;">
+              <h2 style="color: #27ae60;">Password Reset Successful</h2>
+              <p>Hello ${user.firstname},</p>
+              <p>Your password has been successfully reset.</p>
+              <p>If you did not initiate this password reset, please contact our support team immediately.</p>
+              <p>Best regards,<br><strong>Eco-Store Security Team</strong></p>
+            </div>
+          `,
+        });
+      } catch (emailError) {
+        console.error("Password reset confirmation email failed:", emailError);
+      }
+    })();
+
     res.json({ message: "Password reset successful" });
   } catch (error) {
     console.error("Reset password error:", error);
+
+    await logAuthAction(
+      req,
+      "RESET_PASSWORD_ERROR",
+      null,
+      {
+        tokenUsed: req.params.token?.substring(0, 10) + "...",
+        error: error.message,
+      },
+      "Password reset process failed"
+    );
     res.status(500).json({ message: "Server error" });
   }
 };

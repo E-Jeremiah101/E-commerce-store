@@ -16,6 +16,10 @@ import {
   Clock,
   Package,
   RefreshCw,
+  LogIn, // Add this
+  LogOut, // Add this
+  Key, // Add this
+  User,
 } from "lucide-react";
 import { format } from "date-fns"; // ADD THIS IMPORT
 
@@ -56,6 +60,14 @@ const AuditLogsTab = () => {
     { value: "CREATE_ORDER", label: "Create Order" },
     { value: "VIEW_ORDER_DETAILS", label: "View Order Details" },
 
+    // Auth actions
+    { value: "LOGIN", label: "Login" },
+    { value: "LOGOUT", label: "Logout" },
+    { value: "LOGIN_FAILED", label: "Login Failed" },
+    { value: "SIGNUP_SUCCESS", label: "Signup Success" },
+    { value: "FORGOT_PASSWORD_REQUEST", label: "Forgot Password" },
+    { value: "RESET_PASSWORD", label: "Reset Password" },
+  
     // Inventory actions
     { value: "BULK_INVENTORY_UPDATE", label: "Bulk Inventory Update" },
     { value: "INVENTORY_SYNC", label: "Inventory Sync" },
@@ -161,6 +173,28 @@ const AuditLogsTab = () => {
       case "TOGGLE_FEATURED":
         return <AlertCircle className="h-4 w-4 text-purple-500" />;
 
+      // Auth actions
+      case "LOGIN":
+      case "SIGNUP_SUCCESS":
+        return <LogIn className="h-4 w-4 text-green-500" />; // Add LogIn import
+      case "LOGOUT":
+        return <LogOut className="h-4 w-4 text-gray-500" />; // Add LogOut import
+      case "LOGIN_FAILED":
+      case "SIGNUP_FAILED":
+      case "RESET_PASSWORD_FAILED":
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case "FORGOT_PASSWORD_REQUEST":
+      case "RESET_PASSWORD":
+        return <Key className="h-4 w-4 text-blue-500" />; // Add Key import
+
+      // Error cases
+      case "LOGIN_ERROR":
+      case "LOGOUT_ERROR":
+      case "SIGNUP_ERROR":
+      case "FORGOT_PASSWORD_ERROR":
+      case "RESET_PASSWORD_ERROR":
+        return <XCircle className="h-4 w-4 text-red-500" />;
+
       // Inventory actions
       case "UPDATE_INVENTORY":
       case "BULK_INVENTORY_UPDATE":
@@ -180,7 +214,7 @@ const AuditLogsTab = () => {
         return <Eye className="h-4 w-4 text-gray-500" />;
       case "USER_REFUND_REQUEST":
         return <RefreshCw className="h-4 w-4 text-blue-500" />;
-        
+
       case "BULK_INVENTORY_UPDATE_FAILED":
       case "INVENTORY_SYNC_FAILED":
         return <XCircle className="h-4 w-4 text-red-500" />;
