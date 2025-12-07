@@ -39,6 +39,24 @@ const logOrderAction = async (
   }
 };
 
+// Helper for user actions (when regular user does something)
+const logUserAction = async (req, action, entityType, entityId, entityName, changes = {}, additionalInfo = "") => {
+  try {
+    await AuditLogger.log({
+      adminId: req.user?._id,
+      adminName: req.user ? `${req.user.firstname} ${req.user.lastname}` : "User",
+      action,
+      entityType,
+      entityId,
+      entityName,
+      changes,
+      ...AuditLogger.getRequestInfo(req),
+      additionalInfo
+    });
+  } catch (error) {
+    console.error("Failed to log user action:", error);
+  }
+};
 export const getUserOrders = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -1260,25 +1278,28 @@ export const createOrder = async (req, res) => {
 
     await order.save();
 
-     await AuditLogger.log({
-       adminId: req.user._id,
-       adminName: `${req.user.firstname} ${req.user.lastname}`,
-       action: "CREATE_ORDER",
-       entityType: ENTITY_TYPES.ORDER,
-       entityId: order._id,
-       entityName: `Order #${order.orderNumber}`,
-       changes: {
+     await logUserAction(
+       req,
+       ACTIONS.CREATE_ORDER, // This should be in the enum
+       ENTITY_TYPES.ORDER,
+       order._id,
+       `Order #${order.orderNumber}`,
+       {
          created: {
            orderNumber: order.orderNumber,
            totalAmount: order.totalAmount,
            productsCount: order.products.length,
            subtotal: order.subtotal,
            discount: order.discount,
+           couponUsed: coupon ? coupon.code : "None",
+         },
+         cartItems: {
+           itemsCount: user.cartItems.length,
+           cleared: true,
          },
        },
-       ...AuditLogger.getRequestInfo(req),
-       additionalInfo: "User placed new order",
-     });
+       "User placed new order from cart"
+     );
 
     // Clear cart after order
     user.cartItems = [];
@@ -1316,18 +1337,44 @@ export const getOrderById = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
     // Log order view by admin (if admin is viewing)
-    if (req.user?.role === "admin") {
-      await AuditLogger.log({
-        adminId: req.user._id,
-        adminName: `${req.user.firstname} ${req.user.lastname}`,
-        action: "VIEW_ORDER_DETAILS",
-        entityType: ENTITY_TYPES.ORDER,
-        entityId: order._id,
-        entityName: `Order #${order.orderNumber}`,
-        changes: {},
-        ...AuditLogger.getRequestInfo(req),
-        additionalInfo: "Admin viewed order details",
-      });
+    if (req.user && req.user.role === "admin") {
+      await logOrderAction(
+        req,
+        ACTIONS.VIEW_ORDER_DETAILS,
+        order._id,
+        {
+          viewed: {
+            orderNumber: order.orderNumber,
+            status: order.status,
+            totalAmount: order.totalAmount,
+            customer: order.user
+              ? `${order.user.firstname} ${order.user.lastname}`
+              : "Unknown",
+          },
+        },
+        "Admin viewed order details"
+      );
+    } else if (
+      req.user &&
+      order.user &&
+      req.user._id.toString() === order.user._id.toString()
+    ) {
+      // Log when user views their own order
+      await logUserAction(
+        req,
+        ACTIONS.VIEW_USER_ORDER,
+        ENTITY_TYPES.ORDER,
+        order._id,
+        `Order #${order.orderNumber}`,
+        {
+          viewed: {
+            orderNumber: order.orderNumber,
+            status: order.status,
+            totalAmount: order.totalAmount,
+          },
+        },
+        "User viewed their order details"
+      );
     }
 
     res.json({ success: true, order });

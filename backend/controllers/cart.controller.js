@@ -2,32 +2,18 @@ import Product from "../models/product.model.js";
 
 export const getCartProducts = async (req, res) => {
   try {
-    const cartItems = await Promise.all(
-      req.user.cartItems.map(async (cartItem) => {
-        const product = await Product.findById(cartItem.product);
+    // ✅ Use the updated helper function
+    const validCartItems = await getValidatedCartItems(req.user.cartItems);
 
-        // ✅ FIXED: Check if product exists AND is not archived
-        if (!product || product.archived || product.isActive === false) {
-          return null; // Remove from cart if product is deleted/archived
-        }
-
-        return {
-          ...product.toJSON(),
-          quantity: cartItem.quantity,
-          size: cartItem.size,
-          color: cartItem.color,
-        };
-      })
-    );
-
-    // Remove null items (archived/deleted products)
-    const validCartItems = cartItems.filter(Boolean);
-
-    // ✅ FIXED: Also clean up the user's cartItems array
+    // Clean up user's cart if needed
     if (validCartItems.length !== req.user.cartItems.length) {
-      req.user.cartItems = req.user.cartItems.filter(
-        (cartItem, index) => cartItems[index] !== null
-      );
+      // Map back to find which items to remove
+      req.user.cartItems = req.user.cartItems.filter((cartItem, index) => {
+        const productId = cartItem.product?.toString();
+        return validCartItems.some(
+          (validItem) => validItem._id.toString() === productId
+        );
+      });
       await req.user.save();
     }
 
@@ -287,6 +273,7 @@ export const updateQuantity = async (req, res) => {
 };
 
 // ✅ NEW: Helper function to validate cart items
+
 const getValidatedCartItems = async (cartItems) => {
   const validatedItems = await Promise.all(
     cartItems.map(async (cartItem) => {
@@ -296,12 +283,63 @@ const getValidatedCartItems = async (cartItems) => {
         return null;
       }
 
-      return {
+      // Find the correct variant stock
+      let finalStock = product.countInStock || 0;
+      let variantFound = false;
+      
+      // If product has variants and we have size/color info
+      if (product.variants && product.variants.length > 0) {
+        // Look for exact match first
+        const variant = product.variants.find((v) => {
+          const sizeMatches = (cartItem.size || "") === (v.size || "");
+          const colorMatches = (cartItem.color || "") === (v.color || "");
+          return sizeMatches && colorMatches;
+        });
+
+        if (variant) {
+          finalStock = variant.countInStock || 0;
+          variantFound = true;
+        } 
+        // If no exact match, try to find any variant with matching size/color individually
+        else if (cartItem.size || cartItem.color) {
+          // Try to find by size only
+          if (cartItem.size) {
+            const sizeVariant = product.variants.find(v => v.size === cartItem.size);
+            if (sizeVariant) {
+              finalStock = sizeVariant.countInStock || 0;
+              variantFound = true;
+            }
+          }
+          // Try to find by color only  
+          if (cartItem.color && !variantFound) {
+            const colorVariant = product.variants.find(v => v.color === cartItem.color);
+            if (colorVariant) {
+              finalStock = colorVariant.countInStock || 0;
+              variantFound = true;
+            }
+          }
+        }
+      }
+
+      // Return the product with variant stock info
+      const result = {
         ...product.toJSON(),
         quantity: cartItem.quantity,
         size: cartItem.size || "",
         color: cartItem.color || "",
+        countInStock: finalStock,
       };
+
+      // Debug log
+      console.log(`🛒 Cart item validated: ${product.name}`, {
+        cartItemSize: cartItem.size,
+        cartItemColor: cartItem.color,
+        finalStock,
+        variantFound,
+        hasVariants: product.variants?.length > 0,
+      });
+
+      return result;
     })
   );
 

@@ -29,6 +29,7 @@ export const ACTIONS = {
   VIEW_ORDERS_SEARCH: "VIEW_ORDERS_SEARCH",
   VIEW_ORDER_DETAILS: "VIEW_ORDER_DETAILS",
   VIEW_USER_ORDERS: "VIEW_USER_ORDERS",
+  VIEW_USER_ORDER: "VIEW_USER_ORDER",
 
   // Category actions
   CREATE_CATEGORY: "CREATE_CATEGORY",
@@ -65,6 +66,7 @@ export const ACTION_LABELS = {
   VIEW_ORDERS_SEARCH: "View Orders Search",
   VIEW_ORDER_DETAILS: "View Order Details",
   VIEW_USER_ORDERS: "View User Orders",
+  VIEW_USER_ORDER: "View User Order",
 
   // Category labels
   CREATE_CATEGORY: "Create Category",

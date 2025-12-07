@@ -20,6 +20,17 @@ const OrderSummary = () => {
     unavailableItems: [],
     checked: false,
   });
+  useEffect(() => {
+    console.log(
+      "🛒 Cart item structure:",
+      cart.map((item) => ({
+        name: item.name,
+        keys: Object.keys(item),
+        countInStock: item.countInStock,
+        hasCountInStock: "countInStock" in item,
+      }))
+    );
+  }, [cart]);
 
   // Add one-click protection
   const isProcessing = useRef(false);
@@ -66,46 +77,46 @@ const OrderSummary = () => {
   // FIXED: Check cart availability when cart changes
   useEffect(() => {
     if (cart.length > 0) {
-      // Debug log to see what's in cart
-      console.log("🔍 Checking cart availability:", cart);
-
-      // Check if ALL items are out of stock - more defensive check
-      const allOutOfStock = cart.every((item) => {
+      // Check which items are out of stock
+      const unavailableItems = cart.filter((item) => {
         // Handle various possible stock properties
         const stock =
           item.countInStock || item.stock || item.quantityAvailable || 0;
         return stock === 0 || stock === "0" || !stock;
       });
 
-      // Check if any items are out of stock
-      const unavailableItems = cart.filter((item) => {
+      // Check if ANY items are out of stock (not just ALL)
+      const hasOutOfStockItems = unavailableItems.length > 0;
+
+      // Check if ANY items are in stock
+      const hasInStockItems = cart.some((item) => {
         const stock =
           item.countInStock || item.stock || item.quantityAvailable || 0;
-        return stock === 0 || stock === "0" || !stock;
+        return stock > 0;
       });
 
       console.log("📊 Stock check results:", {
         cartLength: cart.length,
-        allOutOfStock,
         unavailableItemsCount: unavailableItems.length,
-        firstItem: cart[0]
-          ? {
-              name: cart[0].name,
-              hasCountInStock: "countInStock" in cart[0],
-              countInStock: cart[0].countInStock,
-              allKeys: Object.keys(cart[0]),
-            }
-          : null,
+        hasOutOfStockItems,
+        hasInStockItems,
+        cartItems: cart.map((item) => ({
+          name: item.name,
+          stock: item.countInStock,
+          hasStock: item.countInStock > 0,
+        })),
       });
 
       setAvailabilityCheck({
-        allAvailable: !allOutOfStock, // true if NOT all items are out of stock
+        hasOutOfStockItems,
+        hasInStockItems,
         unavailableItems,
         checked: true,
       });
     } else {
       setAvailabilityCheck({
-        allAvailable: true,
+        hasOutOfStockItems: false,
+        hasInStockItems: false,
         unavailableItems: [],
         checked: false,
       });
@@ -133,12 +144,23 @@ const OrderSummary = () => {
     }
 
     // FIXED: Prevent checkout when ALL items are out of stock
-    if (availabilityCheck.checked && !availabilityCheck.allAvailable) {
-      toast.error(
-        "All items in your cart are out of stock. Please remove them before checkout."
-      );
-      return;
-    }
+  if (availabilityCheck.checked && !availabilityCheck.hasInStockItems) {
+    toast.error(
+      "All items in your cart are out of stock. Please remove them before checkout."
+    );
+    return;
+  };
+
+  const anyItemsInStock = cart.some((item) => {
+    const stock =
+      item.countInStock || item.stock || item.quantityAvailable || 0;
+    return stock > 0;
+  });
+
+  if (!anyItemsInStock) {
+    toast.error("Cannot proceed: All items in your cart are out of stock.");
+    return;
+  }
 
     try {
       // Set processing flag immediately
@@ -212,50 +234,49 @@ const OrderSummary = () => {
     minimumFractionDigits: 0,
   });
 
-  // Determine if button should be disabled
-const isButtonDisabled = () => {
-  // If no items in cart
-  if (cart.length === 0) {
-    console.log("❌ Button disabled: Cart is empty");
-    return true;
-  }
+ const isButtonDisabled = () => {
+   // If no items in cart
+   if (cart.length === 0) {
+     console.log("❌ Button disabled: Cart is empty");
+     return true;
+   }
 
-  // If availability check says all items are out of stock
-  if (availabilityCheck.checked && !availabilityCheck.allAvailable) {
-    console.log("❌ Button disabled: All items out of stock");
-    return true;
-  }
+   // If NO items have stock (all are out of stock)
+   if (availabilityCheck.checked && !availabilityCheck.hasInStockItems) {
+     console.log("❌ Button disabled: All items out of stock");
+     return true;
+   }
 
-  // If missing contact info
-  if (!defaultPhone || !defaultAddress) {
-    console.log("❌ Button disabled: Missing contact info");
-    return true;
-  }
+   // If missing contact info
+   if (!defaultPhone || !defaultAddress) {
+     console.log("❌ Button disabled: Missing contact info");
+     return true;
+   }
 
-  // If loading
-  if (loading || isProcessing.current) {
-    console.log("❌ Button disabled: Processing");
-    return true;
-  }
+   // If loading
+   if (loading || isProcessing.current) {
+     console.log("❌ Button disabled: Processing");
+     return true;
+   }
 
-  // Safety check: manually verify ALL items are actually out of stock
-  const allItemsOutOfStock = cart.every((item) => {
-    const stock =
-      item.countInStock || item.stock || item.quantityAvailable || 0;
-    return stock === 0 || stock === "0" || !stock;
-  });
+   // Additional safety check
+   const anyItemsInStock = cart.some((item) => {
+     const stock =
+       item.countInStock || item.stock || item.quantityAvailable || 0;
+     return stock > 0;
+   });
 
-  if (allItemsOutOfStock) {
-    console.log("❌ Button disabled: Manual check - all items out of stock");
-    return true;
-  }
+   if (!anyItemsInStock) {
+     console.log("❌ Button disabled: Safety check - no items in stock");
+     return true;
+   }
 
-  console.log("✅ Button enabled");
-  return false;
-};
+   console.log("✅ Button enabled - has items with stock");
+   return false;
+ };
 
-// Use the function
-const buttonDisabled = isButtonDisabled();
+  // Use the function
+  const buttonDisabled = isButtonDisabled();
 
   return (
     <motion.div
@@ -309,14 +330,20 @@ const buttonDisabled = isButtonDisabled();
 
         {/* FIXED: Show warning if SOME items are out of stock (but not all) */}
         {availabilityCheck.checked &&
-          availabilityCheck.unavailableItems.length > 0 &&
-          availabilityCheck.allAvailable && (
+          availabilityCheck.unavailableItems.length > 0 && (
             <div className="flex items-center gap-2 p-3 bg-yellow-50 text-yellow-800 rounded-md text-sm">
               <AlertTriangle size={16} />
-              <span>
-                Some items in your cart are out of stock. Please remove to
-                proceed
-              </span>
+              <div>
+                <p className="font-medium">
+                  {availabilityCheck.unavailableItems.length} item(s) out of
+                  stock
+                </p>
+                <p className="text-xs mt-1">
+                  {availabilityCheck.hasInStockItems
+                    ? "You can still checkout with available items"
+                    : "All items are out of stock - please remove them to continue"}
+                </p>
+              </div>
             </div>
           )}
 
@@ -338,9 +365,9 @@ const buttonDisabled = isButtonDisabled();
             </>
           ) : cart.length === 0 ? (
             <>Cart is Empty</>
-          ) : buttonDisabled && !defaultPhone && !defaultAddress ? (
-            <>Proceed to Checkout</>
-          ) : buttonDisabled ? (
+          ) : !defaultPhone || !defaultAddress ? (
+            <>Update Info to Checkout</>
+          ) : !availabilityCheck.hasInStockItems ? (
             <>All Items Out of Stock</>
           ) : (
             <>
@@ -354,17 +381,13 @@ const buttonDisabled = isButtonDisabled();
           <>
             <div className="flex items-center gap-2 p-3 bg-yellow-50 text-yellow-800 rounded-md text-sm">
               <AlertTriangle size={16} />
-              <Link
-              to="/Personal-info"
-              className=" underline"
-            >
-              <span>
-                Please provide a <strong>valid phone number</strong> and{" "}
-                <strong>address</strong> before checkout.
-              </span>
+              <Link to="/Personal-info" className=" underline">
+                <span>
+                  Please provide a <strong>valid phone number</strong> and{" "}
+                  <strong>address</strong> before checkout.
+                </span>
               </Link>
             </div>
-            
           </>
         )}
 

@@ -22,6 +22,7 @@ const auditLogSchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: [
+        // Product actions
         "CREATE_PRODUCT",
         "UPDATE_PRODUCT",
         "DELETE_PRODUCT",
@@ -29,10 +30,28 @@ const auditLogSchema = new mongoose.Schema(
         "PERMANENT_DELETE_PRODUCT",
         "TOGGLE_FEATURED",
         "UPDATE_INVENTORY",
+
+        // Order actions
+        "UPDATE_ORDER_STATUS",
+        "ORDER_RECOVERY_ATTEMPT",
+        "ORDER_RECOVERY_SUCCESS",
+        "ORDER_RECOVERY_FAILED",
+        "ORDER_RECOVERY_DUPLICATE",
+        "CREATE_ORDER",
+        "CREATE_ORDER_FAILED",
+        "VIEW_ORDERS_SEARCH",
+        "VIEW_ORDER_DETAILS",
+        "VIEW_USER_ORDERS",
+        "VIEW_USER_ORDER", // Add this
+
+        // Category actions
         "CREATE_CATEGORY",
         "UPDATE_CATEGORY",
-        "UPDATE_ORDER_STATUS",
+
+        // User actions
         "UPDATE_USER_ROLE",
+
+        // Auth actions
         "LOGIN",
         "LOGOUT",
         "OTHER",
