@@ -1,6 +1,57 @@
 import Order from "../models/order.model.js";
 import { flw } from "../lib/flutterwave.js";
 import { sendEmail } from "../lib/mailer.js";
+import AuditLogger from "../lib/auditLogger.js";
+import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
+
+const logRefundAction = async (
+  req,
+  action,
+  orderId,
+  refundId = null,
+  changes = {},
+  additionalInfo = ""
+) => {
+  try {
+    // Only log if user is an admin
+    if (!req.user || req.user.role !== "admin") {
+      return;
+    }
+
+    const order = await Order.findById(orderId).populate(
+      "user",
+      "firstname lastname email"
+    );
+    if (!order) return;
+
+    const refund = refundId ? order.refunds.id(refundId) : null;
+    const refundInfo = refund
+      ? {
+          refundId: refund._id,
+          amount: refund.amount,
+          product: refund.productSnapshot?.name || "Unknown Product",
+          status: refund.status,
+        }
+      : null;
+
+    await AuditLogger.log({
+      adminId: req.user._id,
+      adminName: `${req.user.firstname} ${req.user.lastname}`,
+      action,
+      entityType: ENTITY_TYPES.ORDER,
+      entityId: order._id,
+      entityName: `Order #${order.orderNumber}`,
+      changes: {
+        ...changes,
+        refund: refundInfo,
+      },
+      ...AuditLogger.getRequestInfo(req),
+      additionalInfo,
+    });
+  } catch (error) {
+    console.error("Failed to log refund action:", error);
+  }
+};
 
 // Request refund
 export const requestRefund = async (req, res) => {
@@ -75,11 +126,11 @@ export const requestRefund = async (req, res) => {
     );
     const refundAmount = refundProduct.price * refundQuantity;
 
-    if (refundAmount < 100) {
-      return res.status(400).json({
-        message: "Refund amount must be at least ₦100",
-      });
-    }
+    // if (refundAmount < 100) {
+    //   return res.status(400).json({
+    //     message: "Refund amount must be at least ₦100",
+    //   });
+    // }
 
     
     // Check for ANY existing refund for this product (all statuses)
@@ -193,6 +244,11 @@ export const requestRefund = async (req, res) => {
 // Get all refund requests for admin
 export const getAllRefundRequests = async (req, res) => {
   try {
+
+     console.log(
+       `📝 [AUDIT] Admin ${req.user.email} viewing all refund requests`
+     );
+
     const ordersWithRefunds = await Order.find({
       "refunds.0": { $exists: true }
     })
@@ -232,6 +288,28 @@ export const getAllRefundRequests = async (req, res) => {
 
     allRefunds.sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
 
+    if (req.user && req.user.role === "admin") {
+      await AuditLogger.log({
+        adminId: req.user._id,
+        adminName: `${req.user.firstname} ${req.user.lastname}`,
+        action: "VIEW_REFUND_REQUESTS",
+        entityType: ENTITY_TYPES.SYSTEM,
+        entityId: null,
+        entityName: "Refund Management",
+        changes: {
+          viewed: {
+            totalRefunds: allRefunds.length,
+            pendingRefunds: allRefunds.filter((r) => r.status === "Pending")
+              .length,
+            approvedRefunds: allRefunds.filter((r) => r.status === "Approved")
+              .length,
+          },
+        },
+        ...AuditLogger.getRequestInfo(req),
+        additionalInfo: "Admin viewed all refund requests",
+      });
+    }
+
     res.json(allRefunds);
 
   } catch (error) {
@@ -245,11 +323,14 @@ export const approveRefund = async (req, res) => {
   try {
     const { orderId, refundId } = req.params;
 
+    console.log(
+      `📝 [AUDIT] Admin ${req.user.email} attempting to approve refund ${refundId}`
+    );
+
     const order = await Order.findById(orderId).populate(
       "user",
       "firstname lastname email"
     );
-
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -261,10 +342,15 @@ export const approveRefund = async (req, res) => {
     }
 
     if (refund.status !== "Pending") {
-      return res.status(400).json({ 
-        message: `Refund is already ${refund.status}` 
+      return res.status(400).json({
+        message: `Refund is already ${refund.status}`,
       });
     }
+
+    // Store old status for audit log
+    const oldRefundStatus = refund.status;
+    const oldOrderStatus = order.status;
+    const oldRefundAmount = refund.amount;
 
     // PROCESS THROUGH FLUTTERWAVE
     try {
@@ -276,42 +362,64 @@ export const approveRefund = async (req, res) => {
       console.log("Processing Flutterwave refund:", refundData);
 
       const flutterwaveResponse = await flw.Transaction.refund(refundData);
-      
+
       console.log("Flutterwave response:", flutterwaveResponse);
 
       if (flutterwaveResponse.status === "success") {
-        refund.status = "Approved"; 
+        refund.status = "Approved";
         refund.processedAt = new Date();
-         
+
         if (flutterwaveResponse.data?.id) {
           refund.flutterwaveRefundId = flutterwaveResponse.data.id;
-        } 
+        }
 
         refund.flutterwaveResponse = flutterwaveResponse.data;
       } else {
-        throw new Error(flutterwaveResponse.message || "Flutterwave refund failed");
-      } 
- 
+        throw new Error(
+          flutterwaveResponse.message || "Flutterwave refund failed"
+        );
+      }
     } catch (flutterwaveError) {
       console.error("Flutterwave refund error:", flutterwaveError);
-      
+
       refund.status = "Rejected";
       refund.processedAt = new Date();
       refund.errorDetails = flutterwaveError.message;
-      
+
       await order.save();
-      
+      await logRefundAction(
+        req,
+        "REFUND_APPROVAL_FAILED",
+        orderId,
+        refundId,
+        {
+          before: {
+            refundStatus: oldRefundStatus,
+            orderStatus: oldOrderStatus,
+          },
+          after: {
+            refundStatus: "Rejected",
+            error: flutterwaveError.message,
+          },
+          paymentGateway: "Flutterwave",
+          error: flutterwaveError.message,
+        },
+        "Refund approval failed - Flutterwave error"
+      );
+
       return res.status(400).json({
         message: "Flutterwave refund failed",
-        error: flutterwaveError.message
+        error: flutterwaveError.message,
       });
     }
 
     // ✅ CRITICAL FIX: UPDATE THE MAIN ORDER STATUS
     order.totalRefunded = (order.totalRefunded || 0) + refund.amount;
 
-    const approvedRefunds = order.refunds.filter(r => r.status === "Approved" || r.status === "Refunded");
-    
+    const approvedRefunds = order.refunds.filter(
+      (r) => r.status === "Approved" || r.status === "Refunded"
+    );
+
     if (approvedRefunds.length === order.products.length) {
       // All products refunded - mark as Refunded
       order.refundStatus = "Fully Refunded";
@@ -323,6 +431,28 @@ export const approveRefund = async (req, res) => {
     }
 
     await order.save();
+
+    await logRefundAction(
+      req,
+      "REFUND_APPROVED",
+      orderId,
+      refundId,
+      {
+        before: {
+          refundStatus: oldRefundStatus,
+          orderStatus: oldOrderStatus,
+        },
+        after: {
+          refundStatus: "Approved",
+          orderStatus: order.status,
+          refundAmount: refund.amount,
+        },
+        paymentGateway: "Flutterwave",
+        transactionId: order.flutterwaveTransactionId,
+        flutterwaveRefundId: refund.flutterwaveRefundId,
+      },
+      `Refund approved for ₦${refund.amount.toLocaleString()} via Flutterwave`
+    );
 
     (async () => {
       try {
@@ -359,9 +489,8 @@ export const approveRefund = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Refund approved and processed successfully"
+      message: "Refund approved and processed successfully",
     });
-
   } catch (error) {
     console.error("Approve refund error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -386,6 +515,10 @@ export const rejectRefund = async (req, res) => {
       return res.status(404).json({ message: "Refund request not found" });
     }
 
+    // Store old status for audit log
+    const oldRefundStatus = refund.status;
+    const oldOrderStatus = order.status;
+
     refund.status = "Rejected";
     refund.processedAt = new Date();
 
@@ -395,9 +528,32 @@ export const rejectRefund = async (req, res) => {
     const productImage = productSnapshot.image || "/images/deleted.png";
     const productPrice = productSnapshot.price || 0;
 
+    await logRefundAction(
+      req,
+      "REFUND_REJECTED",
+      orderId,
+      refundId,
+      {
+        before: {
+          refundStatus: oldRefundStatus,
+          orderStatus: oldOrderStatus,
+        },
+        after: {
+          refundStatus: "Rejected",
+        },
+        refundDetails: {
+          amount: refund.amount,
+          product: productName,
+          quantity: refund.quantity,
+          reason: refund.reason,
+        },
+      },
+      `Refund rejected for ₦${refund.amount.toLocaleString()}`
+    );
+
     res.json({
       success: true,
-      message: "Refund rejected successfully"
+      message: "Refund rejected successfully",
     });
 
     (async () => {
@@ -427,7 +583,6 @@ export const rejectRefund = async (req, res) => {
 
       console.log(`✅ Refund ${refund._id} rejected successfully.`);
     })();
-
   } catch (error) {
     console.error("Reject refund error:", error);
     res.status(500).json({ message: "Server error", error: error.message });

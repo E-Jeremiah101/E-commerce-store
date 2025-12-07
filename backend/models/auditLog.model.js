@@ -31,6 +31,21 @@ const auditLogSchema = new mongoose.Schema(
         "TOGGLE_FEATURED",
         "UPDATE_INVENTORY",
 
+        // Inventory actions
+        "BULK_INVENTORY_UPDATE",
+        "BULK_INVENTORY_UPDATE_FAILED",
+        "INVENTORY_SYNC",
+        "INVENTORY_SYNC_FAILED",
+        "AUTO_INVENTORY_ADJUSTMENT",
+
+        // Refund actions
+        "REFUND_APPROVED",
+        "REFUND_REJECTED",
+        "REFUND_APPROVAL_FAILED",
+        "REFUND_APPROVAL_ERROR",
+        "REFUND_REJECTION_ERROR",
+        "VIEW_REFUND_REQUESTS",
+
         // Order actions
         "UPDATE_ORDER_STATUS",
         "ORDER_RECOVERY_ATTEMPT",

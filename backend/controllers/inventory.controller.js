@@ -2,6 +2,83 @@ import Product from "../models/product.model.js";
 import InventoryLog from "../models/inventoryLog.model.js";
 import mongoose from "mongoose";
 import Order from "../models/order.model.js";
+import AuditLogger from "../lib/auditLogger.js";
+import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
+
+const logInventoryAction = async (
+  req,
+  action,
+  productId,
+  changes = {},
+  additionalInfo = ""
+) => {
+  try {
+    // Only log if user is an admin
+    if (!req.user || req.user.role !== "admin") {
+      return;
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) return;
+
+    await AuditLogger.log({
+      adminId: req.user._id,
+      adminName: `${req.user.firstname} ${req.user.lastname}`,
+      action,
+      entityType: ENTITY_TYPES.PRODUCT,
+      entityId: product._id,
+      entityName: product.name,
+      changes,
+      ...AuditLogger.getRequestInfo(req),
+      additionalInfo,
+    });
+  } catch (error) {
+    console.error("Failed to log inventory action:", error);
+  }
+};
+
+// Helper for variant-specific inventory logging
+const logVariantInventoryAction = async (
+  req,
+  action,
+  productId,
+  variantId,
+  changes = {},
+  additionalInfo = ""
+) => {
+  try {
+    // Only log if user is an admin
+    if (!req.user || req.user.role !== "admin") {
+      return;
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) return;
+
+    const variant = product.variants.id(variantId);
+    if (!variant) return;
+
+    const variantName = `${variant.color || "Default"} - ${
+      variant.size || "One Size"
+    }`;
+
+    await AuditLogger.log({
+      adminId: req.user._id,
+      adminName: `${req.user.firstname} ${req.user.lastname}`,
+      action,
+      entityType: ENTITY_TYPES.PRODUCT,
+      entityId: product._id,
+      entityName: `${product.name} - ${variantName}`,
+      changes,
+      ...AuditLogger.getRequestInfo(req),
+      additionalInfo,
+    });
+  } catch (error) {
+    console.error("Failed to log variant inventory action:", error);
+  }
+};
+
+
 const getTopSellingProducts = async (
   limit = 10,
 ) => {
@@ -362,12 +439,45 @@ export const getInventoryDashboard = async (req, res) => {
 export const syncOrdersWithInventory = async (req, res) => {
   try {
     const result = await syncInventoryWithStoreOrders();
+
+     await AuditLogger.log({
+       adminId: req.user._id,
+       adminName: `${req.user.firstname} ${req.user.lastname}`,
+       action: "INVENTORY_SYNC",
+       entityType: ENTITY_TYPES.SYSTEM,
+       entityId: null,
+       entityName: "Order-Inventory Sync",
+       changes: {
+         syncResult: {
+           syncedOrders: result.synced || 0,
+           timestamp: new Date().toISOString(),
+         },
+       },
+       ...AuditLogger.getRequestInfo(req),
+       additionalInfo: `Manual inventory sync completed: ${
+         result.synced || 0
+       } orders processed`,
+     });
+
     res.json({
       message: "Inventory sync completed",
       ...result,
     });
   } catch (error) {
     console.error("Error syncing orders:", error);
+    await AuditLogger.log({
+      adminId: req.user._id,
+      adminName: `${req.user.firstname} ${req.user.lastname}`,
+      action: "INVENTORY_SYNC_FAILED",
+      entityType: ENTITY_TYPES.SYSTEM,
+      entityId: null,
+      entityName: "Failed Sync",
+      changes: {
+        error: error.message,
+      },
+      ...AuditLogger.getRequestInfo(req),
+      additionalInfo: "Manual inventory sync failed",
+    });
     res.status(500).json({ message: "Sync failed", error: error.message });
   }
 };
@@ -767,6 +877,36 @@ export const adjustStock = async (req, res) => {
     });
 
     await inventoryLog.save();
+
+    // AUDIT LOG: Log the admin action
+    await logVariantInventoryAction(
+      req,
+      ACTIONS.UPDATE_INVENTORY,
+      productId,
+      variantId,
+      {
+        variant: {
+          name: variantName,
+          size: variant.size,
+          color: variant.color,
+          before: { countInStock: oldStock },
+          after: { countInStock: newStock },
+        },
+        adjustment: {
+          type: adjustmentType,
+          quantity: Math.abs(quantity),
+          reason,
+          notes,
+        },
+      },
+      `Variant stock ${
+        adjustmentType === "add"
+          ? "increased"
+          : adjustmentType === "remove"
+          ? "decreased"
+          : "set"
+      } from ${oldStock} to ${newStock}`
+    );
 
     // Return updated variant data
     res.json({
@@ -1270,6 +1410,29 @@ export const bulkUpdateStock = async (req, res) => {
 
         await inventoryLog.save();
 
+         // Individual audit log for each successful adjustment
+        await logVariantInventoryAction(
+          req,
+          ACTIONS.UPDATE_INVENTORY,
+          update.productId,
+          update.variantId,
+          {
+            variant: {
+              name: variantName,
+              before: { countInStock: oldStock },
+              after: { countInStock: newStock }
+            },
+            adjustment: {
+              type: update.adjustmentType,
+              quantity: Math.abs(update.quantity),
+              reason: update.reason || "Bulk update"
+            },
+            bulkUpdate: true
+          },
+          `Bulk update: ${update.adjustmentType} ${Math.abs(update.quantity)} units`
+        );
+
+
         results.push({
           productId: product._id,
           productName: product.name,
@@ -1296,6 +1459,22 @@ export const bulkUpdateStock = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in bulk update:", error);
+    await AuditLogger.log({
+      adminId: req.user?._id,
+      adminName: req.user
+        ? `${req.user.firstname} ${req.user.lastname}`
+        : "System",
+      action: "BULK_INVENTORY_UPDATE_FAILED",
+      entityType: ENTITY_TYPES.SYSTEM,
+      entityId: null,
+      entityName: "Failed Bulk Update",
+      changes: {
+        error: error.message,
+        attemptData: req.body,
+      },
+      ...AuditLogger.getRequestInfo(req),
+      additionalInfo: "Bulk inventory update failed",
+    });
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };

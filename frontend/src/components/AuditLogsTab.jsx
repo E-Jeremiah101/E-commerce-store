@@ -14,6 +14,8 @@ import {
   CheckCircle,
   XCircle,
   Clock,
+  Package,
+  RefreshCw,
 } from "lucide-react";
 import { format } from "date-fns"; // ADD THIS IMPORT
 
@@ -53,6 +55,15 @@ const AuditLogsTab = () => {
     { value: "ORDER_RECOVERY_FAILED", label: "Order Recovery Failed" },
     { value: "CREATE_ORDER", label: "Create Order" },
     { value: "VIEW_ORDER_DETAILS", label: "View Order Details" },
+
+    // Inventory actions
+    { value: "BULK_INVENTORY_UPDATE", label: "Bulk Inventory Update" },
+    { value: "INVENTORY_SYNC", label: "Inventory Sync" },
+
+    // Refund actions
+    { value: "REFUND_APPROVED", label: "Refund Approved" },
+    { value: "REFUND_REJECTED", label: "Refund Rejected" },
+    { value: "VIEW_REFUND_REQUESTS", label: "View Refund Requests" },
 
     // Category actions
     { value: "CREATE_CATEGORY", label: "Create Category" },
@@ -149,6 +160,32 @@ const AuditLogsTab = () => {
         return <Clock className="h-4 w-4 text-orange-500" />;
       case "TOGGLE_FEATURED":
         return <AlertCircle className="h-4 w-4 text-purple-500" />;
+
+      // Inventory actions
+      case "UPDATE_INVENTORY":
+      case "BULK_INVENTORY_UPDATE":
+      case "INVENTORY_SYNC":
+        return <Package className="h-4 w-4 text-teal-500" />;
+
+      // Refund actions
+      case "REFUND_APPROVED":
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case "REFUND_REJECTED":
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case "REFUND_APPROVAL_FAILED":
+      case "REFUND_APPROVAL_ERROR":
+      case "REFUND_REJECTION_ERROR":
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case "VIEW_REFUND_REQUESTS":
+        return <Eye className="h-4 w-4 text-gray-500" />;
+      case "USER_REFUND_REQUEST":
+        return <RefreshCw className="h-4 w-4 text-blue-500" />;
+        
+      case "BULK_INVENTORY_UPDATE_FAILED":
+      case "INVENTORY_SYNC_FAILED":
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case "AUTO_INVENTORY_ADJUSTMENT":
+        return <RefreshCw className="h-4 w-4 text-gray-500" />;
 
       // Order actions
       case "UPDATE_ORDER_STATUS":
