@@ -126,11 +126,11 @@ export const requestRefund = async (req, res) => {
     );
     const refundAmount = refundProduct.price * refundQuantity;
 
-    // if (refundAmount < 100) {
-    //   return res.status(400).json({
-    //     message: "Refund amount must be at least ₦100",
-    //   });
-    // }
+    if (refundAmount < 100) {
+      return res.status(400).json({
+        message: "Refund amount must be at least ₦100",
+      });
+    }
 
     
     // Check for ANY existing refund for this product (all statuses)
@@ -343,7 +343,7 @@ export const approveRefund = async (req, res) => {
 
     if (refund.status !== "Pending") {
       return res.status(400).json({
-        message: `Refund is already ${refund.status}`,
+        message: `Refund is already ${refund.status}`, 
       });
     }
 
