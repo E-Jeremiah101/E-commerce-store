@@ -23,6 +23,11 @@ addressSchema.pre("validate", function (next) {
   next();
 });
 
+const previousPasswordSchema = new mongoose.Schema({
+  password: { type: String, required: true },
+  changedAt: { type: Date, default: Date.now },
+});
+
 const userSchema = new mongoose.Schema(
   {
     firstname: {
@@ -47,13 +52,14 @@ const userSchema = new mongoose.Schema(
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
-    addresses: [
-      {
-        label: { type: String, default: "Home" },
+    previousPasswords: [previousPasswordSchema],
+    passwordHistoryLimit: {
+      type: Number,
+      default: 5,
+      min: 1,
+      max: 10,
+    },
 
-        isDefault: { type: Boolean, default: false },
-      },
-    ],
     addresses: [addressSchema],
 
     phones: [
@@ -97,7 +103,24 @@ userSchema.pre("save", async function (next) {
 
   try {
     const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+    const hashedPassword = await bcrypt.hash(this.password, salt);
+
+     if (!this.isNew) {
+       // Get the current password before updating
+       const currentPassword = this.password;
+
+       this.previousPasswords.push({
+         password: currentPassword,
+         changedAt: new Date(),
+       });
+
+       if (this.previousPasswords.length > this.passwordHistoryLimit) {
+         this.previousPasswords = this.previousPasswords.slice(
+           -this.passwordHistoryLimit
+         );
+       }
+     }
+     this.password = hashedPassword;
     next();
   } catch (error) {
     next(error);
@@ -107,6 +130,40 @@ userSchema.pre("save", async function (next) {
 userSchema.methods.comparePassword = async function (password) {
   return bcrypt.compare(password, this.password);
 };
+userSchema.methods.isPasswordUsedBefore = async function (newPassword) {
+  // Check if it's the same as current password
+  const isCurrentPassword = await bcrypt.compare(newPassword, this.password);
+  if (isCurrentPassword) return true;
+
+  for (const previousPassword of this.previousPasswords) {
+    const isMatch = await bcrypt.compare(
+      newPassword,
+      previousPassword.password
+    );
+    if (isMatch) return true;
+  }
+
+  return false;
+};
+
+
+userSchema.methods.getPasswordHistoryAge = function () {
+  if (this.previousPasswords.length === 0) return null;
+
+  const oldestPassword = this.previousPasswords.reduce((oldest, current) => {
+    return current.changedAt < oldest.changedAt ? current : oldest;
+  });
+
+  const ageInDays = Math.floor(
+    (new Date() - oldestPassword.changedAt) / (1000 * 60 * 60 * 24)
+  );
+
+  return {
+    oldestChange: oldestPassword.changedAt,
+    ageInDays,
+  };
+};
+
 
 const User = mongoose.model("User", userSchema);
 

@@ -3,20 +3,21 @@ import axios from "../lib/axios";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../stores/useUserStore";
+import { MoreVertical } from "lucide-react";
 
 const AdminOrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isFetching, setIsFetching] = useState(false); // for search/filter updates
+  const [isFetching, setIsFetching] = useState(false);
   const [search, setSearch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
   const navigate = useNavigate();
-
+  const [openDropdownId, setOpenDropdownId] = useState(null);
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(6);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Debounce search
   useEffect(() => {
@@ -26,7 +27,8 @@ const AdminOrdersPage = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  const {user} = useUserStore()
+  const { user } = useUserStore();
+
   // Fetch orders
   const fetchOrders = async () => {
     try {
@@ -36,16 +38,6 @@ const AdminOrdersPage = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setOrders(data.orders);
-      console.log("Orders data:", data.orders);
-      console.log(
-        "Orders with isProcessed flag:",
-        data.orders.map((order) => ({
-          id: order._id,
-          orderNumber: order.orderNumber,
-          isProcessed: order.isProcessed,
-          status: order.status,
-        }))
-      );
     } catch (err) {
       console.error("Error fetching orders:", err);
     } finally {
@@ -72,10 +64,30 @@ const AdminOrdersPage = () => {
         }
       );
       fetchOrders();
+      setOpenDropdownId(null);
     } catch (err) {
       console.error(err);
     }
   };
+
+    const toggleDropdown = (orderId) => {
+      setOpenDropdownId(openDropdownId === orderId ? null : orderId);
+    };
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event) => {
+        if (!event.target.closest(".dropdown-container")) {
+          setOpenDropdownId(null);
+        }
+      };
+
+      document.addEventListener("click", handleClickOutside);
+      return () => {
+        document.removeEventListener("click", handleClickOutside);
+      };
+    }, []);
+
 
   // Pagination logic
   const totalOrders = orders.length;
@@ -86,6 +98,21 @@ const AdminOrdersPage = () => {
   const handlePrev = () => setCurrentPage((p) => Math.max(p - 1, 1));
   const handleNext = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
   const handlePageClick = (pageNum) => setCurrentPage(pageNum);
+
+  // Get status badge color
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Delivered":
+        return "bg-green-600 text-white";
+      case "Cancelled":
+        return "bg-red-600 text-white";
+      case "Refunded":
+      case "Partially Refunded":
+        return "bg-purple-600 text-white";
+      default:
+        return "bg-yellow-500 text-white";
+    }
+  };
 
   if (loading)
     return (
@@ -101,33 +128,34 @@ const AdminOrdersPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <div className=" flex justify-center align-middle text-black py-5 ">
+        <div className="flex justify-center align-middle text-black py-5">
           <h1 className="text-3xl font-bold">
             Welcome👋 {user?.firstname || "Admin"}
           </h1>
         </div>
       </motion.div>
+
       <motion.div
-        className="px-4 lg:px-28"
+        className="px-4 lg:px-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
         {/* Search & Sort */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-19">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-15 bg-white rounded-lg shadow-md p-4 ">
           <input
             type="text"
             placeholder="Search by ORD/EC0STORE/Id"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={handleSearchKeyDown}
-            className="px-3 py-2 rounded-lg bg-gray-700 text-white w-full md:w-1/3"
+            className="px-3 py-2 rounded-lg border placeholder-gray-400 focus:ring-1  text-gray-500 w-full md:w-1/3"
           />
           <div className="flex gap-2 flex-wrap">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-gray-700 text-white"
+              className="px-3 py-2 rounded-lg text-gray-500"
             >
               <option value="date">Sort by Date</option>
               <option value="totalAmount">Sort by Total Amount</option>
@@ -137,7 +165,7 @@ const AdminOrdersPage = () => {
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-gray-700 text-white"
+              className="px-3 py-2 rounded-lg  text-gray-500"
             >
               {sortBy === "date" ? (
                 <>
@@ -164,274 +192,299 @@ const AdminOrdersPage = () => {
             No orders found.
           </p>
         ) : (
-          <div className="space-y-6">
-            {displayedOrders.map((order) => (
-              <div
-                key={order._id}
-                className={`border rounded-lg p-4 bg-gray-800 text-gray-100 relative ${
-                  !order.isProcessed ? "border-red-500" : ""
-                }`}
-              >
-                {/* NEW badge */}
-                {!order.isProcessed && (
-                  <span className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 text-xs rounded font-bold">
-                    NEW
-                  </span>
-                )}
-
-                {/* Header */}
-                <div className="flex justify-between mb-2">
-                  <span className="text-yellow-600 font-semibold">
-                    {order.orderNumber}
-                  </span>
-                  <span>
-                    <select
-                      value={order.status}
-                      onChange={(e) =>
-                        handleStatusChange(order._id, e.target.value)
-                      }
-                      className="bg-gray-700 text-white px-2 py-1 rounded"
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="Processing">Processing</option>
-                      <option value="Shipped">Shipped</option>
-                      <option value="Delivered">Delivered</option>
-                      {order.status === "Partially Refunded" && (
-                        <option value="Partially Refunded">
-                          Partially Refunded
-                        </option>
-                      )}
-
-                      {order.status === "Refunded" && (
-                        <option value="Refunded">Refunded</option>
-                      )}
-
-                      <option value="Cancelled">Cancelled</option>
-                    </select>
-                  </span>
-                </div>
-                {/* Refund Status
-              {order.refundStatus && order.refundStatus !== "No Refund" && (
-                <p className="text-sm font-semibold mt-1">
-                  Refund Status:{" "}
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-medium ${
-                      order.refundStatus === "Fully Refunded"
-                        ? "bg-green-700 text-white"
-                        : "bg-yellow-700 text-white"
-                    }`}
-                  >
-                    {order.refundStatus}
-                  </span>
-                </p>
-              )} */}
-
-                {/* Order details */}
-                <div className="grid md:grid-cols-3 grid-cols-2 gap-3 md:gap-5 py-4 pr-7 pl-3 bg-gray-700 rounded-lg shadow mb-2">
-                  <div className="text-gray-200 mb-2">
-                    Created:{" "}
-                    <p className="text-sm font-semibold">
-                      {new Date(order.createdAt).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-gray-200 mb-2">
-                    <span
-                      className={`px-1 py-1 rounded text-xs font-medium ${
-                        order.status === "Delivered"
-                          ? "bg-green-600 text-white"
-                          : order.status === "Cancelled"
-                          ? "bg-red-600 text-white"
-                          : order.status === "Refunded" && "Partially Refunded"
-                          ? "bg-purple-600 text-white"
-                          : "bg-yellow-500 text-white"
-                      }`}
-                    >
-                      {order.status}
-                    </span>
-                    <p className="text-sm font-semibold">
-                      {new Date(order.updatedAt).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Product list */}
-                <ul className="space-y-4 mb-4">
-                  {order.products.map((item) => (
-                    <li
-                      key={item._id}
-                      className="flex gap-4 p-4 bg-gray-700 rounded-lg shadow"
-                    >
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-20 h-20 object-cover rounded"
-                      />
-                      <div className="flex-1 space-y-3">
-                        <div className="flex justify-between items-center">
-                          <h3 className="text-white font-medium tracking-widest">
-                            {item.name}
-                          </h3>
-                          <p className="text-yellow-100 font-semibold tracking-widest">
-                            ₦{(item.price * item.quantity).toLocaleString()}
-                          </p>
+          <>
+            {/* Orders Table */}
+            <div className="overflow-x-auto  rounded-lg shadow-lg">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600 ">
+                      Order Info
+                    </th>
+                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600 ">
+                      Customer Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600">
+                      Product Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-300">
+                  {displayedOrders.map((order) => (
+                    <tr key={order._id} className="hover:bg-gray-750">
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-gray-900 font-semibold">
+                              {order.orderNumber}
+                            </span>
+                            {!order.isProcessed && (
+                              <span className="bg-red-500 text-white px-2 py-0.5 text-xs rounded font-bold">
+                                NEW
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[0.80rem] text-gray-400">
+                            {new Date(order.createdAt).toLocaleDateString()}
+                            <span className="mx-1">•</span>
+                            {new Date(order.createdAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2 text-xs text-gray-200">
-                          {item.size && (
-                            <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
-                              Size: {item.size || "N/A"}
-                            </span>
-                          )}
-                          {item.color && (
-                            <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
-                              Color: {item.color || "N/A"}
-                            </span>
-                          )}
+                      </td>
 
-                          <span className="bg-gray-600 px-2 py-1 rounded tracking-widest">
-                            Category: {item.selectedCategory || "N/A"}
+                      <td className="px-6 py-4">
+                        <div className="text-gray-900 font-semibold">
+                          {order.user?.firstname} {order.user?.lastname}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {order.user?.email}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col space-y-1">
+                          {order.products.slice(0, 2).map((item, idx) => (
+                            <div key={idx} className="flex items-center gap-2">
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="w-8 h-8 object-cover rounded"
+                              />
+                              <div className="text-[0.86rem]">
+                                <div className="text-gray-900 font-semibold truncate max-w-[150px]">
+                                  {item.name}
+                                </div>
+                                <div className="text-gray-400">
+                                  Qty: {item.quantity}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          {order.products.length > 2 && (
+                            <div className="text-xs text-gray-400">
+                              +{order.products.length - 2} more items
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="text-gray-900 font-semibold">
+                          ₦{order.totalAmount.toLocaleString()}
+                        </div>
+                        {order.discount > 0 && (
+                          <div className="text-xs text-green-400">
+                            -₦{order.discount.toLocaleString()} off
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col space-y-2">
+                          {/* <select
+                            value={order.status}
+                            onChange={(e) =>
+                              handleStatusChange(order._id, e.target.value)
+                            }
+                            className="bg-gray-700 text-white px-2 py-1 rounded text-sm w-full"
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Processing">Processing</option>
+                            <option value="Shipped">Shipped</option>
+                            <option value="Delivered">Delivered</option>
+                            {order.status === "Partially Refunded" && (
+                              <option value="Partially Refunded">
+                                Partially Refunded
+                              </option>
+                            )}
+                            {order.status === "Refunded" && (
+                              <option value="Refunded">Refunded</option>
+                            )}
+                            <option value="Cancelled">Cancelled</option>
+                          </select> */}
+                          <span
+                            className={` py-1 rounded text-xs font-medium text-center ${getStatusColor(
+                              order.status
+                            )}`}
+                          >
+                            {order.status}
                           </span>
                         </div>
-                        <div className="flex justify-between text-sm text-gray-300">
-                          <span>Qty: {item.quantity}</span>
-                          {item.quantity > 1 && (
-                            <span>₦{item.price.toLocaleString()} each</span>
-                          )}
-                          {(() => {
-                            // Find refunds that belong to this specific product
-                            const productRefunds =
-                              order.refunds?.filter((refund) => {
-                                // Get the product ID from the refund
-                                let refundProductId;
+                      </td>
 
-                                if (refund.product) {
-                                  if (typeof refund.product === "object") {
-                                    refundProductId =
-                                      refund.product._id?.toString();
-                                  } else {
-                                    refundProductId = refund.product.toString();
-                                  }
-                                } else if (refund.productSnapshot?._id) {
-                                  // Handle deleted products
-                                  refundProductId = refund.productSnapshot._id;
-                                }
+                      <td className="px-6 py-4">
+                        <div className="flex  align-middle flex-row gap-3">
+                          <div>
+                            <button
+                              onClick={() =>
+                                navigate(`/admin/orders/${order._id}`)
+                              }
+                              className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-sm tracking-widest"
+                            >
+                              Details
+                            </button>
+                            {/* {order.refunds && order.refunds.length > 0 && (
+                            <div className="mt-1">
+                              <span className="inline-block px-2 py-0.5 text-xs rounded bg-purple-100 text-purple-700">
+                                Refunds: {order.refunds.length}
+                              </span>
+                            </div>
+                          )} */}
+                          </div>
 
-                                // Get the product ID from the current item
-                                const currentProductId =
-                                  item.product?._id?.toString();
+                          <div className="relative dropdown-container">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleDropdown(order._id);
+                              }}
+                              className="p-1 hover:bg-gray-500 rounded transition-colors"
+                            >
+                              <MoreVertical className="w-4 h-4 text-gray-700" />
+                            </button>
 
-                                // Compare IDs
-                                return refundProductId === currentProductId;
-                              }) || [];
-
-                            // If this product has refunds, show them
-                            if (productRefunds.length > 0) {
-                              return productRefunds.map((refund, index) => (
-                                <div key={index} className="mt-2 p-2 rounded">
-                                  <span
-                                    className={`inline-block px-2 py-1 text-xs rounded ${
-                                      refund.status === "Approved" ||
-                                      refund.status === "Refunded"
-                                        ? "bg-green-100 text-green-700"
-                                        : refund.status === "Processing"
-                                        ? "bg-blue-100 text-blue-700"
-                                        : refund.status === "Rejected"
-                                        ? "bg-red-100 text-red-700"
-                                        : "bg-yellow-100 text-yellow-700"
-                                    }`}
+                            {/* Dropdown menu */}
+                            {openDropdownId === order._id && (
+                              <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
+                                <div className="py-1">
+                                  <div className="px-4 py-2 text-xs text-gray-400 border-b border-gray-700">
+                                    Change Status
+                                  </div>
+                                  <button
+                                    onClick={() =>
+                                      handleStatusChange(order._id, "Pending")
+                                    }
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
                                   >
-                                    {refund.status === "Approved" ||
-                                    refund.status === "Refunded"
-                                      ? "Refunded"
-                                      : refund.status === "Processing"
-                                      ? "Refund Processing"
-                                      : refund.status === "Rejected"
-                                      ? "Refund Rejected"
-                                      : "Refund Pending"}
-                                  </span>
+                                    Pending
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleStatusChange(
+                                        order._id,
+                                        "Processing"
+                                      )
+                                    }
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                                  >
+                                    Processing
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleStatusChange(order._id, "Shipped")
+                                    }
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                                  >
+                                    Shipped
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleStatusChange(order._id, "Delivered")
+                                    }
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                                  >
+                                    Delivered
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleStatusChange(order._id, "Cancelled")
+                                    }
+                                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                                  >
+                                    Cancelled
+                                  </button>
+                                  {order.status === "Partially Refunded" && (
+                                    <button
+                                      onClick={() =>
+                                        handleStatusChange(
+                                          order._id,
+                                          "Partially Refunded"
+                                        )
+                                      }
+                                      className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                                    >
+                                      Partially Refunded
+                                    </button>
+                                  )}
+                                  {order.status === "Refunded" && (
+                                    <button
+                                      onClick={() =>
+                                        handleStatusChange(
+                                          order._id,
+                                          "Refunded"
+                                        )
+                                      }
+                                      className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                                    >
+                                      Refunded
+                                    </button>
+                                  )}
                                 </div>
-                              ));
-                            }
-
-                            return null;
-                          })()}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </li>
+                      </td>
+                    </tr>
                   ))}
-                </ul>
+                </tbody>
+              </table>
+            </div>
 
-                {/* Totals */}
-                <div className="bg-gray-700 rounded-lg p-2 text-sm font-bold">
-                  <p>Subtotal: ₦{order.subtotal.toLocaleString()}</p>
-                  {order.discount > 0 && (
-                    <>
-                      <p>
-                        Coupon Applied:{" "}
-                        <span className="text-green-500">
-                          {order.couponCode}
-                        </span>
-                      </p>
-                      <p className="text-sm my-1 font-bold">
-                        Discount:{" "}
-                        <span className="text-red-500">
-                          -₦{order.discount.toLocaleString()}
-                        </span>
-                      </p>
-                    </>
-                  )}
-                  <p className="font-bold text-yellow-100 text-lg">
-                    Total: ₦{order.totalAmount.toLocaleString()}
-                  </p>
-                </div>
-                <div className="flex justify-end mt-3">
-                  <button
-                    onClick={() => navigate(`/admin/orders/${order._id}`)}
-                    className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-md text-sm tracking-widest"
-                  >
-                    View Details
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+            {/* Expanded Order Details (Modal-like view when clicking "View Details") */}
+            {/* This remains the same as your original detailed view */}
+            {/* The table above is just a summary view */}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center space-x-3 py-8">
-            <button
-              onClick={handlePrev}
-              disabled={currentPage === 1}
-              className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
-            >
-              Prev
-            </button>
-
-            {[...Array(totalPages).keys()].map((num) => {
-              const page = num + 1;
-              return (
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center space-x-3 py-8">
                 <button
-                  key={page}
-                  onClick={() => handlePageClick(page)}
-                  className={`px-4 py-2 text-sm rounded ${
-                    currentPage === page
-                      ? "bg-yellow-700 text-white"
-                      : "bg-gray-700 text-white hover:bg-gray-600"
-                  }`}
+                  onClick={handlePrev}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded disabled:opacity-40 hover:bg-gray-200"
                 >
-                  {page}
+                  Prev
                 </button>
-              );
-            })}
 
-            <button
-              onClick={handleNext}
-              disabled={currentPage === totalPages}
-              className="px-4 py-2 text-sm bg-gray-700 text-white rounded disabled:opacity-40 hover:bg-gray-600"
-            >
-              Next
-            </button>
-          </div>
+                {[...Array(totalPages).keys()].map((num) => {
+                  const page = num + 1;
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => handlePageClick(page)}
+                      className={`px-4 py-2 text-sm rounded ${
+                        currentPage === page
+                          ? "bg-gray-700 text-white"
+                          : "bg-gray-100 text-yellow-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={handleNext}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded disabled:opacity-40 hover:bg-gray-200"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
       </motion.div>
     </>

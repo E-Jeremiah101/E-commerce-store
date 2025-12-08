@@ -16,9 +16,9 @@ import {
   Clock,
   Package,
   RefreshCw,
-  LogIn, // Add this
-  LogOut, // Add this
-  Key, // Add this
+  LogIn, 
+  LogOut, 
+  Key,
   User,
 } from "lucide-react";
 import { format } from "date-fns"; // ADD THIS IMPORT
@@ -84,10 +84,6 @@ const AuditLogsTab = () => {
     // User actions
     { value: "UPDATE_USER_ROLE", label: "Update User Role" },
 
-    // Auth actions
-    { value: "LOGIN", label: "Login" },
-    { value: "LOGOUT", label: "Logout" },
-    { value: "OTHER", label: "Other" },
   ];
 
   // Entity types for dropdown

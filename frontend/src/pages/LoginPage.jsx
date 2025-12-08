@@ -37,7 +37,7 @@ const LoginPage = () => {
     console.log(email, password);
   };
   return (
-    <div className="h-screen overflow-hidden flex-col py-12  sm:px-6 lg:px-8">
+    <div className=" overflow-hidden flex-col py-12  sm:px-6 lg:px-8">
       <motion.div
         className="sm:mx-auto sm:w-full sm:max-w-md"
         initial={{ opacity: 0, y: -20 }}

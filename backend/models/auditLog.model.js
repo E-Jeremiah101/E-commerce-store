@@ -83,10 +83,6 @@ const auditLogSchema = new mongoose.Schema(
         // User actions
         "UPDATE_USER_ROLE",
 
-        // Auth actions
-        "LOGIN",
-        "LOGOUT",
-        "OTHER",
       ],
     },
     entityType: {

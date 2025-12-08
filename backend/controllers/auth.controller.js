@@ -5,6 +5,8 @@ import jwt from "jsonwebtoken";
 import {sendEmail} from "../lib/mailer.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 const generateTokens = (userId) => {
   const accessToken = jwt.sign({ userId }, process.env.ACCESS_TOKEN_SECRET, {
@@ -150,6 +152,78 @@ export const signup = async (req, res) => {
         },
         "New user registered successfully"
       );
+
+       (async () => {
+         try {
+           await sendEmail({
+             to: user.email,
+             subject: `Welcome to Eco-Store, ${user.firstname}! 🌿`,
+             text: `Welcome ${user.firstname}! Thank you for joining Eco-Store. Your account is ready. Start exploring eco-friendly products at ${process.env.CLIENT_URL}.`,
+             html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background: #f9fafb; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+            .header { background: linear-gradient(135deg, #10b981, #047857); padding: 30px; text-align: center; color: white; }
+            .header h1 { margin: 0; font-size: 24px; font-weight: bold; }
+            .content { padding: 30px; }
+            .welcome { color: #047857; font-size: 20px; margin-bottom: 20px; font-weight: 600; }
+            .button { display: inline-block; background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+            .footer { background: #f8fafc; padding: 20px; text-align: center; color: #6b7280; font-size: 14px; border-top: 1px solid #e5e7eb; }
+            .icon { font-size: 24px; margin-bottom: 10px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="icon">🌿</div>
+              <h1>Welcome to Eco-Store</h1>
+              <p>Sustainable Shopping, Beautiful Living</p>
+            </div>
+            
+            <div class="content">
+              <div class="welcome">Hello ${user.firstname} ${
+               user.lastname
+             },</div>
+              
+              <p>We're thrilled to welcome you to our community! Your account is now active and ready to use.</p>
+              
+              <p><strong>Email:</strong> ${user.email}</p>
+              
+              <p>Start your sustainable shopping journey today:</p>
+              
+              <div style="text-align: center;">
+                <a href="${process.env.CLIENT_URL}/products" class="button">
+                  Start Shopping →
+                </a>
+              </div>
+              
+              <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
+                <strong>Tip:</strong> Complete your profile for personalized recommendations.
+              </p>
+            </div>
+            
+            <div class="footer">
+              <p>🌍 Eco-Store | Sustainable Living Made Easy</p>
+              <p>📍 Lagos, Nigeria | 📧 support@eco-store.com</p>
+              <p style="font-size: 12px; margin-top: 15px;">
+                &copy; ${new Date().getFullYear()} Eco-Store. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+           });
+           console.log(`Welcome email sent to ${user.email}`);
+         } catch (emailError) {
+           console.error("Welcome email failed:", emailError);
+         }
+       })();
 
       res.status(201).json({
         user: {
@@ -508,6 +582,27 @@ export const resetPassword = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired token" });
     }
 
+    // Check if password was used before
+    const isPasswordUsed = await user.isPasswordUsedBefore(password);
+    if (isPasswordUsed) {
+      await logAuthAction(
+        req,
+        "RESET_PASSWORD_FAILED",
+        user._id,
+        {
+          reason: "Password reuse not allowed",
+          attemptedReuse: true,
+          historySize: user.previousPasswords.length,
+        },
+        "Password reset failed - attempted to reuse old password"
+      );
+      return res.status(400).json({
+        message:
+          "New password cannot be the same as your current or previous passwords",
+        code: "PASSWORD_REUSE",
+      });
+    }
+
     user.password = password; // hash in User model pre-save hook
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
@@ -564,4 +659,107 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+// Change password (requires authentication)
+export const changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user._id;
 
+    const user = await User.findById(userId);
+
+    // Verify current password
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch) {
+      await logAuthAction(
+        req,
+        "CHANGE_PASSWORD_FAILED",
+        userId,
+        {
+          reason: "Incorrect current password",
+        },
+        "Password change failed - incorrect current password"
+      );
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    // Check if new password is same as current
+    if (currentPassword === newPassword) {
+      await logAuthAction(
+        req,
+        "CHANGE_PASSWORD_FAILED",
+        userId,
+        {
+          reason: "Same as current password",
+        },
+        "Password change failed - same as current password"
+      );
+      return res.status(400).json({ 
+        message: "New password cannot be the same as current password" 
+      });
+    }
+
+   
+
+    // Check if password was used before
+    const isPasswordUsed = await user.isPasswordUsedBefore(newPassword);
+    if (isPasswordUsed) {
+      await logAuthAction(
+        req,
+        "CHANGE_PASSWORD_FAILED",
+        userId,
+        {
+          reason: "Password reuse not allowed",
+          attemptedReuse: true,
+        },
+        "Password change failed - attempted to reuse old password"
+      );
+      return res.status(400).json({ 
+        message: "New password cannot be the same as your previous passwords",
+        code: "PASSWORD_REUSE"
+      });
+    }
+
+    // Update password (pre-save hook handles history)
+    user.password = newPassword;
+    await user.save();
+
+    // Invalidate refresh token
+    await redis.del(`refresh_token:${userId}`);
+
+    // Clear cookies
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+
+    await logAuthAction(
+      req,
+      "CHANGE_PASSWORD",
+      userId,
+      {
+        passwordChanged: true,
+        timestamp: new Date().toISOString(),
+        previousPasswordsCount: user.previousPasswords.length,
+        passwordStrength: passwordValidation.score,
+      },
+      "Password changed directly from profile"
+    );
+
+    res.json({ 
+      message: "Password changed successfully. Please login again.",
+      requiresReauth: true 
+    });
+  } catch (error) {
+    console.error("Change password error:", error);
+    
+    await logAuthAction(
+      req,
+      "CHANGE_PASSWORD_ERROR",
+      req.user?._id || null,
+      {
+        error: error.message,
+      },
+      "Password change process failed"
+    );
+    
+    res.status(500).json({ message: "Server error" });
+  }
+};

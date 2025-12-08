@@ -29,7 +29,7 @@ const tabs = [
   { id: "create", label: "Create Product", icon: PlusCircle },
   { id: "products", label: "Product List", icon: ShoppingBasket },
   { id: "inventory", label: "Manage Inventory", icon: Warehouse },
-  { id: "analytics", label: "Analytics", icon: BarChart },
+  { id: "analytics", label: "Analytics Report", icon: BarChart },
   { id: "AdminOrder", label: "Orders", icon: Package },
   { id: "AdminRefunds", label: "Refund ", icon: RotateCcw },
   { id: "AllUsers", label: "User Managemant", icon: User },
