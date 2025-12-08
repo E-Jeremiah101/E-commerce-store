@@ -78,7 +78,7 @@ const AdminOrderDetails = () => {
 
         <div>
           <h1 className="text-gray-600">Order Placed</h1>
-          <p className="font-semibold">
+          <p className="font-semibold"> 
             {new Date(order.createdAt).toLocaleString()}
           </p>
         </div>

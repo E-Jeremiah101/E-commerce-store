@@ -11,7 +11,7 @@ const AllUsers = () => {
   const [showCartModal, setShowCartModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const {user} = useUserStore();
-
+ 
   const fetchUsers = async () => { 
     try {
       setLoading(true);
@@ -94,12 +94,13 @@ const AllUsers = () => {
         {/* Table */}
         <div className="overflow-x-auto bg-white rounded-lg shadow no-scroll">
           <table className="min-w-full border-collapse">
-            <thead className="bg-gradient-to-br from-white via-gray-100 to-gray-300">
+            <thead className="bg-gray-200">
               <tr>
-                <th className="text-left px-4 py-2 border">Id</th>
+                {/* <th className="text-left px-4 py-2 border">Id</th> */}
                 <th className="px-4 py-2 border text-left">Name</th>
                 <th className="px-4 py-2 border text-left">Email</th>
                 <th className="px-4 py-2 border text-left">Phone</th>
+                <th className="px-4 py-2 border text-left">Address</th>
                 <th className="px-4 py-2 border text-left">Cart</th>
                 <th className="px-4 py-2 border text-left">Role</th>
                 <th className="px-4 py-2 border text-center">Actions</th>
@@ -110,17 +111,25 @@ const AllUsers = () => {
                 users.map((user) => (
                   <tr
                     key={user._id}
-                    className="border-b even:bg-white  odd:bg-gray-200 hover:bg-gray-300 transition "
+                    className="border-b hover:bg-gray-200 transition "
                   >
-                    <td className="px-2 py-2 border">{user._id}</td>
-                    <td className="px-2 py-2 border">
+                    {/* <td className="px-2 py-2 border">{user._id}</td> */}
+                    <td className="px-2 py-2 border text-sm">
                       {user.name || user.firstname + " " + user.lastname}
                     </td>
-                    <td className="px-2 py-2 border">{user.email}</td>
-                    <td className="px-2 py-2 border">
+                    <td className="px-2 py-2 border text-sm">{user.email}</td>
+                    <td className="px-2 py-2 border text-sm">
                       {user.phones?.find((p) => p.isDefault)?.number ||
                         user.phones?.[0]?.number ||
                         "N/A"}
+                    </td>
+                    <td className="px-2 py-2 border text-sm">
+                      {user?.addresses?.find((a) => a.isDefault)
+                        ? `${user.addresses.find((a) => a.isDefault).landmark}, 
+       ${user.addresses.find((a) => a.isDefault).lga}, 
+       ${user.addresses.find((a) => a.isDefault).city}, 
+       ${user.addresses.find((a) => a.isDefault).state}`
+                        : "N/A"}
                     </td>
                     <td className="px-2 py-2 border capitalize">
                       <button
@@ -130,18 +139,20 @@ const AllUsers = () => {
                         }}
                         className="px-3 py-1 bg-gray-700 text-white rounded-md"
                       >
-                        View Cart
+                        View
                       </button>
                     </td>
-                    <td className="px-2 py-2 border capitalize">{user.role}</td>
-                    <td className="px-2 py-2 border text-center space-x-2">
+                    <td className="px-2 py-2 border text-sm capitalize">
+                      {user.role}
+                    </td>
+                    <td className="px-2 py-2 border text-center space-x-2 text-sm">
                       <button
                         onClick={() => toggleAdminRole(user._id)}
-                        className={`px-3 py-1 rounded-md text-white ${
+                        className={`px-3 py-1 text-sm  rounded-md text-white ${
                           user.role === "admin" ? "bg-red-500" : "bg-blue-600"
                         }`}
                       >
-                        {user.role === "admin" ? "Remove Admin" : "Make Admin"}
+                        {user.role === "admin" ? "Remove" : "Promot"}
                       </button>
                     </td>
                   </tr>

@@ -25,6 +25,7 @@ import GoBackButton from "../components/GoBackButton";
 import InventoryTab from "../components/InventoryTab.jsx"
 import Recovery from "../components/Recovery.jsx";
 import AuditLogsTab from "../components/AuditLogsTab.jsx";
+import Transactions from "../components/Transactions.jsx";
 const tabs = [
   { id: "create", label: "Create Product", icon: PlusCircle },
   { id: "products", label: "Product List", icon: ShoppingBasket },
@@ -34,6 +35,7 @@ const tabs = [
   { id: "AdminRefunds", label: "Refund ", icon: RotateCcw },
   { id: "AllUsers", label: "User Managemant", icon: User },
   { id: "OrderRecovery", label: "Recovery", icon: Headset },
+  { id: "Transactions", label: "Transactions", icon: Headset },
   { id: "audit", label: "Audit Logs", icon: FileText },
 ];
 const clearCache = async () => {
@@ -127,6 +129,7 @@ const AdminPage = () => {
           {activeTab === "AdminRefunds" && <AdminRefundsTab />}
           {activeTab === "AllUsers" && <AllUsers />}
           {activeTab === "OrderRecovery" && <Recovery />}
+          {activeTab === "Transactions" && <Transactions />}
           {activeTab === "audit" && <AuditLogsTab />}
         </div>
       </div>

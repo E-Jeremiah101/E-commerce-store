@@ -786,10 +786,11 @@ export const getAllOrders = async (req, res) => {
         $or: [
           { orderNumber: { $regex: search, $options: "i" } },
           { flutterwaveRef: { $regex: search, $options: "i" } },
+          { flutterwaveTransactionId: { $regex: search, $options: "i" } },
           ...(isObjectId ? [{ _id: search }] : []),
           { "user.firstname": { $regex: search, $options: "i" } },
           { "user.lastname": { $regex: search, $options: "i" } },
-        ],
+        ], 
       };
     }
 
