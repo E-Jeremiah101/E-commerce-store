@@ -6,6 +6,7 @@ import {
   Package,
   Headset,
   RotateCcw,
+  CreditCard,
   User,
   FileText,
   Warehouse,
@@ -35,7 +36,7 @@ const tabs = [
   { id: "AdminRefunds", label: "Refund ", icon: RotateCcw },
   { id: "AllUsers", label: "User Managemant", icon: User },
   { id: "OrderRecovery", label: "Recovery", icon: Headset },
-  { id: "Transactions", label: "Transactions", icon: Headset },
+  { id: "Transactions", label: "Transactions", icon: CreditCard },
   { id: "audit", label: "Audit Logs", icon: FileText },
 ];
 const clearCache = async () => {

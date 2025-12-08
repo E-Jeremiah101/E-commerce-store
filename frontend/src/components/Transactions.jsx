@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import axios from "../lib/axios";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { motion } from "framer-motion";
 import { useUserStore } from "../stores/useUserStore";
-
+import ExportTransactionPdf from "../utils/exportTransactionPdf.jsx";
 const Transactions = () => {
   const [transactions, setTransaction] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -14,6 +16,9 @@ const Transactions = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
+  const [exportData, setExportData] = useState([]);
 
   // Debounce search
   useEffect(() => {
@@ -25,15 +30,38 @@ const Transactions = () => {
 
   const { user } = useUserStore();
 
-  // Fetch orders
+  
   const fetchTransaction = async () => {
     try {
       setIsFetching(true);
+      const params = {
+        search: searchQuery,
+        sortBy: "date",
+        sortOrder,
+        startDate: startDate ? startDate.toISOString() : undefined,
+        endDate: endDate ? endDate.toISOString() : undefined,
+      };
+      if (startDate) params.startDate = startDate.toISOString();
+      if (endDate) params.endDate = endDate.toISOString();
+
       const { data } = await axios.get("/admin/transactions", {
         params: { search: searchQuery, sortBy, sortOrder },
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      setTransaction(data.transactions);
+
+      let sortedTransactions = [...data.transactions];
+
+      if (startDate || endDate) {
+        sortedTransactions = sortedTransactions.filter((tx) => {
+          const txDate = new Date(tx.date);
+          if (startDate && txDate < startDate) return false;
+          if (endDate && txDate > endDate) return false;
+          return true;
+        });
+      }
+
+      setTransaction(sortedTransactions);
+      setExportData(sortedTransactions);
     } catch (err) {
       console.error("Error fetching orders:", err);
     } finally {
@@ -44,7 +72,7 @@ const Transactions = () => {
 
   useEffect(() => {
     fetchTransaction();
-  }, [searchQuery, sortBy, sortOrder]);
+  }, [searchQuery, sortOrder, startDate, endDate]);
 
   const handleSearchKeyDown = (e) => {
     if (e.key === "Enter") setSearchQuery(search);
@@ -53,10 +81,10 @@ const Transactions = () => {
 
 
   // Pagination logic
-  const totalOrders = transactions.length;
-  const totalPages = Math.ceil(totalOrders / itemsPerPage);
+  const totalTransactions = transactions.length;
+  const totalPages = Math.ceil(totalTransactions / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const displayedOrders = transactions.slice(startIndex, startIndex + itemsPerPage);
+  const transactionsList = transactions.slice(startIndex, startIndex + itemsPerPage);
 
   const handlePrev = () => setCurrentPage((p) => Math.max(p - 1, 1));
   const handleNext = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
@@ -74,72 +102,68 @@ const Transactions = () => {
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className="flex justify-center align-middle text-black py-5">
-          <h1 className="text-3xl font-bold">
-            Welcome👋 {user?.firstname || "Admin"}
-          </h1>
-        </div>
-      </motion.div>
-
-      <motion.div
         className="px-4 lg:px-6"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
+        <ExportTransactionPdf
+          data={exportData}
+          filters={{
+            startDate,
+            endDate,
+            searchQuery,
+            sortOrder,
+          }}
+          total={totalTransactions}
+        />
         {/* Search & Sort */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-15 bg-white rounded-lg shadow-md p-4 ">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-15 bg-white rounded-lg shadow-md p-4">
           <input
             type="text"
-            placeholder="Search by ORD/EC0STORE/Id"
+            placeholder="Search by Transaction ID"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={handleSearchKeyDown}
-            className="px-3 py-2 rounded-lg border placeholder-gray-400 focus:ring-1  text-gray-500 w-full md:w-1/3"
+            className="px-3 py-2 rounded-lg border placeholder-gray-400 focus:ring-1 text-gray-500 w-full md:w-1/3"
           />
-          <div className="flex gap-2 flex-wrap">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 rounded-lg text-gray-500"
-            >
-              <option value="date">Sort by Date</option>
-              <option value="totalAmount">Sort by Total Amount</option>
-              <option value="status">Sort by Status</option>
-            </select>
+
+          <div className="flex gap-2 flex-wrap items-center">
+            <DatePicker
+              selected={startDate}
+              onChange={(date) => setStartDate(date)}
+              selectsStart
+              startDate={startDate}
+              endDate={endDate}
+              placeholderText="Start Date"
+              className="px-3 py-2 rounded-lg border"
+            />
+            <DatePicker
+              selected={endDate}
+              onChange={(date) => setEndDate(date)}
+              selectsEnd
+              startDate={startDate}
+              endDate={endDate}
+              minDate={startDate}
+              placeholderText="End Date"
+              className="px-3 py-2 rounded-lg border"
+            />
 
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
-              className="px-3 py-2 rounded-lg  text-gray-500"
+              className="px-3 py-2 rounded-lg text-gray-500"
             >
-              {sortBy === "date" ? (
-                <>
-                  <option value="desc">Most Recent → Least Recent</option>
-                  <option value="asc">Least Recent → Most Recent</option>
-                </>
-              ) : sortBy === "totalAmount" ? (
-                <>
-                  <option value="asc">Lowest → Highest</option>
-                  <option value="desc">Highest → Lowest</option>
-                </>
-              ) : (
-                <>
-                  <option value="asc">Pending → Cancelled</option>
-                  <option value="desc">Cancelled → Pending</option>
-                </>
-              )}
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
             </select>
+
+            {/* Add Export PDF Button */}
           </div>
         </div>
 
-        {totalOrders === 0 ? (
+        {totalTransactions === 0 ? (
           <p className="flex justify-center mt-7 tracking-widest">
-            No orders found.
+            No Transaction found.
           </p>
         ) : (
           <>
@@ -158,7 +182,7 @@ const Transactions = () => {
                       Amount
                     </th>
                     <th className="px-6 py-3 text-left text-md font-medium text-gray-600">
-                      Payment Method
+                      Method
                     </th>
                     <th className="px-6 py-3 text-left text-md font-medium text-gray-600">
                       Type
@@ -172,7 +196,7 @@ const Transactions = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-300">
-                  {transactions.map((tx) => (
+                  {transactionsList.map((tx) => (
                     <tr key={tx.transactionId} className="hover:bg-gray-750">
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
@@ -193,7 +217,7 @@ const Transactions = () => {
                         </div>
                       </td>
 
-                      <td className="font-semibold">
+                      <td className="px-6 py-4 capitalize">
                         {tx.type === "refund" ? "-" : ""}₦
                         {(tx.amount ?? 0).toLocaleString()}
                       </td>
@@ -238,7 +262,7 @@ const Transactions = () => {
                     </tr>
                   ))}
 
-                  {transactions.length === 0 && (
+                  {transactionsList.length === 0 && (
                     <tr>
                       <td
                         colSpan="7"
