@@ -11,6 +11,7 @@ import {
   FileText,
   Warehouse,
 } from "lucide-react";
+import UserBadge from "../components/UserBadge.jsx";
 import { motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import AnalyticsTab from "../components/AnalyticsTab.jsx";
@@ -82,7 +83,8 @@ const AdminPage = () => {
         </div>
       </motion.div> */}
       <div className="bg-gradient-to-br from-white via-gray-100 to-gray-300  flex-2  md:flex md:h-[100vh] md:w-full p md:mx-auto md:overflow-hidden -10 min-h-screen ">
-        <div className="hidden md:flex  w-1/6 bg-gray-700 py-7 flex-shrink-0 ">
+        <div className="hidden md:flex  w-1/6 bg-gray-700 pb-7 flex-shrink-0 overflow-auto no-scroll flex-col ">
+          
           <ul className="hidden space-y-5 md:flex flex-col">
             {tabs.map((tab) => (
               <li

@@ -289,32 +289,6 @@ export const useInventoryStore = create((set, get) => ({
     });
   },
 
-  // 📊 Export Data
-  exportInventoryReport: async (type = "csv") => {
-    try {
-      const res = await axios.get("/inventory/export", {
-        params: { type },
-        responseType: "blob",
-      });
-
-      // Create download link
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute(
-        "download",
-        `inventory-report-${new Date().toISOString().split("T")[0]}.${type}`
-      );
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      toast.success("Report exported successfully");
-    } catch (error) {
-      console.error("Error exporting report:", error);
-      toast.error("Failed to export report");
-    }
-  },
 
   getInventoryStats: () => {
     const { stockLevels, lowStockAlerts } = get();

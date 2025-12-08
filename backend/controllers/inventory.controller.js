@@ -5,6 +5,7 @@ import Order from "../models/order.model.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
 
+
 const logInventoryAction = async (
   req,
   action,
@@ -1655,4 +1656,3 @@ const generateAgingRecommendations = (buckets, totalValue) => {
 
   return recommendations;
 };
- 

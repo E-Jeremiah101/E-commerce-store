@@ -107,16 +107,15 @@ const Transactions = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <ExportTransactionPdf
-          data={exportData}
-          filters={{
-            startDate,
-            endDate,
-            searchQuery,
-            sortOrder,
-          }}
-          total={totalTransactions}
-        />
+        <div className="my-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2">
+            Transactions
+          </h1>
+          <p className="text-gray-600">
+            Review payment history, refunds, and transaction statuses.
+          </p>
+        </div>
+
         {/* Search & Sort */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-15 bg-white rounded-lg shadow-md p-4">
           <input
@@ -124,10 +123,10 @@ const Transactions = () => {
             placeholder="Search by Transaction ID"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="px-3 py-2 rounded-lg border placeholder-gray-400 focus:ring-1 text-gray-500 w-full md:w-1/3"
+            className="px-3 py-2 rounded-lg border placeholder-gray-400 focus:ring-1 text-gray-500 w-50 md:w-1/4"
           />
 
-          <div className="flex gap-2 flex-wrap items-center">
+          <div className="flex gap-2 flex-wrap items-center ">
             <DatePicker
               selected={startDate}
               onChange={(date) => setStartDate(date)}
@@ -135,7 +134,7 @@ const Transactions = () => {
               startDate={startDate}
               endDate={endDate}
               placeholderText="Start Date"
-              className="px-3 py-2 rounded-lg border"
+              className="px-3 py-2 rounded-lg border md:w-40"
             />
             <DatePicker
               selected={endDate}
@@ -145,19 +144,32 @@ const Transactions = () => {
               endDate={endDate}
               minDate={startDate}
               placeholderText="End Date"
-              className="px-3 py-2 rounded-lg border"
+              className="px-3 py-2 rounded-lg border md:w-40"
             />
 
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
-              className="px-3 py-2 rounded-lg text-gray-500"
+              className="px-3 py-2 rounded-lg text-gray-500 "
             >
               <option value="desc">Newest First</option>
               <option value="asc">Oldest First</option>
             </select>
 
             {/* Add Export PDF Button */}
+          </div>
+
+          <div>
+            <ExportTransactionPdf
+              data={exportData}
+              filters={{
+                startDate,
+                endDate,
+                searchQuery,
+                sortOrder,
+              }}
+              total={totalTransactions}
+            />
           </div>
         </div>
 

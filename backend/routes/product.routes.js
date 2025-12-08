@@ -54,7 +54,7 @@ router.delete("/:id", protectRoute, adminRoute, deleteProduct);
 router.get('/archived', protectRoute, adminRoute, getArchivedProducts);
 router.patch('/:id/restore', protectRoute, adminRoute, restoreProduct);
 router.delete('/:id/permanent', protectRoute, adminRoute, permanentDeleteProduct);
-//end
+//end 
 router.put("/:id/reduce-stock", protectRoute, adminRoute, reduceProduct);
 router.put("/:id/variants", protectRoute, adminRoute, updateVariantStock);
 router.put(
@@ -65,4 +65,4 @@ router.put(
 );
 router.delete("/cache/featured", protectRoute, adminRoute, clearFeaturedCache);
 
-export default router;
+export default router; 

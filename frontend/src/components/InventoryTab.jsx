@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ShoppingBag, Layers} from "lucide-react";
 import { useUserStore } from "../stores/useUserStore.js";
 import { useInventoryStore } from "../stores/useInventoryStore.js";
+import { exportInventoryPDF, exportSimpleInventoryPDF } from "../utils/exportInventoryPdf.js";
 import axios from "../lib/axios.js";
 import {
   Package,
@@ -20,6 +21,7 @@ import {
   Plus,
   Minus,
   Download,
+  FileText,
   Upload,
   Filter,
   Search,
@@ -113,8 +115,6 @@ const InventoryTab = () => {
     }, 1000);
   };
 
-  
-
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [adjustmentData, setAdjustmentData] = useState({
@@ -148,9 +148,9 @@ const InventoryTab = () => {
     if (activeTab === "reorder") {
       fetchReorderSuggestions(10);
     }
-     if (activeTab === "valuation") {
-       fetchInventoryAging();
-     }
+    if (activeTab === "valuation") {
+      fetchInventoryAging();
+    }
     if (activeTab === "valuation") {
       fetchInventoryValuation();
     }
@@ -160,70 +160,111 @@ const InventoryTab = () => {
     if (activeTab === "locations") {
       fetchInventoryByLocation();
     }
-    
-    
   }, [activeTab]);
 
   // Get stats for display
   const stats = getInventoryStats();
 
-  const handleExportReport = async () => {
+  // Update the export function in InventoryTab
+  const handleExportPDF = () => {
     try {
-      await exportInventoryReport("csv");
+      // Prepare data for export
+      const exportData = stockLevels.flatMap((product) => {
+        if (!product.variants || product.variants.length === 0) {
+          return [
+            {
+              name: product.name,
+              product: product.name,
+              category: product.category,
+              countInStock: product.totalStock || 0,
+              stock: product.totalStock || 0,
+              price: product.price || 0,
+              totalValue: product.totalValue || 0,
+            },
+          ];
+        }
+
+        return product.variants.map((variant) => ({
+          name: product.name,
+          product: product.name,
+          category: product.category,
+          color: variant.color,
+          size: variant.size,
+          countInStock: variant.countInStock || 0,
+          stock: variant.countInStock || 0,
+          price: variant.price || product.price || 0,
+          sku: variant.sku,
+          variantValue: variant.variantValue || 0,
+        }));
+      });
+
+      // Get summary
+      const summary = {
+        totalProducts: stockLevels.length,
+        totalValue: stockLevels.reduce(
+          (sum, p) => sum + (p.totalValue || 0),
+          0
+        ),
+        lowStockCount: stockLevels.filter((p) => p.status === "low").length,
+        outOfStockCount: stockLevels.filter((p) => p.status === "out").length,
+      };
+
+      // Use the simple version (most reliable)
+      exportSimpleInventoryPDF(exportData);
+
+      toast.success("PDF exported successfully!");
     } catch (error) {
-      toast.error("Failed to export report");
+      console.error("Export error:", error);
+      toast.error("Failed to export PDF");
     }
   };
 
-const handleAdjustStock = (product) => {
-  console.log("🔄 Adjusting product:", product);
-
-  setSelectedProduct({
-    id: product.id,
-    name: product.name,
-    image: product.image,
-    category: product.category,
-    price: product.price,
-    variants: product.variants || [],
-    
-  });
-
-  setAdjustmentData({
-    adjustmentType: "add",
-    quantity: 1,
-    reason: "restock",
-    notes: "",
-  });
-  setShowAdjustModal(true);
-};
 
 
+  const handleAdjustStock = (product) => {
+    console.log("🔄 Adjusting product:", product);
 
- // Update the submitAdjustment function to pass variantId
- const submitAdjustment = async (adjustmentDataWithVariant) => {
-   if (!selectedProduct) return;
+    setSelectedProduct({
+      id: product.id,
+      name: product.name,
+      image: product.image,
+      category: product.category,
+      price: product.price,
+      variants: product.variants || [],
+    });
 
-   try {
-     await adjustStock(selectedProduct.id, adjustmentDataWithVariant);
-     setShowAdjustModal(false);
-     setSelectedProduct(null);
+    setAdjustmentData({
+      adjustmentType: "add",
+      quantity: 1,
+      reason: "restock",
+      notes: "",
+    });
+    setShowAdjustModal(true);
+  };
 
-     // Refresh current view
-     if (activeTab === "stock-levels") {
-       fetchStockLevels(pagination.currentPage, filters);
-     }
-     if (activeTab === "low-stock") {
-       fetchLowStockAlerts(10);
-     }
-     if (activeTab === "dashboard") {
-       fetchDashboard();
-     }
-   } catch (error) {
-     // Error is handled in store
-   }
- };
+  // Update the submitAdjustment function to pass variantId
+  const submitAdjustment = async (adjustmentDataWithVariant) => {
+    if (!selectedProduct) return;
 
- 
+    try {
+      await adjustStock(selectedProduct.id, adjustmentDataWithVariant);
+      setShowAdjustModal(false);
+      setSelectedProduct(null);
+
+      // Refresh current view
+      if (activeTab === "stock-levels") {
+        fetchStockLevels(pagination.currentPage, filters);
+      }
+      if (activeTab === "low-stock") {
+        fetchLowStockAlerts(10);
+      }
+      if (activeTab === "dashboard") {
+        fetchDashboard();
+      }
+    } catch (error) {
+      // Error is handled in store
+    }
+  };
 
   const handleSearch = (e) => {
     const searchValue = e.target.value;
@@ -280,13 +321,18 @@ const handleAdjustStock = (product) => {
               </p>
             </div>
             <div className="flex items-center gap-3 mt-4 sm:mt-0">
-              <button
-                onClick={handleExportReport}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              >
-                <Download className="h-4 w-4" />
-                Export Report
-              </button>
+              <div className="flex flex-wrap gap-2">
+              
+                <button
+                  onClick={handleExportPDF}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  <FileText className="h-4 w-4" />
+                  Export PDF
+                </button>
+
+              </div>
+
               <button
                 onClick={handleSyncOrders}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"

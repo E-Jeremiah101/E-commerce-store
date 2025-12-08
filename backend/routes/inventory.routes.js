@@ -7,7 +7,7 @@ import {
   getStockHistory,
   getInventoryByLocation,
   getReorderSuggestions,
-  getInventoryValuation, 
+  getInventoryValuation,
   bulkUpdateStock,
   syncOrdersWithInventory,
   getInventoryAgingReport,
@@ -49,4 +49,5 @@ router.post("/sync-orders", syncOrdersWithInventory);
 router.get("/aging-report",  getInventoryAgingReport);
 
 
+ 
 export default router;

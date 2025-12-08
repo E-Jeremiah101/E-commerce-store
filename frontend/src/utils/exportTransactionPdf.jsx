@@ -297,7 +297,7 @@ const ExportTransactionPdf = ({ data, filters = {}, total = 0 }) => {
     <motion.button
       onClick={generatePDF}
       disabled={exporting || !data || data.length === 0}
-      className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      className="flex items-center gap-2 px-4 py-2 text-green-700 rounded-lg hover:bg-green-200  bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
     >
