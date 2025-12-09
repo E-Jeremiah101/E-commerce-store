@@ -3,7 +3,7 @@ import { useParams, Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useProductStore } from "../stores/useProductStore.js";
 import toast from "react-hot-toast";
-import { ShoppingCart, Heart } from "lucide-react"; // Import both Heart icons
+import { ShoppingCart, Heart } from "lucide-react";
 import { useCartStore } from "../stores/useCartStore";
 import { useUserStore } from "../stores/useUserStore";
 import GoBackButton from "../components/GoBackButton";
@@ -24,8 +24,57 @@ const ViewProductPage = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isSaved, setIsSaved] = useState(false);
-  const [isLoadingSave, setIsLoadingSave] = useState(false); // Fixed: Added this state
+  const [isLoadingSave, setIsLoadingSave] = useState(false);
   const location = useLocation();
+
+  // Price display component
+  const PriceDisplay = () => {
+    if (!product) return null;
+
+    if (product.isPriceSlashed && product.previousPrice) {
+      const discountPercentage =
+        product.discountPercentage ||
+        (
+          ((product.previousPrice - product.price) / product.previousPrice) *
+          100
+        ).toFixed(0);
+
+      return (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <span className="text-[1.5rem] text-black font-bold tracking-tight">
+              ₦
+              {product.price.toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+              })}
+            </span>
+            <span className="text-gray-500 line-through text-lg">
+              ₦
+              {product.previousPrice.toLocaleString(undefined, {
+                minimumFractionDigits: 0,
+              })}
+            </span>
+            <span className="bg-red-100 text-red-800 text-sm font-medium px-2 py-1 rounded">
+              {discountPercentage}% OFF
+            </span>
+          </div>
+          <p className="text-xs text-green-600 font-medium">
+            🎉 You save ₦
+            {(product.previousPrice - product.price).toLocaleString()}
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <span className="text-[1.2rem] text-black font-medium tracking-tight">
+        ₦{" "}
+        {product.price.toLocaleString(undefined, {
+          minimumFractionDigits: 0,
+        })}
+      </span>
+    );
+  };
 
   // Check if product is saved when component loads
   useEffect(() => {
@@ -90,15 +139,28 @@ const ViewProductPage = () => {
   useEffect(() => {
     const loadProduct = async () => {
       setLoading(true);
-      const data = await fetchProductById(id);
-      setProduct(data);
-      setSelectedImage(data?.images?.[0]);
-      setLoading(false);
+      try {
+        const data = await fetchProductById(id);
+        if (data) {
+          setProduct(data);
+          setSelectedImage(data?.images?.[0] || "");
+          console.log("Product loaded with slash data:", {
+            price: data.price,
+            previousPrice: data.previousPrice,
+            isPriceSlashed: data.isPriceSlashed,
+            discountPercentage: data.discountPercentage,
+          });
+        }
+      } catch (error) {
+        console.error("Error loading product:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     loadProduct();
   }, [id, fetchProductById]);
 
-  // Calculate variant-specific stock - FIXED VERSION
+  // Calculate variant-specific stock
   const getVariantStock = () => {
     if (!product) return 0;
 
@@ -121,20 +183,16 @@ const ViewProductPage = () => {
     return variant ? variant.countInStock : 0;
   };
 
-  // Check if current variant is in cart - FIXED VERSION
+  // Check if current variant is in cart
   const getVariantInCart = () => {
     return cart.find((item) => {
       const productMatch = item?._id === product?._id;
-
-      // FIXED: Use flexible matching for size and color
       const sizeMatch = selectedSize
         ? item?.size === selectedSize
         : !item?.size || item?.size === "" || item?.size === "Standard";
-
       const colorMatch = selectedColor
         ? item?.color === selectedColor
         : !item?.color || item?.color === "" || item?.color === "Standard";
-
       return productMatch && sizeMatch && colorMatch;
     });
   };
@@ -143,10 +201,9 @@ const ViewProductPage = () => {
   const variantInCart = getVariantInCart();
   const currentQuantity = variantInCart?.quantity || 0;
   const availableStock = variantStock - currentQuantity;
-
   const isOutOfStock = availableStock <= 0;
 
-  // Check if variant exists - FIXED VERSION
+  // Check if variant exists
   const variantExists = () => {
     if (!product || !product.variants || product.variants.length === 0)
       return true;
@@ -187,13 +244,13 @@ const ViewProductPage = () => {
       return;
     }
 
-    // FIXED: Check if variant exists
+    // Check if variant exists
     if (!variantExists()) {
       toast.error("This variant is not available");
       return;
     }
 
-    // FIXED: Check available stock
+    // Check available stock
     if (isOutOfStock) {
       toast.error("This variant is out of stock");
       return;
@@ -228,8 +285,6 @@ const ViewProductPage = () => {
         </span>
 
         <div className="flex items-center gap-4">
-          
-
           {/* Cart Link */}
           <Link to={"/cart"} className="relative text-black ">
             <ShoppingCart size={22} />
@@ -276,16 +331,19 @@ const ViewProductPage = () => {
               <span className="text-2xl tracking-wider text-black m-0 ">
                 {product.name}
               </span>
-
-              
             </div>
 
-            <span className="text-[1.2rem] text-black font-medium tracking-tight">
-              ₦{" "}
-              {product.price.toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-              })}
-            </span>
+            {/* Price Display */}
+            <PriceDisplay />
+
+            {/* Product Badges */}
+            <div className="flex gap-2">
+              {product.isPriceSlashed && (
+                <span className="px-3 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
+                  Limited Time Offer
+                </span>
+              )}
+            </div>
 
             {/* Color Options */}
             {product.colors?.length > 0 && (
@@ -332,9 +390,8 @@ const ViewProductPage = () => {
             )}
 
             <div>
-              {/* Stock information - FIXED LOGIC */}
+              {/* Stock information */}
               {product.variants?.length > 0 ? (
-                // Show stock info when we have a valid variant selection
                 (selectedSize ||
                   selectedColor ||
                   (product.sizes?.length === 0 &&
@@ -426,6 +483,21 @@ const ViewProductPage = () => {
                 )}
               </button>
             </div>
+
+            {/* Shipping Info */}
+            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                  <span className="text-green-600 text-sm">✓</span>
+                </div>
+                <span className="text-sm font-medium">Free Shipping</span>
+              </div>
+              {product.isPriceSlashed && (
+                <p className="text-xs text-green-600 mt-1">
+                  🎁 Special offer: Get free shipping on this discounted item!
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -457,6 +529,46 @@ const ViewProductPage = () => {
               __html: DOMPurify.sanitize(product.description),
             }}
           ></div>
+
+          {/* Price History Section (Admin only or for transparency) */}
+          {user?.role === "admin" && product.isPriceSlashed && (
+            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">
+                Price History (Admin View)
+              </h4>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-blue-700">Current Price:</span>
+                  <span className="font-medium">
+                    ₦{product.price.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-700">Original Price:</span>
+                  <span className="line-through">
+                    ₦{product.previousPrice?.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-700">Discount:</span>
+                  <span className="text-red-600 font-medium">
+                    {(
+                      ((product.previousPrice - product.price) /
+                        product.previousPrice) *
+                      100
+                    ).toFixed(1)}
+                    % OFF
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-700">You Save:</span>
+                  <span className="text-green-600 font-medium">
+                    ₦{(product.previousPrice - product.price).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

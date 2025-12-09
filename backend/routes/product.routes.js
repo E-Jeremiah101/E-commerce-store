@@ -23,10 +23,24 @@ import {
   restoreProduct,
   getArchivedProducts,
 } from "../controllers/product.controller.js";
+
+import { slashProductPrice, resetProductPrice,updateProductPrice,getPriceHistory } from "../controllers/price.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
 
+
 const router = express.Router();
+
+router.use((req, res, next) => {
+  console.log(`🔍 [ROUTE DEBUG] ${req.method} ${req.originalUrl}`);
+  console.log(`🔍 [ROUTE DEBUG] Params:`, req.params);
+  next();
+});
+
+router.patch("/:id/price/slash", protectRoute, adminRoute, slashProductPrice);
+router.patch("/:id/price/reset", protectRoute, adminRoute, resetProductPrice);
+router.patch("/:id/price", protectRoute, adminRoute, updateProductPrice);
+router.get("/:id/price-history", protectRoute, adminRoute, getPriceHistory);
 
 // Public routes
 router.get("/featured", getFeaturedProducts);
@@ -64,5 +78,8 @@ router.put(
   updateVariantInventory
 );
 router.delete("/cache/featured", protectRoute, adminRoute, clearFeaturedCache);
+
+// Price management routes (admin only)
+
 
 export default router; 

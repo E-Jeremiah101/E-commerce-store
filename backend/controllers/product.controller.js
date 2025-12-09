@@ -430,25 +430,37 @@ export const getVariantStock = async (req, res) => {
   }
 };
 
+
 export const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find({
       archived: { $ne: true },
     }).select(
-      "name description price images category sizes colors variants isFeatured archived createdAt"
-    ); // Add variants to selection
+      "name description price images category sizes colors variants isFeatured archived createdAt previousPrice isPriceSlashed"
+    );
 
-    // Transform products for frontend - VARIANT-ONLY
+    // Transform products for frontend
     const transformedProducts = products.map((product) => {
-      // Calculate total stock from variants
       const totalVariantStock = product.variants.reduce(
         (sum, v) => sum + (v.countInStock || 0),
         0
       );
 
+      const discountPercentage =
+        product.isPriceSlashed && product.previousPrice
+          ? (
+              ((product.previousPrice - product.price) /
+                product.previousPrice) *
+              100
+            ).toFixed(1)
+          : null;
+
       return {
         ...product.toObject(),
-        countInStock: totalVariantStock, // Use variant stock total
+        countInStock: totalVariantStock,
+        previousPrice: product.previousPrice,
+        isPriceSlashed: product.isPriceSlashed,
+        discountPercentage: discountPercentage,
         variants: product.variants || [],
       };
     });
@@ -460,11 +472,20 @@ export const getAllProducts = async (req, res) => {
   }
 };
 
+
 export const getFeaturedProducts = async (req, res) => {
   try {
     let featuredProducts = await redis.get("featured_products");
     if (featuredProducts) {
-      return res.json(JSON.parse(featuredProducts));
+      console.log("✅ Loading featured products from cache");
+      const parsed = JSON.parse(featuredProducts);
+      console.log(`🔍 Sample cached product:`, {
+        name: parsed[0]?.name,
+        price: parsed[0]?.price,
+        previousPrice: parsed[0]?.previousPrice,
+        isPriceSlashed: parsed[0]?.isPriceSlashed,
+      });
+      return res.json(parsed);
     }
 
     // if not in redis, fetch from mongodb
@@ -472,7 +493,9 @@ export const getFeaturedProducts = async (req, res) => {
       isFeatured: true,
       archived: { $ne: true },
     })
-      .select("name price images category sizes colors variants") // Add variants
+      .select(
+        "name price images category sizes colors variants  previousPrice isPriceSlashed priceHistory averageRating numReviews"
+      ) 
       .lean();
 
     if (!featuredProducts.length === 0) {
@@ -484,12 +507,23 @@ export const getFeaturedProducts = async (req, res) => {
       const totalVariantStock =
         product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
         0;
+        const discountPercentage =
+          product.isPriceSlashed && product.previousPrice
+            ? (
+                ((product.previousPrice - product.price) /
+                  product.previousPrice) *
+                100
+              ).toFixed(1)
+            : null;
       return {
         ...product,
         countInStock: totalVariantStock,
+        discountPercentage,
       };
+
     });
 
+    
     // store in redis for future quick access
     await redis.set("featured_products", JSON.stringify(transformedFeatured));
 
@@ -683,15 +717,39 @@ export const getRecommendedProducts = async (req, res) => {
           sizes: 1,
           colors: 1,
           variants: 1,
-          // Calculate total variant stock
+          previousPrice: 1, 
+          isPriceSlashed: 1,
           countInStock: {
             $sum: "$variants.countInStock",
           },
         },
       },
     ]);
+    console.log(`✅ Found ${products.length} recommended products`);
+    console.log(`🔍 Sample product slash data:`, {
+      name: products[0]?.name,
+      price: products[0]?.price,
+      previousPrice: products[0]?.previousPrice,
+      isPriceSlashed: products[0]?.isPriceSlashed,
+    });
 
-    res.json(products);
+      const productsWithDiscount = products.map((product) => {
+        const discountPercentage =
+          product.isPriceSlashed && product.previousPrice
+            ? (
+                ((product.previousPrice - product.price) /
+                  product.previousPrice) *
+                100
+              ).toFixed(1)
+            : null;
+
+        return {
+          ...product,
+          discountPercentage,
+        };
+      });
+
+    res.json(productsWithDiscount);
   } catch (error) {
     console.log("Error in getRecommendedProducts controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
@@ -903,6 +961,7 @@ export const getSearchSuggestions = async (req, res) => {
   }
 };
 
+
 export const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -915,9 +974,23 @@ export const getProductById = async (req, res) => {
       (sum, v) => sum + (v.countInStock || 0),
       0
     );
+
+    // Calculate discount if slashed
+    const discountPercentage =
+      product.isPriceSlashed && product.previousPrice
+        ? (
+            ((product.previousPrice - product.price) / product.previousPrice) *
+            100
+          ).toFixed(1)
+        : null;
+
     const transformedProduct = {
       ...product.toObject(),
       countInStock: totalVariantStock,
+      // Include slash information
+      previousPrice: product.previousPrice,
+      isPriceSlashed: product.isPriceSlashed,
+      discountPercentage: discountPercentage,
     };
 
     res.status(200).json({ product: transformedProduct });
@@ -927,7 +1000,7 @@ export const getProductById = async (req, res) => {
   }
 };
 
-// Get archived products (admin only)
+
 export const getArchivedProducts = async (req, res) => {
   try {
     const products = await Product.find({ archived: true });

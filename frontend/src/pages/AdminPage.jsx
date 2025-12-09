@@ -61,16 +61,9 @@ const AdminPage = () => {
   }, [fetchAllProducts]);
   return (
     <>
-      {/* <motion.div
-        className="sm:mx-auto  fixed top-0 left-0 right-0   z-90  "
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className=" flex justify-center align-middle text-black py-5 bg-gradient-to-br from-white via-gray-100 to-gray-300 ">
-          <div className="absolute left-5">
-            <GoBackButton />
-          </div>
+
+        {/* <div className=" flex justify-center align-middle text-black py-5 bg-gradient-to-br from-white via-gray-100 to-gray-300 ">
+          
           <span className=" flex  text-center text-xl  text-gray-900 tracking-widest">
             Welcome Back, {user.firstname}
           </span>
@@ -80,11 +73,10 @@ const AdminPage = () => {
           >
             Clear Featured Cache
           </button>
-        </div>
-      </motion.div> */}
+        </div> */}
+
       <div className="bg-gradient-to-br from-white via-gray-100 to-gray-300  flex-2  md:flex md:h-[100vh] md:w-full p md:mx-auto md:overflow-hidden -10 min-h-screen ">
         <div className="hidden md:flex  w-1/6 bg-gray-700 pb-7 flex-shrink-0 overflow-auto no-scroll flex-col ">
-          
           <ul className="hidden space-y-5 md:flex flex-col">
             {tabs.map((tab) => (
               <li

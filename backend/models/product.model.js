@@ -35,7 +35,26 @@ const productSchema = new mongoose.Schema(
       min: 0,
       required: true,
     },
-  
+
+    previousPrice: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
+    isPriceSlashed: {
+      type: Boolean,
+      default: false,
+    },
+
+    priceHistory: [
+      {
+        price: { type: Number, required: true },
+        previousPrice: { type: Number },
+        changedAt: { type: Date, default: Date.now },
+        changedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        reason: { type: String },
+      },
+    ],
 
     variants: [productVariantSchema],
 

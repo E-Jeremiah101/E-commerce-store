@@ -11,7 +11,12 @@ import {
   TrendingUp,
   TrendingDown,
   DollarSign,
+  TrendingDown as SlashIcon,
+  RefreshCw as UpdateIcon,
+  Undo as ResetIcon,
+  XCircle as CloseIcon,
   Warehouse,
+  Undo,
   History,
   RefreshCw,
   BarChart,
@@ -23,6 +28,7 @@ import {
   Download,
   FileText,
   Upload,
+  Tag,
   Filter,
   Search,
   ArrowUpDown,
@@ -597,7 +603,291 @@ const LocationsView = ({ locations }) => (
   </div>
 );
 
-// Update StockLevelsView to include search functionality
+// Add this component before the StockLevelsView function
+const PriceDisplay = ({
+  price,
+  previousPrice,
+  isPriceSlashed,
+  discountPercentage,
+}) => {
+  if (isPriceSlashed && previousPrice) {
+    const discount =
+      discountPercentage ||
+      (((previousPrice - price) / previousPrice) * 100).toFixed(1);
+
+    return (
+      <div className="flex flex-col">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-green-700">
+            ₦{price?.toLocaleString()}
+          </span>
+          <span className="text-gray-500 line-through text-sm">
+            ₦{previousPrice?.toLocaleString()}
+          </span>
+          <span className="bg-red-100 text-red-800 text-xs font-medium px-1.5 py-0.5 rounded">
+            {discount}% OFF
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <span className="font-semibold text-gray-900">
+      ₦{price?.toLocaleString()}
+    </span>
+  );
+};
+
+// Add this component for price management
+const PriceManagementModal = ({ product, onClose, onUpdate }) => {
+  const { slashProductPrice, resetProductPrice, updateProductPrice } =
+    useInventoryStore();
+  const [newPrice, setNewPrice] = useState("");
+  const [reason, setReason] = useState("");
+  const [action, setAction] = useState("update");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!newPrice && action !== "reset") {
+      toast.error("Please enter a price");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let result;
+
+      switch (action) {
+        case "slash":
+          result = await slashProductPrice(
+            product.id,
+            parseFloat(newPrice),
+            reason
+          );
+          break;
+        case "reset":
+          result = await resetProductPrice(product.id, reason);
+          break;
+        case "update":
+        default:
+          result = await updateProductPrice(
+            product.id,
+            parseFloat(newPrice),
+            reason
+          );
+          break;
+      }
+
+      toast.success(result.message || "Price updated successfully");
+      if (onUpdate) {
+        onUpdate(result.product);
+      }
+      onClose();
+    } catch (error) {
+      // Error is handled in store
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Manage Price
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">{product.name}</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 p-1"
+            >
+              {/* <CloseIcon className="h-5 w-5" /> */}
+            </button>
+          </div>
+
+          {/* Current Price Info */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-gray-600">Current Price:</span>
+              <PriceDisplay
+                price={product.price}
+                previousPrice={product.previousPrice}
+                isPriceSlashed={product.isPriceSlashed}
+                discountPercentage={product.discountPercentage}
+              />
+            </div>
+            {product.isPriceSlashed && product.previousPrice && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-500">Original Price:</span>
+                <span className="text-gray-500 line-through">
+                  ₦{product.previousPrice?.toLocaleString()}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Action Selection */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              Select Action
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                {
+                  value: "update",
+                  label: "Update",
+                  icon: UpdateIcon,
+                  color: "bg-blue-50 border-blue-200 text-blue-700",
+                },
+                {
+                  value: "slash",
+                  label: "Slash",
+                  icon: SlashIcon,
+                  color: "bg-red-50 border-red-200 text-red-700",
+                  disabled: product.isPriceSlashed,
+                },
+                {
+                  value: "reset",
+                  label: "Reset",
+                  icon: ResetIcon,
+                  color: "bg-gray-50 border-gray-200 text-gray-700",
+                  disabled: !product.isPriceSlashed,
+                },
+              ].map((type) => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => setAction(type.value)}
+                  disabled={type.disabled}
+                  className={`p-4 rounded-lg border flex flex-col items-center gap-2 transition-all ${
+                    action === type.value
+                      ? `${type.color} ring-2 ring-offset-1 ring-opacity-30`
+                      : "border-gray-300 hover:bg-gray-50"
+                  } ${type.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                >
+                  <type.icon className="h-5 w-5" />
+                  <span className="text-sm font-medium">{type.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Price Input (only for update and slash) */}
+          {action !== "reset" && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Price
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                  ₦
+                </span>
+                <input
+                  type="number"
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              {action === "slash" &&
+                newPrice &&
+                parseFloat(newPrice) >= product.price && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Slash price must be lower than current price
+                  </p>
+                )}
+            </div>
+          )}
+
+          {/* Reason Input */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Reason {action !== "reset" && "(Optional)"}
+            </label>
+            <input
+              type="text"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="e.g., Sale, Clearance, Promotion"
+            />
+          </div>
+
+          {/* Summary */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Summary</h4>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Action:</span>
+                <span className="font-medium capitalize">{action}</span>
+              </div>
+              {action !== "reset" && newPrice && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">New Price:</span>
+                  <span className="font-medium">
+                    ₦{parseFloat(newPrice).toLocaleString()}
+                  </span>
+                </div>
+              )}
+              {action === "reset" && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Will reset to:</span>
+                  <span className="font-medium text-blue-600">
+                    ₦{product.previousPrice?.toLocaleString()}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={
+                loading ||
+                (action !== "reset" && !newPrice) ||
+                (action === "slash" &&
+                  newPrice &&
+                  parseFloat(newPrice) >= product.price)
+              }
+              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:bg-blue-300 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Processing...
+                </div>
+              ) : action === "reset" ? (
+                "Reset Price"
+              ) : (
+                "Apply Changes"
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// Update the StockLevelsView component
 const StockLevelsView = ({
   stockLevels,
   onAdjust,
@@ -606,15 +896,12 @@ const StockLevelsView = ({
   filters,
   updateFilters,
   clearFilters,
-  pagination = {
-    currentPage: 1,
-    totalPages: 1,
-    hasNextPage: false,
-    hasPrevPage: false,
-  },
+  pagination,
   onPageChange,
 }) => {
   const [expandedProducts, setExpandedProducts] = useState({});
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [selectedProductForPrice, setSelectedProductForPrice] = useState(null);
 
   const toggleProductExpand = (productId) => {
     setExpandedProducts((prev) => ({
@@ -623,249 +910,574 @@ const StockLevelsView = ({
     }));
   };
 
+  const handlePriceAction = (product) => {
+    setSelectedProductForPrice(product);
+    setShowPriceModal(true);
+  };
+
+  const handlePriceUpdate = (updatedProduct) => {
+    // Update local state
+    setSelectedProductForPrice(updatedProduct);
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-      <div className="p-6 border-b">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h2 className="text-xl font-semibold text-gray-800">Stock Levels</h2>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={filters.search || ""}
-                onChange={onSearch}
-              />
+    <>
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div className="p-6 border-b">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h2 className="text-xl font-semibold text-gray-800">
+              Stock Levels
+            </h2>
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search products..."
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={filters.search || ""}
+                  onChange={onSearch}
+                />
+              </div>
+              <select
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={filters.category || ""}
+                onChange={(e) => updateFilters({ category: e.target.value })}
+              >
+                <option value="">All Categories</option>
+                <option value="electronics">Electronics</option>
+                <option value="fashion">Fashion</option>
+                <option value="home">Home</option>
+              </select>
+              <button
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                onClick={() => clearFilters()}
+              >
+                <Filter className="h-4 w-4" />
+              </button>
             </div>
-            <select
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={filters.category || ""}
-              onChange={(e) => updateFilters({ category: e.target.value })}
-            >
-              <option value="">All Categories</option>
-              <option value="electronics">Electronics</option>
-              <option value="fashion">Fashion</option>
-              <option value="home">Home</option>
-            </select>
-            <button
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              onClick={() => clearFilters()}
-            >
-              <Filter className="h-4 w-4" />
-            </button>
           </div>
         </div>
-      </div>
-      {loading ? (
-        <div className="flex justify-center items-center p-12">
-          <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Product
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Stock
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Value
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {stockLevels.map((product) => (
-                <React.Fragment key={product.id}>
-                  {/* Product Summary Row */}
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {product.image && (
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="h-10 w-10 rounded object-cover mr-3"
-                          />
-                        )}
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {product.name}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {product.variantsCount} variants
-                          </div>
-                          {product.variantsCount > 0 && (
-                            <button
-                              onClick={() => toggleProductExpand(product.id)}
-                              className="text-xs text-blue-600 hover:text-blue-800 mt-1"
-                            >
-                              {expandedProducts[product.id] ? "Hide" : "Show"}{" "}
-                              variants
-                            </button>
+        {loading ? (
+          <div className="flex justify-center items-center p-12">
+            <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Product
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Price
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Total Stock
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Value
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {stockLevels.map((product) => (
+                  <React.Fragment key={product.id}>
+                    {/* Product Summary Row */}
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {product.image && (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="h-10 w-10 rounded object-cover mr-3"
+                            />
                           )}
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {product.name}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {product.variantsCount} variants
+                            </div>
+                            {product.variantsCount > 0 && (
+                              <button
+                                onClick={() => toggleProductExpand(product.id)}
+                                className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                              >
+                                {expandedProducts[product.id] ? "Hide" : "Show"}{" "}
+                                variants
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-                        {product.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {product.totalStock || 0}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StockStatusBadge status={product.status} />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        ₦{product.totalValue?.toLocaleString() || "0"}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() =>
-                          onAdjust({
-                            ...product,
-                            variants: product.variants || [],
-                          })
-                        }
-                        className="text-blue-600 hover:text-blue-900 mr-3"
-                      >
-                        Adjust
-                      </button>
-                      <button className="text-gray-600 hover:text-gray-900">
-                        <Eye className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-
-                  {/* Variant Rows (if expanded) */}
-                  {expandedProducts[product.id] &&
-                    product.variants &&
-                    product.variants.length > 0 && (
-                      <>
-                        {product.variants.map((variant) => (
-                          <tr
-                            key={variant._id}
-                            className="bg-gray-50 hover:bg-gray-100"
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                          {product.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <PriceDisplay
+                          price={product.price}
+                          previousPrice={product.previousPrice}
+                          isPriceSlashed={product.isPriceSlashed}
+                          discountPercentage={product.discountPercentage}
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {product.totalStock || 0}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <StockStatusBadge status={product.status} />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          ₦{product.totalValue?.toLocaleString() || "0"}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() =>
+                              onAdjust({
+                                ...product,
+                                variants: product.variants || [],
+                              })
+                            }
+                            className="text-blue-600 hover:text-blue-900"
+                            title="Adjust Stock"
                           >
-                            <td className="px-6 py-3 pl-10">
-                              <div className="flex items-center">
-                                <div className="ml-2">
-                                  <div className="text-sm text-gray-900 flex items-center gap-2">
-                                    <span className="font-medium">
-                                      {variant.color || "Default"}
-                                    </span>
-                                    <span className="text-gray-500">-</span>
-                                    <span className="font-medium">
-                                      {variant.size || "One Size"}
-                                    </span>
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    SKU: {variant.sku || "N/A"}
+                            Adjust
+                          </button>
+                          <span className="text-gray-300">|</span>
+                          <button
+                            onClick={() => handlePriceAction(product)}
+                            className="text-green-600 hover:text-green-900"
+                            title="Manage Price"
+                          >
+                            Price
+                          </button>
+                          <span className="text-gray-300">|</span>
+                          <button className="text-gray-600 hover:text-gray-900">
+                            <Eye className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+
+                    {/* Variant Rows */}
+                    {expandedProducts[product.id] &&
+                      product.variants &&
+                      product.variants.length > 0 && (
+                        <>
+                          {product.variants.map((variant) => (
+                            <tr
+                              key={variant._id}
+                              className="bg-gray-50 hover:bg-gray-100"
+                            >
+                              <td className="px-6 py-3 pl-10">
+                                <div className="flex items-center">
+                                  <div className="ml-2">
+                                    <div className="text-sm text-gray-900 flex items-center gap-2">
+                                      <span className="font-medium">
+                                        {variant.color || "Default"}
+                                      </span>
+                                      <span className="text-gray-500">-</span>
+                                      <span className="font-medium">
+                                        {variant.size || "One Size"}
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      SKU: {variant.sku || "N/A"}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-3">
-                              <span className="text-xs text-gray-500">
-                                Variant
-                              </span>
-                            </td>
-                            <td className="px-6 py-3">
-                              <div className="text-sm font-medium text-gray-900">
-                                {variant.countInStock}
-                              </div>
-                            </td>
-                            <td className="px-6 py-3">
-                              <StockStatusBadge
-                                status={
-                                  variant.countInStock === 0
-                                    ? "out"
-                                    : variant.countInStock <= 5
-                                    ? "low"
-                                    : "healthy"
-                                }
-                              />
-                            </td>
-                            <td className="px-6 py-3">
-                              <div className="text-sm text-gray-900">
-                                ₦{variant.variantValue?.toLocaleString() || "0"}
-                              </div>
-                            </td>
-                            <td className="px-6 py-3 text-sm font-medium">
-                              <button
-                                onClick={() =>
-                                  onAdjust({
-                                    ...product,
-                                    variantId: variant._id,
-                                    variantName: `${
-                                      variant.color || "Default"
-                                    } - ${variant.size || "One Size"}`,
-                                    currentStock: variant.countInStock,
-                                  })
-                                }
-                                className="text-blue-600 hover:text-blue-900 text-xs"
-                              >
-                                Adjust Variant
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </>
-                    )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+                              </td>
+                              <td className="px-6 py-3">
+                                <span className="text-xs text-gray-500">
+                                  Variant
+                                </span>
+                              </td>
+                              <td className="px-6 py-3">
+                                <span className="text-sm font-medium text-gray-900">
+                                  ₦{variant.price?.toLocaleString() || "0"}
+                                </span>
+                              </td>
+                              <td className="px-6 py-3">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {variant.countInStock}
+                                </div>
+                              </td>
+                              <td className="px-6 py-3">
+                                <StockStatusBadge
+                                  status={
+                                    variant.countInStock === 0
+                                      ? "out"
+                                      : variant.countInStock <= 5
+                                      ? "low"
+                                      : "healthy"
+                                  }
+                                />
+                              </td>
+                              <td className="px-6 py-3">
+                                <div className="text-sm text-gray-900">
+                                  ₦
+                                  {variant.variantValue?.toLocaleString() ||
+                                    "0"}
+                                </div>
+                              </td>
+                              <td className="px-6 py-3 text-sm font-medium">
+                                <button
+                                  onClick={() =>
+                                    onAdjust({
+                                      ...product,
+                                      variantId: variant._id,
+                                      variantName: `${
+                                        variant.color || "Default"
+                                      } - ${variant.size || "One Size"}`,
+                                      currentStock: variant.countInStock,
+                                    })
+                                  }
+                                  className="text-blue-600 hover:text-blue-900 text-xs"
+                                >
+                                  Adjust Variant
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </>
+                      )}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-      {/* Pagination */}
-      <div className="flex justify-center gap-2 p-4 border-t">
-        <button
-          onClick={() => onPageChange(pagination.currentPage - 1)}
-          disabled={!pagination.hasPrevPage}
-          className={`px-3 py-1 rounded ${
-            pagination.hasPrevPage
-              ? "bg-gray-200 hover:bg-gray-300"
-              : "bg-gray-100 text-gray-400 cursor-not-allowed"
-          }`}
-        >
-          Previous
-        </button>
-        <button
-          onClick={() => onPageChange(pagination.currentPage + 1)}
-          disabled={!pagination.hasNextPage}
-          className={`px-3 py-1 rounded ${
-            pagination.hasNextPage
-              ? "bg-gray-200 hover:bg-gray-300"
-              : "bg-gray-100 text-gray-400 cursor-not-allowed"
-          }`}
-        >
-          Next
-        </button>
+        {/* Pagination */}
+        <div className="flex justify-center gap-2 p-4 border-t">
+          <button
+            onClick={() => onPageChange(pagination.currentPage - 1)}
+            disabled={!pagination.hasPrevPage}
+            className={`px-3 py-1 rounded ${
+              pagination.hasPrevPage
+                ? "bg-gray-200 hover:bg-gray-300"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            Previous
+          </button>
+          <button
+            onClick={() => onPageChange(pagination.currentPage + 1)}
+            disabled={!pagination.hasNextPage}
+            className={`px-3 py-1 rounded ${
+              pagination.hasNextPage
+                ? "bg-gray-200 hover:bg-gray-300"
+                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            Next
+          </button>
+        </div>
       </div>
-    </div>
+
+      {/* Price Management Modal */}
+      {showPriceModal && selectedProductForPrice && (
+        <PriceManagementModal
+          product={selectedProductForPrice}
+          onClose={() => {
+            setShowPriceModal(false);
+            setSelectedProductForPrice(null);
+          }}
+          onUpdate={handlePriceUpdate}
+        />
+      )}
+    </>
   );
 };
+// Update StockLevelsView to include search functionality
+// const StockLevelsView = ({
+//   stockLevels,
+//   onAdjust,
+//   loading,
+//   onSearch,
+//   filters,
+//   updateFilters,
+//   clearFilters,
+//   pagination = {
+//     currentPage: 1,
+//     totalPages: 1,
+//     hasNextPage: false,
+//     hasPrevPage: false,
+//   },
+//   onPageChange,
+// }) => {
+//   const [expandedProducts, setExpandedProducts] = useState({});
+
+//   const toggleProductExpand = (productId) => {
+//     setExpandedProducts((prev) => ({
+//       ...prev,
+//       [productId]: !prev[productId],
+//     }));
+//   };
+
+//   return (
+//     <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+//       <div className="p-6 border-b">
+//         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+//           <h2 className="text-xl font-semibold text-gray-800">Stock Levels</h2>
+//           <div className="flex items-center gap-3">
+//             <div className="relative">
+//               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+//               <input
+//                 type="text"
+//                 placeholder="Search products..."
+//                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+//                 value={filters.search || ""}
+//                 onChange={onSearch}
+//               />
+//             </div>
+//             <select
+//               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+//               value={filters.category || ""}
+//               onChange={(e) => updateFilters({ category: e.target.value })}
+//             >
+//               <option value="">All Categories</option>
+//               <option value="electronics">Electronics</option>
+//               <option value="fashion">Fashion</option>
+//               <option value="home">Home</option>
+//             </select>
+//             <button
+//               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+//               onClick={() => clearFilters()}
+//             >
+//               <Filter className="h-4 w-4" />
+//             </button>
+//           </div>
+//         </div>
+//       </div>
+//       {loading ? (
+//         <div className="flex justify-center items-center p-12">
+//           <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+//         </div>
+//       ) : (
+//         <div className="overflow-x-auto">
+//           <table className="min-w-full divide-y divide-gray-200">
+//             <thead className="bg-gray-50">
+//               <tr>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   Product
+//                 </th>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   Category
+//                 </th>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   Total Stock
+//                 </th>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   Status
+//                 </th>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   Value
+//                 </th>
+//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                   Actions
+//                 </th>
+//               </tr>
+//             </thead>
+//             <tbody className="bg-white divide-y divide-gray-200">
+//               {stockLevels.map((product) => (
+//                 <React.Fragment key={product.id}>
+//                   {/* Product Summary Row */}
+//                   <tr className="hover:bg-gray-50">
+//                     <td className="px-6 py-4 whitespace-nowrap">
+//                       <div className="flex items-center">
+//                         {product.image && (
+//                           <img
+//                             src={product.image}
+//                             alt={product.name}
+//                             className="h-10 w-10 rounded object-cover mr-3"
+//                           />
+//                         )}
+//                         <div>
+//                           <div className="text-sm font-medium text-gray-900">
+//                             {product.name}
+//                           </div>
+//                           <div className="text-xs text-gray-500">
+//                             {product.variantsCount} variants
+//                           </div>
+//                           {product.variantsCount > 0 && (
+//                             <button
+//                               onClick={() => toggleProductExpand(product.id)}
+//                               className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+//                             >
+//                               {expandedProducts[product.id] ? "Hide" : "Show"}{" "}
+//                               variants
+//                             </button>
+//                           )}
+//                         </div>
+//                       </div>
+//                     </td>
+//                     <td className="px-6 py-4 whitespace-nowrap">
+//                       <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+//                         {product.category}
+//                       </span>
+//                     </td>
+//                     <td className="px-6 py-4 whitespace-nowrap">
+//                       <div className="text-sm font-medium text-gray-900">
+//                         {product.totalStock || 0}
+//                       </div>
+//                     </td>
+//                     <td className="px-6 py-4 whitespace-nowrap">
+//                       <StockStatusBadge status={product.status} />
+//                     </td>
+//                     <td className="px-6 py-4 whitespace-nowrap">
+//                       <div className="text-sm font-medium text-gray-900">
+//                         ₦{product.totalValue?.toLocaleString() || "0"}
+//                       </div>
+//                     </td>
+//                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+//                       <button
+//                         onClick={() =>
+//                           onAdjust({
+//                             ...product,
+//                             variants: product.variants || [],
+//                           })
+//                         }
+//                         className="text-blue-600 hover:text-blue-900 mr-3"
+//                       >
+//                         Adjust
+//                       </button>
+//                       <button className="text-gray-600 hover:text-gray-900">
+//                         <Eye className="h-4 w-4" />
+//                       </button>
+//                     </td>
+//                   </tr>
+
+//                   {/* Variant Rows (if expanded) */}
+//                   {expandedProducts[product.id] &&
+//                     product.variants &&
+//                     product.variants.length > 0 && (
+//                       <>
+//                         {product.variants.map((variant) => (
+//                           <tr
+//                             key={variant._id}
+//                             className="bg-gray-50 hover:bg-gray-100"
+//                           >
+//                             <td className="px-6 py-3 pl-10">
+//                               <div className="flex items-center">
+//                                 <div className="ml-2">
+//                                   <div className="text-sm text-gray-900 flex items-center gap-2">
+//                                     <span className="font-medium">
+//                                       {variant.color || "Default"}
+//                                     </span>
+//                                     <span className="text-gray-500">-</span>
+//                                     <span className="font-medium">
+//                                       {variant.size || "One Size"}
+//                                     </span>
+//                                   </div>
+//                                   <div className="text-xs text-gray-500">
+//                                     SKU: {variant.sku || "N/A"}
+//                                   </div>
+//                                 </div>
+//                               </div>
+//                             </td>
+//                             <td className="px-6 py-3">
+//                               <span className="text-xs text-gray-500">
+//                                 Variant
+//                               </span>
+//                             </td>
+//                             <td className="px-6 py-3">
+//                               <div className="text-sm font-medium text-gray-900">
+//                                 {variant.countInStock}
+//                               </div>
+//                             </td>
+//                             <td className="px-6 py-3">
+//                               <StockStatusBadge
+//                                 status={
+//                                   variant.countInStock === 0
+//                                     ? "out"
+//                                     : variant.countInStock <= 5
+//                                     ? "low"
+//                                     : "healthy"
+//                                 }
+//                               />
+//                             </td>
+//                             <td className="px-6 py-3">
+//                               <div className="text-sm text-gray-900">
+//                                 ₦{variant.variantValue?.toLocaleString() || "0"}
+//                               </div>
+//                             </td>
+//                             <td className="px-6 py-3 text-sm font-medium">
+//                               <button
+//                                 onClick={() =>
+//                                   onAdjust({
+//                                     ...product,
+//                                     variantId: variant._id,
+//                                     variantName: `${
+//                                       variant.color || "Default"
+//                                     } - ${variant.size || "One Size"}`,
+//                                     currentStock: variant.countInStock,
+//                                   })
+//                                 }
+//                                 className="text-blue-600 hover:text-blue-900 text-xs"
+//                               >
+//                                 Adjust Variant
+//                               </button>
+//                             </td>
+//                           </tr>
+//                         ))}
+//                       </>
+//                     )}
+//                 </React.Fragment>
+//               ))}
+//             </tbody>
+//           </table>
+//         </div>
+//       )}
+
+//       {/* Pagination */}
+//       <div className="flex justify-center gap-2 p-4 border-t">
+//         <button
+//           onClick={() => onPageChange(pagination.currentPage - 1)}
+//           disabled={!pagination.hasPrevPage}
+//           className={`px-3 py-1 rounded ${
+//             pagination.hasPrevPage
+//               ? "bg-gray-200 hover:bg-gray-300"
+//               : "bg-gray-100 text-gray-400 cursor-not-allowed"
+//           }`}
+//         >
+//           Previous
+//         </button>
+//         <button
+//           onClick={() => onPageChange(pagination.currentPage + 1)}
+//           disabled={!pagination.hasNextPage}
+//           className={`px-3 py-1 rounded ${
+//             pagination.hasNextPage
+//               ? "bg-gray-200 hover:bg-gray-300"
+//               : "bg-gray-100 text-gray-400 cursor-not-allowed"
+//           }`}
+//         >
+//           Next
+//         </button>
+//       </div>
+//     </div>
+//   );
+// };
 
 // Sub-components
 // In your InventoryTab.js - Update the DashboardView component:

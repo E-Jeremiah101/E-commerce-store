@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { ShoppingCart, ChevronLeft, ChevronRight, } from "lucide-react";
 import { useCartStore } from "../stores/useCartStore.js";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
@@ -75,6 +75,13 @@ const FeaturedProducts = ({ featuredProducts }) => {
                       className="w-1/2 sm:w-1/2 md:w-1/3 lg:w-1/3 xl:w-1/4 flex-shrink-0 px-1"
                     >
                       <div className=" backdrop-blur-sm  overflow-hidden h-full transition-all duration-300 hover:shadow-xl ">
+                        <div className="absolute top-1 right-1 z-10">
+                          {product.isPriceSlashed && product.previousPrice && (
+                            <span className="bg-red-100 text-red-800 rounded text-[0.70rem] font-medium px-1 py-1">
+                              {product.discountPercentage}% OFF
+                            </span>
+                          )}
+                        </div>
                         <Link to={`/product/${product._id}`}>
                           <div className="overflow-hidden">
                             <img
@@ -89,12 +96,27 @@ const FeaturedProducts = ({ featuredProducts }) => {
                             </h3>
                           </div>
                           <div className="flex justify-between w-full text-gray-900 px-2">
-                            <div className="text-sm lg:text-md text-gray-900">
-                              ₦{" "}
-                              {product.price.toLocaleString(undefined, {
-                                minimumFractionDigits: 0,
-                              })}
-                            </div>
+                           
+                            {product.isPriceSlashed && product.previousPrice ? (
+                              <div className="flex items-center gap-2">
+                                <span className="text-black font-medium text-[1.1rem]">
+                                  ₦{" "}
+                                  {product.price.toLocaleString(undefined, {
+                                    minimumFractionDigits: 0,
+                                  })}
+                                </span>
+                                <span className="text-gray-500 line-through text-[0.85rem]">
+                                  ₦{product.previousPrice.toLocaleString()}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-sm lg:text-md text-gray-900 font-semibold">
+                                ₦{" "}
+                                {product.price.toLocaleString(undefined, {
+                                  minimumFractionDigits: 0,
+                                })}
+                              </span>
+                            )}
                             <div>
                               <ShoppingCart size={20} />
                             </div>

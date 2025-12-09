@@ -289,7 +289,6 @@ export const useInventoryStore = create((set, get) => ({
     });
   },
 
-
   getInventoryStats: () => {
     const { stockLevels, lowStockAlerts } = get();
 
@@ -364,5 +363,121 @@ export const useInventoryStore = create((set, get) => ({
       inventoryByLocation: [],
       loading: false,
     });
+  },
+  // Add these to your store actions
+  slashProductPrice: async (productId, newPrice, reason = "") => {
+    set({ loading: true });
+    try {
+      console.log("🔄 [STORE] Slashing price for product:", productId);
+      console.log(
+        "🔄 [STORE] Request URL:",
+        `/products/${productId}/price/slash`
+      );
+
+      const res = await axios.patch(`/products/${productId}/price/slash`, {
+        newPrice: parseFloat(newPrice),
+        reason,
+      });
+
+      console.log("✅ [STORE] Price slash response:", res.data);
+      toast.success("Price slashed successfully!");
+
+      // Update the product in stockLevels
+      set((state) => ({
+        stockLevels: state.stockLevels.map((product) =>
+          product.id === productId
+            ? {
+                ...product,
+                price: res.data.product.price,
+                previousPrice: res.data.product.previousPrice,
+                isPriceSlashed: res.data.product.isPriceSlashed,
+                discountPercentage: res.data.product.discountPercentage,
+              }
+            : product
+        ),
+      }));
+
+      set({ loading: false });
+      return res.data;
+    } catch (error) {
+      console.error("❌ [STORE] Error slashing price:", error);
+      console.error("❌ [STORE] Error response:", error.response?.data);
+      toast.error(error.response?.data?.message || "Failed to slash price");
+      set({ loading: false });
+      throw error;
+    }
+  },
+
+  resetProductPrice: async (productId, reason = "") => {
+    set({ loading: true });
+    try {
+      console.log("🔄 [STORE] Resetting price for product:", productId);
+
+      const res = await axios.patch(`/products/${productId}/price/reset`, {
+        reason,
+      });
+
+      toast.success("Price reset successfully!");
+
+      // Update the product in stockLevels
+      set((state) => ({
+        stockLevels: state.stockLevels.map((product) =>
+          product.id === productId
+            ? {
+                ...product,
+                price: res.data.product.price,
+                previousPrice: null,
+                isPriceSlashed: false,
+                discountPercentage: null,
+              }
+            : product
+        ),
+      }));
+
+      set({ loading: false });
+      return res.data;
+    } catch (error) {
+      console.error("❌ [STORE] Error resetting price:", error);
+      toast.error(error.response?.data?.message || "Failed to reset price");
+      set({ loading: false });
+      throw error;
+    }
+  },
+
+  updateProductPrice: async (productId, newPrice, reason = "") => {
+    set({ loading: true });
+    try {
+      console.log("🔄 [STORE] Updating price for product:", productId);
+
+      const res = await axios.patch(`/products/${productId}/price`, {
+        newPrice: parseFloat(newPrice),
+        reason,
+      });
+
+      toast.success("Price updated successfully!");
+
+      // Update the product in stockLevels
+      set((state) => ({
+        stockLevels: state.stockLevels.map((product) =>
+          product.id === productId
+            ? {
+                ...product,
+                price: res.data.product.price,
+                previousPrice: res.data.product.previousPrice,
+                isPriceSlashed: res.data.product.isPriceSlashed,
+                discountPercentage: res.data.product.discountPercentage,
+              }
+            : product
+        ),
+      }));
+
+      set({ loading: false });
+      return res.data;
+    } catch (error) {
+      console.error("❌ [STORE] Error updating price:", error);
+      toast.error(error.response?.data?.message || "Failed to update price");
+      set({ loading: false });
+      throw error;
+    }
   },
 }));
