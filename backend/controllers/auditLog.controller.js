@@ -232,3 +232,59 @@ export const getAuditLogById = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+// Add this to your auditLog.controller.js
+export const getPriceHistory = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    
+    // Fetch all price-related audit logs for this product
+    const priceLogs = await AuditLog.find({
+      entityId: productId,
+      entityType: ENTITY_TYPES.PRODUCT,
+      action: { 
+        $in: [
+          ACTIONS.PRICE_SLASH, 
+          ACTIONS.PRICE_UPDATE, 
+          ACTIONS.PRICE_RESET,
+          ACTIONS.UPDATE_PRODUCT // If regular product updates include price changes
+        ] 
+      }
+    })
+    .sort({ timestamp: -1 })
+    .populate('adminId', 'firstname lastname email')
+    .lean();
+
+    // Format the logs for display
+    const formattedLogs = priceLogs.map(log => ({
+      id: log._id,
+      timestamp: log.timestamp,
+      adminName: log.adminName,
+      adminEmail: log.adminId?.email || '',
+      action: log.action,
+      oldPrice: log.changes?.oldPrice || log.changes?.price?.before || 'N/A',
+      newPrice: log.changes?.newPrice || log.changes?.price?.after || 'N/A',
+      changeType: log.changes?.priceChange?.type || 
+                 (log.action === 'PRICE_SLASH' ? 'slash' : 
+                  log.action === 'PRICE_RESET' ? 'reset' : 'update'),
+      percentage: log.changes?.priceChange?.percentage || 
+                 log.changes?.priceChange?.discount || 
+                 log.changes?.price?.discount || 'N/A',
+      reason: log.additionalInfo || 'No reason provided',
+      ipAddress: log.ipAddress,
+      discount: log.changes?.priceChange?.discount || 
+               log.changes?.price?.discount || null
+    }));
+
+    res.json({
+      success: true,
+      priceHistory: formattedLogs,
+      total: formattedLogs.length
+    });
+  } catch (error) {
+    console.error('Error fetching price history:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch price history' 
+    });
+  }
+};

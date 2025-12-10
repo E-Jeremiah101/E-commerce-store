@@ -196,7 +196,7 @@ export const resetProductPrice = async (req, res) => {
      ipAddress: auditInfo.ipAddress,
      userAgent: auditInfo.userAgent,
      additionalInfo:
-       `Price reset from $${oldPrice} to original price $${originalPrice}` +
+       `Price reset from ₦${oldPrice.toLocaleString()} to original price ₦${originalPrice.toLocaleString()}` +
        (reason ? ` - Reason: ${reason}` : ""),
    });
 
