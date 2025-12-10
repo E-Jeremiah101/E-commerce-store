@@ -19,7 +19,7 @@ import {
   checkVariantAvailability,
   checkCartAvailability,
   debugProductStock,
-  permanentDeleteProduct,
+  permanentDeleteProduct, 
   restoreProduct,
   getArchivedProducts,
 } from "../controllers/product.controller.js";

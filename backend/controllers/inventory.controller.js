@@ -615,8 +615,10 @@ export const getStockLevels = async (req, res) => {
     // Build query
     let query = Product.find(filter);
 
-    // Select fields - REMOVED main product stock fields
-    query = query.select("name price category images variants");
+    // ✅ FIXED: Select ALL price fields including slash data
+    query = query.select(
+      "name price category images variants previousPrice isPriceSlashed priceHistory"
+    );
 
     // Apply pagination
     query = query.skip(skip).limit(parseInt(limit)).sort({ createdAt: -1 });
@@ -654,6 +656,15 @@ export const getStockLevels = async (req, res) => {
         status = "low";
       }
 
+      // ✅ ADD: Calculate discount percentage if price is slashed
+      let discountPercentage = null;
+      if (product.isPriceSlashed && product.previousPrice) {
+        discountPercentage = (
+          ((product.previousPrice - product.price) / product.previousPrice) *
+          100
+        ).toFixed(1);
+      }
+
       // Transform variants
       const transformedVariants = product.variants.map((variant) => ({
         _id: variant._id,
@@ -669,10 +680,15 @@ export const getStockLevels = async (req, res) => {
 
       return {
         id: product._id,
+        _id: product._id, // Also include _id for consistency
         name: product.name,
         image: product.images?.[0] || "",
         category: product.category,
         price: product.price,
+        // ✅ ADD: Price slash data
+        previousPrice: product.previousPrice || null,
+        isPriceSlashed: product.isPriceSlashed || false,
+        discountPercentage: discountPercentage,
         variantsStock: variantsStock,
         totalStock: variantsStock, // Same as variantsStock
         status: status,
@@ -688,7 +704,17 @@ export const getStockLevels = async (req, res) => {
       (sum, p) => sum + p.totalStock,
       0
     );
-    console.log(`📊 Total variant stock in response: ${totalStockInResponse}`);
+
+    // Log sample product with price data
+    if (stockLevels.length > 0) {
+      console.log(`🔍 Sample product price data:`, {
+        name: stockLevels[0].name,
+        price: stockLevels[0].price,
+        previousPrice: stockLevels[0].previousPrice,
+        isPriceSlashed: stockLevels[0].isPriceSlashed,
+        discountPercentage: stockLevels[0].discountPercentage,
+      });
+    }
 
     res.json({
       stockLevels,
@@ -705,6 +731,7 @@ export const getStockLevels = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 
 export const getLowStockAlerts = async (req, res) => {

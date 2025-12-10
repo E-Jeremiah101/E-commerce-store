@@ -16,10 +16,12 @@ import {
   Clock,
   Package,
   RefreshCw,
-  LogIn, 
-  LogOut, 
+  LogIn,
+  LogOut,
   Key,
   User,
+  TrendingDown,
+  DollarSign,
 } from "lucide-react";
 import { format } from "date-fns"; // ADD THIS IMPORT
 
@@ -52,6 +54,9 @@ const AuditLogsTab = () => {
     { value: "PERMANENT_DELETE_PRODUCT", label: "Permanent Delete" },
     { value: "UPDATE_INVENTORY", label: "Update Inventory" },
     { value: "TOGGLE_FEATURED", label: "Toggle Featured" },
+    { value: "PRICE_SLASH", label: "Price Slash" },
+    { value: "PRICE_UPDATE", label: "Price Update" },
+    { value: "PRICE_RESET", label: "Price Reset" },
 
     // Order actions
     { value: "UPDATE_ORDER_STATUS", label: "Update Order Status" },
@@ -67,7 +72,7 @@ const AuditLogsTab = () => {
     { value: "SIGNUP_SUCCESS", label: "Signup Success" },
     { value: "FORGOT_PASSWORD_REQUEST", label: "Forgot Password" },
     { value: "RESET_PASSWORD", label: "Reset Password" },
-  
+
     // Inventory actions
     { value: "BULK_INVENTORY_UPDATE", label: "Bulk Inventory Update" },
     { value: "INVENTORY_SYNC", label: "Inventory Sync" },
@@ -83,7 +88,6 @@ const AuditLogsTab = () => {
 
     // User actions
     { value: "UPDATE_USER_ROLE", label: "Update User Role" },
-
   ];
 
   // Entity types for dropdown
@@ -168,7 +172,12 @@ const AuditLogsTab = () => {
         return <Clock className="h-4 w-4 text-orange-500" />;
       case "TOGGLE_FEATURED":
         return <AlertCircle className="h-4 w-4 text-purple-500" />;
-
+      case "PRICE_SLASH":
+        return <TrendingDown className="h-4 w-4 text-red-500" />;
+      case "PRICE_UPDATE":
+        return <DollarSign className="h-4 w-4 text-blue-500" />;
+      case "PRICE_RESET":
+        return <RefreshCw className="h-4 w-4 text-orange-500" />;
       // Auth actions
       case "LOGIN":
       case "SIGNUP_SUCCESS":

@@ -80,6 +80,8 @@ export const useInventoryStore = create((set, get) => ({
       throw error;
     }
   },
+
+  
   // In your store, rename fetchLowStockAlerts to fetchAllAlerts
 
   // 🚨 Get Low Stock Alerts

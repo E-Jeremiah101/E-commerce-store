@@ -30,6 +30,9 @@ const auditLogSchema = new mongoose.Schema(
         "PERMANENT_DELETE_PRODUCT",
         "TOGGLE_FEATURED",
         "UPDATE_INVENTORY",
+        "PRICE_SLASH",
+        "PRICE_UPDATE",
+        "PRICE_RESET",
 
         // Inventory actions
         "BULK_INVENTORY_UPDATE",
@@ -61,7 +64,6 @@ const auditLogSchema = new mongoose.Schema(
         "RESET_PASSWORD",
         "RESET_PASSWORD_FAILED",
         "RESET_PASSWORD_ERROR",
-      
 
         // Order actions
         "UPDATE_ORDER_STATUS",
@@ -82,7 +84,6 @@ const auditLogSchema = new mongoose.Schema(
 
         // User actions
         "UPDATE_USER_ROLE",
-
       ],
     },
     entityType: {

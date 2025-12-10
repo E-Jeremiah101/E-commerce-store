@@ -17,6 +17,7 @@ import {
   XCircle as CloseIcon,
   Warehouse,
   Undo,
+
   History,
   RefreshCw,
   BarChart,
@@ -74,7 +75,7 @@ const InventoryTab = () => {
     getInventoryStats,
     setActiveTab,
     activeTab,
-
+updateProductPrice,
     // Computed
     pagination,
     filters,
@@ -98,8 +99,8 @@ const InventoryTab = () => {
       case "low-stock":
         fetchLowStockAlerts(10);
         break;
-      case "reorder":
-        fetchReorderSuggestions(10);
+      case "price-management": // New case
+        fetchStockLevels(pagination.currentPage, filters);
         break;
       case "valuation":
         fetchInventoryValuation();
@@ -129,6 +130,18 @@ const InventoryTab = () => {
     reason: "restock",
     notes: "",
   });
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [selectedProductForPrice, setSelectedProductForPrice] = useState(null);
+
+  const handlePriceAction = (product) => {
+    setSelectedProductForPrice(product);
+    setShowPriceModal(true);
+  };
+
+  const handlePriceUpdate = (updatedProduct) => {
+    // Update local state
+    setSelectedProductForPrice(updatedProduct);
+  };
 
   const { user } = useUserStore();
 
@@ -151,12 +164,13 @@ const InventoryTab = () => {
     if (activeTab === "low-stock") {
       fetchLowStockAlerts(10);
     }
-    if (activeTab === "reorder") {
-      fetchReorderSuggestions(10);
-    }
     if (activeTab === "valuation") {
       fetchInventoryAging();
     }
+     if (activeTab === "price-management") {
+       // Fetch stock levels with price-related filters
+       fetchStockLevels(1, { ...filters, sortBy: "price" });
+     }
     if (activeTab === "valuation") {
       fetchInventoryValuation();
     }
@@ -328,7 +342,6 @@ const InventoryTab = () => {
             </div>
             <div className="flex items-center gap-3 mt-4 sm:mt-0">
               <div className="flex flex-wrap gap-2">
-              
                 <button
                   onClick={handleExportPDF}
                   className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
@@ -336,7 +349,6 @@ const InventoryTab = () => {
                   <FileText className="h-4 w-4" />
                   Export PDF
                 </button>
-
               </div>
 
               <button
@@ -355,32 +367,7 @@ const InventoryTab = () => {
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-4 gap-4 mb-6">
-            <div className="bg-white p-4 rounded-lg shadow">
-              <p className="text-sm text-gray-600">Total Value</p>
-              <p className="text-xl font-bold">
-                ₦{stats.totalStockValue?.toLocaleString()}
-              </p>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow">
-              <p className="text-sm text-gray-600">Out of Stock</p>
-              <p className="text-xl font-bold text-red-600">
-                {stats.outOfStockCount}
-              </p>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow">
-              <p className="text-sm text-gray-600">Low Stock</p>
-              <p className="text-xl font-bold text-yellow-600">
-                {stats.lowStockCount}
-              </p>
-            </div>
-            <div className="bg-white p-4 rounded-lg shadow">
-              <p className="text-sm text-gray-600">Urgent Alerts</p>
-              <p className="text-xl font-bold text-orange-600">
-                {stats.urgentAlerts}
-              </p>
-            </div>
-          </div>
+
 
           {/* Tabs */}
           <div className="flex space-x-1 overflow-x-auto pb-2">
@@ -388,10 +375,10 @@ const InventoryTab = () => {
               { id: "dashboard", label: "Dashboard", icon: BarChart },
               { id: "stock-levels", label: "Stock Levels", icon: Package },
               { id: "low-stock", label: "Low Stock", icon: AlertTriangle },
+              { id: "price-management", label: "Price Management", icon: Tag },
+              { id: "valuation", label: "Valuation", icon: DollarSign },
               { id: "history", label: "History", icon: History },
               { id: "locations", label: "Locations", icon: MapPin },
-              { id: "reorder", label: "Reorder", icon: ShoppingCart },
-              { id: "valuation", label: "Valuation", icon: DollarSign },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -434,8 +421,20 @@ const InventoryTab = () => {
           <LowStockView alerts={lowStockAlerts} onAdjust={handleAdjustStock} />
         )}
 
-        {activeTab === "reorder" && (
-          <ReorderView suggestions={reorderSuggestions} />
+        {activeTab === "price-management" && (
+          <PriceManagementView
+            products={stockLevels}
+            loading={loading}
+            onPriceAction={handlePriceAction}
+            filters={filters}
+            updateFilters={updateFilters}
+            clearFilters={clearFilters}
+            pagination={pagination}
+            onPageChange={(page) =>
+              fetchStockLevels(page, { ...filters, sortBy: "price" })
+            }
+            updateProductPrice={updateProductPrice}
+          />
         )}
         {activeTab === "valuation" && <AgingReportView data={inventoryAging} />}
 
@@ -460,6 +459,16 @@ const InventoryTab = () => {
           onChange={setAdjustmentData}
           onSubmit={submitAdjustment}
           onClose={() => setShowAdjustModal(false)}
+        />
+      )}
+      {showPriceModal && selectedProductForPrice && (
+        <PriceManagementModal
+          product={selectedProductForPrice}
+          onClose={() => {
+            setShowPriceModal(false);
+            setSelectedProductForPrice(null);
+          }}
+          onUpdate={handlePriceUpdate}
         />
       )}
     </div>
@@ -1209,278 +1218,7 @@ const StockLevelsView = ({
     </>
   );
 };
-// Update StockLevelsView to include search functionality
-// const StockLevelsView = ({
-//   stockLevels,
-//   onAdjust,
-//   loading,
-//   onSearch,
-//   filters,
-//   updateFilters,
-//   clearFilters,
-//   pagination = {
-//     currentPage: 1,
-//     totalPages: 1,
-//     hasNextPage: false,
-//     hasPrevPage: false,
-//   },
-//   onPageChange,
-// }) => {
-//   const [expandedProducts, setExpandedProducts] = useState({});
 
-//   const toggleProductExpand = (productId) => {
-//     setExpandedProducts((prev) => ({
-//       ...prev,
-//       [productId]: !prev[productId],
-//     }));
-//   };
-
-//   return (
-//     <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-//       <div className="p-6 border-b">
-//         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-//           <h2 className="text-xl font-semibold text-gray-800">Stock Levels</h2>
-//           <div className="flex items-center gap-3">
-//             <div className="relative">
-//               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-//               <input
-//                 type="text"
-//                 placeholder="Search products..."
-//                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//                 value={filters.search || ""}
-//                 onChange={onSearch}
-//               />
-//             </div>
-//             <select
-//               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//               value={filters.category || ""}
-//               onChange={(e) => updateFilters({ category: e.target.value })}
-//             >
-//               <option value="">All Categories</option>
-//               <option value="electronics">Electronics</option>
-//               <option value="fashion">Fashion</option>
-//               <option value="home">Home</option>
-//             </select>
-//             <button
-//               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-//               onClick={() => clearFilters()}
-//             >
-//               <Filter className="h-4 w-4" />
-//             </button>
-//           </div>
-//         </div>
-//       </div>
-//       {loading ? (
-//         <div className="flex justify-center items-center p-12">
-//           <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
-//         </div>
-//       ) : (
-//         <div className="overflow-x-auto">
-//           <table className="min-w-full divide-y divide-gray-200">
-//             <thead className="bg-gray-50">
-//               <tr>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Product
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Category
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Total Stock
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Status
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Value
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Actions
-//                 </th>
-//               </tr>
-//             </thead>
-//             <tbody className="bg-white divide-y divide-gray-200">
-//               {stockLevels.map((product) => (
-//                 <React.Fragment key={product.id}>
-//                   {/* Product Summary Row */}
-//                   <tr className="hover:bg-gray-50">
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <div className="flex items-center">
-//                         {product.image && (
-//                           <img
-//                             src={product.image}
-//                             alt={product.name}
-//                             className="h-10 w-10 rounded object-cover mr-3"
-//                           />
-//                         )}
-//                         <div>
-//                           <div className="text-sm font-medium text-gray-900">
-//                             {product.name}
-//                           </div>
-//                           <div className="text-xs text-gray-500">
-//                             {product.variantsCount} variants
-//                           </div>
-//                           {product.variantsCount > 0 && (
-//                             <button
-//                               onClick={() => toggleProductExpand(product.id)}
-//                               className="text-xs text-blue-600 hover:text-blue-800 mt-1"
-//                             >
-//                               {expandedProducts[product.id] ? "Hide" : "Show"}{" "}
-//                               variants
-//                             </button>
-//                           )}
-//                         </div>
-//                       </div>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-//                         {product.category}
-//                       </span>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <div className="text-sm font-medium text-gray-900">
-//                         {product.totalStock || 0}
-//                       </div>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <StockStatusBadge status={product.status} />
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <div className="text-sm font-medium text-gray-900">
-//                         ₦{product.totalValue?.toLocaleString() || "0"}
-//                       </div>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-//                       <button
-//                         onClick={() =>
-//                           onAdjust({
-//                             ...product,
-//                             variants: product.variants || [],
-//                           })
-//                         }
-//                         className="text-blue-600 hover:text-blue-900 mr-3"
-//                       >
-//                         Adjust
-//                       </button>
-//                       <button className="text-gray-600 hover:text-gray-900">
-//                         <Eye className="h-4 w-4" />
-//                       </button>
-//                     </td>
-//                   </tr>
-
-//                   {/* Variant Rows (if expanded) */}
-//                   {expandedProducts[product.id] &&
-//                     product.variants &&
-//                     product.variants.length > 0 && (
-//                       <>
-//                         {product.variants.map((variant) => (
-//                           <tr
-//                             key={variant._id}
-//                             className="bg-gray-50 hover:bg-gray-100"
-//                           >
-//                             <td className="px-6 py-3 pl-10">
-//                               <div className="flex items-center">
-//                                 <div className="ml-2">
-//                                   <div className="text-sm text-gray-900 flex items-center gap-2">
-//                                     <span className="font-medium">
-//                                       {variant.color || "Default"}
-//                                     </span>
-//                                     <span className="text-gray-500">-</span>
-//                                     <span className="font-medium">
-//                                       {variant.size || "One Size"}
-//                                     </span>
-//                                   </div>
-//                                   <div className="text-xs text-gray-500">
-//                                     SKU: {variant.sku || "N/A"}
-//                                   </div>
-//                                 </div>
-//                               </div>
-//                             </td>
-//                             <td className="px-6 py-3">
-//                               <span className="text-xs text-gray-500">
-//                                 Variant
-//                               </span>
-//                             </td>
-//                             <td className="px-6 py-3">
-//                               <div className="text-sm font-medium text-gray-900">
-//                                 {variant.countInStock}
-//                               </div>
-//                             </td>
-//                             <td className="px-6 py-3">
-//                               <StockStatusBadge
-//                                 status={
-//                                   variant.countInStock === 0
-//                                     ? "out"
-//                                     : variant.countInStock <= 5
-//                                     ? "low"
-//                                     : "healthy"
-//                                 }
-//                               />
-//                             </td>
-//                             <td className="px-6 py-3">
-//                               <div className="text-sm text-gray-900">
-//                                 ₦{variant.variantValue?.toLocaleString() || "0"}
-//                               </div>
-//                             </td>
-//                             <td className="px-6 py-3 text-sm font-medium">
-//                               <button
-//                                 onClick={() =>
-//                                   onAdjust({
-//                                     ...product,
-//                                     variantId: variant._id,
-//                                     variantName: `${
-//                                       variant.color || "Default"
-//                                     } - ${variant.size || "One Size"}`,
-//                                     currentStock: variant.countInStock,
-//                                   })
-//                                 }
-//                                 className="text-blue-600 hover:text-blue-900 text-xs"
-//                               >
-//                                 Adjust Variant
-//                               </button>
-//                             </td>
-//                           </tr>
-//                         ))}
-//                       </>
-//                     )}
-//                 </React.Fragment>
-//               ))}
-//             </tbody>
-//           </table>
-//         </div>
-//       )}
-
-//       {/* Pagination */}
-//       <div className="flex justify-center gap-2 p-4 border-t">
-//         <button
-//           onClick={() => onPageChange(pagination.currentPage - 1)}
-//           disabled={!pagination.hasPrevPage}
-//           className={`px-3 py-1 rounded ${
-//             pagination.hasPrevPage
-//               ? "bg-gray-200 hover:bg-gray-300"
-//               : "bg-gray-100 text-gray-400 cursor-not-allowed"
-//           }`}
-//         >
-//           Previous
-//         </button>
-//         <button
-//           onClick={() => onPageChange(pagination.currentPage + 1)}
-//           disabled={!pagination.hasNextPage}
-//           className={`px-3 py-1 rounded ${
-//             pagination.hasNextPage
-//               ? "bg-gray-200 hover:bg-gray-300"
-//               : "bg-gray-100 text-gray-400 cursor-not-allowed"
-//           }`}
-//         >
-//           Next
-//         </button>
-//       </div>
-//     </div>
-//   );
-// };
-
-// Sub-components
-// In your InventoryTab.js - Update the DashboardView component:
 
 const DashboardView = ({ data }) => (
   <div className="space-y-6">
@@ -1721,6 +1459,884 @@ const DashboardView = ({ data }) => (
   </div>
 );
 
+// Add the PriceManagementView component before the HistoryView component
+const PriceManagementView = ({
+  products,
+  loading,
+  onPriceAction,
+  filters,
+  updateFilters,
+  clearFilters,
+  pagination,
+  onPageChange,
+  updateProductPrice,
+}) => {
+  const [priceFilters, setPriceFilters] = useState({
+    minPrice: "",
+    maxPrice: "",
+    showSlashedOnly: false,
+    sortBy: "price",
+    sortOrder: "asc",
+  });
+
+  // Use local state for search with debouncing
+  const [searchInput, setSearchInput] = useState(filters.search || "");
+
+  // Debounce search to trigger API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      // Only update if search actually changed
+      if (searchInput !== filters.search) {
+        updateFilters({ search: searchInput });
+
+        // Trigger API call with a slight delay
+        if (onPageChange) {
+          setTimeout(() => {
+            onPageChange(1); // Go to first page when searching
+          }, 100);
+        }
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timer);
+  }, [searchInput, filters.search, updateFilters, onPageChange]);
+
+  // Also handle when global filters.search changes externally
+  useEffect(() => {
+    if (filters.search !== searchInput) {
+      setSearchInput(filters.search || "");
+    }
+  }, [filters.search]);
+
+
+  const handleSearch = (e) => {
+    const value = e.target.value;
+    setSearchInput(value);
+  };
+
+  const clearAllFilters = () => {
+    setSearchInput("");
+    setPriceFilters({
+      minPrice: "",
+      maxPrice: "",
+      showSlashedOnly: false,
+      sortBy: "price",
+      sortOrder: "asc",
+    });
+    clearFilters();
+  };
+
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [bulkPriceChange, setBulkPriceChange] = useState({
+    action: "increase",
+    type: "percentage",
+    value: "",
+    reason: "",
+  });
+
+  const [showBulkModal, setShowBulkModal] = useState(false);
+
+  const filteredProducts = products
+    .filter((product) => {
+      if (
+        priceFilters.minPrice &&
+        product.price < parseFloat(priceFilters.minPrice)
+      )
+        return false;
+      if (
+        priceFilters.maxPrice &&
+        product.price > parseFloat(priceFilters.maxPrice)
+      )
+        return false;
+      if (priceFilters.showSlashedOnly && !product.isPriceSlashed) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const sortKey = priceFilters.sortBy;
+      const order = priceFilters.sortOrder === "asc" ? 1 : -1;
+
+      if (sortKey === "price") {
+        return (a.price - b.price) * order;
+      } else if (sortKey === "name") {
+        return a.name.localeCompare(b.name) * order;
+      } else if (sortKey === "discount") {
+        const discountA = productDiscount(a);
+        const discountB = productDiscount(b);
+        return (discountA - discountB) * order;
+      }
+      return 0;
+    });
+
+  const productDiscount = (product) => {
+    if (!product.isPriceSlashed || !product.previousPrice) return 0;
+    return (
+      ((product.previousPrice - product.price) / product.previousPrice) * 100
+    );
+  };
+
+  const toggleSelectProduct = (productId) => {
+    setSelectedProducts((prev) =>
+      prev.includes(productId)
+        ? prev.filter((id) => id !== productId)
+        : [...prev, productId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedProducts.length === filteredProducts.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(filteredProducts.map((p) => p.id));
+    }
+  };
+
+  const handleBulkPriceChange = async () => {
+    if (!bulkPriceChange.value || selectedProducts.length === 0) {
+      toast.error("Please select products and enter a value");
+      return;
+    }
+
+    if (!updateProductPrice) {
+      toast.error("Price update function not available");
+      return;
+    }
+
+    try {
+      toast.loading(
+        `Updating prices for ${selectedProducts.length} products...`
+      );
+
+      const promises = selectedProducts.map((productId) => {
+        const product = products.find((p) => p.id === productId);
+        if (!product) return Promise.resolve();
+
+        let newPrice;
+        const currentPrice = product.price;
+
+        if (bulkPriceChange.type === "percentage") {
+          const percentage = parseFloat(bulkPriceChange.value);
+          if (bulkPriceChange.action === "increase") {
+            newPrice = currentPrice * (1 + percentage / 100);
+          } else {
+            newPrice = currentPrice * (1 - percentage / 100);
+          }
+        } else {
+          const amount = parseFloat(bulkPriceChange.value);
+          if (bulkPriceChange.action === "increase") {
+            newPrice = currentPrice + amount;
+          } else {
+            newPrice = currentPrice - amount;
+          }
+        }
+
+        // Ensure price doesn't go negative
+        newPrice = Math.max(newPrice, 0.01);
+
+        // Use the passed function
+        return updateProductPrice(productId, newPrice, bulkPriceChange.reason);
+      });
+
+      await Promise.all(promises);
+      toast.dismiss();
+      toast.success(
+        `Updated ${selectedProducts.length} products successfully!`
+      );
+
+      setShowBulkModal(false);
+      setSelectedProducts([]);
+      setBulkPriceChange({
+        action: "increase",
+        type: "percentage",
+        value: "",
+        reason: "",
+      });
+
+      // Refresh data
+      if (onPageChange && pagination) {
+        onPageChange(pagination.currentPage);
+      }
+    } catch (error) {
+      toast.dismiss();
+      toast.error("Failed to update some prices");
+      console.error("Bulk price update error:", error);
+    }
+  };
+
+  const calculateSummary = () => {
+    const totalProducts = filteredProducts.length;
+    const slashedProducts = filteredProducts.filter(
+      (p) => p.isPriceSlashed
+    ).length;
+    const avgPrice =
+      totalProducts > 0
+        ? filteredProducts.reduce((sum, p) => sum + p.price, 0) / totalProducts
+        : 0;
+    const totalValue = filteredProducts.reduce(
+      (sum, p) => sum + p.totalValue,
+      0
+    );
+
+    let maxDiscount = 0;
+    let maxDiscountProduct = null;
+    filteredProducts.forEach((p) => {
+      if (p.isPriceSlashed && p.previousPrice) {
+        const discount = ((p.previousPrice - p.price) / p.previousPrice) * 100;
+        if (discount > maxDiscount) {
+          maxDiscount = discount;
+          maxDiscountProduct = p;
+        }
+      }
+    });
+
+    return {
+      totalProducts,
+      slashedProducts,
+      avgPrice,
+      totalValue,
+      maxDiscount,
+      maxDiscountProduct,
+      discountRate:
+        totalProducts > 0 ? (slashedProducts / totalProducts) * 100 : 0,
+    };
+  };
+
+  const summary = calculateSummary();
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Products</p>
+              <p className="text-xl font-bold">{summary.totalProducts}</p>
+            </div>
+            <Package className="h-8 w-8 text-blue-400" />
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            {summary.slashedProducts} with discounts
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Average Price</p>
+              <p className="text-xl font-bold">
+                ₦
+                {summary.avgPrice.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </p>
+            </div>
+            <DollarSign className="h-8 w-8 text-green-400" />
+          </div>
+          <div className="mt-2 text-xs text-gray-500">Across all products</div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Discount Rate</p>
+              <p className="text-xl font-bold">
+                {summary.discountRate.toFixed(1)}%
+              </p>
+            </div>
+            <Tag className="h-8 w-8 text-red-400" />
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            {summary.slashedProducts} discounted products
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow border">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Value</p>
+              <p className="text-xl font-bold">
+                ₦{summary.totalValue.toLocaleString()}
+              </p>
+            </div>
+            <TrendingUp className="h-8 w-8 text-purple-400" />
+          </div>
+          <div className="mt-2 text-xs text-gray-500">
+            Current inventory value
+          </div>
+        </div>
+      </div>
+
+      {/* Controls Bar */}
+      <div className="bg-white rounded-xl shadow-sm border p-4">
+        <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={selectedProducts.length === filteredProducts.length}
+              onChange={toggleSelectAll}
+              className="h-4 w-4 rounded border-gray-300"
+            />
+            <span className="text-sm text-gray-600">
+              {selectedProducts.length} of {filteredProducts.length} selected
+            </span>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={searchInput}
+                onChange={handleSearch}
+              />
+            </div>
+
+            {/* Price Range */}
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                placeholder="Min ₦"
+                value={priceFilters.minPrice}
+                onChange={(e) =>
+                  setPriceFilters((prev) => ({
+                    ...prev,
+                    minPrice: e.target.value,
+                  }))
+                }
+                className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                min="0"
+                step="0.01"
+              />
+              <span className="text-gray-400">-</span>
+              <input
+                type="number"
+                placeholder="Max ₦"
+                value={priceFilters.maxPrice}
+                onChange={(e) =>
+                  setPriceFilters((prev) => ({
+                    ...prev,
+                    maxPrice: e.target.value,
+                  }))
+                }
+                className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                min="0"
+                step="0.01"
+              />
+            </div>
+
+            {/* Filters */}
+            <select
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              value={priceFilters.sortBy}
+              onChange={(e) =>
+                setPriceFilters((prev) => ({ ...prev, sortBy: e.target.value }))
+              }
+            >
+              <option value="price">Sort by Price</option>
+              <option value="name">Sort by Name</option>
+              <option value="discount">Sort by Discount</option>
+            </select>
+
+            <select
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              value={priceFilters.sortOrder}
+              onChange={(e) =>
+                setPriceFilters((prev) => ({
+                  ...prev,
+                  sortOrder: e.target.value,
+                }))
+              }
+            >
+              <option value="asc">Ascending</option>
+              <option value="desc">Descending</option>
+            </select>
+
+            <button
+              onClick={() =>
+                setPriceFilters((prev) => ({
+                  ...prev,
+                  showSlashedOnly: !prev.showSlashedOnly,
+                }))
+              }
+              className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                priceFilters.showSlashedOnly
+                  ? "bg-red-100 text-red-700 border border-red-300"
+                  : "bg-gray-100 text-gray-700 border border-gray-300"
+              }`}
+            >
+              {priceFilters.showSlashedOnly
+                ? "Showing Discounted"
+                : "Show Discounted"}
+            </button>
+
+            <button
+              onClick={() => {
+                setPriceFilters({
+                  minPrice: "",
+                  maxPrice: "",
+                  showSlashedOnly: false,
+                  sortBy: "price",
+                  sortOrder: "asc",
+                });
+                clearFilters();
+              }}
+              className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200"
+            >
+              Clear All
+            </button>
+
+            {selectedProducts.length > 0 && (
+              <button
+                onClick={() => setShowBulkModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+              >
+                Bulk Update ({selectedProducts.length})
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Products Table */}
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedProducts.length === filteredProducts.length &&
+                      filteredProducts.length > 0
+                    }
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Product
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Current Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Original Price
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Discount
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Stock Value
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {loading ? (
+                <tr>
+                  <td colSpan="8" className="px-6 py-12 text-center">
+                    <div className="flex justify-center">
+                      <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+                    </div>
+                  </td>
+                </tr>
+              ) : filteredProducts.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan="8"
+                    className="px-6 py-12 text-center text-gray-500"
+                  >
+                    No products found. Try adjusting your filters.
+                  </td>
+                </tr>
+              ) : (
+                filteredProducts.map((product) => {
+                  const discount = productDiscount(product);
+                  const isSelected = selectedProducts.includes(product.id);
+
+                  return (
+                    <tr
+                      key={product.id}
+                      className={`hover:bg-gray-50 ${
+                        isSelected ? "bg-blue-50" : ""
+                      }`}
+                    >
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelectProduct(product.id)}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center">
+                          {product.image && (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="h-10 w-10 rounded object-cover mr-3"
+                            />
+                          )}
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {product.name}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {product.category}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-lg font-bold text-gray-900">
+                          ₦
+                          {product.price.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                        <div className="text-xs text-gray-500">per unit</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {product.isPriceSlashed && product.previousPrice ? (
+                          <>
+                            <div className="text-sm text-gray-500 line-through">
+                              ₦
+                              {product.previousPrice.toLocaleString(undefined, {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Original
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-sm text-gray-400">-</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {product.isPriceSlashed && discount > 0 ? (
+                          <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            {discount.toFixed(1)}% OFF
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-400">-</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900">
+                          ₦{(product.totalValue || 0).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {product.totalStock || 0} units
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <StockStatusBadge status={product.status} />
+                        {product.isPriceSlashed && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700">
+                              <Tag className="h-3 w-3 mr-1" />
+                              Discounted
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => onPriceAction(product)}
+                            className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
+                          >
+                            Manage Price
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {filteredProducts.length > 0 && (
+          <div className="flex justify-between items-center p-4 border-t">
+            <div className="text-sm text-gray-600">
+              Showing {filteredProducts.length} products
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => onPageChange(pagination.currentPage - 1)}
+                disabled={!pagination.hasPrevPage}
+                className={`px-3 py-1 rounded text-sm ${
+                  pagination.hasPrevPage
+                    ? "bg-gray-200 hover:bg-gray-300"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                }`}
+              >
+                Previous
+              </button>
+              <span className="px-3 py-1 text-sm text-gray-700">
+                Page {pagination.currentPage} of {pagination.totalPages}
+              </span>
+              <button
+                onClick={() => onPageChange(pagination.currentPage + 1)}
+                disabled={!pagination.hasNextPage}
+                className={`px-3 py-1 rounded text-sm ${
+                  pagination.hasNextPage
+                    ? "bg-gray-200 hover:bg-gray-300"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                }`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bulk Update Modal */}
+      {showBulkModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-scroll no-scroll">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    Bulk Price Update
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Update prices for {selectedProducts.length} selected
+                    products
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowBulkModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Action
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() =>
+                        setBulkPriceChange((prev) => ({
+                          ...prev,
+                          action: "increase",
+                        }))
+                      }
+                      className={`p-3 rounded-lg border flex flex-col items-center gap-2 ${
+                        bulkPriceChange.action === "increase"
+                          ? "border-green-500 bg-green-50 text-green-700"
+                          : "border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <TrendingUp className="h-5 w-5" />
+                      <span className="text-sm font-medium">Increase</span>
+                    </button>
+                    <button
+                      onClick={() =>
+                        setBulkPriceChange((prev) => ({
+                          ...prev,
+                          action: "decrease",
+                        }))
+                      }
+                      className={`p-3 rounded-lg border flex flex-col items-center gap-2 ${
+                        bulkPriceChange.action === "decrease"
+                          ? "border-red-500 bg-red-50 text-red-700"
+                          : "border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <TrendingDown className="h-5 w-5" />
+                      <span className="text-sm font-medium">Decrease</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Type
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() =>
+                        setBulkPriceChange((prev) => ({
+                          ...prev,
+                          type: "percentage",
+                        }))
+                      }
+                      className={`p-3 rounded-lg border flex flex-col items-center gap-2 ${
+                        bulkPriceChange.type === "percentage"
+                          ? "border-blue-500 bg-blue-50 text-blue-700"
+                          : "border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <span className="text-lg">%</span>
+                      <span className="text-sm font-medium">Percentage</span>
+                    </button>
+                    <button
+                      onClick={() =>
+                        setBulkPriceChange((prev) => ({
+                          ...prev,
+                          type: "amount",
+                        }))
+                      }
+                      className={`p-3 rounded-lg border flex flex-col items-center gap-2 ${
+                        bulkPriceChange.type === "amount"
+                          ? "border-blue-500 bg-blue-50 text-blue-700"
+                          : "border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <DollarSign className="h-5 w-5" />
+                      <span className="text-sm font-medium">Fixed Amount</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Value
+                  </label>
+                  <div className="relative">
+                    {bulkPriceChange.type === "percentage" ? (
+                      <div className="flex items-center">
+                        <input
+                          type="number"
+                          value={bulkPriceChange.value}
+                          onChange={(e) =>
+                            setBulkPriceChange((prev) => ({
+                              ...prev,
+                              value: e.target.value,
+                            }))
+                          }
+                          className="w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="0.00"
+                          min="0"
+                          step="0.01"
+                        />
+                        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                          %
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center">
+                        <span className="absolute left-3 text-gray-500">₦</span>
+                        <input
+                          type="number"
+                          value={bulkPriceChange.value}
+                          onChange={(e) =>
+                            setBulkPriceChange((prev) => ({
+                              ...prev,
+                              value: e.target.value,
+                            }))
+                          }
+                          className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="0.00"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {bulkPriceChange.action === "increase"
+                      ? "Increase"
+                      : "Decrease"}{" "}
+                    by {bulkPriceChange.value || "0"}{" "}
+                    {bulkPriceChange.type === "percentage" ? "%" : "₦"}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Reason (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={bulkPriceChange.reason}
+                    onChange={(e) =>
+                      setBulkPriceChange((prev) => ({
+                        ...prev,
+                        reason: e.target.value,
+                      }))
+                    }
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="e.g., Seasonal sale, Clearance"
+                  />
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    Summary
+                  </h4>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Products to update:</span>
+                      <span className="font-medium">
+                        {selectedProducts.length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Action:</span>
+                      <span className="font-medium capitalize">
+                        {bulkPriceChange.action} {bulkPriceChange.type}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Value:</span>
+                      <span className="font-medium">
+                        {bulkPriceChange.value || "0"}{" "}
+                        {bulkPriceChange.type === "percentage" ? "%" : "₦"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8 pt-6 border-t">
+                <button
+                  onClick={() => setShowBulkModal(false)}
+                  className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkPriceChange}
+                  disabled={
+                    !bulkPriceChange.value || selectedProducts.length === 0
+                  }
+                  className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:bg-blue-300 disabled:cursor-not-allowed"
+                >
+                  Apply to {selectedProducts.length} Products
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 const LowStockView = ({ alerts, onAdjust }) => {
   // Group alerts by product for better organization
   const groupedAlerts = alerts.reduce((groups, alert) => {
@@ -2552,179 +3168,9 @@ const AgingReportView = ({ data }) => {
 
 
 
-const ReorderView = ({ suggestions }) => {
-  if (!suggestions || suggestions.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="text-center py-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              All Stock Levels Are Healthy!
-            </h3>
-            <p className="text-gray-600 max-w-md mx-auto">
-              No reorder suggestions at this time. Your inventory is
-              well-stocked.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-xl shadow-sm border p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-800">
-              Reorder Suggestions
-            </h2>
-            <p className="text-gray-600 mt-1">
-              Smart suggestions to optimize your inventory
-            </p>
-          </div>
-          <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-            Create Purchase Order
-          </button>
-        </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Product & Variant
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Current Stock
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Suggested Order
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Unit Cost
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Cost
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Urgency
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {suggestions.map((item) => (
-                <tr key={item.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      {item.image && (
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="h-10 w-10 rounded object-cover mr-3"
-                        />
-                      )}
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {item.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {item.category}
-                        </div>
-                        {item.variantName && (
-                          <div className="text-xs text-gray-400 mt-1">
-                            {item.variantName}
-                          </div>
-                        )}
-                        {item.sku && (
-                          <div className="text-xs text-gray-400">
-                            SKU: {item.sku}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {item.currentStock}
-                    </div>
-                    {item.currentStock === 0 && (
-                      <div className="text-xs text-red-600">Out of stock</div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-bold text-blue-600">
-                      {item.suggestedOrder}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      ₦{item.unitPrice?.toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-gray-900">
-                      ₦{item.estimatedCost?.toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <UrgencyBadge urgency={item.urgency} />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex gap-2">
-                      <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
-                        Order
-                      </button>
-                      <button className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-sm hover:bg-gray-300">
-                        Skip
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
 
-        {/* Summary Footer */}
-        {suggestions.length > 0 && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-600">
-                  Total estimated cost:{" "}
-                  <span className="font-bold text-gray-900">
-                    ₦
-                    {suggestions
-                      .reduce((sum, s) => sum + s.estimatedCost, 0)
-                      .toLocaleString()}
-                  </span>
-                </p>
-                <p className="text-xs text-gray-500">
-                  {suggestions.filter((s) => s.urgency === "critical").length}{" "}
-                  critical items •{" "}
-                  {suggestions.filter((s) => s.urgency === "high").length} high
-                  priority
-                </p>
-              </div>
-              <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                Generate Purchase Order (PDF)
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-  // Updated ValuationView to work with your current backend structure:
 const ValuationView = ({ data }) => {
   // Calculate summary from the array if summary doesn't exist
   const valuationArray = data.valuation || [];
@@ -3087,7 +3533,6 @@ const ValuationView = ({ data }) => {
   );
 };
 
-// Add this to your InventoryTab.js
 
 
 // Helper Components

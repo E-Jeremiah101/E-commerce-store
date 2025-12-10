@@ -78,24 +78,32 @@ export const slashProductPrice = async (req, res) => {
     ).toFixed(1);
 
     // Log to audit trail
+    const auditInfo = AuditLogger.getRequestInfo(req);
     await AuditLogger.log({
       adminId: req.user._id,
       adminName: `${req.user.firstname} ${req.user.lastname}`,
-      action: ACTIONS.PRICE_SLASH || "PRICE_SLASH",
+      action: ACTIONS.PRICE_SLASH,
       entityType: ENTITY_TYPES.PRODUCT,
       entityId: product._id,
       entityName: product.name,
       changes: {
-        price: {
-          before: oldPrice,
-          after: parseFloat(newPrice),
-          slash: true,
-          discount: `${discountPercentage}%`,
+        oldPrice: oldPrice,
+        newPrice: parseFloat(newPrice),
+        priceChange: {
+          type: "slash",
+          amount: (oldPrice - parseFloat(newPrice)).toFixed(2),
+          percentage: discountPercentage + "%",
+          discountApplied: true,
         },
+        isPriceSlashed: true,
+        previousPrice: oldPrice,
       },
-      additionalInfo: reason || "Price slashed",
+      ipAddress: auditInfo.ipAddress,
+      userAgent: auditInfo.userAgent,
+      additionalInfo:
+        `Price slashed from ₦${oldPrice.toLocaleString()} to ₦${newPrice} (${discountPercentage.toLocaleString()}% discount)` +
+        (reason ? ` - Reason: ${reason}` : ""),
     });
-
     // Clear cache
     await clearProductCache(id);
 
@@ -164,22 +172,33 @@ export const resetProductPrice = async (req, res) => {
     await product.save();
 
     // Log to audit trail
-    await AuditLogger.log({
-      adminId: req.user._id,
-      adminName: `${req.user.firstname} ${req.user.lastname}`,
-      action: ACTIONS.PRICE_RESET || "PRICE_RESET",
-      entityType: ENTITY_TYPES.PRODUCT,
-      entityId: product._id,
-      entityName: product.name,
-      changes: {
-        price: {
-          before: oldPrice,
-          after: originalPrice,
-          reset: true,
-        },
-      },
-      additionalInfo: reason || "Price reset to original",
-    });
+   const auditInfo = AuditLogger.getRequestInfo(req);
+   await AuditLogger.log({
+     adminId: req.user._id,
+     adminName: `${req.user.firstname} ${req.user.lastname}`,
+     action: ACTIONS.PRICE_RESET,
+     entityType: ENTITY_TYPES.PRODUCT,
+     entityId: product._id,
+     entityName: product.name,
+     changes: {
+       oldPrice: oldPrice,
+       newPrice: originalPrice,
+       priceChange: {
+         type: "reset",
+         amount: (originalPrice - oldPrice).toFixed(2),
+         percentage:
+           (((originalPrice - oldPrice) / oldPrice) * 100).toFixed(1) + "%",
+         resetToOriginal: true,
+       },
+       isPriceSlashed: false,
+       previousPrice: null,
+     },
+     ipAddress: auditInfo.ipAddress,
+     userAgent: auditInfo.userAgent,
+     additionalInfo:
+       `Price reset from $${oldPrice} to original price $${originalPrice}` +
+       (reason ? ` - Reason: ${reason}` : ""),
+   });
 
     // Clear cache
     await clearProductCache(id);
@@ -266,28 +285,49 @@ export const updateProductPrice = async (req, res) => {
 
     await product.save();
 
-    // Log the action
-    const action = isSlash ? "PRICE_SLASH" : "PRICE_UPDATE";
+    const auditInfo = AuditLogger.getRequestInfo(req);
     const discountPercentage = isSlash
       ? (((oldPrice - parseFloat(newPrice)) / oldPrice) * 100).toFixed(1)
       : null;
+    const priceDifference = parseFloat(newPrice) - oldPrice;
+    const percentChange = ((priceDifference / oldPrice) * 100).toFixed(1);
+    const changeType =
+      priceDifference > 0
+        ? "increase"
+        : priceDifference < 0
+        ? "decrease"
+        : "no change";
 
     await AuditLogger.log({
       adminId: req.user._id,
       adminName: `${req.user.firstname} ${req.user.lastname}`,
-      action: action,
+      action: isSlash ? ACTIONS.PRICE_SLASH : ACTIONS.PRICE_UPDATE,
       entityType: ENTITY_TYPES.PRODUCT,
       entityId: product._id,
       entityName: product.name,
       changes: {
-        price: {
-          before: oldPrice,
-          after: parseFloat(newPrice),
-          slash: isSlash,
-          discount: discountPercentage ? `${discountPercentage}%` : null,
+        oldPrice: oldPrice,
+        newPrice: parseFloat(newPrice),
+        priceChange: {
+          type: isSlash ? "slash" : "update",
+          amount: Math.abs(priceDifference).toFixed(2),
+          percentage: Math.abs(percentChange) + "%",
+          direction: changeType,
+          discount: isSlash ? discountPercentage + "%" : null,
         },
+        isPriceSlashed: isSlash,
+        previousPrice: isSlash ? oldPrice : product.previousPrice,
       },
-      additionalInfo: reason || (isSlash ? "Price slashed" : "Price updated"),
+      ipAddress: auditInfo.ipAddress,
+      userAgent: auditInfo.userAgent,
+      additionalInfo:
+        `Price ${
+          isSlash ? "slashed" : "updated"
+        } from ₦${oldPrice.toLocaleString()} to ₦${newPrice.toLocaleString()} (${changeType} of ${Math.abs(
+          priceDifference
+        ).toFixed(2)} / ${Math.abs(percentChange)}%)` +
+        (isSlash ? ` - ${discountPercentage}% discount applied` : "") +
+        (reason ? ` - Reason: ${reason}` : ""),
     });
 
     // Clear cache
