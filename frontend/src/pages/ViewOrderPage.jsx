@@ -75,8 +75,10 @@ const ViewOrderPage = () => {
         setShowRefundModal(false);
   
         //  Re-fetch updated orders right after success
-        const { data } = await axios.get("/orders/my-orders");
-        setOrders(data.orders || [id]);
+       const { data } = await axios.get(`/orders/vieworders/${id}`, {
+         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+       });
+       setOrder(data.order);
       } catch (err) {
         console.error(err);
         toast.error(

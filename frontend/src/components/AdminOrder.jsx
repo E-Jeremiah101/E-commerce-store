@@ -223,12 +223,12 @@ const AdminOrdersPage = () => {
                     <tr key={order._id} className="hover:bg-gray-750">
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-gray-900 font-semibold">
+                          <div className="flex items-center gap-2 mb-1 relative">
+                            <span className="text-gray-900 font-semibold pt-1">
                               {order.orderNumber}
                             </span>
                             {!order.isProcessed && (
-                              <span className="bg-red-500 text-white px-2 py-0.5 text-xs rounded font-bold">
+                              <span className="bg-red-500 text-white px-1 py-0.5 text-[0.44rem] rounded absolute top-0 left-0 tracking-wider z-50">
                                 NEW
                               </span>
                             )}

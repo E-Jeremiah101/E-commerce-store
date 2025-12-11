@@ -668,7 +668,7 @@ export const supportRecoverOrder = async (req, res) => {
             }
           : {}),
       },
-      isProcessed: true,
+      isProcessed: false,
       notes: `AUTO-RECOVERED - Found via ${searchMethod}. 
             Reference Used: ${referenceUsed}
             Flutterwave Ref: ${payment.flw_ref}
@@ -695,7 +695,7 @@ export const supportRecoverOrder = async (req, res) => {
           currency: payment.currency,
           recoveredProducts: recoveredProducts.length,
           customerEmail: customer_email,
-          createdUser: !user.$isNew ? "Existing" : "New",
+          createdUser: !user.isNew ? "Existing" : "New",
         },
       },
       `Order recovered via ${searchMethod.replace(
@@ -912,6 +912,9 @@ export const updateOrderStatus = async (req, res) => {
     const oldStatus = order.status;
     const oldIsProcessed = order.isProcessed;
 
+    const newIsProcessed =
+      oldStatus === "Pending" && status !== "Pending" ? true : oldIsProcessed;
+
     await logOrderAction(
       req,
       ACTIONS.UPDATE_ORDER_STATUS,
@@ -924,7 +927,7 @@ export const updateOrderStatus = async (req, res) => {
         },
         after: {
           status,
-          isProcessed: true,
+          isProcessed: newIsProcessed,
           deliveredAt: status === "Delivered" ? new Date() : order.deliveredAt,
         },
       },
@@ -932,7 +935,7 @@ export const updateOrderStatus = async (req, res) => {
     );
 
     order.status = status;
-    order.isProcessed = true;
+    order.isProcessed = newIsProcessed;
     
 
     if (status === "Delivered") order.deliveredAt = Date.now();
