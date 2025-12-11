@@ -20,6 +20,7 @@ import Product from "../models/product.model.js";
 import { sendEmail } from "../lib/mailer.js";
 import { flw } from "../lib/flutterwave.js";
 import redis from "../lib/redis.js";
+import { calculateDeliveryFee } from "../../frontend/src/utils/deliveryConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -758,6 +759,8 @@ async function processOrderCreation(transactionData) {
       products,
       subtotal: Number(meta.originalTotal) || Number(data.amount) || 0,
       discount: Number(meta.discountAmount) || 0,
+      deliveryFee: Number(meta.deliveryFee) || 0, 
+      deliveryZone: meta.deliveryZone || "Same City",
       totalAmount: Number(meta.finalTotal) || Number(data.amount) || 0,
       orderNumber: generateOrderNumber(),
       couponCode: couponCode || null,
@@ -816,8 +819,14 @@ async function processOrderCreation(transactionData) {
 
 export const createCheckoutSession = async (req, res) => {
   try {
-    const { products, couponCode } = req.body;
+    const { products, couponCode, deliveryAddress, deliveryFee, deliveryZone } =
+      req.body;
     const userId = req.user._id;
+
+    console.log("📦 Received checkout request:");
+    console.log("- Delivery address:", deliveryAddress);
+    console.log("- Delivery fee from frontend:", deliveryFee);
+    console.log("- Delivery zone:", deliveryZone);
 
     if (!Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ error: "Invalid or empty products array" });
@@ -912,6 +921,31 @@ export const createCheckoutSession = async (req, res) => {
         error: availabilityError.message,
       });
     }
+   let calculatedDeliveryFee = 0;
+   let finalDeliveryFee = 0;
+
+   if (deliveryAddress && deliveryAddress.state) {
+     // Use frontend-provided fee if available, otherwise calculate
+     if (deliveryFee !== undefined && deliveryFee !== null) {
+       calculatedDeliveryFee = Number(deliveryFee);
+       console.log("✅ Using frontend delivery fee:", calculatedDeliveryFee);
+     } else {
+       // Fallback: calculate on backend
+       calculatedDeliveryFee = calculateDeliveryFee(
+         deliveryAddress.state,
+         deliveryAddress.city || "",
+         deliveryAddress.lga || ""
+       );
+       console.log(
+         "🔄 Calculated delivery fee on backend:",
+         calculatedDeliveryFee
+       );
+     }
+   }
+
+
+    
+  
     // Calculate totals
     const originalTotal = products.reduce((acc, p) => {
       const qty = p.quantity || 1;
@@ -945,8 +979,15 @@ export const createCheckoutSession = async (req, res) => {
         console.error("Error validating coupon:", error);
       }
     }
+    finalDeliveryFee = calculatedDeliveryFee;
 
-    const finalTotal = Math.max(0, originalTotal - discountAmount);
+    console.log(
+      "💰 Final delivery fee after free delivery check:",
+      finalDeliveryFee
+    );
+    console.log("🛒 Original total:", originalTotal);
+
+    const finalTotal = Math.max(0, originalTotal - discountAmount + finalDeliveryFee);
     const tx_ref = `ECOSTORE-${Date.now()}`;
 
     // === CRITICAL: RESERVE INVENTORY BEFORE PAYMENT ===
@@ -993,6 +1034,8 @@ export const createCheckoutSession = async (req, res) => {
         couponCode: couponCode || "",
         originalTotal,
         discountAmount,
+        deliveryFee: finalDeliveryFee, // Make sure this is included
+        deliveryZone: deliveryZone || "", 
         finalTotal,
         deliveryAddress: addressString || "",
         phoneNumber: defaultPhone.number || "",
@@ -1211,6 +1254,9 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     const meta_data = data.meta || event.meta_data || {};
 
+    const deliveryFee = Number(meta_data.deliveryFee) || 0;
+    const deliveryZone = meta_data.deliveryZone || "";
+
     let parsedProducts = [];
     if (meta_data.products) {
       try {
@@ -1296,6 +1342,8 @@ export const handleFlutterwaveWebhook = async (req, res) => {
             couponCode: couponCode,
             originalTotal: originalTotal,
             discountAmount: discountAmount,
+            deliveryFee: deliveryFee, 
+            deliveryZone: deliveryZone,
             finalTotal: finalTotal,
             deliveryAddress: deliveryAddress || "No address provided",
             phoneNumber:
@@ -1794,15 +1842,13 @@ export const sendDetailedOrderEmail = async ({
   const totalAmount = order.totalAmount || order.totalPrice || order.total || 0;
   const subtotal = order.subtotal || order.subTotal || 0;
   const discount = order.discount || 0;
-
-  // Card info block (masked)
-  const maskedLast4 = card.last4 || card.last_4digits || "****";
+  
   const cardBrand = card.type || "Card";
 
   const cardInfo = card.last4
     ? `
     <div style="margin-top:10px;font-size:14px;color:#333;">
-      <strong>Payment Method:</strong> ${cardBrand} **** ${maskedLast4}<br/>
+      <strong>Payment Method:</strong> ${cardBrand} <br/>
     </div>`
     : "";
 
@@ -1844,8 +1890,18 @@ export const sendDetailedOrderEmail = async ({
             <strong>Original Subtotal:</strong> ₦${Number(
               subtotal
             ).toLocaleString()} <br>
-            <strong>Coupon Discount:</strong> -₦${Number(
-              discount
+           
+                    ${
+                      discount > 0
+                        ? `
+                    <p>
+                      <strong>Coupon Discount:</strong> -₦${Number(discount).toLocaleString()}
+                    </p>
+          ` 
+                        : ""
+                    }}<br>
+            <strong>Delivery Fee:</strong> ₦${Number(
+              order.deliveryFee
             ).toLocaleString()}<br>
             <strong>Final Total:</strong> ₦${Number(
               totalAmount

@@ -8,13 +8,15 @@ import axios from "../lib/axios";
 import { useUserStore } from "../stores/useUserStore.js";
 import { useProductStore } from "../stores/useProductStore.js";
 import toast from "react-hot-toast";
-
+import { calculateDeliveryFee } from "../utils/deliveryConfig.js";
 const OrderSummary = () => {
   const { user, setUser } = useUserStore();
   const { total, subtotal, coupon, cart, isCouponApplied } = useCartStore();
   const { checkCartAvailability } = useProductStore();
 
   const [loading, setIsLoading] = useState(false);
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [deliveryZone, setDeliveryZone] = useState("");
   const [availabilityCheck, setAvailabilityCheck] = useState({
     allAvailable: true,
     unavailableItems: [],
@@ -31,6 +33,42 @@ const OrderSummary = () => {
       }))
     );
   }, [cart]);
+
+  // Calculate delivery fee based on user's address
+  useEffect(() => {
+    if (user?.addresses?.length > 0) {
+      const defaultAddress =
+        user.addresses.find((a) => a.isDefault) || user.addresses[0];
+
+      if (defaultAddress) {
+        const fee = calculateDeliveryFee(
+          defaultAddress.state || "",
+          defaultAddress.city || "",
+          defaultAddress.lga || ""
+        );
+
+        setDeliveryFee(fee);
+
+        // Determine zone name for display
+        if (fee === 500) setDeliveryZone("Same City Delivery");
+        else if (fee === 1500) setDeliveryZone("Edo State Delivery");
+        else if (fee === 2500) setDeliveryZone("South-South Region");
+        else if (fee === 3500) setDeliveryZone("Southern Region");
+        else if (fee === 5000) setDeliveryZone("Northern Region");
+      }
+    }
+  }, [user]);
+
+
+  const finalDeliveryFee = deliveryFee;
+
+   const newSubtotal = subtotal;
+   const newTotal =
+     subtotal -
+     (coupon && isCouponApplied
+       ? subtotal * (coupon.discountPercentage / 100)
+       : 0);
+   const grandTotal = newTotal + finalDeliveryFee;
 
   // Add one-click protection
   const isProcessing = useRef(false);
@@ -144,23 +182,23 @@ const OrderSummary = () => {
     }
 
     // FIXED: Prevent checkout when ALL items are out of stock
-  if (availabilityCheck.checked && !availabilityCheck.hasInStockItems) {
-    toast.error(
-      "All items in your cart are out of stock. Please remove them before checkout."
-    );
-    return;
-  };
+    if (availabilityCheck.checked && !availabilityCheck.hasInStockItems) {
+      toast.error(
+        "All items in your cart are out of stock. Please remove them before checkout."
+      );
+      return;
+    }
 
-  const anyItemsInStock = cart.some((item) => {
-    const stock =
-      item.countInStock || item.stock || item.quantityAvailable || 0;
-    return stock > 0;
-  });
+    const anyItemsInStock = cart.some((item) => {
+      const stock =
+        item.countInStock || item.stock || item.quantityAvailable || 0;
+      return stock > 0;
+    });
 
-  if (!anyItemsInStock) {
-    toast.error("Cannot proceed: All items in your cart are out of stock.");
-    return;
-  }
+    if (!anyItemsInStock) {
+      toast.error("Cannot proceed: All items in your cart are out of stock.");
+      return;
+    }
 
     try {
       // Set processing flag immediately
@@ -169,11 +207,17 @@ const OrderSummary = () => {
 
       console.log("🔄 Proceeding with payment...");
 
+      const defaultAddressObj =
+        user.addresses.find((a) => a.isDefault) || user.addresses[0];
+
       // Proceed with payment - backend will handle availability checks
       const res = await axios.post("/payments/flutterwave-pay", {
         products: cart,
         user,
         couponCode: coupon ? coupon.code : null,
+        deliveryAddress: defaultAddressObj,
+        deliveryFee: finalDeliveryFee,
+        deliveryZone: deliveryZone,
       });
 
       const { link } = res.data;
@@ -205,6 +249,10 @@ const OrderSummary = () => {
     }
   };
 
+  const formatCurrency = (amount) => {
+    return amount.toLocaleString(undefined, { minimumFractionDigits: 0 });
+  };
+
   // FIXED: hasUnavailableItems should be true when ALL items are out of stock
   // (not when SOME items are out of stock - which your requirement allows)
   const hasUnavailableItems =
@@ -234,46 +282,46 @@ const OrderSummary = () => {
     minimumFractionDigits: 0,
   });
 
- const isButtonDisabled = () => {
-   // If no items in cart
-   if (cart.length === 0) {
-     console.log("❌ Button disabled: Cart is empty");
-     return true;
-   }
+  const isButtonDisabled = () => {
+    // If no items in cart
+    if (cart.length === 0) {
+      console.log("❌ Button disabled: Cart is empty");
+      return true;
+    }
 
-   // If NO items have stock (all are out of stock)
-   if (availabilityCheck.checked && !availabilityCheck.hasInStockItems) {
-     console.log("❌ Button disabled: All items out of stock");
-     return true;
-   }
+    // If NO items have stock (all are out of stock)
+    if (availabilityCheck.checked && !availabilityCheck.hasInStockItems) {
+      console.log("❌ Button disabled: All items out of stock");
+      return true;
+    }
 
-   // If missing contact info
-   if (!defaultPhone || !defaultAddress) {
-     console.log("❌ Button disabled: Missing contact info");
-     return true;
-   }
+    // If missing contact info
+    if (!defaultPhone || !defaultAddress) {
+      console.log("❌ Button disabled: Missing contact info");
+      return true;
+    }
 
-   // If loading
-   if (loading || isProcessing.current) {
-     console.log("❌ Button disabled: Processing");
-     return true;
-   }
+    // If loading
+    if (loading || isProcessing.current) {
+      console.log("❌ Button disabled: Processing");
+      return true;
+    }
 
-   // Additional safety check
-   const anyItemsInStock = cart.some((item) => {
-     const stock =
-       item.countInStock || item.stock || item.quantityAvailable || 0;
-     return stock > 0;
-   });
+    // Additional safety check
+    const anyItemsInStock = cart.some((item) => {
+      const stock =
+        item.countInStock || item.stock || item.quantityAvailable || 0;
+      return stock > 0;
+    });
 
-   if (!anyItemsInStock) {
-     console.log("❌ Button disabled: Safety check - no items in stock");
-     return true;
-   }
+    if (!anyItemsInStock) {
+      console.log("❌ Button disabled: Safety check - no items in stock");
+      return true;
+    }
 
-   console.log("✅ Button enabled - has items with stock");
-   return false;
- };
+    console.log("✅ Button enabled - has items with stock");
+    return false;
+  };
 
   // Use the function
   const buttonDisabled = isButtonDisabled();
@@ -293,7 +341,7 @@ const OrderSummary = () => {
         <div className="space-y-2">
           <dl className="flex items-center justify-between gap-4">
             <dt className="text-base font-normal text-gray-600">
-              Original price
+              Sub-Total
             </dt>
             <dt className="text-sm font-medium text-black">
               ₦{formattedSubtotal}
@@ -320,11 +368,29 @@ const OrderSummary = () => {
             </dl>
           )}
 
+          {/* Delivery Fee */}
+          <dl className="flex items-center justify-between gap-4">
+            <dt className="text-base font-normal text-gray-600">
+              Shipping
+              {deliveryZone && (
+                <span className="text-xs text-gray-500 block">
+                  ({deliveryZone})
+                </span>
+              )}
+            </dt>
+            <dd
+              className="text-base font-medium  text-black
+              "
+            >
+              {`₦${formatCurrency(finalDeliveryFee)}`}
+            </dd>
+          </dl>
+
           <dl className="flex items-center justify-between gap-4">
             <dt className="text-base font-normal text-gray-600">Total </dt>
-            <dt className="text-lg font-medium text-black-">
-              ₦{formattedTotal}
-            </dt>
+            <dt className="text-lg font-medium text-black-">{`₦${formatCurrency(
+              grandTotal
+            )}`}</dt>
           </dl>
         </div>
 

@@ -78,7 +78,7 @@ const AdminOrderDetails = () => {
 
         <div>
           <h1 className="text-gray-600">Order Placed</h1>
-          <p className="font-semibold"> 
+          <p className="font-semibold">
             {new Date(order.createdAt).toLocaleString()}
           </p>
         </div>
@@ -89,7 +89,7 @@ const AdminOrderDetails = () => {
         </div>
 
         <div>
-          <h1 className="text-gray-600">Order Updated:</h1>{" "}
+          <h1 className="text-gray-600">Order {order.status}:</h1>{" "}
           <p className="font-semibold">
             {new Date(order.updatedAt).toLocaleString()}
           </p>
@@ -99,87 +99,23 @@ const AdminOrderDetails = () => {
       {/* Customer Info */}
       <div className=" text-black rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 py-6 px-2">
         <h2 className="text-lg font-semibold mb-4  border-gray-600 pb-2">
-          RECEIVER INFO
+          SHIPPING ADDRESS
         </h2>
-        <div className="grid grid-cols-1 gap-4 text-sm">
-          <div className="grid grid-cols-2">
-            <span className="text-gray-600">Name:</span>{" "}
-            <span className="font-semibold break-words">
-              {order.user?.firstname + " " + order.user?.lastname}
-            </span>
-          </div>
-          <div className="grid grid-cols-2 ">
-            <span className="text-gray-600">Email:</span>{" "}
-            <span className="font-semibold break-words">
-              {" "}
-              {order.user?.email}
-            </span>
-          </div>
-          <p className="grid grid-cols-2 ">
-            <span className="text-gray-600 break-words">Phone:</span>{" "}
-            <span className="font-semibold">
-              {order.phone || "Not provided"}
-            </span>
-          </p>
-          <div className="grid grid-cols-2">
-            <span className="text-gray-600">Address:</span>{" "}
-            <span className="font-semibold break-words">
-              {" "}
-              {order.deliveryAddress || "Not provided"}
-            </span>
-          </div>
+        <div className="flex flex-col gap-4 text-sm text-gray-600">
+          {" "}
+          <span className="font-semibold break-words">
+            {order.user?.firstname + " " + order.user?.lastname}
+          </span>
+          <span className="font-semibold break-words">
+            {" "}
+            {order.user?.email}
+          </span>
+          <span className="font-semibold">{order.phone || "Not provided"}</span>
+          <span className="font-semibold break-words">
+            {" "}
+            {order.deliveryAddress || "Not provided"}
+          </span>
         </div>
-      </div>
-      <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
-      <div className=" text-black rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 py-6 px-2">
-        <h2 className="text-lg font-semibold mb-4  border-gray-600 pb-2">
-          PAYMENT METHOD
-        </h2>
-        {order.paymentMethod.method === "account" && (
-          <div>
-            <h1 className="text-gray-600">
-              Status:{" "}
-              <span className="text-gray-800">
-                {order.paymentMethod.status}
-              </span>
-            </h1>
-            <h1 className="text-gray-600">
-              Method:{" "}
-              <span className="text-gray-800">
-                {order.paymentMethod.method}
-              </span>
-            </h1>
-          </div>
-        )}
-        {order.paymentMethod.method === "card" && (
-          <div>
-            <h1 className="text-gray-600">
-              Status:{" "}
-              <span className="text-gray-800">
-                {order.paymentMethod.status}
-              </span>
-            </h1>
-            <h1 className="text-gray-600">
-              Card Num:************
-              <span className="text-gray-800">
-                {order.paymentMethod.card.last4}
-              </span>
-            </h1>
-
-            <h1 className="text-gray-600">
-              Card Type:{" "}
-              <span className="text-gray-800">
-                {order.paymentMethod.card.type}
-              </span>
-            </h1>
-            <h1 className="text-gray-600">
-              Card Issuer:{" "}
-              <span className="text-gray-800">
-                {order.paymentMethod.card.issuer}
-              </span>
-            </h1>
-          </div>
-        )}
       </div>
 
       <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
@@ -299,25 +235,67 @@ const AdminOrderDetails = () => {
           </ul>
         </div>
       </div>
-      <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
-      {/* Totals */}
-      <div className=" bg-gradient-to-br from-white via-gray-100 to-gray-300 text-gray-600 rounded-lg py-6 px-2">
-        <h2 className="text-lg font-semibold mb-4  pb-2">Payment Summary</h2>
 
+      <div className="py-5 text-3xl border-t-1 border-gray-300"></div>
+      <h1 className="text-lg font-semibold m  border-gray-600 pb-2">
+        PAYMENT INFORMATION
+      </h1>
+
+      <div className=" text-black rounded-lg  bg-gradient-to-br from-white via-gray-100 to-gray-300 py-6 px-2">
+        <h2 className="text-lg font-semibold mb-4  border-gray-600 text-black/80">
+          Payment Method ({order.paymentMethod.method})
+        </h2>
+        {order.paymentMethod.method === "account" && (
+          <div>
+            <h1 className="text-gray-600">
+              Status:{" "}
+              <span className="text-gray-800">
+                {order.paymentMethod.status}
+              </span>
+            </h1>
+            <h1 className="text-gray-600">
+              Method:{" "}
+              <span className="text-gray-800">
+                {order.paymentMethod.method}
+              </span>
+            </h1>
+          </div>
+        )}
+        {order.paymentMethod.method === "card" && (
+          <div>
+            <h1 className="text-gray-600">
+              Status:{" "}
+              <span className="text-gray-800">
+                {order.paymentMethod.status}
+              </span>
+            </h1>
+
+            <h1 className="text-gray-600">
+              Card Type:{" "}
+              <span className="text-gray-800">
+                {order.paymentMethod.card.type}
+              </span>
+            </h1>
+          </div>
+        )}
+      </div>
+
+      {/* Totals */}
+      <div className=" bg-gradient-to-br from-white via-gray-100 to-gray-300 text-black rounded-lg py-6 px-2 ">
+        <h2 className="text-lg font-semibold mb-4  text-black/80">
+          Payment Summary
+        </h2>
+
+        <p className="pb-1 text-gray-600">
+          Items total: <span> ₦{order.subtotal.toLocaleString()}</span>
+        </p>
         {order.discount > 0 && (
           <>
-            <p>
-              Subtotal:{" "}
-              <span className="text-black">
-                {" "}
-                ₦{order.subtotal.toLocaleString()}
-              </span>
-            </p>
-            <p>
+            <p className="pb-1 text-gray-600">
               Coupon:{" "}
               <span className="text-green-600 ">{order.couponCode}</span>
             </p>
-            <p>
+            <p className="pb-1 text-gray-600">
               Discount:{" "}
               <span className="text-red-500">
                 -₦{order.discount.toLocaleString()}
@@ -325,7 +303,13 @@ const AdminOrderDetails = () => {
             </p>
           </>
         )}
-        <p className="text-black tracking-wider font-bold text-lg mt-2">
+        {order.deliveryFee && (
+          <p className="pb-1 text-gray-600">
+            Delivery Fees: <span>₦{order.deliveryFee.toLocaleString()}</span>
+          </p>
+        )}
+
+        <p className="tracking-wider font-bold text-lg mt-2">
           Total: ₦{order.totalAmount.toLocaleString()}
         </p>
       </div>

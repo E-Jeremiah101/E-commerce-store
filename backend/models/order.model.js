@@ -93,6 +93,16 @@ const orderSchema = new mongoose.Schema(
 
     subtotal: { type: Number, required: false, default: 0 },
     discount: { type: Number, required: false, default: 0 },
+    deliveryFee: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    deliveryZone: {
+      type: String,
+      enum: ["Same City", "Edo State", "South-South", "Southern", "Northern"],
+      default: "Same City",
+    },
     coupon: {
       code: String,
       discount: Number,

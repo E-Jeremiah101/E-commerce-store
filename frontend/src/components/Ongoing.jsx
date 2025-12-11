@@ -5,28 +5,12 @@ import axios from "../lib/axios.js";
 import { requestRefund } from "../stores/refundRequestStore.js";
 import GoBackButton from "./GoBackButton.jsx";
 import { motion } from "framer-motion";
-import { Check, Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Ongoing = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showRefundModal, setShowRefundModal] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [refundData, setRefundData] = useState({
-    productId: "",
-    quantity: 1,
-    reason: "",
-  });
   const navigate = useNavigate()
-  const [saving, setSaving] = useState(false);
-  const getDeletedProductId = (p, orderId) => {
-    const safeName = (p.name || p.product?.name || "")
-      .trim()
-      .replace(/\s+/g, "_");
-    const price = p.price || p.product?.price || 0;
-    return `deleted-${orderId}-${safeName}-${price}`;
-  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -42,41 +26,8 @@ const Ongoing = () => {
     fetchOrders();
   }, []);
 
-  const handleRefundClick = (order) => {
-    setSelectedOrder(order);
-    setShowRefundModal(true);
-  };
+ 
 
-  const handleRefundSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!refundData.productId || !refundData.reason.trim()) {
-      toast.error("Please select product and provide a reason");
-      return;
-    }
-
-    try {
-      setSaving(true);
-
-      await requestRefund(selectedOrder._id, refundData);
-
-      toast.success("Refund request submitted successfully!");
-      setRefundData({ productId: "", quantity: 1, reason: "" });
-      setShowRefundModal(false);
-
-      //  Re-fetch updated orders right after success
-      const { data } = await axios.get("/orders/my-orders");
-      setOrders(data.orders || []);
-    } catch (err) {
-      console.error(err);
-      toast.error(
-        err.response?.data?.message || "Failed to submit refund request"
-      );
-    } finally {
-      // Always stop loading, even if modal closes early
-      setSaving(false);
-    }
-  };
 
   if (loading)
     return (
@@ -207,47 +158,6 @@ const Ongoing = () => {
                       </li>
                     ))}
                   </ul>
-
-                  <div className="flex justify-between align-middle">
-                    <div>
-                      {order.discount > 0 && (
-                        <>
-                          <p className="text-xs text-gray-500 mb-1">
-                            Subtotal: ₦{order.subtotal.toLocaleString()}
-                          </p>
-                          <p className="text-xs text-gray-500 mb-1">
-                            Coupon Applied:{" "}
-                            <span className="text-red-500 text-xs">-10%</span>{" "}
-                            <span className="text-green-500 text-xs">
-                              {order.couponCode}
-                            </span>
-                          </p>{" "}
-                          <p className="text-xs text-gray-500 mb-1">
-                            Discount: -₦
-                            {order.discount.toLocaleString()}
-                          </p>
-                        </>
-                      )}
-                      <p className="text-sm text-gray-500 mb-2">
-                        Total: ₦{order.totalAmount.toLocaleString()}
-                      </p>
-                    </div>
-
-                    <div className="flex">
-                      {order.status === "Delivered" &&
-                        order.products.some(
-                          (p) =>
-                            !p.refundStatus || p.refundStatus === "Rejected"
-                        ) && (
-                          <button
-                            onClick={() => handleRefundClick(order)}
-                            className="hover:text-red-600 text-red-500 px-2 py-2 rounded-lg text-xs"
-                          >
-                            Request Refund?
-                          </button>
-                        )}
-                    </div>
-                  </div>
                 </span>
               </div>
             ))

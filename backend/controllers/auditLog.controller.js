@@ -288,3 +288,208 @@ export const getPriceHistory = async (req, res) => {
     });
   }
 };
+
+// export const getPriceHistory = async (req, res) => {
+//   try {
+//     const { productId, startDate, endDate, action } = req.query;
+
+//     // Build filter
+//     const filter = {
+//       entityType: "Product",
+//       action: {
+//         $in: ["PRICE_SLASH", "PRICE_UPDATE", "PRICE_RESET", "UPDATE_PRODUCT"],
+//       },
+//     };
+
+//     // Add product filter if provided
+//     if (productId) {
+//       filter.entityId = productId;
+//     }
+
+//     // Add date filters if provided
+//     if (startDate || endDate) {
+//       filter.timestamp = {};
+//       if (startDate) {
+//         filter.timestamp.$gte = new Date(startDate);
+//       }
+//       if (endDate) {
+//         filter.timestamp.$lte = new Date(endDate);
+//       }
+//     }
+
+//     // Add action filter if provided
+//     if (action && action !== "ALL" && action !== "") {
+//       filter.action = action;
+//     }
+
+//     console.log("🔍 Fetching price history with filter:", filter);
+
+//     // Fetch audit logs
+//     const priceLogs = await AuditLog.find(filter)
+//       .sort({ timestamp: -1 })
+//       .populate("adminId", "firstname lastname email")
+//       .lean();
+
+//     // Format the logs for display
+//     const formattedLogs = priceLogs.map((log) => {
+//       // Extract price information from changes object
+//       let oldPrice = "N/A";
+//       let newPrice = "N/A";
+//       let discount = null;
+//       let changeType = log.action.toLowerCase().replace("price_", "");
+
+//       if (log.changes) {
+//         // Check different possible structures
+//         if (
+//           log.changes.oldPrice !== undefined &&
+//           log.changes.newPrice !== undefined
+//         ) {
+//           oldPrice = log.changes.oldPrice;
+//           newPrice = log.changes.newPrice;
+//         } else if (log.changes.price) {
+//           oldPrice = log.changes.price.before || "N/A";
+//           newPrice = log.changes.price.after || "N/A";
+//           discount = log.changes.price.discount || null;
+//         }
+//       }
+
+//       // Calculate percentage if not provided
+//       let percentage = discount;
+//       if (
+//         !percentage &&
+//         oldPrice !== "N/A" &&
+//         newPrice !== "N/A" &&
+//         oldPrice > 0
+//       ) {
+//         const change = ((newPrice - oldPrice) / oldPrice) * 100;
+//         percentage = `${change > 0 ? "+" : ""}${change.toFixed(1)}%`;
+//       }
+
+//       return {
+//         id: log._id,
+//         _id: log._id,
+//         timestamp: log.timestamp,
+//         adminName: log.adminName,
+//         adminId: log.adminId,
+//         action: log.action,
+//         oldPrice: oldPrice,
+//         newPrice: newPrice,
+//         changeType: changeType,
+//         percentage: percentage || "N/A",
+//         discount: discount,
+//         entityName: log.entityName || "Unknown Product",
+//         entityId: log.entityId,
+//         additionalInfo: log.additionalInfo || "No reason provided",
+//         ipAddress: log.ipAddress,
+//         createdAt: log.createdAt,
+//       };
+//     });
+
+//     res.json({
+//       success: true,
+//       priceHistory: formattedLogs,
+//       total: formattedLogs.length,
+//       filters: {
+//         productId,
+//         startDate,
+//         endDate,
+//         action,
+//       },
+//     });
+//   } catch (error) {
+//     console.error("❌ Error fetching price history:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to fetch price history",
+//       error: error.message,
+//     });
+//   }
+// };
+
+// // Add this function for single product price history
+// export const getProductPriceHistory = async (req, res) => {
+//   try {
+//     const { productId } = req.params;
+
+//     if (!productId) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Product ID is required",
+//       });
+//     }
+
+//     const priceLogs = await AuditLog.find({
+//       entityType: "Product",
+//       entityId: productId,
+//       action: {
+//         $in: ["PRICE_SLASH", "PRICE_UPDATE", "PRICE_RESET", "UPDATE_PRODUCT"],
+//       },
+//     })
+//       .sort({ timestamp: -1 })
+//       .populate("adminId", "firstname lastname email")
+//       .lean();
+
+//     const formattedLogs = priceLogs.map((log) => {
+//       let oldPrice = "N/A";
+//       let newPrice = "N/A";
+//       let discount = null;
+
+//       if (log.changes) {
+//         if (
+//           log.changes.oldPrice !== undefined &&
+//           log.changes.newPrice !== undefined
+//         ) {
+//           oldPrice = log.changes.oldPrice;
+//           newPrice = log.changes.newPrice;
+//         } else if (log.changes.price) {
+//           oldPrice = log.changes.price.before || "N/A";
+//           newPrice = log.changes.price.after || "N/A";
+//           discount = log.changes.price.discount || null;
+//         }
+//       }
+
+//       let percentage = discount;
+//       if (
+//         !percentage &&
+//         oldPrice !== "N/A" &&
+//         newPrice !== "N/A" &&
+//         oldPrice > 0
+//       ) {
+//         const change = ((newPrice - oldPrice) / oldPrice) * 100;
+//         percentage = `${change > 0 ? "+" : ""}${change.toFixed(1)}%`;
+//       }
+
+//       return {
+//         id: log._id,
+//         _id: log._id,
+//         timestamp: log.timestamp,
+//         adminName: log.adminName,
+//         adminId: log.adminId,
+//         action: log.action,
+//         oldPrice: oldPrice,
+//         newPrice: newPrice,
+//         changeType: log.action.toLowerCase().replace("price_", ""),
+//         percentage: percentage || "N/A",
+//         discount: discount,
+//         entityName: log.entityName || "Unknown Product",
+//         entityId: log.entityId,
+//         additionalInfo: log.additionalInfo || "No reason provided",
+//         ipAddress: log.ipAddress,
+//       };
+//     });
+
+//     res.json({
+//       success: true,
+//       priceHistory: formattedLogs,
+//       total: formattedLogs.length,
+//       productId: productId,
+//     });
+//   } catch (error) {
+//     console.error("❌ Error fetching product price history:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Failed to fetch product price history",
+//       error: error.message,
+//     });
+//   }
+// };

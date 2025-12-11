@@ -74,7 +74,7 @@ const ProductCard = ({ product }) => {
       <div className="absolute top-1 right-1 z-10">
         {product.isPriceSlashed && product.previousPrice && (
           <span className="bg-red-100 text-red-800 rounded text-[0.70rem] font-medium px-1 py-1">
-            {product.discountPercentage}% OFF
+            {Math.round(product.discountPercentage)}% OFF
           </span>
         )}
       </div>
@@ -112,17 +112,17 @@ const ProductCard = ({ product }) => {
         <div className="flex justify-between w-full text-gray-900">
           <Link to={`/product/${product._id}`} className="m-0">
             {product.isPriceSlashed && product.previousPrice ? (
-              <div className="flex items-center gap-2">
-                <span className="text-black font-medium text-[1.1rem]">
+              <div className="flex items-center gap-1">
+                <span className="text-black font-medium text-[1rem]">
                   ₦{product.price.toLocaleString()}
                 </span>
-                <span className="text-gray-500 line-through text-[0.85rem]">
+                <span className="text-gray-500 line-through text-[0.82rem]">
                   ₦{product.previousPrice.toLocaleString()}
                 </span>
               </div>
             ) : (
               <span className="text-sm lg:text-md text-gray-900 font-semibold">
-                ₦{" "}
+                ₦
                 {product.price.toLocaleString(undefined, {
                   minimumFractionDigits: 0,
                 })}

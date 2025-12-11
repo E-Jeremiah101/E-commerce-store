@@ -192,11 +192,11 @@ export const useCartStore = create((set, get) => ({
         console.log("🛒 Logged in user flow");
 
         // Prepare the request body - send empty strings instead of undefined
-        const requestBody = {
-          productId: product._id,
-          size: selectedSize || "", // Always send as string, even if empty
-          color: selectedColor || "", // Always send as string, even if empty
-        };
+         const requestBody = {
+           productId: product._id,
+           size: selectedSize || "", // Empty string if not provided
+           color: selectedColor || "", // Empty string if not provided
+         };
 
         console.log("🛒 Sending to server:", requestBody);
 

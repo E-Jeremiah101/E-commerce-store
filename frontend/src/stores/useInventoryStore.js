@@ -152,6 +152,7 @@ export const useInventoryStore = create((set, get) => ({
       throw error;
     }
   },
+  
 
   // 📈 Get Stock History
   fetchStockHistory: async (productId = null, page = 1) => {
@@ -482,4 +483,5 @@ export const useInventoryStore = create((set, get) => ({
       throw error;
     }
   },
+  
 }));

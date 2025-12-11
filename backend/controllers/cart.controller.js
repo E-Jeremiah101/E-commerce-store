@@ -24,6 +24,7 @@ export const getCartProducts = async (req, res) => {
   }
 };
 
+
 export const addToCart = async (req, res) => {
   try {
     const { productId, size, color } = req.body;
@@ -32,11 +33,13 @@ export const addToCart = async (req, res) => {
     console.log("🛒 Backend addToCart received:", { productId, size, color });
 
     const product = await Product.findById(productId);
-
-    // ✅ FIXED: Check if product exists AND is not archived
     if (!product || product.archived || product.isActive === false) {
       return res.status(404).json({ message: "Product not found" });
     }
+
+    // ✅ FIXED: Normalize size and color to empty strings if not provided
+    const normalizedSize = size || "";
+    const normalizedColor = color || "";
 
     // Find variant stock - FIXED LOGIC
     let availableStock = product.countInStock;
@@ -44,16 +47,14 @@ export const addToCart = async (req, res) => {
 
     if (product.variants && product.variants.length > 0) {
       variant = product.variants.find((v) => {
-        const sizeMatches = size
-          ? v.size === size
-          : !v.size || v.size === "" || v.size === "Standard";
-        const colorMatches = color
-          ? v.color === color
-          : !v.color || v.color === "" || v.color === "Standard";
-        return sizeMatches && colorMatches;
-      });
+        // FIXED: Use normalized values
+        const variantSize = v.size || "";
+        const variantColor = v.color || "";
 
-      console.log("📊 Found variant:", variant);
+        return (
+          normalizedSize === variantSize && normalizedColor === variantColor
+        );
+      });
 
       if (variant) {
         availableStock = variant.countInStock;
@@ -64,22 +65,21 @@ export const addToCart = async (req, res) => {
       }
     }
 
-    console.log("📊 Available stock:", availableStock);
-
     if (availableStock <= 0) {
       return res.status(400).json({ message: "Out of stock" });
     }
 
-    // Look for existing item in user's cart - FIXED MATCHING
+    // ✅ FIXED: Look for existing item with normalized matching
     const existingItem = user.cartItems.find((item) => {
       const productMatch = item.product?.toString() === productId;
-      const sizeMatch = size
-        ? item.size === size
-        : !item.size || item.size === "";
-      const colorMatch = color
-        ? item.color === color
-        : !item.color || item.color === "";
-      return productMatch && sizeMatch && colorMatch;
+      const itemSize = item.size || "";
+      const itemColor = item.color || "";
+
+      return (
+        productMatch &&
+        itemSize === normalizedSize &&
+        itemColor === normalizedColor
+      );
     });
 
     if (existingItem) {
@@ -93,9 +93,9 @@ export const addToCart = async (req, res) => {
       const newItem = {
         product: productId,
         quantity: 1,
+        size: normalizedSize, // Store normalized values
+        color: normalizedColor, // Store normalized values
       };
-      if (size) newItem.size = size;
-      if (color) newItem.color = color;
 
       user.cartItems.push(newItem);
     }
@@ -107,7 +107,6 @@ export const addToCart = async (req, res) => {
       user.cartItems.map(async (cartItem) => {
         const product = await Product.findById(cartItem.product);
 
-        // ✅ FIXED: Filter out archived products in response too
         if (!product || product.archived || product.isActive === false) {
           return null;
         }
@@ -115,8 +114,8 @@ export const addToCart = async (req, res) => {
         return {
           ...product.toJSON(),
           quantity: cartItem.quantity,
-          size: cartItem.size || "",
-          color: cartItem.color || "",
+          size: cartItem.size || "", // Ensure consistency
+          color: cartItem.color || "", // Ensure consistency
         };
       })
     );
@@ -133,18 +132,23 @@ export const removeFromCart = async (req, res) => {
     const { productId, size, color } = req.body;
     const user = req.user;
 
-    user.cartItems = user.cartItems.filter(
-      (item) =>
-        !(
-          item.product?.toString() === productId &&
-          item.size === size &&
-          item.color === color
-        )
-    );
+    // ✅ FIXED: Normalize values for matching
+    const normalizedSize = size || "";
+    const normalizedColor = color || "";
+
+    user.cartItems = user.cartItems.filter((item) => {
+      const itemSize = item.size || "";
+      const itemColor = item.color || "";
+
+      return !(
+        item.product?.toString() === productId &&
+        itemSize === normalizedSize &&
+        itemColor === normalizedColor
+      );
+    });
 
     await user.save();
 
-    // ✅ FIXED: Return validated cart items
     const validatedCartItems = await getValidatedCartItems(user.cartItems);
     res.json(validatedCartItems);
   } catch (error) {
@@ -152,7 +156,6 @@ export const removeFromCart = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 export const removeAllFromCart = async (req, res) => {
   try {
     const user = req.user;
@@ -283,61 +286,48 @@ const getValidatedCartItems = async (cartItems) => {
         return null;
       }
 
-      // Find the correct variant stock
+      // ✅ FIXED: Better variant matching logic
       let finalStock = product.countInStock || 0;
       let variantFound = false;
-      
-      // If product has variants and we have size/color info
+
+      // If product has variants
       if (product.variants && product.variants.length > 0) {
-        // Look for exact match first
+        // Try to find matching variant
         const variant = product.variants.find((v) => {
-          const sizeMatches = (cartItem.size || "") === (v.size || "");
-          const colorMatches = (cartItem.color || "") === (v.color || "");
-          return sizeMatches && colorMatches;
+          // FIXED: Handle empty strings for size/color
+          const cartSize = cartItem.size || "";
+          const cartColor = cartItem.color || "";
+          const variantSize = v.size || "";
+          const variantColor = v.color || "";
+
+          // Both size and color must match (or both be empty)
+          return cartSize === variantSize && cartColor === variantColor;
         });
 
         if (variant) {
           finalStock = variant.countInStock || 0;
           variantFound = true;
-        } 
-        // If no exact match, try to find any variant with matching size/color individually
-        else if (cartItem.size || cartItem.color) {
-          // Try to find by size only
-          if (cartItem.size) {
-            const sizeVariant = product.variants.find(v => v.size === cartItem.size);
-            if (sizeVariant) {
-              finalStock = sizeVariant.countInStock || 0;
-              variantFound = true;
-            }
-          }
-          // Try to find by color only  
-          if (cartItem.color && !variantFound) {
-            const colorVariant = product.variants.find(v => v.color === cartItem.color);
-            if (colorVariant) {
-              finalStock = colorVariant.countInStock || 0;
-              variantFound = true;
-            }
-          }
+        } else {
+          // If no exact match found, it might be a simple product without variants
+          // Or the variant might have been deleted
+          console.warn(`No matching variant found for ${product.name}`, {
+            cartSize: cartItem.size,
+            cartColor: cartItem.color,
+            availableVariants: product.variants.map((v) => ({
+              size: v.size,
+              color: v.color,
+            })),
+          });
         }
       }
 
-      // Return the product with variant stock info
       const result = {
         ...product.toJSON(),
         quantity: cartItem.quantity,
-        size: cartItem.size || "",
-        color: cartItem.color || "",
+        size: cartItem.size || "", // Ensure empty string for consistency
+        color: cartItem.color || "", // Ensure empty string for consistency
         countInStock: finalStock,
       };
-
-      // Debug log
-      console.log(`🛒 Cart item validated: ${product.name}`, {
-        cartItemSize: cartItem.size,
-        cartItemColor: cartItem.color,
-        finalStock,
-        variantFound,
-        hasVariants: product.variants?.length > 0,
-      });
 
       return result;
     })

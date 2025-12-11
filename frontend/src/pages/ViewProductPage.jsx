@@ -485,19 +485,20 @@ const ViewProductPage = () => {
             </div>
 
             {/* Shipping Info */}
-            <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                  <span className="text-green-600 text-sm">✓</span>
+
+            {product.isPriceSlashed && (
+              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center">
+                    <span className=" text-sm">🎁</span>
+                  </div>
+                  <span className="text-sm font-medium text-green-600">
+                    Enjoy your purchase on discount sale
+                  </span>
                 </div>
-                <span className="text-sm font-medium">Free Shipping</span>
+               
               </div>
-              {product.isPriceSlashed && (
-                <p className="text-xs text-green-600 mt-1">
-                  🎁 Special offer: Get free shipping on this discounted item!
-                </p>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </div>
