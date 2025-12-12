@@ -254,7 +254,6 @@ const Delivered = () => {
                                         ? "Refund Rejected"
                                         : "Refund Pending"}
                                     </span>
-                                    
                                   </div>
                                 ));
                               }
@@ -267,31 +266,27 @@ const Delivered = () => {
 
                       <div className="mt-2">
                         {order.status === "Delivered" && (
-                          <div className=" text-end">
-                            {/* Rating stars preview (greyed out before rating) */}
-
-                            {/* Rate button */}
+                          <div className="text-end">
                             <Link
                               to={`/product/${
                                 item.product?._id || item._id
                               }?rate=true&order=${order._id}`}
-                              className="inline-flex items-center gap-1   text-xs font-medium  text-black   bg-gray-300 p-1 rounded transition duration-200"
+                              className="inline-flex items-center gap-2 px-3.5 py-2 bg-gradient-to-br from-amber-50 to-yellow-50 text-amber-800 text-xs font-medium rounded-full border border-amber-200 hover:border-amber-300 hover:shadow-sm transition-all duration-200 group hover:scale-105"
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                className="w-3.5 h-3.5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
+                                className="w-3.5 h-3.5 text-amber-500 group-hover:text-amber-600 group-hover:rotate-12 transition-all"
+                                fill="currentColor"
+                                viewBox="0 0 20 20"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.967a1 1 0 00.95.69h4.174c.969 0 1.371 1.24.588 1.81l-3.379 2.455a1 1 0 00-.364 1.118l1.287 3.967c.3.921-.755 1.688-1.54 1.118L12 13.347l-3.374 2.455c-.785.57-1.84-.197-1.54-1.118l1.287-3.967a1 1 0 00-.364-1.118L4.63 9.394c-.783-.57-.38-1.81.588-1.81h4.174a1 1 0 00.95-.69l1.286-3.967z"
-                                />
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118L10 13.187l-2.8 2.034c-.785.57-1.84-.197-1.54-1.118l1.07-3.292a1 1 0 00-.364-1.118L3.46 8.327c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                               </svg>
-                              Rate this product
+                              <span className="font-semibold tracking-tight">
+                                Rate
+                              </span>
+                              <span className="text-[10px] text-amber-600 opacity-80">
+                                Share feedback
+                              </span>
                             </Link>
                           </div>
                         )}
@@ -300,7 +295,7 @@ const Delivered = () => {
                   ))}
                 </ul>
                 <div className="flex justify-between align-middle">
-                  <div>
+                  {/* <div>
                     {order.discount > 0 && (
                       <>
                         <p className="text-xs text-gray-500 mb-1">
@@ -322,7 +317,7 @@ const Delivered = () => {
                     <p className="text-sm text-gray-500 mb-2">
                       Total: ₦{order.totalAmount.toLocaleString()}
                     </p>
-                  </div>
+                  </div> */}
 
                   {/* <div className="flex">
                     {order.products.some((product) => {
@@ -363,7 +358,7 @@ const Delivered = () => {
               </div>
             ))
         )}
- 
+
         {/* Refund Modal */}
         {showRefundModal && selectedOrder && (
           <div className="fixed inset-0 flex no-scroll items-center justify-center bg-black/90 bg-opacity-700 z-50">
