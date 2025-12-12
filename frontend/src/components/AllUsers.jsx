@@ -93,17 +93,31 @@ const AllUsers = () => {
 
         {/* Table */}
         <div className="overflow-x-auto bg-white rounded-lg shadow no-scroll">
-          <table className="min-w-full border-collapse">
-            <thead className="bg-gray-200">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-100">
               <tr>
                 {/* <th className="text-left px-4 py-2 border">Id</th> */}
-                <th className="px-4 py-2 border text-left">Name</th>
-                <th className="px-4 py-2 border text-left">Email</th>
-                <th className="px-4 py-2 border text-left">Phone</th>
-                <th className="px-4 py-2 border text-left">Address</th>
-                <th className="px-4 py-2 border text-left">Cart</th>
-                <th className="px-4 py-2 border text-left">Role</th>
-                <th className="px-4 py-2 border text-center">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Phone
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Address
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Cart
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  Role
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider ">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -111,19 +125,21 @@ const AllUsers = () => {
                 users.map((user) => (
                   <tr
                     key={user._id}
-                    className="border-b hover:bg-gray-200 transition "
+                    className="border-b border-gray-100 hover:bg-gray-100 transition "
                   >
                     {/* <td className="px-2 py-2 border">{user._id}</td> */}
-                    <td className="px-2 py-2 border text-sm">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {user.name || user.firstname + " " + user.lastname}
                     </td>
-                    <td className="px-2 py-2 border text-sm">{user.email}</td>
-                    <td className="px-2 py-2 border text-sm">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {user.email}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {user.phones?.find((p) => p.isDefault)?.number ||
                         user.phones?.[0]?.number ||
                         "N/A"}
                     </td>
-                    <td className="px-2 py-2 border text-sm">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {user?.addresses?.find((a) => a.isDefault)
                         ? `${user.addresses.find((a) => a.isDefault).landmark}, 
        ${user.addresses.find((a) => a.isDefault).lga}, 
@@ -131,7 +147,7 @@ const AllUsers = () => {
        ${user.addresses.find((a) => a.isDefault).state}`
                         : "N/A"}
                     </td>
-                    <td className="px-2 py-2 border capitalize">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm capitalize">
                       <button
                         onClick={() => {
                           setSelectedUser(user);
@@ -142,10 +158,10 @@ const AllUsers = () => {
                         View
                       </button>
                     </td>
-                    <td className="px-2 py-2 border text-sm capitalize">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm capitalize">
                       {user.role}
                     </td>
-                    <td className="px-2 py-2 border text-center space-x-2 text-sm">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center space-x-2 ">
                       <button
                         onClick={() => toggleAdminRole(user._id)}
                         className={`px-3 py-1 text-sm  rounded-md text-white ${

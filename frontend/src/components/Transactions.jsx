@@ -184,25 +184,25 @@ const Transactions = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600 ">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                       Transaction ID
                     </th>
-                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600 ">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                       Customer
                     </th>
-                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                       Amount
                     </th>
-                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                       Method
                     </th>
-                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-md font-medium text-gray-600">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                       Date
                     </th>
                   </tr>
@@ -213,7 +213,7 @@ const Transactions = () => {
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className="text-gray-900 font-semibold">
+                            <span className="text-sm text-gray-900 font-medium">
                               {tx.transactionId}
                             </span>
                           </div>
@@ -221,7 +221,7 @@ const Transactions = () => {
                       </td>
 
                       <td className="px-6 py-4">
-                        <div className="text-gray-900 font-semibold">
+                        <div className="text-sm text-gray-900 font-medium">
                           {tx.customer?.name}
                         </div>
                         <div className="text-xs text-gray-400">
@@ -229,12 +229,12 @@ const Transactions = () => {
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 capitalize">
+                      <td className="px-6 py-4  text-sm text-gray-900 font-medium capitalize">
                         {tx.type === "refund" ? "-" : ""}₦
                         {(tx.amount ?? 0).toLocaleString()}
                       </td>
 
-                      <td className="px-6 py-4 capitalize">
+                      <td className="px-6 py-4 text-sm text-gray-900 font-medium capitalize">
                         {tx.paymentMethod.replace("_", " ")}
                       </td>
 
@@ -243,8 +243,8 @@ const Transactions = () => {
                           className={`px-3 py-1 text-xs font-medium rounded-full
                     ${
                       tx.type === "payment"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"
+                        ? "bg-green-100 text-sm font-medium text-green-700"
+                        : "bg-red-100 text-sm font-medium text-red-700"
                     }`}
                         >
                           {tx.type}
@@ -253,7 +253,7 @@ const Transactions = () => {
 
                       <td className="px-6 py-4">
                         <span
-                          className={`px-3 py-1 text-xs rounded-full font-medium
+                          className={`px-3 py-1 text-xs rounded-full  font-medium
                     ${
                       tx.status === "success" ||
                       tx.status === "processed" ||
@@ -268,7 +268,7 @@ const Transactions = () => {
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-gray-600">
+                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                         {new Date(tx.date).toLocaleDateString()}
                       </td>
                     </tr>

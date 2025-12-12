@@ -419,7 +419,7 @@ const AuditLogsTab = () => {
                 <p className="text-gray-500">
                   Try adjusting your filters or create some activity
                 </p>
-              </div>
+              </div> 
             ) : (
               <>
                 <div className="overflow-x-auto">

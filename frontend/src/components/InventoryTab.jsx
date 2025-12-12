@@ -3992,10 +3992,7 @@ const LocationsView = ({ locations }) => (
   <div className="space-y-6">
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {locations.map((location) => (
-        <div
-          key={location.id}
-          className="bg-white rounded-xl shadow-sm border p-6"
-        >
+        <div key={location.id} className="bg-white rounded-xl shadow-sm  p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-800">
               {location.name}
@@ -4026,7 +4023,9 @@ const LocationsView = ({ locations }) => (
                   className="flex justify-between text-sm"
                 >
                   <span className="truncate">{product.productName}</span>
-                  <span className="font-medium">{product.stock} units</span>
+                  <span className="font-medium text-black">
+                    {product.stock} units
+                  </span>
                 </div>
               ))}
             </div>
