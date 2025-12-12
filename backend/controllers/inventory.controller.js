@@ -428,8 +428,8 @@ export const getInventoryDashboard = async (req, res) => {
       },
       fastMovingProducts,
       alerts: {
-        lowStock: lowStockProducts.slice(0, 7),
-        outOfStock: outOfStockProducts.slice(0, 7),
+        lowStock: lowStockProducts.slice(0, 5),
+        outOfStock: outOfStockProducts.slice(0, 5),
       },
     });
   } catch (error) {

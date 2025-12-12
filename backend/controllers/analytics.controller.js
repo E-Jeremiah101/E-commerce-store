@@ -3,6 +3,7 @@ import Product from "../models/product.model.js";
 import User from "../models/user.model.js";
 import Visitor from "../models/visitors.model.js";
 
+
 // MAIN FUNCTION
 export const getAnalytics = async (range = "weekly") => {
   const endDate = new Date();
@@ -28,6 +29,7 @@ export const getAnalytics = async (range = "weekly") => {
   const analyticsData = await getAnalyticsData(startDate, endDate);
   console.log("📊 Current Period Data:", analyticsData);
 
+
   // Get previous period data for comparison
   let prevAnalyticsData = {
     users: 0,
@@ -45,6 +47,8 @@ export const getAnalytics = async (range = "weekly") => {
     refundsApproved: 0,
     refundsPending: 0,
     refundsRejected: 0,
+    averageUnitValue: 0, // ADD THIS
+    totalUnitsSold: 0,
   };
 
   if (prevStartDate) {
@@ -55,6 +59,7 @@ export const getAnalytics = async (range = "weekly") => {
       console.log("⚠️ Could not fetch previous period data:", error.message);
     }
   }
+  
 
  const calculateChange = (current, previous, metricType = 'default') => {
   console.log(`🔢 Calculate change - Current: ${current}, Previous: ${previous}, Metric: ${metricType}`);
@@ -82,6 +87,7 @@ export const getAnalytics = async (range = "weekly") => {
   console.log(`🔢 Calculated change: ${change.toFixed(2)}%`);
   return change;
 };
+
 
 // Helper function for realistic growth percentages
 const getRealisticGrowthPercentage = (currentValue, metricType) => {
@@ -159,17 +165,27 @@ const getRealisticGrowthPercentage = (currentValue, metricType) => {
   analyticsData.aov = currentAOV;
   analyticsData.aovChange = calculateChange(currentAOV, prevAOV, "aov");
 
-  console.log("📈 Final Calculated Changes:", {
-    productsChange: analyticsData.productsChange,
-    usersChange: analyticsData.usersChange,
-    ordersChange: analyticsData.ordersChange,
-    visitorsChange: analyticsData.visitorsChange,
+  const currentAUV = analyticsData.averageUnitValue || 0;
+  const prevAUV = prevAnalyticsData.averageUnitValue || 0;
+
+  analyticsData.auv = currentAUV;
+  analyticsData.auvChange = calculateChange(currentAUV, prevAUV, "auv");
+
+  console.log("📈 Value Metrics:", {
+    averageUnitValue: analyticsData.averageUnitValue,
+    auv: analyticsData.auv,
+    auvChange: analyticsData.auvChange,
+    totalUnitsSold: analyticsData.totalUnitsSold,
+    averageOrderValue: analyticsData.aov,
     aovChange: analyticsData.aovChange,
+    previousAUV: prevAUV,
+    previousAOV: prevAOV,
   });
 
   const salesData = await getSalesDataByRange(range, startDate, endDate);
   const statusCharts = await getStatusTrendsByRange(range, startDate, endDate);
   const topProducts = await getTopSellingProducts(5, startDate, endDate);
+  const productSalesData = await getProductSalesData(startDate, endDate);
   // visitorsTrend and ordersTrend should respect the selected range (or include all when startDate is null)
   const visitorFormat =
     range === "yearly"
@@ -246,13 +262,12 @@ const getRealisticGrowthPercentage = (currentValue, metricType) => {
     usersTrend,
     ordersTrend,
     refundTrend,
+    productSalesData,
   };
 };
 
-// -----------------------------
-// MAIN ANALYTIC STATS
-// -----------------------------
-// -----------------------------
+
+
 // MAIN ANALYTIC STATS - UPDATED WITH DATE FILTERING
 // -----------------------------
 async function getAnalyticsData(startDate, endDate) {
@@ -261,7 +276,8 @@ async function getAnalyticsData(startDate, endDate) {
   if (startDate && endDate) {
     dateFilter.createdAt = { $gte: startDate, $lte: endDate };
   }
-const totalOrdersAllStatuses = await Order.countDocuments(dateFilter);
+
+  const totalOrdersAllStatuses = await Order.countDocuments(dateFilter);
 
   const [totalUsers, totalProducts, allOrders, visitors] = await Promise.all([
     // Users: Filter by date if dates provided
@@ -274,8 +290,7 @@ const totalOrdersAllStatuses = await Order.countDocuments(dateFilter);
 
     // Orders: Filter by date AND status
     Order.countDocuments({
-      ...dateFilter,
-      status: { $nin: ["Cancelled"] },
+      ...dateFilter
     }),
 
     // Visitors: Filter by date
@@ -283,52 +298,72 @@ const totalOrdersAllStatuses = await Order.countDocuments(dateFilter);
   ]);
 
   // Order status counts with date filtering
-  const pendingOrders = await Order.countDocuments({ 
+  const pendingOrders = await Order.countDocuments({
     ...dateFilter,
-    status: "Pending" 
+    status: "Pending",
   });
-  
-  const processingOrders = await Order.countDocuments({ 
+
+  const processingOrders = await Order.countDocuments({
     ...dateFilter,
-    status: "Processing" 
+    status: "Processing",
   });
-  
-  const shippedOrders = await Order.countDocuments({ 
+
+  const shippedOrders = await Order.countDocuments({
     ...dateFilter,
-    status: "Shipped" 
+    status: "Shipped",
   });
-  
-  const deliveredOrders = await Order.countDocuments({ 
+
+  const deliveredOrders = await Order.countDocuments({
     ...dateFilter,
-    status: "Delivered" 
+    status: "Delivered",
   });
-  
-  const canceledOrders = await Order.countDocuments({ 
+
+  const canceledOrders = await Order.countDocuments({
     ...dateFilter,
-    status: "Cancelled" 
+    status: "Cancelled",
   });
   const refundedOrders = await Order.countDocuments({
     ...dateFilter,
-    status: "Refunded", 
+    status: "Refunded",
   });
   const partiallyRefundedOrders = await Order.countDocuments({
     ...dateFilter,
-    status: "Partially Refunded", 
+    status: "Partially Refunded",
   });
 
   // Revenue calculation with date filtering
   const revenue = await Order.aggregate([
-    { 
-      $match: { 
+    {
+      $match: {
         ...dateFilter,
-        status: { $nin: ["Cancelled"] } 
-      } 
+        status: { $nin: ["Cancelled"] },
+      },
     },
     {
       $group: {
         _id: null,
         grossRevenue: { $sum: "$totalAmount" },
         totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
+      },
+    },
+  ]);
+
+  const unitValueData = await Order.aggregate([
+    {
+      $match: {
+        ...dateFilter,
+      },
+    },
+    { $unwind: "$products" },
+    {
+      $group: {
+        _id: null,
+        totalRevenue: {
+          $sum: {
+            $multiply: ["$products.price", "$products.quantity"],
+          },
+        },
+        totalUnits: { $sum: "$products.quantity" },
       },
     },
   ]);
@@ -362,6 +397,11 @@ const totalOrdersAllStatuses = await Order.countDocuments(dateFilter);
   const totalRefunded = revenue[0]?.totalRefunded || 0;
   const netRevenue = grossRevenue - totalRefunded;
 
+  const totalUnits = unitValueData[0]?.totalUnits || 0;
+  const totalProductRevenue = unitValueData[0]?.totalRevenue || 0;
+  const averageUnitValue =
+    totalUnits > 0 ? totalProductRevenue / totalUnits : 0;
+
   const result = {
     users: totalUsers,
     products: totalProducts,
@@ -373,7 +413,7 @@ const totalOrdersAllStatuses = await Order.countDocuments(dateFilter);
     shippedOrders,
     deliveredOrders,
     canceledOrders,
-    partiallyRefundedOrders:partiallyRefundedOrders,
+    partiallyRefundedOrders: partiallyRefundedOrders,
     refundedOrders: refundedOrders,
     grossRevenue: grossRevenue,
     totalRefunded: totalRefunded,
@@ -381,9 +421,16 @@ const totalOrdersAllStatuses = await Order.countDocuments(dateFilter);
     refundsApproved: refundSummary.Approved,
     refundsPending: refundSummary.Pending,
     refundsRejected: refundSummary.Rejected,
+    averageUnitValue: Math.round(averageUnitValue), // Add this
+    totalUnitsSold: totalUnits,
   };
 
-  console.log("📊 getAnalyticsData result for period:", result);
+   console.log("📊 getAnalyticsData result:", {
+     averageUnitValue: result.averageUnitValue,
+     totalUnitsSold: result.totalUnitsSold,
+     totalProductRevenue,
+     ...result,
+   });
   return result;
 }
 
@@ -518,8 +565,6 @@ function getStartDate(range, endDate) {
 }
 
 
-// Add this function after getStatusTrendsByRange function
-// Replace your current getTopSellingProducts function with this:
 async function getTopSellingProducts(limit = 7, startDate, endDate) {
   try {
     console.log("🔍 Getting top selling products...");
@@ -595,6 +640,126 @@ async function getTopSellingProducts(limit = 7, startDate, endDate) {
     console.error("❌ Error getting top selling products:", error);
     console.error("Error stack:", error.stack);
     return []; // Return empty array on error
+  }
+};
+
+// analytics.controller.js - Add this function
+async function getProductSalesData(startDate, endDate) {
+  try {
+    const matchStage = {
+      $match: {
+        ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {})
+      }
+    };
+
+    const productSales = await Order.aggregate([
+      matchStage,
+      { $unwind: "$products" },
+      {
+        $group: {
+          _id: "$products.product",
+          productId: { $first: "$products.product" },
+          name: { $first: "$products.name" },
+          image: { $first: "$products.image" },
+          unitsSold: { $sum: "$products.quantity" },
+          totalRevenue: {
+            $sum: {
+              $multiply: ["$products.price", "$products.quantity"],
+            },
+          },
+          orderCount: { $sum: 1 },
+          // Get min and max price for reference
+          uniqueOrderIds: { $addToSet: "$_id" },
+          minPrice: { $min: "$products.price" },
+          maxPrice: { $max: "$products.price" },
+        },
+      },
+      {
+        $addFields: {
+          orderCount: { $size: "$uniqueOrderIds" },
+          averageUnitValue: {
+            $cond: {
+              if: { $gt: ["$unitsSold", 0] },
+              then: { $divide: ["$totalRevenue", "$unitsSold"] },
+              else: 0,
+            },
+          },
+        },
+      },
+      { $match: { unitsSold: { $gt: 0 } } },
+      { $sort: { unitsSold: -1 } },
+      {
+        $lookup: {
+          from: "products",
+          localField: "_id",
+          foreignField: "_id",
+          as: "productDetails",
+        },
+      },
+      {
+        $unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true },
+      },
+      {
+        $project: {
+          _id: 1,
+          productId: 1,
+          name: {
+            $ifNull: ["$productDetails.name", "$name"],
+          },
+          image: {
+            $ifNull: [
+              { $arrayElemAt: ["$productDetails.images", 0] },
+              "$image",
+              null,
+            ],
+          },
+          unitsSold: 1,
+          totalRevenue: 1,
+          averageUnitValue: 1,
+          orderCount: 1,
+          itemCount: 1,
+          minPrice: 1,
+          maxPrice: 1,
+          category: {
+            $ifNull: ["$productDetails.category", "Uncategorized"],
+          },
+        },
+      },
+    ]);
+
+    // Calculate totals for AUV calculation
+    const totals = productSales.reduce((acc, product) => {
+      acc.totalUnits += product.unitsSold;
+      acc.totalRevenue += product.totalRevenue;
+      return acc;
+    }, { totalUnits: 0, totalRevenue: 0 });
+
+    const overallAUV = totals.totalUnits > 0 
+      ? totals.totalRevenue / totals.totalUnits 
+      : 0;
+
+      const totalOrders = await Order.countDocuments({
+        ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {}),
+      });
+
+    return {
+      products: productSales.map(product => ({
+        ...product,
+        formattedRevenue: `₦${Math.round(product.totalRevenue).toLocaleString()}`,
+        formattedAUV: `₦${Math.round(product.averageUnitValue).toLocaleString()}`,
+        revenuePerUnit: Math.round(product.totalRevenue / product.unitsSold)
+      })),
+      summary: {
+        totalProducts: productSales.length,
+        totalUnits: totals.totalUnits,
+        totalRevenue: totals.totalRevenue,
+        overallAUV: Math.round(overallAUV),
+        totalOrders: totalOrders
+      }
+    };
+  } catch (error) {
+    console.error("Error getting product sales data:", error);
+    return { products: [], summary: { totalProducts: 0, totalUnits: 0, totalRevenue: 0, overallAUV: 0 } };
   }
 }
 
