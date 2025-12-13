@@ -75,9 +75,18 @@ export const requestRefund = async (req, res) => {
     const allowedStatuses = ["Delivered", "Partially Refunded"];
     if (!allowedStatuses.includes(order.status)) {
       return res.status(400).json({
-        message: `Refunds can only be requested for orders with status: ${allowedStatuses.join(
-          ", "
-        )}`,
+        message: `Refunds can only be requested for Delivered orders`,
+      });
+    }
+
+    const deliveredTime = new Date(order.deliveredAt || order.updatedAt);
+    const currentTime = new Date();
+    const hoursSinceDelivery = (currentTime - deliveredTime) / (1000 * 60 * 60);
+
+    if (hoursSinceDelivery > 48) {
+      return res.status(400).json({
+        success: false,
+        message: "Returns must be requested within 48 hours of delivery.",
       });
     }
 

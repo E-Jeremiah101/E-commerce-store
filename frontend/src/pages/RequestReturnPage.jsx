@@ -110,20 +110,21 @@ const RequestReturnPage = () => {
     >
       <ToastContainer />
 
-      <div className="mb-6">
-        <GoBackButton />
-      </div>
-
       <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+        <div className="mb-5 flex align-middle text-c">
+          <div className="mb-6">
+            <GoBackButton />
+          </div>
+          <div><h1 className="text-2xl font-bold text-gray-900 ">
             Request a Return
-          </h1>
-          <p className="text-gray-600">
-            Order #{order.orderNumber} • Placed on{" "}
-            {new Date(order.createdAt).toLocaleDateString()}
-          </p>
+          </h1></div>
+          
         </div>
+        <p className="text-gray-600 mb-5">
+          <span className="text-gray-900 font-medium">#{order.orderNumber}</span> 
+            • Placed on{" "}
+          {new Date(order.createdAt).toLocaleDateString()}
+        </p>
 
         <div className="bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-xl p-6 shadow-sm mb-8">
           <h2 className="text-lg font-semibold mb-4 text-gray-900">
@@ -339,3 +340,5 @@ const RequestReturnPage = () => {
 };
 
 export default RequestReturnPage;
+
+

@@ -59,7 +59,7 @@ const logUserAction = async (req, action, entityType, entityId, entityName, chan
 };
 export const getUserOrders = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const userId = req.user._id.toString();
 
     const orders = await Order.find({ user: userId })
       .populate("products.product", "name image price")
@@ -1189,6 +1189,29 @@ export const getOrderById = async (req, res) => {
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
+
+   if (!order.user) {
+     return res.status(404).json({
+       success: false,
+       message: "Order owner not found",
+     });
+   }
+
+   // Convert both IDs to strings for comparison
+   const orderUserId = order.user._id.toString();
+   const requestUserId = req.user._id.toString();
+
+   // Check ownership
+   if (orderUserId !== requestUserId) {
+     // Check if user is admin (allow admins to view any order)
+     if (req.user.role !== "admin") {
+       return res.status(403).json({
+         success: false,
+         message:
+           "Access denied. You do not have permission to view this order.",
+       });
+     }
+   }
     // Log order view by admin (if admin is viewing)
     if (req.user && req.user.role === "admin") {
       await logOrderAction(
