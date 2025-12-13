@@ -6,9 +6,9 @@ import { useUserStore } from "../stores/useUserStore.js";
 const Recovery = () => {
   const [searchMethod, setSearchMethod] = useState("transaction_ref");
   const [formData, setFormData] = useState({
-    transaction_ref: "ECOSTORE-1764257590757", // Pre-fill with the working reference
+    transaction_ref: "", // Pre-fill with the working reference
     flutterwave_ref: "",
-    customer_email: "enofejeremiah5@gmail.com",
+    customer_email: "",
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -95,17 +95,7 @@ ${
 
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className=" bg-white flex justify-center align-middle text-black py-5 ">
-          <h1 className="text-3xl font-bold">
-            Welcome👋 {user?.firstname || "Admin"}
-          </h1>
-        </div>
-      </motion.div>
+      
       <motion.div
         className="max-w-2xl mx-auto mt-19 p-6 bg-white  rounded-lg shadow-md"
         initial={{ opacity: 0, y: 20 }}
@@ -121,12 +111,10 @@ ${
           <h3 className="font-semibold text-blue-800 mb-2">Reference Guide:</h3>
           <div className="text-sm text-blue-700 ">
             <div className="mb-2">
-              <strong>Transaction Reference:</strong> ECOSTORE-1764257590757
-              (from customer receipt)
+              <strong>Transaction Reference:</strong> ECOSTORE-1764xxxx
             </div>
             <div>
-              <strong>Flutterwave Reference:</strong> JayyTech_xxx (from
-              Flutterwave dashboard)
+              <strong>Flutterwave Reference:</strong> JayyTech_xxx 
             </div>
           </div>
         </div>
@@ -145,7 +133,6 @@ ${
               <span>
                 <strong>Transaction Reference</strong>
                 <div className="text-xs text-gray-500">
-                  Use ECOSTORE-xxx from customer receipt
                 </div>
               </span>
             </label>
@@ -160,7 +147,6 @@ ${
               <span>
                 <strong>Flutterwave Reference</strong>
                 <div className="text-xs text-gray-500">
-                  Use JayyTech_xxx from Flutterwave dashboard
                 </div>
               </span>
             </label>
@@ -204,7 +190,6 @@ ${
                 placeholder="JayyTech_VTVIKF176425766668140070"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Found in Flutterwave dashboard under Transactions
               </p>
             </div>
           )}
