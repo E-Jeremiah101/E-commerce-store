@@ -86,9 +86,6 @@ function App() {
     );
   return (
     <>
-      {/*Background gradient */}
-
-      {/* {the app content} */}
 
       {location.pathname === "/" && <Navbar />}
 

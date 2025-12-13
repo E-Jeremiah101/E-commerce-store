@@ -116,8 +116,24 @@ const AdminOrdersPage = () => {
 
   if (loading)
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+      <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-br from-gray-50 to-white">
+        <div className="flex space-x-2 mb-6">
+          <div
+            className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
+            style={{ animationDelay: "0ms" }}
+          ></div>
+          <div
+            className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
+            style={{ animationDelay: "150ms" }}
+          ></div>
+          <div
+            className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
+            style={{ animationDelay: "300ms" }}
+          ></div>
+        </div>
+        <p className="text-gray-600 font-medium animate-pulse">
+          Please wait, Loading data...
+        </p>
       </div>
     );
 

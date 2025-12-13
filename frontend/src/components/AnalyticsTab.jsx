@@ -240,14 +240,23 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
 
   if (isLoading)
     return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+      <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-br from-gray-50 to-white">
+        <div className="flex space-x-3 mb-6">
+          <div className="h-5 w-5 bg-gray-700 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+          <div className="h-5 w-5 bg-gray-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+          <div className="h-5 w-5 bg-gray-500 rounded-full animate-bounce"></div>
+        </div>
+        <p className="text-gray-700 font-medium text-lg animate-pulse">
+          Please wait, Loading data
+        </p>
+        <p className="text-gray-500 text-sm mt-2">
+          Preparing your analytics dashboard...
+        </p>
       </div>
     );
 
   return (
     <>
-
 
       <motion.div
         className="max-w-7xl mx-auto px-4 text-gray-700"

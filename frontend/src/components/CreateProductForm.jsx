@@ -6,7 +6,6 @@ import ReactQuill from "react-quill-new";
 import "react-quill-new/dist/quill.snow.css";
 import toast from "react-hot-toast";
 import axios from "../lib/axios.js";
-import { useUserStore } from "../stores/useUserStore.js";
 
 const fallbackCategories = [
   "bottoms",
@@ -36,7 +35,6 @@ const CreateProductForm = () => {
   });
 
   const { createProduct, loading } = useProductStore();
-  const {user} = useUserStore()
 
   // Fetch categories from backend
   useEffect(() => {
@@ -250,272 +248,255 @@ const CreateProductForm = () => {
     "link",
   ];
 
-  return (
-    <>
-    <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className=" flex justify-center align-middle text-black py-5 ">
-              <h1 className="text-3xl font-bold">
-                Welcome👋 {user?.firstname || "Admin"}
-              </h1>
-            </div>
-          </motion.div>
-    <motion.div
-      className="bg-gray-800 shadow-lg rounded-lg p-8 mb-8 max-w-4xl mx-auto"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8 }}
-    >
-      <h2 className="text-2xl font-semibold mb-6 text-white tracking-wider">
-        Create a New Product
-      </h2>
+ return (
+   <div className="bg-gray-900 min-h-screen">
+     <div className="container mx-auto px-4 py-8 max-w-4xl">
+       <div className="bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+         <div className="p-6">
+           <h2 className="text-2xl font-bold text-white mb-6">
+             Create a New Product
+           </h2>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* PRODUCT NAME */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 tracking-wider">
-            Product Name
-          </label>
-          <input
-            type="text"
-            value={newProduct.name}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, name: e.target.value })
-            }
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:ring-2 focus:ring-gray-600"
-            required
-          />
-        </div>
+           <form onSubmit={handleSubmit} className="space-y-6">
+             {/* PRODUCT NAME */}
+             <div>
+               <label className="block text-sm font-medium text-gray-300 mb-2">
+                 Product Name
+               </label>
+               <input
+                 type="text"
+                 value={newProduct.name}
+                 onChange={(e) =>
+                   setNewProduct({ ...newProduct, name: e.target.value })
+                 }
+                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white"
+                 required
+               />
+             </div>
 
-        {/* DESCRIPTION */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 tracking-wider">
-            Description
-          </label>
-          <ReactQuill
-            modules={modules}
-            formats={formats}
-            value={newProduct.description}
-            onChange={handleDescriptionChange}
-            className="bg-gray-700 rounded-md"
-          />
-        </div>
+             {/* DESCRIPTION - Fixed Height */}
+             <div className="h-64">
+               <label className="block text-sm font-medium text-gray-300 mb-2">
+                 Description
+               </label>
+               <div className="h-48 bg-gray-700 rounded-lg overflow-hidden">
+                 <ReactQuill
+                   theme="snow"
+                   value={newProduct.description}
+                   onChange={handleDescriptionChange}
+                   modules={modules}
+                   formats={formats}
+                   className="h-full [&_.ql-container]:!min-h-[120px] [&_.ql-editor]:!min-h-[120px]"
+                 />
+               </div>
+             </div>
 
-        {/* PRICE */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 tracking-wider">
-            Price
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            value={newProduct.price}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, price: e.target.value })
-            }
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:ring-2 focus:ring-gray-600"
-            required
-          />
-        </div>
+             {/* PRICE */}
+             <div>
+               <label className="block text-sm font-medium text-gray-300 mb-2">
+                 Price
+               </label>
+               <input
+                 type="number"
+                 step="0.01"
+                 value={newProduct.price}
+                 onChange={(e) =>
+                   setNewProduct({ ...newProduct, price: e.target.value })
+                 }
+                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white"
+                 required
+               />
+             </div>
 
-        {/* SIZES */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 tracking-wider">
-            Sizes (comma separated)
-          </label>
-          <input
-            type="text"
-            value={newProduct.sizes.join(", ")}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                sizes: e.target.value.split(",").map((s) => s.trim()),
-              })
-            }
-            placeholder="e.g. S, M, L, XL"
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
-          />
-        </div>
+             {/* SIZES & COLORS */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div>
+                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                   Sizes (comma separated)
+                 </label>
+                 <input
+                   type="text"
+                   value={newProduct.sizes.join(", ")}
+                   onChange={(e) =>
+                     setNewProduct({
+                       ...newProduct,
+                       sizes: e.target.value.split(",").map((s) => s.trim()),
+                     })
+                   }
+                   placeholder="e.g. S, M, L, XL"
+                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white"
+                 />
+               </div>
 
-        {/* COLORS */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 tracking-wider">
-            Colors (comma separated)
-          </label>
-          <input
-            type="text"
-            value={newProduct.colors.join(", ")}
-            onChange={(e) =>
-              setNewProduct({
-                ...newProduct,
-                colors: e.target.value.split(",").map((c) => c.trim()),
-              })
-            }
-            placeholder="e.g. Red, Blue, Green"
-            className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white"
-          />
-        </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                   Colors (comma separated)
+                 </label>
+                 <input
+                   type="text"
+                   value={newProduct.colors.join(", ")}
+                   onChange={(e) =>
+                     setNewProduct({
+                       ...newProduct,
+                       colors: e.target.value.split(",").map((c) => c.trim()),
+                     })
+                   }
+                   placeholder="e.g. Red, Blue, Green"
+                   className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white"
+                 />
+               </div>
+             </div>
 
-        {/* VARIANT MANAGEMENT */}
-        <div className="border border-gray-600 rounded-md p-4">
-          <div className="flex justify-between items-center mb-4">
-            <label className="block text-sm font-medium text-gray-300 tracking-wider">
-              Product Variants & Inventory
-            </label>
-            <button
-              type="button"
-              onClick={generateVariants}
-              className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-sm"
-            >
-              Generate Variants
-            </button>
-          </div>
+             {/* VARIANT MANAGEMENT */}
+             <div className="border border-gray-700 rounded-lg p-4">
+               <div className="flex justify-between items-center mb-4">
+                 <label className="block text-sm font-medium text-gray-300">
+                   Product Variants & Inventory
+                 </label>
+                 <button
+                   type="button"
+                   onClick={generateVariants}
+                   className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm"
+                 >
+                   Generate Variants
+                 </button>
+               </div>
 
-          {newProduct.variants.length > 0 ? (
-            <div className="space-y-3 max-h-60 overflow-y-auto">
-              {newProduct.variants.map((variant, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-3 bg-gray-700 p-2 rounded"
-                >
-                  <div className="flex-1">
-                    <span className="text-white text-sm">
-                      {getVariantDisplayName(variant)}
-                    </span>
-                    <span className="text-gray-400 text-xs block">
-                      {variant.sku}
-                    </span>
-                  </div>
-                  <input
-                    type="number"
-                    min="0"
-                    value={variant.countInStock}
-                    onChange={(e) => updateVariantStock(index, e.target.value)}
-                    placeholder="Stock"
-                    className="w-20 bg-gray-600 border border-gray-500 rounded px-2 py-1 text-white text-sm"
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-400 text-sm">
-              Add sizes and/or colors, then click "Generate Variants" to set up
-              inventory per variant.
-            </p>
-          )}
+               {newProduct.variants.length > 0 ? (
+                 <div className="space-y-3 max-h-48 overflow-y-auto">
+                   {newProduct.variants.map((variant, index) => (
+                     <div
+                       key={index}
+                       className="flex items-center justify-between bg-gray-700 p-3 rounded-lg"
+                     >
+                       <div>
+                         <span className="text-white font-medium">
+                           {getVariantDisplayName(variant)}
+                         </span>
+                         <span className="text-gray-400 text-sm block">
+                           {variant.sku}
+                         </span>
+                       </div>
+                       <input
+                         type="number"
+                         min="0"
+                         value={variant.countInStock}
+                         onChange={(e) =>
+                           updateVariantStock(index, e.target.value)
+                         }
+                         className="w-20 bg-gray-600 border border-gray-500 rounded px-3 py-2 text-white"
+                       />
+                     </div>
+                   ))}
+                 </div>
+               ) : (
+                 <p className="text-gray-400 text-sm">
+                   Add sizes and/or colors, then click "Generate Variants" to
+                   set up inventory.
+                 </p>
+               )}
+             </div>
 
-          {/* TOTAL STOCK DISPLAY */}
-          {newProduct.variants.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-600">
-              <p className="text-green-400 text-sm">
-                Total Stock: {newProduct.countInStock} units
-              </p>
-            </div>
-          )}
-        </div>
+             {/* CATEGORY & IMAGES */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div>
+                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                   Category
+                 </label>
+                 <div className="flex gap-2">
+                   <select
+                     value={newProduct.category}
+                     onChange={(e) =>
+                       setNewProduct({
+                         ...newProduct,
+                         category: e.target.value,
+                       })
+                     }
+                     className="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white"
+                     required
+                   >
+                     <option value="">Select category</option>
+                     {categories.map((c) => (
+                       <option key={c} value={c}>
+                         {c}
+                       </option>
+                     ))}
+                   </select>
+                   <button
+                     type="button"
+                     onClick={handleAddCategory}
+                     disabled={addingCategory}
+                     className="bg-emerald-700 hover:bg-emerald-600 px-4 py-3 rounded-lg text-white"
+                   >
+                     {addingCategory ? (
+                       <Loader className="h-5 w-5 animate-spin" />
+                     ) : (
+                       <Plus className="h-5 w-5" />
+                     )}
+                   </button>
+                 </div>
+               </div>
 
-        {/* CATEGORY SELECT + CREATE NEW */}
-        <div>
-          <label className="block text-sm font-medium text-gray-300 tracking-wider">
-            Category
-          </label>
-          <div className="flex items-center gap-2">
-            <select
-              value={newProduct.category}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, category: e.target.value })
-              }
-              className="mt-1 flex-1 bg-gray-700 border border-gray-600 rounded-md py-2 px-3 text-white focus:ring-2 focus:ring-gray-600"
-              required
-            >
-              <option value="">Select a category</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+               <div>
+                 <input
+                   type="file"
+                   id="images"
+                   onChange={handleImageChange}
+                   className="hidden"
+                   accept="image/*"
+                   multiple
+                   required
+                 />
+                 <label
+                   htmlFor="images"
+                   className="cursor-pointer bg-gray-700 hover:bg-gray-600 border border-gray-600 rounded-lg px-4 py-3 text-white flex items-center justify-center h-full"
+                 >
+                   <Upload className="h-5 w-5 mr-2" />
+                   Upload Images
+                 </label>
+               </div>
+             </div>
 
-            <div className="flex items-center gap-1">
-              <input
-                type="text"
-                placeholder="New category"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                className="bg-gray-700 border border-gray-600 rounded-md py-2 px-2 text-white w-32 focus:ring-2 focus:ring-gray-600"
-              />
-              <button
-                type="button"
-                onClick={handleAddCategory}
-                disabled={addingCategory}
-                className="bg-emerald-700 hover:bg-emerald-600 p-2 rounded-md text-white disabled:opacity-50"
-              >
-                {addingCategory ? (
-                  <Loader className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+             {/* IMAGE PREVIEW */}
+             {newProduct.images.length > 0 && (
+               <div className="flex flex-wrap gap-2">
+                 {newProduct.images.map((img, index) => (
+                   <img
+                     key={index}
+                     src={img}
+                     alt={`preview-${index}`}
+                     className="w-20 h-20 object-cover rounded-lg border border-gray-600"
+                   />
+                 ))}
+               </div>
+             )}
 
-        {/* IMAGES */}
-        <div>
-          <input
-            type="file"
-            id="images"
-            onChange={handleImageChange}
-            className="sr-only"
-            accept="image/*"
-            multiple
-            required
-          />
-          <label
-            htmlFor="images"
-            className="cursor-pointer bg-gray-700 border border-gray-600 hover:bg-gray-600 rounded-md shadow-sm py-2 px-3 text-sm text-white"
-          >
-            <Upload className="h-5 w-5 inline-block mr-2" />
-            Upload Images
-          </label>
-        </div>
-
-        {newProduct.images.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {newProduct.images.map((img, index) => (
-              <img
-                key={index}
-                src={img}
-                alt={`preview-${index}`}
-                className="w-20 h-20 object-cover rounded border border-gray-600"
-              />
-            ))}
-          </div>
-        )}
-
-        {/* SUBMIT */}
-        <button
-          type="submit"
-          className="w-full flex justify-center py-2 px-4 rounded-md text-sm font-medium text-white bg-yellow-700 hover:bg-yellow-600 disabled:opacity-50"
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <Loader className="mr-2 h-5 w-5 animate-spin" /> Creating...
-            </>
-          ) : (
-            <>
-              <PlusCircle className="mr-2 h-5 w-5" /> Create Product
-            </>
-          )}
-        </button>
-      </form>
-    </motion.div>
-    </>
-  );
+             {/* SUBMIT BUTTON - NO EXTRA SPACE */}
+             <div>
+               <button
+                 type="submit"
+                 disabled={loading}
+                 className="w-full bg-yellow-700 hover:bg-yellow-600 text-white font-medium py-4 rounded-lg disabled:opacity-50"
+               >
+                 {loading ? (
+                   <span className="flex items-center justify-center">
+                     <Loader className="h-5 w-5 animate-spin mr-2" />
+                     Creating Product...
+                   </span>
+                 ) : (
+                   <span className="flex items-center justify-center">
+                     <PlusCircle className="h-5 w-5 mr-2" />
+                     Create Product
+                   </span>
+                 )}
+               </button>
+             </div>
+           </form>
+         </div>
+       </div>
+     </div>
+   </div>
+ );
 };
 
 export default CreateProductForm;
