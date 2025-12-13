@@ -64,7 +64,7 @@ Order Number: ${error.response.data.orderDetails.orderNumber}
 Status: ${error.response.data.orderDetails.status}
 Customer: ${error.response.data.orderDetails.customer}
 Email: ${error.response.data.orderDetails.customerEmail}
-Amount: ${error.response.data.orderDetails.totalAmount}
+Amount: ₦${error.response.data.orderDetails.totalAmount}
 
 This order already exists in the system.
           `,

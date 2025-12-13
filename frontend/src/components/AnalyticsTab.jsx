@@ -247,17 +247,7 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
 
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className="flex justify-center items-center text-black py-5">
-          <h1 className="text-3xl font-bold">
-            Welcome👋 {user?.firstname || "Admin"}
-          </h1>
-        </div>
-      </motion.div>
+
 
       <motion.div
         className="max-w-7xl mx-auto px-4 text-gray-700"

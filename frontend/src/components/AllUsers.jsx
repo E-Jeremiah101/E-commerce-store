@@ -53,17 +53,6 @@ const AllUsers = () => {
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className=" bg-white flex justify-center align-middle text-black py-5 ">
-          <h1 className="text-3xl font-bold">
-            Welcome👋 {user?.firstname || "Admin"}
-          </h1>
-        </div>
-      </motion.div>
-      <motion.div
         className="py-6 px-4 bg-white"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

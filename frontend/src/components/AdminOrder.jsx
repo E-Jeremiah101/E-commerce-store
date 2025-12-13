@@ -123,17 +123,7 @@ const AdminOrdersPage = () => {
 
   return (
     <>
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className="flex justify-center align-middle text-black py-5">
-          <h1 className="text-3xl font-bold">
-            Welcome👋 {user?.firstname || "Admin"}
-          </h1>
-        </div>
-      </motion.div>
+
 
       <motion.div
         className="px-4 lg:px-6"
@@ -142,7 +132,7 @@ const AdminOrdersPage = () => {
         transition={{ duration: 0.8 }}
       >
         {/* Search & Sort */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-15 bg-white rounded-lg shadow-md p-4 ">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-5 bg-white rounded-lg shadow-md p-4 ">
           <input
             type="text"
             placeholder="Search by ORD/EC0STORE/Id"

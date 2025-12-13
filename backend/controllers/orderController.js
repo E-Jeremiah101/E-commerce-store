@@ -674,7 +674,7 @@ export const supportRecoverOrder = async (req, res) => {
             Flutterwave Ref: ${payment.flw_ref}
             Transaction Ref: ${payment.tx_ref}
             Transaction ID: ${payment.id}
-            Amount: ${payment.currency} ${payment.amount}
+            Amount: ₦${payment.currency} ${payment.amount}
             Customer: ${payment.customer?.name || "N/A"}
             Products: ${recoveredProducts.length} items
             Recovered on: ${new Date().toLocaleString()}`,
