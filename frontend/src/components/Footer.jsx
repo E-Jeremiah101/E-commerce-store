@@ -8,7 +8,16 @@ import {
 } from "react-icons/fa6";
 import { Link } from "react-router-dom";
 import ScrollReveal from "./ScrollReveal.jsx";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 const Footer = () => {
+  const { settings } = useStoreSettings();
+    if (!settings) {
+      return (
+        <header className="w-full bg-gray-100 py-4 text-center text-gray-500">
+          Loading...
+        </header>
+      );
+    }
   return (
     <ScrollReveal direction="up" delay={0.8} duration={1}>
       <div className=" text-black ">
@@ -56,12 +65,16 @@ const Footer = () => {
           </div>
         </div>
         <Link to={"/"} className="flex justify-center items-center mb-3">
-          <img
-            src="/logo-buz.jpg"
-            alt="Logo"
-            className="h-10 w-auto rounded-2xl"
-          />
-          <span className="text-black px-2 font-bold text-xl">Eco~Store</span>
+          {settings.logo && (
+            <img
+              src={settings.logo}
+              alt={settings.storeName}
+              className="h-10 w-auto"
+            />
+          )}
+          <span className="text-black px-2 font-bold text-xl">
+            {settings.storeName}
+          </span>
         </Link>
         <hr className="border-1 my-1 border-gray-400" />
         <div className="flex justify-center items-center gap-2 text-sm font-light">

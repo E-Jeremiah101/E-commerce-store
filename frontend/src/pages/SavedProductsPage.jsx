@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Heart, ShoppingCart } from "lucide-react";
+import { Heart, Bookmark } from "lucide-react";
 import { useUserStore } from "../stores/useUserStore";
 import toast from "react-hot-toast";
 import GoBackButton from "../components/GoBackButton";
@@ -125,10 +125,9 @@ const SavedProductsPage = () => {
                     <div className="text-right">
                       <button
                         onClick={() => removeSavedProduct(product._id)}
-                        className="text-red-500 px-4 py-2 rounded text-sm hover:bg-red-500 
-                        hover:text-white transition"
+                        className="bg-bla px-4 py-2 rounded text-sm"
                       >
-                        Remove
+                        <Bookmark className=" fill-current"/>
                       </button>
                     </div>
                   </div>

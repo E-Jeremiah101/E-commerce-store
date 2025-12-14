@@ -6,6 +6,10 @@ import Product from "../models/product.model.js";
 import { flw } from "../lib/flutterwave.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
+import storeSettings from "../models/storeSettings.model.js"
+export const getStoreSettingsForEmail = async () => {
+  return await storeSettings.findOne();
+};
 
 const logOrderAction = async (
   req,
@@ -903,6 +907,7 @@ export const getAllOrders = async (req, res) => {
 
 export const updateOrderStatus = async (req, res) => {
   try {
+    const settings = await storeSettings.findOne();
     const { orderId } = req.params;
     const { status } = req.body;
 
@@ -947,7 +952,7 @@ export const updateOrderStatus = async (req, res) => {
       <html>
         <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
           <div style="max-width: 600px; margin: auto; background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #eee;">
-            <h2 style="color: #2c3e50; text-align: center;">📢 Order Status Update</h2>
+            <h2 style="color: #2c3e50; text-align: center;"> Order Status Update</h2>
             <p>Hi <strong>${order.user?.firstname || "Customer"}</strong>,</p>
             <p>Your order <strong>${
               order.orderNumber
@@ -972,17 +977,17 @@ export const updateOrderStatus = async (req, res) => {
               status === "Delivered"
                 ? `<p>Your package has been delivered. We hope you enjoy your purchase!</p>`
                 : status === "Shipped"
-                ? `<p>🚚 Your order is on the way! You’ll receive it soon.</p>`
+                ? `<p>Your order is on the way! You’ll receive it soon.</p>`
                 : status === "Processing"
                 ? `<p>We’re currently preparing your order.</p>`
                 : status === "Cancelled"
-                ? `<p>❌ Unfortunately, your order has been cancelled. Please contact support if this wasn’t expected.</p>`
+                ? `<p>Unfortunately, your order has been cancelled. Please contact support if this wasn’t expected.</p>`
                 : ""
             }
 
             <p style="margin-top: 30px; font-size: 14px; color: #555;">
               Best regards, <br>
-              <strong>The Eco-Store Team 🌱</strong>
+              <strong>The ${settings?.storeName} Team </strong>
             </p>
           </div>
         </body>

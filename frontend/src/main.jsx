@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import { BrowserRouter } from 'react-router-dom';
 import React from "react";
+import { StoreSettingsProvider } from './components/StoreSettingsContext.jsx';
 
 
 class ErrorBoundary extends React.Component {
@@ -34,9 +35,10 @@ createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-      <App />
-    </BrowserRouter>
+        <StoreSettingsProvider>
+          <App />
+        </StoreSettingsProvider>
+      </BrowserRouter>
     </ErrorBoundary>
-    
   </StrictMode>
 );

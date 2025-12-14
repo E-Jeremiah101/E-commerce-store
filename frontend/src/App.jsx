@@ -26,6 +26,7 @@ import useTrackVisitors from "./stores/useTrackVisitors.js";
 import ViewOrderPage from "./pages/ViewOrderPage.jsx";
 import SavedProductsPage from "./pages/SavedProductsPage.jsx";
 import RequestReturnPage from "./pages/RequestReturnPage.jsx";
+import StoreSettings from "./components/StoreSettings.jsx";
 
 
 function App() {
@@ -86,7 +87,6 @@ function App() {
     );
   return (
     <>
-
       {location.pathname === "/" && <Navbar />}
 
       <Routes>
@@ -117,9 +117,10 @@ function App() {
           element={user ? <OrderHistoryPage /> : <Navigate to="/login" />}
         />
         <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
-
         <Route path="/vieworders/:id" element={<ViewOrderPage />} />
         <Route path="/vieworders/:id/return" element={<RequestReturnPage />} />
+        <Route path="/store-settings" element={<StoreSettings />} />
+
         <Route
           path="Personal-info"
           element={user ? <PersonalInfoPage /> : <Navigate to="/login" />}
@@ -134,12 +135,10 @@ function App() {
         />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
-
         <Route
           path="/saved"
           element={user ? <SavedProductsPage /> : <Navigate to="/login" />}
         />
-
         <Route path="/search" element={<SearchResultsPage />} />
       </Routes>
 

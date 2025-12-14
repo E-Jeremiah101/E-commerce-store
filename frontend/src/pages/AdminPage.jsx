@@ -9,6 +9,7 @@ import {
   User,
   FileText,
   Warehouse,
+  Settings,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import AnalyticsTab from "../components/AnalyticsTab.jsx";
@@ -25,7 +26,8 @@ import Recovery from "../components/Recovery.jsx";
 import AuditLogsTab from "../components/AuditLogsTab.jsx";
 import Transactions from "../components/Transactions.jsx";
 import toast from "react-hot-toast";
-
+import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
+import { Link } from "react-router-dom";
 
 // Define constants at the top
 const STORAGE_KEY = "admin_active_tab";
@@ -55,6 +57,9 @@ const clearCache = async () => {
 };
 
 const AdminPage = () => {
+
+  const { settings } = useStoreSettings();
+  if (!settings) return null;
   // Load active tab from localStorage on initial render
   const [activeTab, setActiveTab] = useState(() => {
     try {
@@ -117,6 +122,10 @@ const AdminPage = () => {
 
         {/* Clear Cache Button in Sidebar */}
         <div className="mt-auto px-3 py-4">
+          <Link to={"/store-settings"}>
+            <Settings />
+          </Link>
+
           <button
             onClick={clearCache}
             className="w-full flex items-center justify-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
@@ -130,6 +139,11 @@ const AdminPage = () => {
       <div className="md:hidden bg-gray-800 py-3 px-2">
         <div className="flex justify-between items-center px-2 mb-3">
           <h2 className="text-white text-lg font-semibold">Admin Dashboard</h2>
+
+          <Link to={"/store-settings"}>
+            <Settings />
+          </Link>
+
           <button
             onClick={clearCache}
             className="px-3 py-1 bg-red-600 text-white text-xs rounded"

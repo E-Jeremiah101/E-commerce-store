@@ -21,6 +21,10 @@ import { sendEmail } from "../lib/mailer.js";
 import { flw } from "../lib/flutterwave.js";
 import redis from "../lib/redis.js";
 import { calculateDeliveryFee } from "../../frontend/src/utils/deliveryConfig.js";
+import storeSettings from "../models/storeSettings.model.js"
+export const getStoreSettingsForEmail = async () => {
+  return await storeSettings.findOne();
+};
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1780,7 +1784,6 @@ export const checkoutSuccess = async (req, res) => {
 export const sendDetailedOrderEmail = async ({
   to,
   order,
-  flutterwaveData,
 }) => {
   if (!to || !order) return;
 
@@ -1802,7 +1805,7 @@ export const sendDetailedOrderEmail = async ({
   const tx_ref = order.flutterwaveRef || "N/A";
   const transaction_id = order.flutterwaveTransactionId || "N/A";
   const payment_type = paymentMethod.method || "N/A";
-  const card = paymentMethod.card || {};
+  const settings = await storeSettings.findOne();
 
   // Prepare items array
   const items = order.products || order.items || [];
@@ -1841,25 +1844,17 @@ export const sendDetailedOrderEmail = async ({
 
   const totalAmount = order.totalAmount || order.totalPrice || order.total || 0;
   const subtotal = order.subtotal || order.subTotal || 0;
-  const discount = order.discount || 0;
+  const discount = order.discount || 0
   
-  const cardBrand = card.type || "Card";
-
-  const cardInfo = card.last4
-    ? `
-    <div style="margin-top:10px;font-size:14px;color:#333;">
-      <strong>Payment Method:</strong> ${cardBrand} <br/>
-    </div>`
-    : "";
 
   // HTML email (your existing email template with paymentMethod adjustments)
   const html = `
     <div style="font-family: Arial, sans-serif; background-color: #f6f8fa; padding: 20px;">
       <div style="max-width: 700px; margin: auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.06);">
         <div style="background: #10b981; padding: 22px; text-align: center; color: #fff;">
-          <img src="${
-            process.env.STORE_LOGO || ""
-          }" alt="Store Logo" style="max-height:50px; display:block; margin: 0 auto 8px;" />
+          <img src="${settings?.logo}" alt="${
+    settings?.storeName
+  }" style="max-height:50px; display:block; margin: 0 auto 8px;" />
           <h1 style="margin:0; font-size:20px;">Order Confirmation</h1>
           <div style="margin-top:6px; font-size:15px;">${
             order.orderNumber || "N/A"
@@ -1870,7 +1865,7 @@ export const sendDetailedOrderEmail = async ({
           <p style="margin:0 0 8px;">Hi <strong>${customerName}</strong>,</p>
           <p style="margin:0 0 16px;">Thank you for your order! We've received your payment and are now processing your purchase. Below are your order details.</p>
 
-          <h3 style="margin:18px 0 8px;">🧾 Order Summary</h3>
+          <h3 style="margin:18px 0 8px;"> Order Summary</h3>
           <table style="width:100%; border-collapse: collapse; margin-top:8px;">
             <thead>
               <tr style="background:#f7faf7;">
@@ -1895,11 +1890,13 @@ export const sendDetailedOrderEmail = async ({
                       discount > 0
                         ? `
                     <p>
-                      <strong>Coupon Discount:</strong> -₦${Number(discount).toLocaleString()}
+                      <strong>Coupon Discount:</strong> -₦${Number(
+                        discount
+                      ).toLocaleString()}
                     </p>
-          ` 
+          `
                         : ""
-                    }}<br>
+                    }<br>
             <strong>Delivery Fee:</strong> ₦${Number(
               order.deliveryFee
             ).toLocaleString()}<br>
@@ -1916,7 +1913,7 @@ export const sendDetailedOrderEmail = async ({
             <strong>Email:</strong> ${to}
           </p>
 
-          <h3 style="margin:18px 0 8px;">💳 Payment Details</h3>
+          <h3 style="margin:18px 0 8px;"> Payment Details</h3>
           <p style="margin:0 0 6px;">
             <strong>Payment Status:</strong> ${
               order.paymentStatus || "Confirmed"
@@ -1926,7 +1923,6 @@ export const sendDetailedOrderEmail = async ({
             <strong>Transaction ID:</strong> ${transaction_id}
           </p>
 
-          ${cardInfo}
 
           <p style="margin-top:20px; color:#555;">We'll send another email once your order ships.</p>
 
@@ -1934,12 +1930,14 @@ export const sendDetailedOrderEmail = async ({
         </div>
 
         <div style="background: #1e293b; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
-          <p style="margin: 0 0 10px 0;"><p style="margin-top:18px;">Thanks for choosing <strong>Eco~Store</strong> 🌱</p>
+          <p style="margin: 0 0 10px 0;"><p style="margin-top:18px;">Thanks for choosing <strong> ${
+            settings?.storeName
+          }</strong> </p>
           <p style="margin: 0;">Need help? Contact us at <a href="mailto:${
-            process.env.SUPPORT_EMAIL || "support@ecostore.example"
+            settings?.supportEmail
           }" 
              style="color: #10b981; text-decoration: none;">${
-               process.env.SUPPORT_EMAIL || "support@ecostore.example"
+               settings?.supportEmail
              }</a></p>
         </div>
       </div>
@@ -1967,13 +1965,15 @@ export const sendDetailedOrderEmail = async ({
         ).toLocaleString()}`
     ),
     ``,
-    `Thanks for shopping with Eco~Store!`,
+    `Thanks for shopping with  ${settings?.storeName}!`,
   ].join("\n");
 
   // Send email
   await sendEmail({
     to,
-    subject: `EcoStore — Order Confirmation #${order.orderNumber || "N/A"}`,
+    subject: ` ${settings?.storeName} — Order Confirmation #${
+      order.orderNumber || "N/A"
+    }`,
     html,
     text,
   });
@@ -1987,6 +1987,7 @@ export const sendCouponEmail = async ({
   orderCount = 1,
 }) => {
   if (!to || !coupon) return;
+  const settings = await storeSettings.findOne();
 
   let subject = "";
   let title = "";
@@ -1996,8 +1997,8 @@ export const sendCouponEmail = async ({
   // Different email content based on coupon type
   switch (couponType) {
     case "welcome_coupon":
-      subject = `🎉 Welcome to EcoStore! Here's Your ${couponValue} Gift`;
-      title = "Welcome to the EcoStore Family!";
+      subject = ` Welcome to ${settings.storeName}! Here's Your ${couponValue} Gift`;
+      title = `Welcome to the  ${settings.storeName} Family!`;
       message = `
         <p>Thank you for joining us! To welcome you to our eco-friendly community, 
         we're giving you a special discount on your next purchase.</p>
@@ -2010,14 +2011,14 @@ export const sendCouponEmail = async ({
       title = "You're Amazing! Here's a Thank You Gift";
       message = `
         <p>Wow! You've already placed ${orderCount} orders with us. We're truly grateful 
-        for your loyalty and trust in EcoStore.</p>
+        for your loyalty and trust in ${settings.storeName}.</p>
         <p>As a token of our appreciation, please enjoy this special discount on your next eco-friendly purchase.</p>
       `;
       break;
 
     case "vip_coupon":
       subject = `🏆 VIP Treatment! ${couponValue} Exclusive Reward`;
-      title = "You're Now an EcoStore VIP!";
+      title = `You're Now an ${settings.storeName} VIP!`;
       message = `
         <p>Congratulations! With ${orderCount} orders, you've officially reached VIP status 
         in our eco-friendly community.</p>
@@ -2038,10 +2039,10 @@ export const sendCouponEmail = async ({
       break;
 
     default:
-      subject = `🎁 Special ${couponValue} Gift from EcoStore`;
+      subject = `🎁 Special ${couponValue} Gift from ${settings.storeName}`;
       title = "Here's a Special Gift For You!";
       message = `
-        <p>Thank you for being a valued EcoStore customer! We appreciate your support 
+        <p>Thank you for being a valued ${settings.storeName} customer! We appreciate your support 
         in making sustainable choices.</p>
         <p>Enjoy this discount on your next purchase of eco-friendly products.</p>
       `;
@@ -2052,7 +2053,7 @@ export const sendCouponEmail = async ({
       <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
         <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; color: #fff;">
           <img src="${
-            process.env.STORE_LOGO || ""
+            settings?.logo
           }" alt="EcoStore Logo" style="max-height: 50px; display:block; margin: 0 auto 15px;" />
           <h1 style="margin:0; font-size: 28px; font-weight: bold;">${title}</h1>
           <div style="margin-top: 10px; font-size: 18px; opacity: 0.9;">Your Exclusive Discount Awaits!</div>
@@ -2096,7 +2097,7 @@ export const sendCouponEmail = async ({
           </p>
 
           <div style="text-align: center; margin-top: 30px;">
-            <a href="${process.env.CLIENT_URL || "https://your-ecostore.com"}" 
+            <a href="${process.env.CLIENT_URL}" 
                style="background: #10b981; color: white; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
               🛍️ Start Shopping Now
             </a>
@@ -2104,12 +2105,14 @@ export const sendCouponEmail = async ({
         </div>
 
         <div style="background: #1e293b; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
-          <p style="margin: 0 0 10px 0;">Thank you for choosing sustainable shopping with Eco~Store 🌱</p>
+          <p style="margin: 0 0 10px 0;">Thank you for choosing sustainable shopping with ${
+            settings.storeName
+          } </p>
           <p style="margin: 0;">Need help? Contact us at <a href="mailto:${
-            process.env.SUPPORT_EMAIL || "support@ecostore.example"
+            settings.supportEmail
           }" 
              style="color: #10b981; text-decoration: none;">${
-               process.env.SUPPORT_EMAIL || "support@ecostore.example"
+               settings.supportEmail
              }</a></p>
         </div>
       </div>
@@ -2132,11 +2135,11 @@ How to Use:
 3. Enter code ${coupon.code} in the coupon field
 4. Enjoy your ${coupon.discountPercentage}% discount instantly!
 
-Shop now: ${process.env.CLIENT_URL || "https://your-ecostore.com"}
+Shop now: ${process.env.CLIENT_URL}
 
 This coupon is exclusively for you and cannot be transferred.
 
-Thank you for choosing sustainable shopping with EcoStore 🌱
+Thank you for choosing sustainable shopping with  ${settings.storeName} 
   `.trim();
 
   await sendEmail({

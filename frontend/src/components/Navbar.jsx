@@ -19,6 +19,7 @@ import { useCartStore } from "../stores/useCartStore.js";
 import SearchBar from "./SearchBar.jsx";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import UserBadge from "./UserBadge.jsx";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
 const Navbar = () => {
   const { user, logout } = useUserStore();
@@ -30,7 +31,7 @@ const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const sidebarRef = useRef(null);
-
+const { settings } = useStoreSettings();
     useEffect(() => {
       const handleClickOutside = (event) => {
         if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
@@ -60,6 +61,7 @@ const Navbar = () => {
     setIsSearchOpen(false); // close search if menu opens
   };
 
+
   return (
     <header className="w-full  bg-gradient-to-br from-white via-gray-50 to-gray-200 bg-opacity-90 backdrop-blur-md shadow-lg  fixed lg:static text-black top-0 left-0 z-40 transition-all duration-300 ">
       {/* Mobile View */}
@@ -68,12 +70,14 @@ const Navbar = () => {
         <div className="container mx-auto px-4 py-3 flex items-center justify-between ">
           {/* Left: Logo */}
           <Link to={"/"} className="flex sm:hidden items-center gap-2">
-            <img
-              src="/logo-buz.jpg"
-              alt="Logo"
-              className="h-10 w-auto rounded-2xl"
-            />
-            <span className="font-bold text-xl">Eco~Store</span>
+            {settings?.logo && (
+              <img
+                src={settings?.logo}
+                alt={settings?.storeName}
+                className="h-10 w-auto"
+              />
+            )}
+            <span className="font-bold text-xl">{settings?.storeName}</span>
           </Link>
 
           {/* Right: Actions */}
@@ -142,12 +146,7 @@ const Navbar = () => {
               className="md:hidden   bg-gradient-to-br from-white via-gray-100 to-gray-300 px-4 py-3 space-y-9 text-black  text-lg overflow-y-auto h-screen absolute right-15 top-0 left-0 no-scroll "
               ref={sidebarRef}
             >
-              {/* <button
-                onClick={handleMenuToggle}
-                className="md:hidden text-gray-800 hover:text-gray-400"
-              >
-                {isOpen ? <X size={24} /> : <Menu size={28} />}
-              </button> */}
+           
 
               {user && (
                 <div className="flex items-center justify-between py-3  ">
@@ -351,8 +350,12 @@ const Navbar = () => {
           <div className="flex justify-between items-center">
             {/* Left: Logo */}
             <Link to={"/"} className="flex items-center gap-2">
-              <img src="/logo-buz.jpg" alt="Logo" className="h-10 w-auto" />
-              <span className=" font-bold text-xl">ECO~STORE</span>
+              <img
+                src={settings?.logo}
+                alt={settings?.storeName}
+                className="h-10 w-auto"
+              />
+              <span className=" font-bold text-xl">{settings?.storeName}</span>
             </Link>
 
             <nav className=" hidden md:flex items-center gap-6  tracking-widest">
@@ -374,7 +377,7 @@ const Navbar = () => {
                 onClick={() => setIsOpen(false)}
                 className="flex items-center gap-5 tracking-widest"
               >
-                 Wishlist
+                Wishlist
               </Link>
               {isAdmin && (
                 <Link

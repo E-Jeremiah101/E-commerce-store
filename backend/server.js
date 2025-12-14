@@ -23,7 +23,8 @@ import Product from "./models/product.model.js";
 import savedProductRoutes from "./routes/savedProduct.routes.js"; 
 import inventoryRoutes from "./routes/inventory.routes.js";
 import auditRoutes from "./routes/auditLog.routes.js";
-import adminTransactionRoutes from "./routes/admin.transaction.route.js"
+import adminTransactionRoutes from "./routes/admin.transaction.route.js";
+import storeSettingsRoutes from "./routes/storeSettings.route.js"
 
 dotenv.config();
 const app = express();
@@ -100,6 +101,8 @@ app.use("/api/admin", userRoutes);
 
 //reviewRoute
 app.use("/api/reviews", reviewRoutes);
+
+app.use("/api/store-settings", storeSettingsRoutes);
 
 //VisitorRoute
 app.use("/api/visitors", visitorRoutes);
