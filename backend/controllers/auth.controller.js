@@ -6,6 +6,7 @@ import {sendEmail} from "../lib/mailer.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
 import dotenv from "dotenv";
+import storeSettings from "../models/storeSettings.model.js"
 dotenv.config();
 
 const generateTokens = (userId) => {
@@ -137,6 +138,7 @@ export const signup = async (req, res) => {
       await storeRefreshToken(user._id, refreshToken);
 
       setCookies(res, accessToken, refreshToken);
+      const settings = await storeSettings.findOne();
 
       await logAuthAction(
         req,
@@ -157,8 +159,8 @@ export const signup = async (req, res) => {
          try {
            await sendEmail({
              to: user.email,
-             subject: `Welcome to Eco-Store, ${user.firstname}! 🌿`,
-             text: `Welcome ${user.firstname}! Thank you for joining Eco-Store. Your account is ready. Start exploring eco-friendly products at ${process.env.CLIENT_URL}.`,
+             subject: `Welcome to  ${settings?.storeName}, ${user.firstname}! `,
+             text: `Welcome ${user.firstname}! Thank you for joining  ${settings?.storeName}. Your account is ready. Start exploring eco-friendly products at ${process.env.CLIENT_URL}.`,
              html: `
         <!DOCTYPE html>
         <html>
@@ -180,8 +182,8 @@ export const signup = async (req, res) => {
         <body>
           <div class="container">
             <div class="header">
-              <div class="icon">🌿</div>
-              <h1>Welcome to Eco-Store</h1>
+              <div class="icon">${settings?.logo}</div>
+              <h1>Welcome to  ${settings?.storeName}</h1>
               <p>Sustainable Shopping, Beautiful Living</p>
             </div>
             
@@ -208,10 +210,12 @@ export const signup = async (req, res) => {
             </div>
             
             <div class="footer">
-              <p>🌍 Eco-Store | Sustainable Living Made Easy</p>
-              <p>📍 Lagos, Nigeria | 📧 support@eco-store.com</p>
+              <p>🌍  ${settings?.storeName} | Sustainable Living Made Easy</p>
+              <p>📍 Lagos, Nigeria | 📧 ${settings?.supportEmail}</p>
               <p style="font-size: 12px; margin-top: 15px;">
-                &copy; ${new Date().getFullYear()} Eco-Store. All rights reserved.
+                &copy; ${new Date().getFullYear()} ${
+               settings?.storeName
+             } . All rights reserved.
               </p>
             </div>
           </div>

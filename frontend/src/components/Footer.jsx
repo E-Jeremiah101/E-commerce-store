@@ -11,13 +11,7 @@ import ScrollReveal from "./ScrollReveal.jsx";
 import { useStoreSettings } from "./StoreSettingsContext.jsx";
 const Footer = () => {
   const { settings } = useStoreSettings();
-    if (!settings) {
-      return (
-        <header className="w-full bg-gray-100 py-4 text-center text-gray-500">
-          Loading...
-        </header>
-      );
-    }
+
   return (
     <ScrollReveal direction="up" delay={0.8} duration={1}>
       <div className=" text-black ">
@@ -65,15 +59,15 @@ const Footer = () => {
           </div>
         </div>
         <Link to={"/"} className="flex justify-center items-center mb-3">
-          {settings.logo && (
+          {settings?.logo && (
             <img
-              src={settings.logo}
-              alt={settings.storeName}
+              src={settings?.logo}
+              alt={settings?.storeName}
               className="h-10 w-auto"
             />
           )}
           <span className="text-black px-2 font-bold text-xl">
-            {settings.storeName}
+            {settings?.storeName}
           </span>
         </Link>
         <hr className="border-1 my-1 border-gray-400" />

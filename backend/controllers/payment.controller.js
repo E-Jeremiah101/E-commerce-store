@@ -22,10 +22,8 @@ import { flw } from "../lib/flutterwave.js";
 import redis from "../lib/redis.js";
 import { calculateDeliveryFee } from "../../frontend/src/utils/deliveryConfig.js";
 import storeSettings from "../models/storeSettings.model.js"
-export const getStoreSettingsForEmail = async () => {
-  return await storeSettings.findOne();
-};
 
+ 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../../.env") });
@@ -579,7 +577,7 @@ async function checkCouponEligibility(userId, orderAmount) {
     });
 
     console.log(
-      `Checking coupon eligibility for user ${userId}: ${orderCount} orders, ₦${orderAmount}`
+      `Checking coupon eligibility for user ${userId}: ${orderCount} orders, ${orderAmount}`
     );
 
     const activeCoupon = await Coupon.findOne({
@@ -623,7 +621,7 @@ async function checkCouponEligibility(userId, orderAmount) {
       };
     } else if (orderAmount > 175000) {
       console.log(
-        `User ${userId} eligible for BIG SPENDER coupon (₦${orderAmount})`
+        `User ${userId} eligible for BIG SPENDER coupon (${orderAmount})`
       );
       return {
         discountPercentage: 15,
@@ -634,7 +632,7 @@ async function checkCouponEligibility(userId, orderAmount) {
     }
 
     console.log(
-      `User ${userId} not eligible for coupon (${orderCount} orders, ₦${orderAmount})`
+      `User ${userId} not eligible for coupon (${orderCount} orders, ${orderAmount})`
     );
     return null;
   } catch (error) {
@@ -681,7 +679,7 @@ async function createNewCoupon(userId, options = {}) {
     );
 
     console.log(
-      `Successfully ${coupon.$isNew ? "CREATED" : "UPDATED"} coupon: ${
+      `Successfully ${coupon.isNew ? "CREATED" : "UPDATED"} coupon: ${
         coupon.code
       } for user ${userId}`
     );
@@ -827,10 +825,6 @@ export const createCheckoutSession = async (req, res) => {
       req.body;
     const userId = req.user._id;
 
-    console.log("📦 Received checkout request:");
-    console.log("- Delivery address:", deliveryAddress);
-    console.log("- Delivery fee from frontend:", deliveryFee);
-    console.log("- Delivery zone:", deliveryZone);
 
     if (!Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ error: "Invalid or empty products array" });
@@ -892,7 +886,7 @@ export const createCheckoutSession = async (req, res) => {
 
           const variant = product.variants[variantIndex];
           console.log(
-            `📊 Availability check - ${item.name} ${item.size || ""}/${
+            ` Availability check - ${item.name} ${item.size || ""}/${
               item.color || ""
             }: Stock=${variant.countInStock}, Requested=${item.quantity}`
           );
@@ -986,7 +980,7 @@ export const createCheckoutSession = async (req, res) => {
     finalDeliveryFee = calculatedDeliveryFee;
 
     console.log(
-      "💰 Final delivery fee after free delivery check:",
+      "Final delivery fee after free delivery check:",
       finalDeliveryFee
     );
     console.log("🛒 Original total:", originalTotal);
@@ -994,7 +988,7 @@ export const createCheckoutSession = async (req, res) => {
     const finalTotal = Math.max(0, originalTotal - discountAmount + finalDeliveryFee);
     const tx_ref = `ECOSTORE-${Date.now()}`;
 
-    // === CRITICAL: RESERVE INVENTORY BEFORE PAYMENT ===
+    
     const reservationId = `res_${tx_ref}`;
     try {
       await reserveInventory(products, reservationId, 4); // Reserve for 10 minutes
@@ -1620,7 +1614,7 @@ export const checkoutSuccess = async (req, res) => {
     lockAcquired = await acquireWebhookLock(transaction_id, 30000);
     if (!lockAcquired) {
       console.log(
-        `⏳ checkoutSuccess: Lock already acquired for ${transaction_id}`
+        `checkoutSuccess: Lock already acquired for ${transaction_id}`
       );
 
       // Wait 1 second and check if order exists now
@@ -1758,7 +1752,7 @@ export const checkoutSuccess = async (req, res) => {
       message: "Payment verified and order finalized",
       orderId: finalOrder._id,
       orderNumber: finalOrder.orderNumber,
-      isNew: isNewOrder, // Optional: include for debugging
+      isNew: isNewOrder,
     });
   } catch (error) {
     console.error("checkoutSuccess failed:", error);
@@ -1806,6 +1800,10 @@ export const sendDetailedOrderEmail = async ({
   const transaction_id = order.flutterwaveTransactionId || "N/A";
   const payment_type = paymentMethod.method || "N/A";
   const settings = await storeSettings.findOne();
+  const formatter = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: settings.currency,
+  });
 
   // Prepare items array
   const items = order.products || order.items || [];
@@ -1882,27 +1880,25 @@ export const sendDetailedOrderEmail = async ({
             </tbody>
           </table>
           <p style="margin-top: 20px; font-size: 16px;">
-            <strong>Original Subtotal:</strong> ₦${Number(
+            <strong>Original Subtotal:</strong> ${formatter.format(
               subtotal
-            ).toLocaleString()} <br>
+            )} <br>
            
                     ${
                       discount > 0
                         ? `
                     <p>
-                      <strong>Coupon Discount:</strong> -₦${Number(
+                      <strong>Coupon Discount:</strong> - ${formatter.format(
                         discount
-                      ).toLocaleString()}
+                      )}
                     </p>
           `
                         : ""
                     }<br>
-            <strong>Delivery Fee:</strong> ₦${Number(
+            <strong>Delivery Fee:</strong> ${formatter.format(
               order.deliveryFee
-            ).toLocaleString()}<br>
-            <strong>Final Total:</strong> ₦${Number(
-              totalAmount
-            ).toLocaleString()}
+            )}<br>
+            <strong>Final Total:</strong> ${formatter.format(totalAmount)}
           </p>
 
           <p style="margin:0;">
@@ -1949,7 +1945,7 @@ export const sendDetailedOrderEmail = async ({
     `EcoStore — Order Confirmation`,
     ` ${order.orderNumber || "N/A"}`,
     `Customer: ${customerName}`,
-    `Total: ₦${Number(totalAmount).toLocaleString()}`,
+    `Total: ${formatter.format(totalAmount)}`,
     `Delivery Address: ${order.deliveryAddress || "No address provided"}`,
     `Phone: ${order.phone || "No phone provided"}`,
     `Payment Status: ${order.paymentStatus || "Confirmed"}`,
@@ -1960,9 +1956,7 @@ export const sendDetailedOrderEmail = async ({
     `Items:`,
     ...items.map(
       (it) =>
-        ` - ${it.quantity || 1} x ${it.name || "Item"} — ₦${Number(
-          it.price || 0
-        ).toLocaleString()}`
+        ` - ${it.quantity || 1} x ${it.name || "Item"} — ${formatter.format(it.price)}`
     ),
     ``,
     `Thanks for shopping with  ${settings?.storeName}!`,

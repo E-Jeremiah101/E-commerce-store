@@ -5,7 +5,8 @@ import axios from "../lib/axios.js";
 import GoBackButton from "./GoBackButton.jsx";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 const CanceledTab = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +33,8 @@ const CanceledTab = () => {
         <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
       </div>
     );
+
+    const { settings } = useStoreSettings();
 
   return (
     <>
@@ -105,7 +108,7 @@ const CanceledTab = () => {
                               {item.name}
                             </h3>
                             <p className="text-gray-800 font-semibold ">
-                              ₦{(item.price * item.quantity).toLocaleString()}
+                             {formatPrice(item.price * item.quantity, settings?.currency )}
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2 text-xs text-gray-900">
@@ -125,43 +128,12 @@ const CanceledTab = () => {
                             <span className="bg-gray-200 px-2 py-1 rounded text-xs ">
                               Qty: {item.quantity}
                             </span>
-                            {item.quantity > 1 && (
-                              <span className="text-gray-700 text-xs">
-                                ₦{item.price.toLocaleString()} each
-                              </span>
-                            )}
                           </div>
                         </div>
                       </li>
                     </span>
                   ))}
                 </ul>
-
-                <div className="flex justify-between align-middle">
-                  <div>
-                    {order.discount > 0 && (
-                      <>
-                        <p className="text-xs text-gray-500 mb-1">
-                          Subtotal: ₦{order.subtotal.toLocaleString()}
-                        </p>
-                        <p className="text-xs text-gray-500 mb-1">
-                          Coupon Applied:{" "}
-                          <span className="text-red-500 text-xs">-10%</span>{" "}
-                          <span className="text-green-500 text-xs">
-                            {order.couponCode}
-                          </span>
-                        </p>{" "}
-                        <p className="text-xs text-gray-500 mb-1">
-                          Discount: -₦
-                          {order.discount.toLocaleString()}
-                        </p>
-                      </>
-                    )}
-                    <p className="text-sm text-gray-500 mb-2">
-                      Total: ₦{order.totalAmount.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
               </div>
             ))
         )}

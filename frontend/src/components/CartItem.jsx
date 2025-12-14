@@ -5,6 +5,8 @@ import { useProductStore } from "../stores/useProductStore.js";
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
 const CartItem = ({ item }) => {
   const { removeFromCart, updateQuantity } = useCartStore();
@@ -53,6 +55,7 @@ const CartItem = ({ item }) => {
     }
   };
 
+  const { settings } = useStoreSettings();
   return (
     <motion.div
       className="px-1 lg:pr-28 text-lg"
@@ -94,7 +97,7 @@ const CartItem = ({ item }) => {
                   alt={item.name}
                   className="w-25 h-25 object-cover rounded"
                 />
-              </Link> 
+              </Link>
 
               {/* Product Info */}
               <div className="flex-1 space-y-1">
@@ -126,7 +129,6 @@ const CartItem = ({ item }) => {
                       Color: {item.color}
                     </span>
                   )}
-
                 </div>
 
                 {/* Quantity & Unit Price */}
@@ -134,10 +136,7 @@ const CartItem = ({ item }) => {
                   {/* Price */}
                   <div className="px-2 rounded text-lg flex justify-between items-center">
                     <p className="text-black font-semibold">
-                      ₦
-                      {(item.price * item.quantity).toLocaleString(undefined, {
-                        minimumFractionDigits: 0,
-                      })}
+                      {formatPrice(item.price * item.quantity, settings?.currency)}
                     </p>
                   </div>
 

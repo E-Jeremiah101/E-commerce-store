@@ -8,7 +8,8 @@ import { motion } from "framer-motion";
 import { Check, Loader } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
-
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 const Delivered = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +91,7 @@ const Delivered = () => {
         <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
       </div>
     );
-
+const { settings } = useStoreSettings();
   return (
     <>
       <motion.div
@@ -174,7 +175,7 @@ const Delivered = () => {
                                 {item.name}
                               </h3>
                               <p className="text-gray-800 font-semibold ">
-                                ₦{(item.price * item.quantity).toLocaleString()}
+                               {formatPrice(item.price * item.quantity, settings?.currency )}
                               </p>
                             </div>
                             <div className="flex flex-wrap gap-2 text-xs text-gray-900">
@@ -195,7 +196,7 @@ const Delivered = () => {
                                 </span>
                                 {item.quantity > 1 && (
                                   <span className="text-gray-700 text-xs">
-                                    ₦{item.price.toLocaleString()}
+                                    {formatPrice(item.price, settings?.currency)}
                                   </span>
                                 )}
                               </div>

@@ -9,12 +9,9 @@ import { protectRoute, adminRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-
-router.get("/", protectRoute, adminRoute, getStoreSettings);
-
+router.get("/",  getStoreSettings);
 
 router.put("/", protectRoute, adminRoute, updateStoreSettings);
-
 
 
 const storage = multer.diskStorage({});

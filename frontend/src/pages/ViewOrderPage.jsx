@@ -4,6 +4,8 @@ import axios from "../lib/axios";
 import { motion } from "framer-motion";
 import "react-toastify/dist/ReactToastify.css";
 import GoBackButton from "../components/GoBackButton";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 
 
 const ViewOrderPage = () => {
@@ -40,6 +42,7 @@ const ViewOrderPage = () => {
       <div className="text-center mt-20 text-gray-400">Order not found.</div>
     );
 
+    const { settings } = useStoreSettings();
    return (
      <motion.div
        className="px-4 lg:px-28 py-8 bg-white "
@@ -140,7 +143,7 @@ const ViewOrderPage = () => {
                          {item.name}
                        </h3>
                        <p className="text-gray-800 font-semibold ">
-                         ₦{(item.price * item.quantity).toLocaleString()}
+                         {formatPrice(item.price * item.quantity, settings?.currency )}
                        </p>
                      </div>
                      <div className="flex flex-wrap gap-2 text-xs text-gray-900">
@@ -161,7 +164,7 @@ const ViewOrderPage = () => {
                        </span>
                        {item.quantity > 1 && (
                          <span className="text-gray-700 text-xs">
-                           ₦{item.price.toLocaleString()} each
+                           {formatPrice(item.price, settings?.currency )} each
                          </span>
                        )}
                        {(() => {
@@ -332,7 +335,7 @@ const ViewOrderPage = () => {
          </h2>
 
          <p className="pb-1 text-gray-600">
-           Items total: <span> ₦{order.subtotal.toLocaleString()}</span>
+           Items total: <span> {formatPrice(order.subtotal, settings?.currency )}</span>
          </p>
          {order.discount > 0 && (
            <>
@@ -343,14 +346,14 @@ const ViewOrderPage = () => {
              <p className="pb-1 text-gray-600">
                Discount:{" "}
                <span className="text-red-500">
-                 -₦{order.discount.toLocaleString()}
+                 -{formatPrice(order.discount, settings?.currency )}
                </span>
              </p>
            </>
          )}
-         {order.deliveryFee && (
+         {order.deliveryFee > 0 && (
            <p className="pb-1 text-gray-600">
-             Delivery Fees: <span>₦{order.deliveryFee.toLocaleString()}</span>
+             Delivery Fees: <span>{formatPrice(order.deliveryFee, settings?.currency )}</span>
            </p>
          )}
 

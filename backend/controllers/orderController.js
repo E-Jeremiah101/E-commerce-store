@@ -7,9 +7,6 @@ import { flw } from "../lib/flutterwave.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
 import storeSettings from "../models/storeSettings.model.js"
-export const getStoreSettingsForEmail = async () => {
-  return await storeSettings.findOne();
-};
 
 const logOrderAction = async (
   req,

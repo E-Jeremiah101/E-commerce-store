@@ -5,7 +5,8 @@ import axios from "../lib/axios.js";
 import GoBackButton from "./GoBackButton.jsx";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 const RefundTab = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,6 +35,7 @@ const RefundTab = () => {
         <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
       </div>
     );
+    const { settings } = useStoreSettings();
 
   return (
     <>
@@ -122,7 +124,7 @@ const RefundTab = () => {
                               {item.name}
                             </h3>
                             <p className="text-gray-800 font-semibold ">
-                              ₦{(item.price * item.quantity).toLocaleString()}
+                             {formatPrice(item.price * item.quantity, settings?.currency )}
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2 text-xs text-gray-900">

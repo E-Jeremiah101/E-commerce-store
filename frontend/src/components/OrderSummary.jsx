@@ -6,14 +6,13 @@ import { MoveRight, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import axios from "../lib/axios";
 import { useUserStore } from "../stores/useUserStore.js";
-import { useProductStore } from "../stores/useProductStore.js";
 import toast from "react-hot-toast";
 import { calculateDeliveryFee } from "../utils/deliveryConfig.js";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 const OrderSummary = () => {
   const { user, setUser } = useUserStore();
   const { total, subtotal, coupon, cart, isCouponApplied } = useCartStore();
-  const { checkCartAvailability } = useProductStore();
-
   const [loading, setIsLoading] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [deliveryZone, setDeliveryZone] = useState("");
@@ -61,8 +60,6 @@ const OrderSummary = () => {
 
 
   const finalDeliveryFee = deliveryFee;
-
-   const newSubtotal = subtotal;
    const newTotal =
      subtotal -
      (coupon && isCouponApplied
@@ -249,10 +246,6 @@ const OrderSummary = () => {
     }
   };
 
-  const formatCurrency = (amount) => {
-    return amount.toLocaleString(undefined, { minimumFractionDigits: 0 });
-  };
-
   // FIXED: hasUnavailableItems should be true when ALL items are out of stock
   // (not when SOME items are out of stock - which your requirement allows)
   const hasUnavailableItems =
@@ -272,15 +265,8 @@ const OrderSummary = () => {
   });
 
   const savings = subtotal - total;
-  const formattedSubtotal = subtotal.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-  });
-  const formattedTotal = total.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-  });
-  const formattedSavings = savings.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-  });
+  const formattedSubtotal = subtotal
+  const formattedSavings = savings
 
   const isButtonDisabled = () => {
     // If no items in cart
@@ -326,6 +312,8 @@ const OrderSummary = () => {
   // Use the function
   const buttonDisabled = isButtonDisabled();
 
+  const { settings } = useStoreSettings();
+
   return (
     <motion.div
       className="space-y-4 rounded-lg border-1 border-gray-500 p-4 shadow-sm sm:p-6 lg:px-5"
@@ -340,11 +328,9 @@ const OrderSummary = () => {
       <div className="space-y-4">
         <div className="space-y-2">
           <dl className="flex items-center justify-between gap-4">
-            <dt className="text-base font-normal text-gray-600">
-              Sub-Total
-            </dt>
+            <dt className="text-base font-normal text-gray-600">Sub-Total</dt>
             <dt className="text-sm font-medium text-black">
-              ₦{formattedSubtotal}
+              {formatPrice(formattedSubtotal, settings?.currency)}
             </dt>
           </dl>
 
@@ -352,7 +338,7 @@ const OrderSummary = () => {
             <dl className="flex items-center justify-between gap-4">
               <dt className="text-base font-normal text-gray-600">Savings</dt>
               <dt className="text-base font-medium text-black">
-                ₦{formattedSavings}
+                {formatPrice(formattedSavings, settings?.currency)}
               </dt>
             </dl>
           )}
@@ -382,15 +368,15 @@ const OrderSummary = () => {
               className="text-base font-medium  text-black
               "
             >
-              {`₦${formatCurrency(finalDeliveryFee)}`}
+              {formatPrice(finalDeliveryFee, settings?.currency)}
             </dd>
           </dl>
 
           <dl className="flex items-center justify-between gap-4">
             <dt className="text-base font-normal text-gray-600">Total </dt>
-            <dt className="text-lg font-medium text-black-">{`₦${formatCurrency(
-              grandTotal
-            )}`}</dt>
+            <dt className="text-lg font-medium text-black-">
+              {formatPrice(grandTotal, settings?.currency)}
+            </dt>
           </dl>
         </div>
 

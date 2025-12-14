@@ -12,7 +12,7 @@ export const StoreSettingsProvider = ({ children }) => {
       const { data } = await axios.get("/store-settings");
       setSettings(data);
     } catch (err) {
-      console.error("Failed to load store settings");
+      console.log("Failed to load store settings");
     } finally {
       setLoading(false);
     }

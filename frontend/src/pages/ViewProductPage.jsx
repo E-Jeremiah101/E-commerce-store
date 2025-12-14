@@ -10,8 +10,10 @@ import GoBackButton from "../components/GoBackButton";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import DOMPurify from "dompurify";
 import ProductReviews from "../components/ProductReviews";
-
-const ViewProductPage = () => {
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
+ 
+  const ViewProductPage = () => {
   const { id } = useParams();
   const { fetchProductById } = useProductStore();
   const { addToCart, isLoading, cart } = useCartStore();
@@ -39,20 +41,17 @@ const ViewProductPage = () => {
           100
         ).toFixed(0);
 
+        const { settings } = useStoreSettings();
+
       return (
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-3">
             <span className="text-[1.5rem] text-black font-bold tracking-tight">
-              ₦
-              {product.price.toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-              })}
+              {formatPrice(product.price, settings?.currency)}
             </span>
             <span className="text-gray-500 line-through text-lg">
-              ₦
-              {product.previousPrice.toLocaleString(undefined, {
-                minimumFractionDigits: 0,
-              })}
+              
+               {formatPrice(product.previousPrice, settings?.currency)}
             </span>
             <span className="bg-red-100 text-red-800 text-sm font-medium px-2 py-1 rounded">
               {discountPercentage}% OFF
@@ -65,13 +64,10 @@ const ViewProductPage = () => {
         </div>
       );
     }
-
+ const { settings } = useStoreSettings();
     return (
       <span className="text-[1.2rem] text-black font-medium tracking-tight">
-        ₦{" "}
-        {product.price.toLocaleString(undefined, {
-          minimumFractionDigits: 0,
-        })}
+        {formatPrice(product.price, settings?.currency)}
       </span>
     );
   };

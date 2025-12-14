@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import {  ShoppingCart, Bookmark } from "lucide-react";
 import { useUserStore } from "../stores/useUserStore";
 import toast from "react-hot-toast";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
 const ProductCard = ({ product }) => {
   const [isSaved, setIsSaved] = useState(false);
@@ -68,6 +70,7 @@ const ProductCard = ({ product }) => {
       setIsLoading(false);
     }
   };
+  const { settings } = useStoreSettings();
 
   return (
     <div className="flex-w-full relative flex-col h-full overflow-hidden border-gray-700">
@@ -114,18 +117,15 @@ const ProductCard = ({ product }) => {
             {product.isPriceSlashed && product.previousPrice ? (
               <div className="flex items-center gap-1">
                 <span className="text-black font-medium text-[1rem]">
-                  ₦{product.price.toLocaleString()}
+                  {formatPrice(product.price, settings?.currency)}
                 </span>
                 <span className="text-gray-500 line-through text-[0.82rem]">
-                  ₦{product.previousPrice.toLocaleString()}
+                  {formatPrice(product.previousPrice, settings?.currency)}
                 </span>
               </div>
             ) : (
               <span className="text-sm lg:text-md text-gray-900 font-semibold">
-                ₦
-                {product.price.toLocaleString(undefined, {
-                  minimumFractionDigits: 0,
-                })}
+                {formatPrice(product.price, settings?.currency)}
               </span>
             )}
           </Link>{" "}

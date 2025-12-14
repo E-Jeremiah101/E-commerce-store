@@ -6,6 +6,9 @@ import { requestRefund } from "../stores/refundRequestStore.js";
 import GoBackButton from "./GoBackButton.jsx";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
+
 
 const Ongoing = () => {
   const [orders, setOrders] = useState([]);
@@ -35,7 +38,7 @@ const Ongoing = () => {
         <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
       </div>
     );
-
+const { settings } = useStoreSettings();
   return (
     <>
       <motion.div
@@ -126,22 +129,24 @@ const Ongoing = () => {
                               {item.name}
                             </h3>
                             <p className="text-gray-800 font-semibold ">
-                              ₦{(item.price * item.quantity).toLocaleString()}
+                              {formatPrice(
+                                item.price * item.quantity,
+                                settings?.currency
+                              )}
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2 text-xs text-gray-900">
                             {item.size && (
                               <span className="bg-gray-200 px-2 py-1 rounded tracking-widest">
-                              Size: {item.size || "N/A"}
-                            </span>
+                                Size: {item.size || "N/A"}
+                              </span>
                             )}
-                            
+
                             {item.color && (
                               <span className="bg-gray-200  rounded tracking-widest">
-                              Color: {item.color || "N/A"}
-                            </span>
+                                Color: {item.color || "N/A"}
+                              </span>
                             )}
-                            
                           </div>
 
                           <div className="flex  justify-between text-sm text-gray-900">
@@ -150,9 +155,9 @@ const Ongoing = () => {
                             </span>
                             {item.quantity > 1 && (
                               <span className="text-gray-700 text-xs">
-                                ₦{item.price.toLocaleString()}
+                                {formatPrice(item.price, settings?.currency)}
                               </span>
-                            )}                       
+                            )}
                           </div>
                         </div>
                       </li>
