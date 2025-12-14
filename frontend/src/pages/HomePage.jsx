@@ -106,7 +106,7 @@ const HomePage = () => {
           ) : categories.length > 0 ? (
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide no-scroll">
               {/* All Categories Button */}
-              <button className="flex-shrink-0 px-6 py-2 bg-black text-white rounded-full hover:bg-gray-800 transition-colors whitespace-nowrap uppercase">
+              <button className="flex-shrink-0 px-4 py-2 bg-black text-white rounded hover:bg-gray-800 transition-colors whitespace-nowrap uppercase">
                 All Products
               </button>
 
@@ -115,7 +115,7 @@ const HomePage = () => {
                 <Link to={`/category/${category.name}`}>
                   <button
                     key={category.name}
-                    className="flex-shrink-0 px-6 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors whitespace-nowrap uppercase"
+                    className="flex-shrink-0 px-4 rounded py-2 bg-gray-100 text-gray-700  hover:bg-gray-200 transition-colors whitespace-nowrap uppercase"
                   >
                     {category.name}
                   </button>
