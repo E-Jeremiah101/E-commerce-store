@@ -539,7 +539,7 @@ const InventoryTab = () => {
           </div>
         )}
         {activeTab === "locations" && (
-          <LocationsView locations={inventoryByLocation} />
+          <LocationsView locations={inventoryByLocation} settings={settings} />
         )}
       </div>
 
@@ -1230,6 +1230,21 @@ const PriceManagementView = ({
     sortOrder: "asc",
   });
 
+  const getCurrencySymbol = (currency) => {
+    switch (currency) {
+      case "NGN":
+        return "₦";
+      case "USD":
+        return "$";
+      case "EUR":
+        return "€";
+      case "GBP":
+        return "£";
+      default:
+        return currency || "";
+    }
+  };
+
   const [searchInput, setSearchInput] = useState(filters.search || "");
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [bulkPriceChange, setBulkPriceChange] = useState({
@@ -1531,7 +1546,7 @@ const PriceManagementView = ({
             <div className="flex items-center gap-2">
               <input
                 type="number"
-                placeholder="Min ₦"
+                placeholder={`Min ${getCurrencySymbol(settings?.currency)}`}
                 value={priceFilters.minPrice}
                 onChange={(e) =>
                   setPriceFilters((prev) => ({
@@ -1546,7 +1561,7 @@ const PriceManagementView = ({
               <span className="text-gray-400">-</span>
               <input
                 type="number"
-                placeholder="Max ₦"
+                placeholder={`Max ${getCurrencySymbol(settings?.currency)}`}
                 value={priceFilters.maxPrice}
                 onChange={(e) =>
                   setPriceFilters((prev) => ({
@@ -1723,11 +1738,7 @@ const PriceManagementView = ({
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-lg font-bold text-gray-900">
-                          ₦
-                          {product.price.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
+                          {formatPrice(product?.price, settings?.currency)}
                         </div>
                         <div className="text-xs text-gray-500">per unit</div>
                       </td>
@@ -1735,11 +1746,7 @@ const PriceManagementView = ({
                         {product.isPriceSlashed && product.previousPrice ? (
                           <>
                             <div className="text-sm text-gray-500 line-through">
-                              ₦
-                              {product.previousPrice.toLocaleString(undefined, {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
+                              {formatPrice(product?.previousPrice, settings?.currency)}
                             </div>
                             <div className="text-xs text-gray-500">
                               Original
@@ -1760,7 +1767,7 @@ const PriceManagementView = ({
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">
-                          ₦{(product.totalValue || 0).toLocaleString()}
+                          {formatPrice(product?.totalValue, settings?.currency )|| 0}
                         </div>
                         <div className="text-xs text-gray-500">
                           {product.totalStock || 0} units
@@ -2107,13 +2114,27 @@ const PriceManagementModal = ({ product, onClose, onUpdate }) => {
         onUpdate(result.product);
       }
       onClose();
+      
     } catch (error) {
       console.error("Price update error:", error);
     } finally {
       setLoading(false);
     }
   };
-
+const getCurrencySymbol = (currency) => {
+  switch (currency) {
+    case "NGN":
+      return "₦";
+    case "USD":
+      return "$";
+    case "EUR":
+      return "€";
+    case "GBP":
+      return "£";
+    default:
+      return currency || "";
+  }
+};
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -2209,7 +2230,7 @@ const PriceManagementModal = ({ product, onClose, onUpdate }) => {
               </label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                  ₦
+                  {`${getCurrencySymbol(settings?.currency)}`}
                 </span>
                 <input
                   type="number"
@@ -2257,7 +2278,7 @@ const PriceManagementModal = ({ product, onClose, onUpdate }) => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">New Price:</span>
                   <span className="font-medium">
-                    ₦{parseFloat(newPrice).toLocaleString()}
+                    {formatPrice(parseFloat(newPrice), settings?.currency)}
                   </span>
                 </div>
               )}
@@ -2265,7 +2286,7 @@ const PriceManagementModal = ({ product, onClose, onUpdate }) => {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Will reset to:</span>
                   <span className="font-medium text-blue-600">
-                    ₦{product.previousPrice?.toLocaleString()}
+                    {formatPrice(product?.previousPrice, settings?.currency)}
                   </span>
                 </div>
               )}
@@ -3186,6 +3207,8 @@ const AgingReportView = ({ data }) => {
     }));
   };
 
+  const {settings} = useStoreSettings()
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -3388,8 +3411,8 @@ const AgingReportView = ({ data }) => {
                         {bucket.label}
                       </h4>
                       <p className="text-gray-600 text-sm mt-1">
-                        {bucket.totalItems} units • ₦
-                        {bucket.totalValue?.toLocaleString()} value
+                        {bucket.totalItems} units • {" "} 
+                        {formatPrice(bucket?.totalValue, settings?.currency)} value
                       </p>
                     </div>
                   </div>
@@ -3476,7 +3499,7 @@ const AgingReportView = ({ data }) => {
                             </div>
                             <div className="ml-3">
                               <div className="px-2 py-1 bg-gray-100 rounded text-xs font-medium text-gray-700">
-                                ₦{Math.round(item.totalValue).toLocaleString()}
+                                {formatPrice(Math.round(item.totalValue),settings?.currency) }
                               </div>
                             </div>
                           </div>
@@ -3671,6 +3694,8 @@ const ValuationView = ({ data }) => {
     ? data.valuation.categories || []
     : valuationArray;
 
+    const {settings} = useStoreSettings()
+
   return (
     <div className="space-y-6 mt-10">
       {/* Summary Stats Cards */}
@@ -3680,7 +3705,7 @@ const ValuationView = ({ data }) => {
             <div>
               <p className="text-sm text-gray-600">Total Inventory Value</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                ₦{summary.totalValue?.toLocaleString() || "0"}
+                {formatPrice(summary.totalValue,  settings?.currency) || "0"}
               </p>
             </div>
             <DollarSign className="h-8 w-8 text-blue-500" />
@@ -3716,12 +3741,9 @@ const ValuationView = ({ data }) => {
             <div>
               <p className="text-sm text-gray-600">Avg. Value per Unit</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                ₦
+                
                 {summary.averageValuePerItem
-                  ? summary.averageValuePerItem.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })
+                  ? formatPrice(summary.averageValuePerItem, settings?.currency)
                   : "0"}
               </p>
             </div>
@@ -3813,7 +3835,7 @@ const ValuationView = ({ data }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-semibold text-gray-900">
-                        ₦{category.totalValue?.toLocaleString()}
+                        {formatPrice(category?.totalValue, settings?.currency)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -3836,11 +3858,8 @@ const ValuationView = ({ data }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-gray-900">
-                        ₦
-                        {avgUnitValue.toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                        
+                        {formatPrice(avgUnitValue, settings?.currency)}
                       </span>
                     </td>
                   </tr>
@@ -3869,7 +3888,7 @@ const ValuationView = ({ data }) => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm font-bold text-gray-900">
-                    ₦{summary.totalValue?.toLocaleString()}
+                    {formatPrice(summary?.totalValue, settings?.currency)}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -3877,11 +3896,8 @@ const ValuationView = ({ data }) => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="text-sm font-bold text-gray-900">
-                    ₦
-                    {summary.averageValuePerItem?.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    
+                    {formatPrice(summary?.averageValuePerItem, settings?.currency)}
                   </span>
                 </td>
               </tr>
@@ -3986,11 +4002,8 @@ const ValuationView = ({ data }) => {
                   <div key={index} className="flex justify-between text-sm">
                     <span className="text-gray-600">{category.category}</span>
                     <span className="font-medium text-gray-900">
-                      ₦
-                      {category.avgUnitValue.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}
+                      
+                      {formatPrice(category?.avgUnitValue, settings?.currency)}
                     </span>
                   </div>
                 ))}
@@ -4003,7 +4016,7 @@ const ValuationView = ({ data }) => {
 };
 
 // Locations View Component
-const LocationsView = ({ locations }) => (
+const LocationsView = ({ locations, settings }) => (
   <div className="space-y-6">
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
       {locations.map((location) => (
@@ -4023,7 +4036,7 @@ const LocationsView = ({ locations }) => (
             <div className="flex justify-between">
               <span className="text-gray-600">Total Value:</span>
               <span className="font-semibold">
-                ₦{location.totalValue?.toLocaleString()}
+                {formatPrice(location?.totalValue, settings?.currency)}
               </span>
             </div>
           </div>
