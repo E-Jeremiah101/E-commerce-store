@@ -49,6 +49,8 @@ import {
   exportSimpleInventoryPDF,
 } from "../utils/exportInventoryPdf.js";
 import axios from "../lib/axios.js";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
 const InventoryTab = () => {
   const {
@@ -115,6 +117,7 @@ const InventoryTab = () => {
     endDate: "",
     action: "ALL",
   });
+  
 
   const handleRefresh = () => {
     toast.loading("Refreshing data...");
@@ -238,6 +241,7 @@ const InventoryTab = () => {
   };
 
   const stats = getInventoryStats();
+  const { settings } = useStoreSettings();
 
   const handleExportPDF = () => {
     try {
@@ -446,11 +450,12 @@ const InventoryTab = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {activeTab === "dashboard" && dashboardData && (
-          <DashboardView data={dashboardData} />
+          <DashboardView data={dashboardData} settings={settings} />
         )}
         {activeTab === "stock-levels" && (
           <StockLevelsView
             stockLevels={stockLevels}
+            settings={settings}
             onAdjust={handleAdjustStock}
             loading={loading}
             onSearch={handleSearch}
@@ -463,12 +468,14 @@ const InventoryTab = () => {
             onPriceAction={handlePriceAction}
           />
         )}
+        
         {activeTab === "low-stock" && (
           <LowStockView alerts={lowStockAlerts} onAdjust={handleAdjustStock} />
         )}
         {activeTab === "price-management" && (
           <PriceManagementView
             products={stockLevels}
+            settings={settings}
             loading={loading}
             onPriceAction={handlePriceAction}
             filters={filters}
@@ -610,24 +617,25 @@ const StockStatusBadge = ({ status }) => {
   );
 };
 
-const UrgencyBadge = ({ urgency }) => {
-  const config = {
-    critical: { label: "Critical", color: "bg-red-100 text-red-800" },
-    high: { label: "High", color: "bg-orange-100 text-orange-800" },
-    medium: { label: "Medium", color: "bg-yellow-100 text-yellow-800" },
-    low: { label: "Low", color: "bg-blue-100 text-blue-800" },
-  };
+// const UrgencyBadge = ({ urgency }) => {
+//   const config = {
+//     critical: { label: "Critical", color: "bg-red-100 text-red-800" },
+//     high: { label: "High", color: "bg-orange-100 text-orange-800" },
+//     medium: { label: "Medium", color: "bg-yellow-100 text-yellow-800" },
+//     low: { label: "Low", color: "bg-blue-100 text-blue-800" },
+//   };
 
-  const { label, color } = config[urgency] || config.medium;
+//   const { label, color } = config[urgency] || config.medium;
 
-  return (
-    <span className={`px-3 py-1 text-sm font-medium rounded-full ${color}`}>
-      {label}
-    </span>
-  );
-};
+//   return (
+//     <span className={`px-3 py-1 text-sm font-medium rounded-full ${color}`}>
+//       {label}
+//     </span>
+//   );
+// };
 
 // Price Display Component
+
 const PriceDisplay = ({
   price,
   previousPrice,
@@ -638,15 +646,16 @@ const PriceDisplay = ({
     const discount =
       discountPercentage ||
       (((previousPrice - price) / previousPrice) * 100).toFixed(1);
+      const {settings} =useStoreSettings()
 
     return (
       <div className="flex flex-col">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-green-700">
-            ₦{price?.toLocaleString()}
+            {formatPrice(price, settings?.currency)}
           </span>
           <span className="text-gray-500 line-through text-sm">
-            ₦{previousPrice?.toLocaleString()}
+            {formatPrice(previousPrice, settings?.currency)}
           </span>
           <span className="bg-red-100 text-red-800 text-xs font-medium px-1.5 py-0.5 rounded">
             {discount}% OFF
@@ -655,10 +664,10 @@ const PriceDisplay = ({
       </div>
     );
   }
-
+ const {settings} = useStoreSettings()
   return (
     <span className="font-semibold text-gray-900">
-      ₦{price?.toLocaleString()}
+      {formatPrice(price, settings?.currency)}
     </span>
   );
 };
@@ -917,11 +926,11 @@ const StockLevelsView = ({
   loading,
   onSearch,
   filters,
+  settings,
   updateFilters,
   clearFilters,
   pagination,
   onPageChange,
-  onViewPriceHistory,
   onPriceAction,
 }) => {
   const [expandedProducts, setExpandedProducts] = useState({});
@@ -1053,7 +1062,7 @@ const StockLevelsView = ({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        ₦{product.totalValue?.toLocaleString() || "0"}
+                        {formatPrice(product?.totalValue, settings?.currency) || "0"}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -1119,7 +1128,7 @@ const StockLevelsView = ({
                             </td>
                             <td className="px-6 py-3">
                               <span className="text-sm font-medium text-gray-900">
-                                ₦{variant.price?.toLocaleString() || "0"}
+                                {formatPrice(variant?.price, settings?.currency)|| "0"}
                               </span>
                             </td>
                             <td className="px-6 py-3">
@@ -1140,7 +1149,7 @@ const StockLevelsView = ({
                             </td>
                             <td className="px-6 py-3">
                               <div className="text-sm text-gray-900">
-                                ₦{variant.variantValue?.toLocaleString() || "0"}
+                                {formatPrice(variant?.variantValue, settings?.currency) || "0"}
                               </div>
                             </td>
                             <td className="px-6 py-3 text-sm font-medium">
@@ -1204,6 +1213,7 @@ const StockLevelsView = ({
 const PriceManagementView = ({
   products,
   loading,
+  settings,
   onPriceAction,
   filters,
   updateFilters,
@@ -1450,11 +1460,7 @@ const PriceManagementView = ({
             <div>
               <p className="text-sm text-gray-600">Average Price</p>
               <p className="text-xl font-bold">
-                ₦
-                {summary.avgPrice.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
+                {formatPrice(summary?.avgPrice, settings?.currency)}
               </p>
             </div>
             <DollarSign className="h-8 w-8 text-green-400" />
@@ -1482,7 +1488,7 @@ const PriceManagementView = ({
             <div>
               <p className="text-sm text-gray-600">Total Value</p>
               <p className="text-xl font-bold">
-                ₦{summary.totalValue.toLocaleString()}
+                {formatPrice(summary?.totalValue, settings?.currency)}
               </p>
             </div>
             <TrendingUp className="h-8 w-8 text-purple-400" />
@@ -2063,6 +2069,7 @@ const PriceManagementModal = ({ product, onClose, onUpdate }) => {
   const [reason, setReason] = useState("");
   const [action, setAction] = useState("update");
   const [loading, setLoading] = useState(false);
+  const {settings} = useStoreSettings()
 
   const handleSubmit = async () => {
     if (!newPrice && action !== "reset") {
@@ -2142,7 +2149,7 @@ const PriceManagementModal = ({ product, onClose, onUpdate }) => {
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Original Price:</span>
                 <span className="text-gray-500 line-through">
-                  ₦{product.previousPrice?.toLocaleString()}
+                  {formatPrice(product?.previousPrice, settings?.currency)}
                 </span>
               </div>
             )}
@@ -2603,13 +2610,13 @@ const AdjustStockModal = ({ product, data, onChange, onSubmit, onClose }) => {
 };
 
 // Dashboard View Component
-const DashboardView = ({ data }) => (
+const DashboardView = ({ data, settings }) => (
   <div className="space-y-6">
     {/* Stats Cards */}
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <StatCard
         title="Total Stock Value"
-        value={`₦${data.summary?.totalStockValue?.toLocaleString() || "0"}`}
+        value={`${formatPrice(data?.summary?.totalStockValue, settings?.currency) || "0"}`}
         icon={DollarSign}
         trend="+12.5%"
         color="blue"
@@ -2720,7 +2727,7 @@ const DashboardView = ({ data }) => (
 
               <div className="text-right">
                 <p className="font-bold text-gray-900 text-lg">
-                  ₦{product.value?.toLocaleString() || "0"}
+                  {formatPrice(product?.value, settings?.currency)}
                 </p>
                 <p className="text-sm text-gray-500">
                   {product.source === "orders" ? "Revenue" : "Stock Value"}
@@ -2728,7 +2735,7 @@ const DashboardView = ({ data }) => (
 
                 {product.price > 0 && (
                   <p className="text-xs text-gray-500 mt-1">
-                    ₦{product.price?.toLocaleString()} each
+                    {formatPrice(product?.price, settings?.currency)} each
                   </p>
                 )}
               </div>
@@ -2833,6 +2840,8 @@ const DashboardView = ({ data }) => (
   </div>
 );
 
+
+
 // Low Stock View Component
 const LowStockView = ({ alerts, onAdjust }) => {
   const groupedAlerts = alerts.reduce((groups, alert) => {
@@ -2884,10 +2893,7 @@ const LowStockView = ({ alerts, onAdjust }) => {
             <h1 className="text-3xl font-bold text-gray-900">
               Stock Alert Dashboard
             </h1>
-            <p className="text-gray-600 mt-2">
-              Manage inventory levels across {Object.keys(groupedAlerts).length}{" "}
-              products
-            </p>
+
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-right">

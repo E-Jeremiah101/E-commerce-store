@@ -5,6 +5,8 @@ import { useUserStore } from "../stores/useUserStore";
 import toast from "react-hot-toast";
 import GoBackButton from "../components/GoBackButton";
 import { motion } from "framer-motion";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 const SavedProductsPage = () => {
   const [savedProducts, setSavedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +53,7 @@ const SavedProductsPage = () => {
       toast.error("Failed to remove product");
     }
   };
+  const { settings } = useStoreSettings();
 
   
 
@@ -119,7 +122,10 @@ const SavedProductsPage = () => {
                     </Link>
 
                     <p className="text-sm lg:text-md text-black">
-                      ₦{product.price.toLocaleString()}
+                      {formatPrice(
+                        product.price,
+                        settings?.currency
+                      )}
                     </p>
 
                     <div className="text-right">
@@ -127,7 +133,7 @@ const SavedProductsPage = () => {
                         onClick={() => removeSavedProduct(product._id)}
                         className="bg-bla px-4 py-2 rounded text-sm"
                       >
-                        <Bookmark className=" fill-current"/>
+                        <Bookmark className=" fill-current" />
                       </button>
                     </div>
                   </div>

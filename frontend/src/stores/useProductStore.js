@@ -57,38 +57,33 @@ export const useProductStore = create((set, get) => ({
     }
   },
   deleteProduct: async (productId) => {
-    set({ loading: true });
     try {
       await axios.delete(`/products/${productId}`);
       set((prevProducts) => ({
         products: prevProducts.products.filter(
           (product) => product._id !== productId
         ),
-        loading: false,
       }));
       toast.success("Product deleted successfully.");
     } catch (error) {
       console.error("Error deleting product:", error);
       toast.error("Failed to delete product. Please try again.");
-      set({ loading: false });
     }
   },
   toggleFeaturedProduct: async (productId) => {
-    set({ loading: true });
+    // set({ loading: true });
     try {
       const response = await axios.patch(`/products/${productId}`);
-      // this will update the isFeatured prop of the product
       set((prevProducts) => ({
         products: prevProducts.products.map((product) =>
           product._id === productId
             ? { ...product, isFeatured: response.data.isFeatured }
             : product
         ),
-        loading: false,
       }));
       toast.success("Product updated successfully.");
     } catch (error) {
-      set({ loading: false });
+      // set({ loading: false });
       console.error("Error updating product:", error);
       toast.error("Failed to update product.");
     }

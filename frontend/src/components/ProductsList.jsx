@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 import { Trash, Star } from "lucide-react";
 import { useProductStore } from "../stores/useProductStore.js";
 import { useState } from "react";
-import toast from "react-hot-toast";
-import { useUserStore } from "../stores/useUserStore.js";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
 const ProductsList = () => {
   const { fetchAllProducts, loading } = useProductStore();
@@ -19,7 +19,6 @@ const ProductsList = () => {
 
   const [currentPage, setCurrentPage] = useState(1);;
   const productsPerPage = 15;
-  // const [isloading,  setIsLoading] = useState(false)
    
 
   // Pagination logic
@@ -31,20 +30,11 @@ const ProductsList = () => {
     startIndex + productsPerPage
   );
 
-  // useEffect(() => {
-  //   setIsLoading(true);
 
-  //   // simulate a delay (optional)
-  //   setTimeout(() => {
-  //     setIsLoading(false);
-  //   }, 1000);
-  // }, []);
-
-  const {user} = useUserStore();
   const handlePrev = () => setCurrentPage((p) => Math.max(p - 1, 1));
   const handleNext = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
   const handlePageClick = (pageNum) => setCurrentPage(pageNum);
-
+const { settings } = useStoreSettings();
   if (loading)
     return (
       <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -135,10 +125,7 @@ const ProductsList = () => {
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
-                    ₦
-                    {product.price.toLocaleString(undefined, {
-                      minimumFractionDigits: 0,
-                    })}
+                    {formatPrice(product.price, settings?.currency)}
                   </td>
 
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
