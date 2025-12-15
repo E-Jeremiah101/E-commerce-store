@@ -135,8 +135,6 @@ const { settings } = useStoreSettings();
                     className={`px-3 py-1 rounded-full text-sm ${
                       order.status === "Delivered"
                         ? "bg-green-100 text-green-700"
-                        : order.status === "Cancelled"
-                        ? "bg-red-100 text-red-700"
                         : "bg-yellow-100 text-yellow-700"
                     }`}
                   >

@@ -1833,9 +1833,11 @@ export const sendDetailedOrderEmail = async ({
           <td style="padding: 8px 12px; text-align:center; border:1px solid #eee;">${
             item.quantity || 1
           }</td>
-          <td style="padding: 8px 12px; text-align:right; border:1px solid #eee;">₦${Number(
-            item.price || item.unitPrice || 0
-          ).toLocaleString()}</td>
+          <td style="padding: 8px 12px; text-align:right; border:1px solid #eee;">${formatter.format(
+           item.price || item.unitPrice || 0
+          )}
+            
+          </td>
         </tr>`;
     })
     .join("");
@@ -1845,7 +1847,7 @@ export const sendDetailedOrderEmail = async ({
   const discount = order.discount || 0
   
 
-  // HTML email (your existing email template with paymentMethod adjustments)
+  
   const html = `
     <div style="font-family: Arial, sans-serif; background-color: #f6f8fa; padding: 20px;">
       <div style="max-width: 700px; margin: auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.06);">

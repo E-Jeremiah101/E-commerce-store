@@ -109,8 +109,9 @@ const AdminOrdersPage = () => {
       case "Cancelled":
         return "bg-red-600 text-white";
       case "Refunded":
-      case "Partially Refunded":
         return "bg-purple-600 text-white";
+      case "Partially Refunded":
+        return "bg-pink-600 text-white";
       default:
         return "bg-yellow-500 text-white";
     }

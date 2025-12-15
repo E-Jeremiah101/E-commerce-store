@@ -68,6 +68,10 @@ const ViewOrderPage = () => {
                ? "bg-green-600 text-white"
                : order.status === "Cancelled"
                ? "bg-red-600 text-white"
+               : order.status === "Refunded"
+               ? "bg-purple-600 text-white"
+               : order.status === "Partially Refunded"
+               ? "bg-pink-600 text-white"
                : "bg-yellow-500 text-white"
            }`}
          >
@@ -76,7 +80,6 @@ const ViewOrderPage = () => {
        </motion.div>
        {/* Order Info */}
        <div className=" grid grid-cols-2 text-black gap-5 mt-12 py-6 px-2  ">
-
          <div>
            <h1 className="text-gray-600">Order Placed</h1>
            <p className="font-semibold">
@@ -123,112 +126,109 @@ const ViewOrderPage = () => {
          <div className="space-y-4">
            <ul>
              {order.products.map((item) => (
-               <span
-                 onClick={() => navigate(`/vieworders/${order._id}`)}
-                 className="cursor-pointer"
+               <li
+                 key={item._id}
+                 className="flex gap-4 p-4 bg-gray-50 rounded-lg shadow mt-2"
                >
-                 <li
-                   key={item._id}
-                   className="flex gap-4 p-4 bg-gray-50 rounded-lg shadow mt-2"
-                 >
-                   {" "}
-                   <img
-                     src={item.image}
-                     alt={item.name}
-                     className="w-20 h-20 object-cover rounded"
-                   />
-                   <div className="flex-1 space-y-3">
-                     <div className="flex justify-between items-center">
-                       <h3 className="text-gray-900 text-sm break-words w-40 md:w-fit">
-                         {item.name}
-                       </h3>
-                       <p className="text-gray-800 font-semibold ">
-                         {formatPrice(item.price * item.quantity, settings?.currency )}
-                       </p>
-                     </div>
-                     <div className="flex flex-wrap gap-2 text-xs text-gray-900">
-                       {item.selectedSize && (
-                         <span className="bg-gray-100 px-2 py-1 rounded tracking-widest">
-                           Size: {item.selectedSize || "NA"}
-                         </span>
+                 {" "}
+                 <img
+                   src={item.image}
+                   alt={item.name}
+                   className="w-20 h-20 object-cover rounded"
+                 />
+                 <div className="flex-1 space-y-3">
+                   <div className="flex justify-between items-center">
+                     <h3 className="text-gray-900 text-sm break-words w-40 md:w-fit">
+                       {item.name}
+                     </h3>
+                     <p className="text-gray-800 font-semibold ">
+                       {formatPrice(
+                         item.price * item.quantity,
+                         settings?.currency
                        )}
-                       {item.selectedColor && (
-                         <span className="bg-gray-100 px-2 py-1 rounded tracking-widest">
-                           Color: {item.selectedColor || "N/A"}
-                         </span>
-                       )}
-                     </div>
-                     <div className="flex  justify-between text-sm text-gray-900">
-                       <span className="bg-gray-100 h-fit px-2 py-1 rounded text-xs ">
-                         Qty: {item.quantity}
-                       </span>
-                       {item.quantity > 1 && (
-                         <span className="text-gray-700 text-xs">
-                           {formatPrice(item.price, settings?.currency )} each
-                         </span>
-                       )}
-                       {(() => {
-                         // Find refunds that belong to this specific product
-                         const productRefunds =
-                           order.refunds?.filter((refund) => {
-                             // Get the product ID from the refund
-                             let refundProductId;
-
-                             if (refund.product) {
-                               if (typeof refund.product === "object") {
-                                 refundProductId =
-                                   refund.product._id?.toString();
-                               } else {
-                                 refundProductId = refund.product.toString();
-                               }
-                             } else if (refund.productSnapshot?._id) {
-                               // Handle deleted products
-                               refundProductId = refund.productSnapshot._id;
-                             }
-
-                             // Get the product ID from the current item
-                             const currentProductId =
-                               item.product?._id?.toString();
-
-                             // Compare IDs
-                             return refundProductId === currentProductId;
-                           }) || [];
-
-                         // If this product has refunds, show them
-                         if (productRefunds.length > 0) {
-                           return productRefunds.map((refund, index) => (
-                             <div key={index} className="mt-2 p-2 rounded">
-                               <span
-                                 className={`inline-block px-2 py-1 text-xs rounded ${
-                                   refund.status === "Approved" ||
-                                   refund.status === "Refunded"
-                                     ? "bg-green-100 text-green-700"
-                                     : refund.status === "Processing"
-                                     ? "bg-blue-100 text-blue-700"
-                                     : refund.status === "Rejected"
-                                     ? "bg-red-100 text-red-700"
-                                     : "bg-yellow-100 text-yellow-700"
-                                 }`}
-                               >
-                                 {refund.status === "Approved" ||
-                                 refund.status === "Refunded"
-                                   ? "Refunded"
-                                   : refund.status === "Processing"
-                                   ? "Refund Processing"
-                                   : refund.status === "Rejected"
-                                   ? "Refund Rejected"
-                                   : "Refund Pending"}
-                               </span>
-                             </div>
-                           ));
-                         }
-
-                         return null;
-                       })()}
-                     </div>
+                     </p>
                    </div>
-                 </li>
-               </span>
+                   <div className="flex flex-wrap gap-2 text-xs text-gray-900">
+                     {item.selectedSize && (
+                       <span className="bg-gray-100 px-2 py-1 rounded tracking-widest">
+                         Size: {item.selectedSize || "NA"}
+                       </span>
+                     )}
+                     {item.selectedColor && (
+                       <span className="bg-gray-100 px-2 py-1 rounded tracking-widest">
+                         Color: {item.selectedColor || "N/A"}
+                       </span>
+                     )}
+                   </div>
+                   <div className="flex  justify-between text-sm text-gray-900">
+                     <span className="bg-gray-100 h-fit px-2 py-1 rounded text-xs ">
+                       Qty: {item.quantity}
+                     </span>
+                     {item.quantity > 1 && (
+                       <span className="text-gray-700 text-xs">
+                         {formatPrice(item.price, settings?.currency)} each
+                       </span>
+                     )}
+                     {(() => {
+                       // Find refunds that belong to this specific product
+                       const productRefunds =
+                         order.refunds?.filter((refund) => {
+                           // Get the product ID from the refund
+                           let refundProductId;
+
+                           if (refund.product) {
+                             if (typeof refund.product === "object") {
+                               refundProductId = refund.product._id?.toString();
+                             } else {
+                               refundProductId = refund.product.toString();
+                             }
+                           } else if (refund.productSnapshot?._id) {
+                             // Handle deleted products
+                             refundProductId = refund.productSnapshot._id;
+                           }
+
+                           // Get the product ID from the current item
+                           const currentProductId =
+                             item.product?._id?.toString();
+
+                           // Compare IDs
+                           return refundProductId === currentProductId;
+                         }) || [];
+
+                       // If this product has refunds, show them
+                       if (productRefunds.length > 0) {
+                         return productRefunds.map((refund, index) => (
+                           <div key={index} className="mt-2 p-2 rounded">
+                             <span
+                               className={`inline-block px-2 py-1 text-xs rounded ${
+                                 refund.status === "Approved" ||
+                                 refund.status === "Refunded"
+                                   ? "bg-green-100 text-green-700"
+                                   : refund.status === "Processing"
+                                   ? "bg-blue-100 text-blue-700"
+                                   : refund.status === "Rejected"
+                                   ? "bg-red-100 text-red-700"
+                                   : "bg-yellow-100 text-yellow-700"
+                               }`}
+                             >
+                               {refund.status === "Approved" ||
+                               refund.status === "Refunded"
+                                 ? "Refunded"
+                                 : refund.status === "Processing"
+                                 ? "Refund Processing"
+                                 : refund.status === "Rejected"
+                                 ? "Refund Rejected"
+                                 : "Refund Pending"}
+                             </span>
+                           </div>
+                         ));
+                       }
+
+                       return null;
+                     })()}
+                   </div>
+                 </div>
+               </li>
              ))}
            </ul>
          </div>
@@ -335,7 +335,8 @@ const ViewOrderPage = () => {
          </h2>
 
          <p className="pb-1 text-gray-600">
-           Items total: <span> {formatPrice(order.subtotal, settings?.currency )}</span>
+           Items total:{" "}
+           <span> {formatPrice(order.subtotal, settings?.currency)}</span>
          </p>
          {order.discount > 0 && (
            <>
@@ -346,14 +347,15 @@ const ViewOrderPage = () => {
              <p className="pb-1 text-gray-600">
                Discount:{" "}
                <span className="text-red-500">
-                 -{formatPrice(order.discount, settings?.currency )}
+                 -{formatPrice(order.discount, settings?.currency)}
                </span>
              </p>
            </>
          )}
          {order.deliveryFee > 0 && (
            <p className="pb-1 text-gray-600">
-             Delivery Fees: <span>{formatPrice(order.deliveryFee, settings?.currency )}</span>
+             Delivery Fees:{" "}
+             <span>{formatPrice(order.deliveryFee, settings?.currency)}</span>
            </p>
          )}
 
@@ -361,7 +363,6 @@ const ViewOrderPage = () => {
            Total: ₦{order.totalAmount.toLocaleString()}
          </p>
        </div>
-
      </motion.div>
    );
 };

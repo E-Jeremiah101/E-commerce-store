@@ -81,10 +81,10 @@ const RefundTab = () => {
                   <h3 className="font-semibold"> {order.orderNumber}</h3>
                   <span
                     className={`px-3 py-1 rounded-full text-sm ${
-                      order.status === "Delivered"
-                        ? "bg-green-100 text-green-700"
-                        : order.status === "Cancelled"
-                        ? "bg-red-100 text-red-700"
+                        order.status === "Refunded"
+                        ? "bg-purple-600 text-white"
+                        : order.status === "Partially Refunded"
+                        ? "bg-pink-600 text-white"
                         : "bg-yellow-100 text-yellow-700"
                     }`}
                   >
@@ -124,7 +124,10 @@ const RefundTab = () => {
                               {item.name}
                             </h3>
                             <p className="text-gray-800 font-semibold ">
-                             {formatPrice(item.price * item.quantity, settings?.currency )}
+                              {formatPrice(
+                                item.price * item.quantity,
+                                settings?.currency
+                              )}
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2 text-xs text-gray-900">
@@ -206,15 +209,13 @@ const RefundTab = () => {
                             })()}
                           </div>
                         </div>
-                      </li> 
+                      </li>
                     </span>
                   ))}
                 </ul>
               </div>
             ))
         )}
-
-    
       </motion.div>
     </>
   );
