@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import axios from "../lib/axios";
 import { useUserStore } from "../stores/useUserStore";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 import {
   Users,
   ShoppingCart,
@@ -44,6 +46,7 @@ const AnalyticsTab = () => {
       key: "unitsSold",
       direction: "descending",
     });
+    
 
   useEffect(() => {
     const fetchAnalyticsData = async () => {
@@ -238,6 +241,9 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
         }
       : { pending: 0, approved: 0, rejected: 0 };
 
+      const { settings } = useStoreSettings();
+      
+
   if (isLoading)
     return (
       <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -257,7 +263,6 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
 
   return (
     <>
-
       <motion.div
         className="max-w-7xl mx-auto px-4 text-gray-700"
         initial={{ opacity: 0, y: 20 }}
@@ -439,11 +444,8 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                 </p>
                 <h3 className="text-2xl font-bold text-gray-900 mt-1">
                   {analyticsData.auv
-                    ? `₦${analyticsData.auv.toLocaleString(undefined, {
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      })}`
-                    : "₦0"}
+                    ? `${formatPrice(analyticsData.auv, settings?.currency)}`
+                    : `${formatPrice(0, settings?.currency)}`}
                 </h3>
                 <p className="text-gray-500 text-xs mt-1">
                   {analyticsData.totalUnitsSold || 0} units sold
@@ -520,11 +522,8 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                 </p>
                 <h4 className="text-2xl font-bold text-gray-900">
                   {analyticsData.aov
-                    ? `₦${analyticsData.aov.toLocaleString(undefined, {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })}`
-                    : "₦0.00"}
+                    ? `${formatPrice(analyticsData.aov, settings?.currency)}`
+                    : `${formatPrice(0, settings?.currency)}`}
                 </h4>
                 <div className="flex items-center gap-1 mt-2">
                   {analyticsData.aovChange > 0 ? (
@@ -762,7 +761,8 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                 <p className="text-gray-600 font-medium">Gross Revenue</p>
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                ₦{analyticsData.grossRevenue?.toLocaleString() || "0"}
+                {formatPrice(analyticsData?.grossRevenue, settings?.currency) ||
+                  "0"}
               </h3>
               <div className="flex items-center gap-2">
                 {analyticsData.revenueChange >= 0 ? (
@@ -792,7 +792,10 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                 <p className="text-gray-600 font-medium">Refunded Amount</p>
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                ₦{analyticsData.totalRefunded?.toLocaleString() || "0"}
+                {formatPrice(
+                  analyticsData?.totalRefunded,
+                  settings?.currency
+                ) || "0"}
               </h3>
               <div className="flex items-center gap-2">
                 {analyticsData.refundedChange >= 0 ? (
@@ -822,7 +825,8 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                 <p className="text-gray-600 font-medium">Net Revenue</p>
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                ₦{analyticsData.netRevenue?.toLocaleString() || "0"}
+                {formatPrice(analyticsData?.netRevenue, settings?.currency) ||
+                  "0"}
               </h3>
               <div className="flex items-center gap-2">
                 {analyticsData.netRevenueChange >= 0 ? (
@@ -859,10 +863,10 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
               <LineChart data={salesData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="name" stroke="#6B7280" fontSize={12} />
-                <YAxis
+                 <YAxis
                   stroke="#6B7280"
                   fontSize={12}
-                  tickFormatter={(value) => `₦${(value / 1000).toFixed(0)}K`}
+                  tickFormatter={(value) => `${formatPrice((value / 1000).toFixed(0), settings?.currency)}K`}
                 />
                 <Tooltip
                   content={<CustomTooltip />}
@@ -941,12 +945,12 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                 Product Sales Analysis
               </h3>
               <p className="text-gray-500 text-sm">
-                Breakdown of items sold in the selected <span className="uppercase font-bold">{selectedRange}</span> period
+                Breakdown of items sold in the selected{" "}
+                <span className="uppercase font-bold">{selectedRange}</span>{" "}
+                period
               </p>
             </div>
-            <div className="flex items-center gap-4">
-
-            </div>
+            <div className="flex items-center gap-4"></div>
           </div>
 
           {/* Summary Cards */}
@@ -960,7 +964,10 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
             <div className="bg-green-50 rounded-lg p-4">
               <p className="text-sm text-gray-600">Total Revenue</p>
               <p className="text-xl font-bold text-gray-900">
-                ₦{productSummary.totalRevenue?.toLocaleString() || "0"}
+                {formatPrice(
+                  productSummary?.totalRevenue,
+                  settings?.currency
+                ) || "0"}
               </p>
             </div>
             <div className="bg-purple-50 rounded-lg p-4">
@@ -974,11 +981,13 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
             <div className="bg-orange-50 rounded-lg p-4">
               <p className="text-sm text-gray-600">Avg. Revenue per Product</p>
               <p className="text-xl font-bold text-gray-900">
-                ₦
                 {productSales.length > 0
-                  ? Math.round(
-                      productSummary.totalRevenue / productSales.length
-                    ).toLocaleString()
+                  ? formatPrice(
+                      Math.round(
+                        productSummary.totalRevenue / productSales.length
+                      ),
+                      settings?.currency
+                    )
                   : "0"}
               </p>
             </div>
@@ -1063,8 +1072,7 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                     scope="col"
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => requestProductSort("revenuePerUnit")}
-                  >
-                  </th>
+                  ></th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -1154,8 +1162,16 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                          {product.formattedRevenue ||
-                            `₦${product.totalRevenue?.toLocaleString() || "0"}`}
+                          {formatPrice(
+                                product.formattedRevenue,
+                                settings?.currency
+                              )  ||
+                            `${
+                              formatPrice(
+                                product.totalRevenue,
+                                settings?.currency
+                              ) || "0"
+                            }`}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div
@@ -1167,10 +1183,15 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                                 : "bg-gray-100 text-gray-800"
                             }`}
                           >
-                            {product.formattedAUV ||
-                              `₦${
-                                product.averageUnitValue?.toLocaleString() ||
-                                "0"
+                            {formatPrice(
+                                 product.formattedAUV,
+                                  settings?.currency
+                                )||
+                              `${
+                                formatPrice(
+                                  product?.averageUnitValue,
+                                  settings?.currency
+                                ) || "0"
                               }`}
                           </div>
                         </td>
@@ -1198,15 +1219,20 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm font-bold text-gray-900">
-                      ₦{productSummary.totalRevenue?.toLocaleString() || "0"}
+                      {formatPrice(
+                        productSummary?.totalRevenue,
+                        settings?.currency
+                      ) || "0"}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm font-bold text-gray-900">
-                      ₦{productSummary.overallAUV?.toLocaleString() || "0"}
+                      {formatPrice(
+                        productSummary?.overallAUV,
+                        settings?.currency
+                      ) || "0"}
                     </span>
                   </td>
-
                 </tr>
               </tbody>
             </table>
@@ -1242,9 +1268,12 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                   </p>
                   <p className="text-sm text-gray-500">
                     {sortedProducts.length > 0
-                      ? `₦${Math.max(
-                          ...sortedProducts.map((p) => p.averageUnitValue)
-                        ).toLocaleString()} per unit`
+                      ? `${formatPrice(
+                          Math.max(
+                            ...sortedProducts.map((p) => p.averageUnitValue)
+                          ),
+                          settings?.currency
+                        )} per unit`
                       : ""}
                   </p>
                 </div>
@@ -1331,19 +1360,27 @@ const MiniChartTooltip = ({ active, payload }) =>
     </div>
   ) : null;
 
-const CustomTooltip = ({ active, payload, label }) =>
-  active && payload && payload.length ? (
+const CustomTooltip = ({ active, payload, label }) => {
+  const { settings } = useStoreSettings(); // ✅ hook at top
+
+  if (!active || !payload || !payload.length) return null;
+
+  return (
     <div className="bg-white border border-gray-300 rounded-lg p-3 text-gray-800 shadow-lg">
       <p className="font-semibold text-gray-900 mb-1">{label}</p>
+
       {payload.map((item) => (
         <p key={item.dataKey} className="text-sm">
           <span style={{ color: item.color }}>● </span>
           {item.name}:{" "}
-          <span className="font-semibold">₦{item.value?.toLocaleString()}</span>
+          <span className="font-semibold">
+            {formatPrice(item.value, settings?.currency)}
+          </span>
         </p>
       ))}
     </div>
-  ) : null;
+  );
+};
 
 /* -----------------------------
    Date Label Formatter

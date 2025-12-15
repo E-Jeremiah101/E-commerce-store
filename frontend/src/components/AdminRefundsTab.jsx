@@ -5,7 +5,9 @@ import axios from "../lib/axios";
 import { Eye, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { Loader } from "lucide-react";
-import { useUserStore } from "../stores/useUserStore.js";
+import { useUserStore } from "../stores/useUserStore.js"; 
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
 const AdminRefundsTab = () => {
   const [refunds, setRefunds] = useState([]);
@@ -21,7 +23,7 @@ const AdminRefundsTab = () => {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const {user} = useUserStore();
+ 
 
   // Fetch all refund requests
   useEffect(() => {
@@ -127,6 +129,7 @@ const AdminRefundsTab = () => {
       setLoadingStates((prev) => ({ ...prev, [refundId]: null }));
     }
   };
+  const {settings} = useStoreSettings()
 
   if (loading)
     return (
@@ -242,7 +245,7 @@ const AdminRefundsTab = () => {
                       </div>
                     </td>
                     <td className="px-4 py-2 border">
-                      ₦{r.amount?.toLocaleString() || 0}
+                      {formatPrice(r.amount, settings?.currency) || 0}
                     </td>
                     <td className="px-4 py-2 border-b border-gray-700">
                       <button
@@ -349,7 +352,7 @@ const AdminRefundsTab = () => {
                 {selectedProduct.productName || "Deleted Product"}
               </h2>
               <p className="text-gray-500 text-sm mb-2">
-                Price: ₦{selectedProduct.productPrice?.toLocaleString() || 0}
+                Price: {formatPrice(selectedProduct?.productPrice, settings?.currency)|| 0}
               </p>
               <p className="text-sm text-gray-600 mb-1">
                 <strong>Quantity:</strong> {selectedProduct.quantity}

@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../stores/useUserStore";
 import { MoreVertical } from "lucide-react";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
 const AdminOrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -113,6 +115,7 @@ const AdminOrdersPage = () => {
         return "bg-yellow-500 text-white";
     }
   };
+  const {settings} = useStoreSettings();
 
   if (loading)
     return (
@@ -288,7 +291,7 @@ const AdminOrdersPage = () => {
 
                       <td className="px-6 py-4">
                         <div className="text-gray-900 font-semibold">
-                          ₦{order.totalAmount.toLocaleString()}
+                          {formatPrice(order?.totalAmount, settings?.currency)}
                         </div>
                         {order.discount > 0 && (
                           <div className="text-xs text-green-400">
@@ -299,29 +302,8 @@ const AdminOrdersPage = () => {
 
                       <td className="px-6 py-4">
                         <div className="flex flex-col space-y-2">
-                          {/* <select
-                            value={order.status}
-                            onChange={(e) =>
-                              handleStatusChange(order._id, e.target.value)
-                            }
-                            className="bg-gray-700 text-white px-2 py-1 rounded text-sm w-full"
-                          >
-                            <option value="Pending">Pending</option>
-                            <option value="Processing">Processing</option>
-                            <option value="Shipped">Shipped</option>
-                            <option value="Delivered">Delivered</option>
-                            {order.status === "Partially Refunded" && (
-                              <option value="Partially Refunded">
-                                Partially Refunded
-                              </option>
-                            )}
-                            {order.status === "Refunded" && (
-                              <option value="Refunded">Refunded</option>
-                            )}
-                            <option value="Cancelled">Cancelled</option>
-                          </select> */}
                           <span
-                            className={` py-1 rounded text-xs font-medium text-center ${getStatusColor(
+                            className={` py-1 px-2 rounded text-xs font-medium text-center ${getStatusColor(
                               order.status
                             )}`}
                           >
@@ -341,13 +323,6 @@ const AdminOrdersPage = () => {
                             >
                               Details
                             </button>
-                            {/* {order.refunds && order.refunds.length > 0 && (
-                            <div className="mt-1">
-                              <span className="inline-block px-2 py-0.5 text-xs rounded bg-purple-100 text-purple-700">
-                                Refunds: {order.refunds.length}
-                              </span>
-                            </div>
-                          )} */}
                           </div>
 
                           <div className="relative dropdown-container">
@@ -358,7 +333,7 @@ const AdminOrdersPage = () => {
                               }}
                               className="p-1 hover:bg-gray-500 rounded transition-colors"
                             >
-                              <MoreVertical className="w-4 h-4 text-gray-700" />
+                              <MoreVertical className=" text-gray-700" size={23} />
                             </button>
 
                             {/* Dropdown menu */}
@@ -448,10 +423,6 @@ const AdminOrdersPage = () => {
                 </tbody>
               </table>
             </div>
-
-            {/* Expanded Order Details (Modal-like view when clicking "View Details") */}
-            {/* This remains the same as your original detailed view */}
-            {/* The table above is just a summary view */}
 
             {/* Pagination */}
             {totalPages > 1 && (

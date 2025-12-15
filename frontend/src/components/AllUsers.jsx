@@ -3,6 +3,8 @@ import axios from "axios";
 import { X } from "lucide-react";
 import { useUserStore } from "../stores/useUserStore.js";
 import { motion } from "framer-motion";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 const AllUsers = () => {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState("");
@@ -43,6 +45,7 @@ const AllUsers = () => {
   useEffect(() => {
     fetchUsers();
   }, [search, roleFilter]);
+  const {settings} = useStoreSettings()
   if (loading)
     return (
       <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -213,8 +216,8 @@ const AllUsers = () => {
                       <div>
                         <p className="font-semibold">{item.product?.name}</p>
                         <p className="text-sm text-gray-600">
-                          Qty: {item.quantity} | ₦
-                          {item.product?.price?.toLocaleString()}
+                          Qty: {item.quantity} | 
+                          {formatPrice(item.product?.price, settings?.currency)}
                         </p>
                         <p className="text-sm text-gray-600">
                           Size: {item?.size}

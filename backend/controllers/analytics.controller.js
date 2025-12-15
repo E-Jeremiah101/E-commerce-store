@@ -643,7 +643,7 @@ async function getTopSellingProducts(limit = 7, startDate, endDate) {
   }
 };
 
-// analytics.controller.js - Add this function
+
 async function getProductSalesData(startDate, endDate) {
   try {
     const matchStage = {
@@ -725,7 +725,7 @@ async function getProductSalesData(startDate, endDate) {
           },
         },
       },
-    ]);
+    ]);  
 
     // Calculate totals for AUV calculation
     const totals = productSales.reduce((acc, product) => {
@@ -745,8 +745,8 @@ async function getProductSalesData(startDate, endDate) {
     return {
       products: productSales.map(product => ({
         ...product,
-        formattedRevenue: `₦${Math.round(product.totalRevenue).toLocaleString()}`,
-        formattedAUV: `₦${Math.round(product.averageUnitValue).toLocaleString()}`,
+        formattedRevenue: `${Math.round(product.totalRevenue)}`,
+        formattedAUV: `${Math.round(product.averageUnitValue)}`,
         revenuePerUnit: Math.round(product.totalRevenue / product.unitsSold)
       })),
       summary: {

@@ -5,6 +5,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { motion } from "framer-motion";
 import { useUserStore } from "../stores/useUserStore";
 import ExportTransactionPdf from "../utils/exportTransactionPdf.jsx";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 const Transactions = () => {
   const [transactions, setTransaction] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -91,6 +93,7 @@ const Transactions = () => {
   const handlePageClick = (pageNum) => setCurrentPage(pageNum);
 
   // Get status badge color
+  const {settings} = useStoreSettings()
 
   if (loading)
     return (
@@ -246,8 +249,8 @@ const Transactions = () => {
                       </td>
 
                       <td className="px-6 py-4  text-sm text-gray-900 font-medium capitalize">
-                        {tx.type === "refund" ? "-" : ""}₦
-                        {(tx.amount ?? 0).toLocaleString()}
+                        {tx.type === "refund" ? "-" : ""}
+                        {formatPrice((tx.amount ?? 0), settings?.currency)}
                       </td>
 
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium capitalize">
