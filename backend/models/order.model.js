@@ -100,8 +100,15 @@ const orderSchema = new mongoose.Schema(
     },
     deliveryZone: {
       type: String,
-      enum: ["Same City", "Edo State", "South-South", "Southern", "Northern"],
-      default: "Same City",
+      enum: [
+        "Same City", // Changed from "Same City Delivery"
+        "Same LGA", // Changed from "Same LGA Delivery"
+        "Same State", // Changed from "Same State Delivery"
+        "Same Region", // Changed from "Same Region Delivery"
+        "Southern Region",
+        "Northern Region",
+      ],
+      default: "Northern Region",
     },
     coupon: {
       code: String,

@@ -20,7 +20,7 @@ import Product from "../models/product.model.js";
 import { sendEmail } from "../lib/mailer.js";
 import { flw } from "../lib/flutterwave.js";
 import redis from "../lib/redis.js";
-import { calculateDeliveryFee } from "../../frontend/src/utils/deliveryConfig.js";
+import { calculateDeliveryFee } from "../service/deliveryConfig.js";
 import storeSettings from "../models/storeSettings.model.js"
 
  
@@ -1032,7 +1032,7 @@ export const createCheckoutSession = async (req, res) => {
         couponCode: couponCode || "",
         originalTotal,
         discountAmount,
-        deliveryFee: finalDeliveryFee, // Make sure this is included
+        deliveryFee: finalDeliveryFee,
         deliveryZone: deliveryZone || "", 
         finalTotal,
         deliveryAddress: addressString || "",

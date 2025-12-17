@@ -27,6 +27,7 @@ import auditRoutes from "./routes/auditLog.routes.js";
 import adminTransactionRoutes from "./routes/admin.transaction.route.js";
 import storeSettingsRoutes from "./routes/storeSettings.route.js";
 import webhookRoutes from "./routes/flutterRefundWebhookRoute.js";
+import locationRoutes from "./routes/location.routes.js"
 
 dotenv.config();
 const app = express();
@@ -51,6 +52,8 @@ app.use(
 app.set("trust proxy", true);
 app.use(express.json({ limit: "10mb" })); // allow to parse the body of the request
 app.use(cookieParser());
+
+app.use("/api/locations", locationRoutes); 
 
 app.use("/api/webhooks", webhookRoutes);
 

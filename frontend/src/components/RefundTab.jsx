@@ -26,7 +26,7 @@ const RefundTab = () => {
     };
     fetchOrders();
   }, []);
-
+    const { settings } = useStoreSettings();
 
 
   if (loading)
@@ -35,7 +35,6 @@ const RefundTab = () => {
         <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
       </div>
     );
-    const { settings } = useStoreSettings();
 
   return (
     <>
@@ -81,7 +80,7 @@ const RefundTab = () => {
                   <h3 className="font-semibold"> {order.orderNumber}</h3>
                   <span
                     className={`px-3 py-1 rounded-full text-sm ${
-                        order.status === "Refunded"
+                      order.status === "Refunded"
                         ? "bg-purple-600 text-white"
                         : order.status === "Partially Refunded"
                         ? "bg-pink-600 text-white"
@@ -105,6 +104,7 @@ const RefundTab = () => {
                 <ul className="space-y-4 mb-4">
                   {order.products.map((item) => (
                     <span
+                      key={item._id}
                       onClick={() => navigate(`/vieworders/${order._id}`)}
                       className="cursor-pointer"
                     >

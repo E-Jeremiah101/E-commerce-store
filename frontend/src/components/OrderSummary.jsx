@@ -7,7 +7,6 @@ import { Link } from "react-router-dom";
 import axios from "../lib/axios";
 import { useUserStore } from "../stores/useUserStore.js";
 import toast from "react-hot-toast";
-import { calculateDeliveryFee } from "../utils/deliveryConfig.js";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "./StoreSettingsContext.jsx";
 const OrderSummary = () => {
@@ -16,6 +15,7 @@ const OrderSummary = () => {
   const [loading, setIsLoading] = useState(false);
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [deliveryZone, setDeliveryZone] = useState("");
+  const [backendDeliveryZone, setBackendDeliveryZone] = useState("");
   const [availabilityCheck, setAvailabilityCheck] = useState({
     allAvailable: true,
     unavailableItems: [],
@@ -34,38 +34,145 @@ const OrderSummary = () => {
   }, [cart]);
 
   // Calculate delivery fee based on user's address
-  useEffect(() => {
-    if (user?.addresses?.length > 0) {
-      const defaultAddress =
-        user.addresses.find((a) => a.isDefault) || user.addresses[0];
+  const { settings } = useStoreSettings();
 
-      if (defaultAddress) {
-        const fee = calculateDeliveryFee(
-          defaultAddress.state || "",
-          defaultAddress.city || "",
-          defaultAddress.lga || ""
-        );
+   useEffect(() => {
+     if (!user?.addresses?.length) return;
 
-        setDeliveryFee(fee);
+     const defaultAddress =
+       user.addresses.find((a) => a.isDefault) || user.addresses[0];
+     if (!defaultAddress) return;
 
-        // Determine zone name for display
-        if (fee === 500) setDeliveryZone("Same City Delivery");
-        else if (fee === 1500) setDeliveryZone("Edo State Delivery");
-        else if (fee === 2500) setDeliveryZone("South-South Region");
-        else if (fee === 3500) setDeliveryZone("Southern Region");
-        else if (fee === 5000) setDeliveryZone("Northern Region");
-      }
-    }
-  }, [user]);
+     // Helper function to determine region
+     const getRegionByState = (stateName) => {
+       const regions = {
+         SOUTH_SOUTH: [
+           "Delta",
+           "Edo",
+           "Bayelsa",
+           "Cross River",
+           "Akwa Ibom",
+           "Rivers",
+         ],
+         SOUTH_EAST: ["Abia", "Anambra", "Ebonyi", "Enugu", "Imo"],
+         SOUTH_WEST: ["Lagos", "Ogun", "Ondo", "Osun", "Oyo", "Ekiti"],
+         NORTH_CENTRAL: [
+           "Benue",
+           "Kogi",
+           "Kwara",
+           "Nasarawa",
+           "Niger",
+           "Plateau",
+           "FCT",
+         ],
+         NORTH_EAST: ["Adamawa", "Bauchi", "Borno", "Gombe", "Taraba", "Yobe"],
+         NORTH_WEST: [
+           "Jigawa",
+           "Kaduna",
+           "Kano",
+           "Katsina",
+           "Kebbi",
+           "Sokoto",
+           "Zamfara",
+         ],
+       };
 
+       for (const [region, states] of Object.entries(regions)) {
+         if (states.includes(stateName)) {
+           return region;
+         }
+       }
+       return null;
+     };
+
+     // Get admin's warehouse location (with defaults if not set)
+     const adminWarehouse = settings?.warehouseLocation || {
+       state: "Edo",
+       city: "Benin City",
+       lga: "Oredo",
+     };
+
+     const adminState = adminWarehouse.state || "Edo";
+     const adminCity = adminWarehouse.city || "Benin City";
+     const adminLGA = adminWarehouse.lga || "Oredo";
+
+     const customerState = defaultAddress.state;
+     const customerCity = defaultAddress.city || "";
+     const customerLGA = defaultAddress.lga || "";
+
+     let fee = 0;
+     let zone = ""; // This will use the exact backend enum values
+
+     // Use the shipping fees from settings (with defaults)
+     const shippingFees = settings?.shippingFees || {
+       sameCity: 500,
+       sameLGA: 1000,
+       sameState: 1500,
+       sameRegion: 2500,
+       southern: 3500,
+       northern: 5000,
+     };
+
+     // 1. Same City (exact match or contains admin city name)
+     if (
+       customerState === adminState &&
+       customerCity.toLowerCase().includes(adminCity.toLowerCase())
+     ) {
+       fee = shippingFees.sameCity;
+       zone = "Same City"; // ✅ Exact backend enum value
+     }
+     // 2. Same LGA (different city but same LGA)
+     else if (customerState === adminState && customerLGA === adminLGA) {
+       fee = shippingFees.sameLGA || shippingFees.sameState;
+       zone = "Same LGA"; // ✅ Exact backend enum value
+     }
+     // 3. Same State (different LGA)
+     else if (customerState === adminState) {
+       fee = shippingFees.sameState;
+       zone = "Same State"; // ✅ Exact backend enum value
+     }
+     // 4. Same Region (based on Nigerian geopolitical zones)
+     else {
+       const adminRegion = getRegionByState(adminState);
+       const customerRegion = getRegionByState(customerState);
+
+       if (adminRegion && customerRegion && adminRegion === customerRegion) {
+         fee = shippingFees.sameRegion;
+         zone = "Same Region"; // ✅ Exact backend enum value
+       }
+       // 5. Southern States (South-South, South-East, South-West)
+       else if (
+         customerRegion &&
+         ["SOUTH_SOUTH", "SOUTH_EAST", "SOUTH_WEST"].includes(customerRegion)
+       ) {
+         fee = shippingFees.southern;
+         zone = "Southern Region"; // ✅ Exact backend enum value
+       }
+       // 6. Northern States
+       else {
+         fee = shippingFees.northern;
+         zone = "Northern Region"; // ✅ Exact backend enum value
+       }
+     }
+
+     setDeliveryFee(fee);
+     setDeliveryZone(zone);
+
+     console.log("📦 Dynamic Delivery Calculation:", {
+       adminWarehouse,
+       customerAddress: defaultAddress,
+       calculatedFee: fee,
+       zone,
+     });
+   }, [user, settings]);
 
   const finalDeliveryFee = deliveryFee;
-   const newTotal =
-     subtotal -
-     (coupon && isCouponApplied
-       ? subtotal * (coupon.discountPercentage / 100)
-       : 0);
-   const grandTotal = newTotal + finalDeliveryFee;
+  const newTotal =
+    subtotal -
+    (coupon && isCouponApplied
+      ? subtotal * (coupon.discountPercentage / 100)
+      : 0);
+  const grandTotal = newTotal + finalDeliveryFee;
 
   // Add one-click protection
   const isProcessing = useRef(false);
@@ -265,8 +372,8 @@ const OrderSummary = () => {
   });
 
   const savings = subtotal - total;
-  const formattedSubtotal = subtotal
-  const formattedSavings = savings
+  const formattedSubtotal = subtotal;
+  const formattedSavings = savings;
 
   const isButtonDisabled = () => {
     // If no items in cart
@@ -311,8 +418,6 @@ const OrderSummary = () => {
 
   // Use the function
   const buttonDisabled = isButtonDisabled();
-
-  const { settings } = useStoreSettings();
 
   return (
     <motion.div

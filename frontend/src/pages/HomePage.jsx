@@ -7,15 +7,15 @@ import { Link } from "react-router-dom";
 import FAQSection from "../components/FAQSection.jsx";
 import Footer from "../components/Footer.jsx";
 import HeroSlider from "../components/HeroSlider.jsx";
-
 import OtherFeatures from "../components/OtherFeatures.jsx";
 import LandingProducts from "../components/LandingProducts.jsx";
+
 const HomePage = () => {
-  
   const [categories, setCategories] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] =
+    useState(true);
 
   const {
     fetchFeaturedProducts,
@@ -51,7 +51,7 @@ const HomePage = () => {
         const res = await axios.get("/products/recommendations");
         setRecommendations(res.data);
       } catch (error) {
-        setRecommendations([]); 
+        setRecommendations([]);
         console.error(error);
       } finally {
         setIsLoadingRecommendations(false);
@@ -77,17 +77,16 @@ const HomePage = () => {
         <HeroSlider />
       </motion.div>
 
-      <div className=" hidden md:flex justify-center items-center text-black mb-5 mt-9 look">
-        <ul className="flex flex-wrap justify-center gap-x-7 gap-y-6 px-30 max-w-5xl text-sm  text-center tracking-widest">
+      <div className="hidden md:flex justify-center items-center text-black mb-5 mt-9 look">
+        <ul className="flex flex-wrap justify-center gap-x-7 gap-y-6 px-30 max-w-5xl text-sm text-center tracking-widest">
           {categories.map((category) => (
-            <Link to={`/category/${category.name}`}>
-              <button
-                key={category.name}
-                className=" hover:text-gray-300 uppercase"
-              >
-                {category.name}
-              </button>
-            </Link>
+            <li key={category.name}>
+              <Link to={`/category/${category.name}`}>
+                <button className="hover:text-gray-300 uppercase">
+                  {category.name}
+                </button>
+              </Link>
+            </li>
           ))}
         </ul>
       </div>
@@ -112,11 +111,12 @@ const HomePage = () => {
 
               {/* Category Buttons */}
               {categories.map((category) => (
-                <Link to={`/category/${category.name}`}>
-                  <button
-                    key={category.name}
-                    className="flex-shrink-0 px-4 rounded py-2 bg-gray-100 text-gray-700  hover:bg-gray-200 transition-colors whitespace-nowrap uppercase"
-                  >
+                <Link
+                  key={category.name}
+                  to={`/category/${category.name}`}
+                  className="flex-shrink-0"
+                >
+                  <button className="px-4 rounded py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors whitespace-nowrap uppercase">
                     {category.name}
                   </button>
                 </Link>

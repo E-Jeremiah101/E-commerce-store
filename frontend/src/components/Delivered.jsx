@@ -5,11 +5,12 @@ import axios from "../lib/axios.js";
 import { requestRefund } from "../stores/refundRequestStore.js";
 import GoBackButton from "./GoBackButton.jsx";
 import { motion } from "framer-motion";
-import { Check, Loader } from "lucide-react";
+import { Loader } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "./StoreSettingsContext.jsx";
+
 const Delivered = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +22,8 @@ const Delivered = () => {
     reason: "",
   });
   const [saving, setSaving] = useState(false);
-   const navigate = useNavigate()
+  const navigate = useNavigate();
+
   const getDeletedProductId = (p, orderId) => {
     const safeName = (p.name || p.product?.name || "")
       .trim()
@@ -50,7 +52,7 @@ const Delivered = () => {
   };
 
   const handleRefundSubmit = async (e) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!refundData.productId || !refundData.reason.trim()) {
       toast.error("Please select product and provide a reason");
@@ -61,7 +63,7 @@ const Delivered = () => {
       toast.error("Please select product and provide a reason");
       return;
     }
- 
+
     try {
       setSaving(true);
 
@@ -84,6 +86,7 @@ const Delivered = () => {
       setSaving(false);
     }
   };
+  const { settings } = useStoreSettings();
 
   if (loading)
     return (
@@ -91,7 +94,7 @@ const Delivered = () => {
         <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
       </div>
     );
-const { settings } = useStoreSettings();
+
   return (
     <>
       <motion.div
@@ -152,15 +155,12 @@ const { settings } = useStoreSettings();
                 )}
                 <ul className="space-y-4 mb-4">
                   {order.products.map((item) => (
-                    <>
-                      <span
+                    <React.Fragment key={item._id}>
+                      <div
                         onClick={() => navigate(`/vieworders/${order._id}`)}
                         className="cursor-pointer"
                       >
-                        <li
-                          key={item._id}
-                          className="flex gap-4 p-4 bg-gray-100 rounded-lg shadow"
-                        >
+                        <li className="flex gap-4 p-4 bg-gray-100 rounded-lg shadow">
                           <img
                             src={item.image}
                             alt={item.name}
@@ -173,7 +173,10 @@ const { settings } = useStoreSettings();
                                 {item.name}
                               </h3>
                               <p className="text-gray-800 font-semibold ">
-                               {formatPrice(item.price * item.quantity, settings?.currency )}
+                                {formatPrice(
+                                  item.price * item.quantity,
+                                  settings?.currency
+                                )}
                               </p>
                             </div>
                             <div className="flex flex-wrap gap-2 text-xs text-gray-900">
@@ -194,7 +197,10 @@ const { settings } = useStoreSettings();
                                 </span>
                                 {item.quantity > 1 && (
                                   <span className="text-gray-700 text-xs">
-                                    {formatPrice(item.price, settings?.currency)}
+                                    {formatPrice(
+                                      item.price,
+                                      settings?.currency
+                                    )}
                                   </span>
                                 )}
                               </div>
@@ -261,7 +267,7 @@ const { settings } = useStoreSettings();
                             })()}
                           </div>
                         </li>
-                      </span>
+                      </div>
 
                       <div className="mt-2">
                         {order.status === "Delivered" && (
@@ -290,70 +296,9 @@ const { settings } = useStoreSettings();
                           </div>
                         )}
                       </div>
-                    </>
+                    </React.Fragment>
                   ))}
                 </ul>
-                <div className="flex justify-between align-middle">
-                  {/* <div>
-                    {order.discount > 0 && (
-                      <>
-                        <p className="text-xs text-gray-500 mb-1">
-                          Subtotal: ₦{order.subtotal.toLocaleString()}
-                        </p>
-                        <p className="text-xs text-gray-500 mb-1">
-                          Coupon Applied:{" "}
-                          <span className="text-red-500 text-xs">-10%</span>{" "}
-                          <span className="text-green-500 text-xs">
-                            {order.couponCode}
-                          </span>
-                        </p>{" "}
-                        <p className="text-xs text-gray-500 mb-1">
-                          Discount: -₦
-                          {order.discount.toLocaleString()}
-                        </p>
-                      </>
-                    )}
-                    <p className="text-sm text-gray-500 mb-2">
-                      Total: ₦{order.totalAmount.toLocaleString()}
-                    </p>
-                  </div> */}
-
-                  {/* <div className="flex">
-                    {order.products.some((product) => {
-                      const productRefunds =
-                        order.refunds?.filter((refund) => {
-                          // Multiple ways to extract the refund product ID
-                          let refundProductId;
-
-                          if (refund.product) {
-                            if (typeof refund.product === "object") {
-                              refundProductId = refund.product._id?.toString();
-                            } else {
-                              refundProductId = refund.product.toString();
-                            }
-                          } else if (refund.productSnapshot?._id) {
-                            refundProductId = refund.productSnapshot._id;
-                          }
-
-                          const currentProductId =
-                            product.product?._id?.toString();
-
-                          return refundProductId === currentProductId;
-                        }) || [];
-
-                      return productRefunds.length === 0;
-                    }) && (
-                      <button
-                        onClick={() => handleRefundClick(order)}
-                        className="hover:text-red-600 text-red-500 px-2 py-2 rounded-lg text-xs cursor-pointer"
-                      >
-                        <span className="bg-red-50 p-1 rounded">
-                          Request Refund
-                        </span>
-                      </button>
-                    )}
-                  </div> */}
-                </div>
               </div>
             ))
         )}

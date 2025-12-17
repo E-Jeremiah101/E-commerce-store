@@ -12,9 +12,18 @@ export const getStoreSettings = async (req, res) => {
 };
 
 
+
 export const updateStoreSettings = async (req, res) => {
-  const { storeName, logo, supportEmail, phoneNumber, currency, address } =
-    req.body;
+  const {
+    storeName,
+    logo,
+    supportEmail,
+    phoneNumber,
+    currency,
+    warehouseLocation,
+    shippingFees,
+    nigeriaConfig,
+  } = req.body;
 
   let settings = await StoreSettings.findOne();
 
@@ -27,7 +36,30 @@ export const updateStoreSettings = async (req, res) => {
   settings.supportEmail = supportEmail;
   settings.phoneNumber = phoneNumber;
   settings.currency = currency;
-  settings.address = address;
+
+  // Update warehouse location if provided
+  if (warehouseLocation) {
+    settings.warehouseLocation = {
+      ...settings.warehouseLocation,
+      ...warehouseLocation,
+    };
+  }
+
+  // Update shipping fees if provided
+  if (shippingFees) {
+    settings.shippingFees = {
+      ...settings.shippingFees,
+      ...shippingFees,
+    };
+  }
+
+  // Update Nigeria config if provided
+  if (nigeriaConfig) {
+    settings.nigeriaConfig = {
+      ...settings.nigeriaConfig,
+      ...nigeriaConfig,
+    };
+  }
 
   await settings.save();
 

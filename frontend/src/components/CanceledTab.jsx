@@ -26,6 +26,9 @@ const CanceledTab = () => {
     fetchOrders();
   }, []);
 
+  
+    const { settings } = useStoreSettings();
+
 
   if (loading)
     return (
@@ -33,8 +36,6 @@ const CanceledTab = () => {
         <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
       </div>
     );
-
-    const { settings } = useStoreSettings();
 
   return (
     <>
@@ -72,7 +73,7 @@ const CanceledTab = () => {
                   <h3 className="font-semibold"> {order.orderNumber}</h3>
                   <span
                     className={`px-3 py-1 rounded-full text-sm ${
-                        order.status === "Cancelled"
+                      order.status === "Cancelled"
                         ? "bg-red-100 text-red-700"
                         : "bg-yellow-100 text-yellow-700"
                     }`}
@@ -87,6 +88,7 @@ const CanceledTab = () => {
                 <ul className="space-y-4 mb-4">
                   {order.products.map((item) => (
                     <span
+                      key={item._id}
                       onClick={() => navigate(`/vieworders/${order._id}`)}
                       className="cursor-pointer"
                     >
@@ -106,7 +108,10 @@ const CanceledTab = () => {
                               {item.name}
                             </h3>
                             <p className="text-gray-800 font-semibold ">
-                             {formatPrice(item.price * item.quantity, settings?.currency )}
+                              {formatPrice(
+                                item.price * item.quantity,
+                                settings?.currency
+                              )}
                             </p>
                           </div>
                           <div className="flex flex-wrap gap-2 text-xs text-gray-900">

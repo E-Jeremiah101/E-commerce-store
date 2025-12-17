@@ -1,8 +1,9 @@
-const NIGERIA_STATES = [
-  {
-    name: "Abia",
-    alias: "abia",
+// Complete list of Nigerian states with their LGAs
+export const NIGERIAN_STATES = {
+  ABIA: {
+    capital: "Umuahia",
     lgas: [
+      "Aba North",
       "Aba South",
       "Arochukwu",
       "Bende",
@@ -21,9 +22,8 @@ const NIGERIA_STATES = [
       "Umu Nneochi",
     ],
   },
-  {
-    name: "Adamawa",
-    alias: "adamawa",
+  ADAMAWA: {
+    capital: "Yola",
     lgas: [
       "Demsa",
       "Fufure",
@@ -33,7 +33,7 @@ const NIGERIA_STATES = [
       "Grie",
       "Hong",
       "Jada",
-      "Larmurde",
+      "Lamurde",
       "Madagali",
       "Maiha",
       "Mayo Belwa",
@@ -48,9 +48,8 @@ const NIGERIA_STATES = [
       "Yola South",
     ],
   },
-  {
-    name: "Akwa Ibom",
-    alias: "akwa-ibom",
+  AKWA_IBOM: {
+    capital: "Uyo",
     lgas: [
       "Abak",
       "Eastern Obolo",
@@ -85,9 +84,8 @@ const NIGERIA_STATES = [
       "Uyo",
     ],
   },
-  {
-    name: "Anambra",
-    alias: "anambra",
+  ANAMBRA: {
+    capital: "Awka",
     lgas: [
       "Aguata",
       "Anambra East",
@@ -112,9 +110,8 @@ const NIGERIA_STATES = [
       "Oyi",
     ],
   },
-  {
-    name: "Bauchi",
-    alias: "bauchi",
+  BAUCHI: {
+    capital: "Bauchi",
     lgas: [
       "Alkaleri",
       "Bauchi",
@@ -138,9 +135,8 @@ const NIGERIA_STATES = [
       "Zaki",
     ],
   },
-  {
-    name: "Bayelsa",
-    alias: "bayelsa",
+  BAYELSA: {
+    capital: "Yenagoa",
     lgas: [
       "Brass",
       "Ekeremor",
@@ -152,9 +148,8 @@ const NIGERIA_STATES = [
       "Yenagoa",
     ],
   },
-  {
-    name: "Benue",
-    alias: "benue",
+  BENUE: {
+    capital: "Makurdi",
     lgas: [
       "Ado",
       "Agatu",
@@ -174,16 +169,15 @@ const NIGERIA_STATES = [
       "Ohimini",
       "Oju",
       "Okpokwu",
-      "Oturkpo",
+      "Otukpo",
       "Tarka",
       "Ukum",
       "Ushongo",
       "Vandeikya",
     ],
   },
-  {
-    name: "Borno",
-    alias: "borno",
+  BORNO: {
+    capital: "Maiduguri",
     lgas: [
       "Abadam",
       "Askira/Uba",
@@ -214,9 +208,8 @@ const NIGERIA_STATES = [
       "Shani",
     ],
   },
-  {
-    name: "Cross River",
-    alias: "cross-river",
+  CROSS_RIVER: {
+    capital: "Calabar",
     lgas: [
       "Abi",
       "Akamkpa",
@@ -238,9 +231,8 @@ const NIGERIA_STATES = [
       "Yala",
     ],
   },
-  {
-    name: "Delta",
-    alias: "delta",
+  DELTA: {
+    capital: "Asaba",
     lgas: [
       "Aniocha North",
       "Aniocha South",
@@ -269,9 +261,8 @@ const NIGERIA_STATES = [
       "Warri South West",
     ],
   },
-  {
-    name: "Ebonyi",
-    alias: "ebonyi",
+  EBONYI: {
+    capital: "Abakaliki",
     lgas: [
       "Abakaliki",
       "Afikpo North",
@@ -283,13 +274,13 @@ const NIGERIA_STATES = [
       "Ishielu",
       "Ivo",
       "Izzi",
+      "Ohaozara",
       "Ohaukwu",
       "Onicha",
     ],
   },
-  {
-    name: "Edo",
-    alias: "edo",
+  EDO: {
+    capital: "Benin City",
     lgas: [
       "Akoko-Edo",
       "Egor",
@@ -301,7 +292,7 @@ const NIGERIA_STATES = [
       "Etsako East",
       "Etsako West",
       "Igueben",
-      "Ikpoba Okha",
+      "Ikpoba-Okha",
       "Orhionmwon",
       "Oredo",
       "Ovia North-East",
@@ -311,9 +302,8 @@ const NIGERIA_STATES = [
       "Uhunmwonde",
     ],
   },
-  {
-    name: "Ekiti",
-    alias: "ekiti",
+  EKITI: {
+    capital: "Ado-Ekiti",
     lgas: [
       "Ado Ekiti",
       "Efon",
@@ -333,9 +323,8 @@ const NIGERIA_STATES = [
       "Oye",
     ],
   },
-  {
-    name: "Enugu",
-    alias: "enugu",
+  ENUGU: {
+    capital: "Enugu",
     lgas: [
       "Aninri",
       "Awgu",
@@ -353,24 +342,15 @@ const NIGERIA_STATES = [
       "Oji River",
       "Udenu",
       "Udi",
-      "Uzo-Uwani",
+      "Uzo Uwani",
     ],
   },
-  {
-    name: "FCT",
-    alias: "fct",
-    lgas: [
-      "Abaji",
-      "Bwari",
-      "Gwagwalada",
-      "Kuje",
-      "Kwali",
-      "Municipal Area Council",
-    ],
+  FCT: {
+    capital: "Abuja",
+    lgas: ["Abuja", "Abaji", "Bwari", "Gwagwalada", "Kuje", "Kwali"],
   },
-  {
-    name: "Gombe",
-    alias: "gombe",
+  GOMBE: {
+    capital: "Gombe",
     lgas: [
       "Akko",
       "Balanga",
@@ -385,9 +365,8 @@ const NIGERIA_STATES = [
       "Yamaltu/Deba",
     ],
   },
-  {
-    name: "Imo",
-    alias: "imo",
+  IMO: {
+    capital: "Owerri",
     lgas: [
       "Aboh Mbaise",
       "Ahiazu Mbaise",
@@ -418,9 +397,8 @@ const NIGERIA_STATES = [
       "Unuimo",
     ],
   },
-  {
-    name: "Jigawa",
-    alias: "jigawa",
+  JIGAWA: {
+    capital: "Dutse",
     lgas: [
       "Auyo",
       "Babura",
@@ -451,9 +429,8 @@ const NIGERIA_STATES = [
       "Yankwashi",
     ],
   },
-  {
-    name: "Kaduna",
-    alias: "kaduna",
+  KADUNA: {
+    capital: "Kaduna",
     lgas: [
       "Birnin Gwari",
       "Chikun",
@@ -480,9 +457,8 @@ const NIGERIA_STATES = [
       "Zaria",
     ],
   },
-  {
-    name: "Kano",
-    alias: "kano",
+  KANO: {
+    capital: "Kano",
     lgas: [
       "Ajingi",
       "Albasu",
@@ -530,9 +506,8 @@ const NIGERIA_STATES = [
       "Wudil",
     ],
   },
-  {
-    name: "Katsina",
-    alias: "katsina",
+  KATSINA: {
+    capital: "Katsina",
     lgas: [
       "Bakori",
       "Batagarawa",
@@ -570,9 +545,8 @@ const NIGERIA_STATES = [
       "Zango",
     ],
   },
-  {
-    name: "Kebbi",
-    alias: "kebbi",
+  KEBBI: {
+    capital: "Birnin Kebbi",
     lgas: [
       "Aleiro",
       "Arewa Dandi",
@@ -597,9 +571,8 @@ const NIGERIA_STATES = [
       "Zuru",
     ],
   },
-  {
-    name: "Kogi",
-    alias: "kogi",
+  KOGI: {
+    capital: "Lokoja",
     lgas: [
       "Adavi",
       "Ajaokuta",
@@ -624,9 +597,8 @@ const NIGERIA_STATES = [
       "Yagba West",
     ],
   },
-  {
-    name: "Kwara",
-    alias: "kwara",
+  KWARA: {
+    capital: "Ilorin",
     lgas: [
       "Asa",
       "Baruten",
@@ -646,9 +618,8 @@ const NIGERIA_STATES = [
       "Pategi",
     ],
   },
-  {
-    name: "Lagos",
-    alias: "lagos",
+  LAGOS: {
+    capital: "Ikeja",
     lgas: [
       "Agege",
       "Ajeromi-Ifelodun",
@@ -672,9 +643,8 @@ const NIGERIA_STATES = [
       "Surulere",
     ],
   },
-  {
-    name: "Nasarawa",
-    alias: "nasarawa",
+  NASARAWA: {
+    capital: "Lafia",
     lgas: [
       "Akwanga",
       "Awe",
@@ -691,9 +661,8 @@ const NIGERIA_STATES = [
       "Wamba",
     ],
   },
-  {
-    name: "Niger",
-    alias: "niger",
+  NIGER: {
+    capital: "Minna",
     lgas: [
       "Agaie",
       "Agwara",
@@ -722,9 +691,8 @@ const NIGERIA_STATES = [
       "Wushishi",
     ],
   },
-  {
-    name: "Ogun",
-    alias: "ogun",
+  OGUN: {
+    capital: "Abeokuta",
     lgas: [
       "Abeokuta North",
       "Abeokuta South",
@@ -746,16 +714,17 @@ const NIGERIA_STATES = [
       "Ogun Waterside",
       "Remo North",
       "Shagamu",
+      "Yewa North",
+      "Yewa South",
     ],
   },
-  {
-    name: "Ondo",
-    alias: "ondo",
+  ONDO: {
+    capital: "Akure",
     lgas: [
       "Akoko North-East",
       "Akoko North-West",
-      "Akoko South-East",
       "Akoko South-West",
+      "Akoko South-East",
       "Akure North",
       "Akure South",
       "Ese Odo",
@@ -772,9 +741,8 @@ const NIGERIA_STATES = [
       "Owo",
     ],
   },
-  {
-    name: "Osun",
-    alias: "osun",
+  OSUN: {
+    capital: "Osogbo",
     lgas: [
       "Aiyedade",
       "Aiyedire",
@@ -808,9 +776,8 @@ const NIGERIA_STATES = [
       "Osogbo",
     ],
   },
-  {
-    name: "Oyo",
-    alias: "oyo",
+  OYO: {
+    capital: "Ibadan",
     lgas: [
       "Afijio",
       "Akinyele",
@@ -840,20 +807,19 @@ const NIGERIA_STATES = [
       "Ona Ara",
       "Orelope",
       "Ori Ire",
-      "Oyo",
       "Oyo East",
+      "Oyo West",
       "Saki East",
       "Saki West",
       "Surulere",
     ],
   },
-  {
-    name: "Plateau",
-    alias: "plateau",
+  PLATEAU: {
+    capital: "Jos",
     lgas: [
+      "Bokkos",
       "Barkin Ladi",
       "Bassa",
-      "Bokkos",
       "Jos East",
       "Jos North",
       "Jos South",
@@ -870,9 +836,8 @@ const NIGERIA_STATES = [
       "Wase",
     ],
   },
-  {
-    name: "Rivers",
-    alias: "rivers",
+  RIVERS: {
+    capital: "Port Harcourt",
     lgas: [
       "Abua/Odual",
       "Ahoada East",
@@ -899,9 +864,8 @@ const NIGERIA_STATES = [
       "Tai",
     ],
   },
-  {
-    name: "Sokoto",
-    alias: "sokoto",
+  SOKOTO: {
+    capital: "Sokoto",
     lgas: [
       "Binji",
       "Bodinga",
@@ -928,9 +892,8 @@ const NIGERIA_STATES = [
       "Yabo",
     ],
   },
-  {
-    name: "Taraba",
-    alias: "taraba",
+  TARABA: {
+    capital: "Jalingo",
     lgas: [
       "Ardo Kola",
       "Bali",
@@ -950,9 +913,8 @@ const NIGERIA_STATES = [
       "Zing",
     ],
   },
-  {
-    name: "Yobe",
-    alias: "yobe",
+  YOBE: {
+    capital: "Damaturu",
     lgas: [
       "Bade",
       "Bursari",
@@ -973,15 +935,15 @@ const NIGERIA_STATES = [
       "Yusufari",
     ],
   },
-  {
-    name: "Zamfara",
-    alias: "zamfara",
+  ZAMFARA: {
+    capital: "Gusau",
     lgas: [
       "Anka",
       "Bakura",
       "Birnin Magaji/Kiyaw",
       "Bukkuyum",
       "Bungudu",
+      "Chafe",
       "Gummi",
       "Gusau",
       "Kaura Namoda",
@@ -989,24 +951,64 @@ const NIGERIA_STATES = [
       "Maru",
       "Shinkafi",
       "Talata Mafara",
-      "Chafe",
       "Zurmi",
     ],
   },
-];
+};
 
-export function getLgasByState(stateName) {
-  const state = NIGERIA_STATES.find(
-    (s) => s.name.toLowerCase() === stateName.toLowerCase()
-  );
-  return state ? state.lgas : [];
+// Nigerian regions mapping
+export const NIGERIAN_REGIONS = {
+  SOUTH_SOUTH: [
+    "Delta",
+    "Edo",
+    "Bayelsa",
+    "Cross River",
+    "Akwa Ibom",
+    "Rivers",
+  ],
+  SOUTH_EAST: ["Abia", "Anambra", "Ebonyi", "Enugu", "Imo"],
+  SOUTH_WEST: ["Lagos", "Ogun", "Ondo", "Osun", "Oyo", "Ekiti"],
+  NORTH_CENTRAL: [
+    "Benue",
+    "Kogi",
+    "Kwara",
+    "Nasarawa",
+    "Niger",
+    "Plateau",
+    "FCT",
+  ],
+  NORTH_EAST: ["Adamawa", "Bauchi", "Borno", "Gombe", "Taraba", "Yobe"],
+  NORTH_WEST: [
+    "Jigawa",
+    "Kaduna",
+    "Kano",
+    "Katsina",
+    "Kebbi",
+    "Sokoto",
+    "Zamfara",
+  ],
+};
+
+// Helper function to get region by state
+export function getRegionByState(stateName) {
+  for (const [region, states] of Object.entries(NIGERIAN_REGIONS)) {
+    if (states.includes(stateName)) {
+      return region;
+    }
+  }
+  return null;
 }
 
+// Helper to get all states
 export function getAllStates() {
-  return NIGERIA_STATES.map((state) => ({
-    name: state.name,
-    alias: state.alias,
+  return Object.keys(NIGERIAN_STATES).map((key) => ({
+    value: key,
+    label: key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
   }));
 }
 
-export { NIGERIA_STATES };
+// Helper to get LGAs by state
+export function getLGAsByState(stateKey) {
+  const state = NIGERIAN_STATES[stateKey];
+  return state ? state.lgas : [];
+}
