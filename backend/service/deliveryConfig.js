@@ -61,7 +61,7 @@ export const NIGERIAN_STATES = {
       "Esan South-East",
       "Esan West",
       "Etsako Central",
-      "Etsako East",
+      "Etsako East", 
       "Etsako West",
       "Igueben",
       "Ikpoba-Okha",

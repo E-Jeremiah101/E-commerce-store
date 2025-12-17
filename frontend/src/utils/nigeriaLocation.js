@@ -11,7 +11,7 @@ export const nigeriaLocations = {
       "Abuja Municipal": ["Garki", "Wuse", "Maitama", "Asokoro"],
       Bwari: ["Dutse", "Kubwa", "Usuma", "Byazhin"],
     },
-  },
+  }, 
   Rivers: {
     cities: {
       PortHarcourt: ["Rumuokoro", "D-line", "Elelenwo", "Rumuola"],

@@ -29,7 +29,7 @@ const ViewOrderPage = () => {
     fetchOrder();
   }, [id]);
   
-
+ const { settings } = useStoreSettings();
   if (loading)
     return (
       <div className="flex justify-center items-center h-screen">
@@ -42,7 +42,7 @@ const ViewOrderPage = () => {
       <div className="text-center mt-20 text-gray-400">Order not found.</div>
     );
 
-    const { settings } = useStoreSettings();
+   
    return (
      <motion.div
        className="px-4 lg:px-28 py-8 bg-white "
