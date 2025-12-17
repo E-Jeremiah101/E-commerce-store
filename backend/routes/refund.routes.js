@@ -5,6 +5,7 @@ import {
   getAllRefundRequests,
   approveRefund,
   rejectRefund,
+  retryWebhook,
 } from "../controllers/refund.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
@@ -25,8 +26,11 @@ router.put(
 router.put(
   "/:orderId/:refundId/reject",
   protectRoute,
-  adminRoute,
+  adminRoute, 
   rejectRefund
 );
+router.post("/webhook/retry", adminRoute, retryWebhook);
+
+
 
 export default router;

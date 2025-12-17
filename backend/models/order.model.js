@@ -123,10 +123,17 @@ const orderSchema = new mongoose.Schema(
     totalRefunded: { type: Number, default: 0 },
     refunds: [
       {
-        product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" }, // refunded product
-        quantity: Number, // how many were refunded
-        amount: Number, // total refunded for this item
-        reason: String, // user reason for refund
+        product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+        quantity: Number,
+        amount: Number,
+        reason: String, //user reason
+        rejectionReason: String,
+        rejectedBy: {
+          type: String,
+          enum: ["admin", "gateway", null],
+          default: null,
+        },
+        errorDetails: String,
         status: {
           type: String,
           enum: ["Pending", "Processing", "Approved", "Rejected"],

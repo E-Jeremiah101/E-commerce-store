@@ -385,6 +385,7 @@ async function getAnalyticsData(startDate, endDate) {
     Approved: 0,
     Pending: 0,
     Rejected: 0,
+    Processing: 0,
   };
 
   refundStats.forEach((r) => {
@@ -421,7 +422,8 @@ async function getAnalyticsData(startDate, endDate) {
     refundsApproved: refundSummary.Approved,
     refundsPending: refundSummary.Pending,
     refundsRejected: refundSummary.Rejected,
-    averageUnitValue: Math.round(averageUnitValue), // Add this
+    refundsProcessing: refundSummary.Processing,
+    averageUnitValue: Math.round(averageUnitValue), 
     totalUnitsSold: totalUnits,
   };
 

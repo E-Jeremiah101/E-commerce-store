@@ -230,6 +230,7 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
   const pending = analyticsData.refundsPending || 0;
   const approved = analyticsData.refundsApproved || 0;
   const rejected = analyticsData.refundsRejected || 0;
+  const processing = analyticsData.refundsProcessing || 0;
   const totalRefunds = pending + approved + rejected;
 
   const percentage =
@@ -238,8 +239,9 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
           pending: (pending / totalRefunds) * 100,
           approved: (approved / totalRefunds) * 100,
           rejected: (rejected / totalRefunds) * 100,
+          processing: (processing / totalRefunds) * 100,
         }
-      : { pending: 0, approved: 0, rejected: 0 };
+      : { pending: 0, approved: 0, rejected: 0, processing: 0};
 
       const { settings } = useStoreSettings();
       
@@ -863,10 +865,15 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
               <LineChart data={salesData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                 <XAxis dataKey="name" stroke="#6B7280" fontSize={12} />
-                 <YAxis
+                <YAxis
                   stroke="#6B7280"
                   fontSize={12}
-                  tickFormatter={(value) => `${formatPrice((value / 1000).toFixed(0), settings?.currency)}K`}
+                  tickFormatter={(value) =>
+                    `${formatPrice(
+                      (value / 1000).toFixed(0),
+                      settings?.currency
+                    )}K`
+                  }
                 />
                 <Tooltip
                   content={<CustomTooltip />}
@@ -922,6 +929,16 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
             iconColor="text-red-600"
             iconBg="bg-red-100"
             subtitle={`${percentage.rejected.toFixed(1)}% `}
+          />
+          <AnalyticsCard
+            title="Processing Refunds"
+            value={analyticsData.refundsProcessing || 0}
+            icon={XCircle}
+            bgColor="bg-gradient-to-br from-red-50 to-pink-50"
+            borderColor="border-red-100"
+            iconColor="text-red-600"
+            iconBg="bg-red-100"
+            subtitle={`${percentage.processing.toFixed(1)}% `}
           />
           <AnalyticsCard
             title="Refund Status"
@@ -1163,9 +1180,9 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
                           {formatPrice(
-                                product.formattedRevenue,
-                                settings?.currency
-                              )  ||
+                            product.formattedRevenue,
+                            settings?.currency
+                          ) ||
                             `${
                               formatPrice(
                                 product.totalRevenue,
@@ -1184,9 +1201,9 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                             }`}
                           >
                             {formatPrice(
-                                 product.formattedAUV,
-                                  settings?.currency
-                                )||
+                              product.formattedAUV,
+                              settings?.currency
+                            ) ||
                               `${
                                 formatPrice(
                                   product?.averageUnitValue,

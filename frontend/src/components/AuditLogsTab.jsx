@@ -9,7 +9,7 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
-  Eye,
+  Eye, 
   AlertCircle,
   CheckCircle,
   XCircle,
@@ -78,9 +78,31 @@ const AuditLogsTab = () => {
     { value: "INVENTORY_SYNC", label: "Inventory Sync" },
 
     // Refund actions
+    { value: "VIEW_REFUND_REQUESTS", label: "View Refund Requests" },
+    { value: "REFUND_REQUESTED", label: "Refund Request Submitted" },
     { value: "REFUND_APPROVED", label: "Refund Approved" },
     { value: "REFUND_REJECTED", label: "Refund Rejected" },
+    { value: "REFUND_PROCESSING_STARTED", label: "Refund Processing Started" }, // ⬅️ IMPORTANT
+    { value: "REFUND_APPROVAL_FAILED", label: "Refund Approval Failed" },
+    { value: "REFUND_APPROVAL_ERROR", label: "Refund Approval Error" },
+    { value: "REFUND_REJECTION_ERROR", label: "Refund Rejection Error" },
     { value: "VIEW_REFUND_REQUESTS", label: "View Refund Requests" },
+    { value: "REFUND_ADMIN_REJECTED", label: "Admin Rejected Refund" },
+    {
+      value: "FLUTTERWAVE_REFUND_INITIATED",
+      label: "Flutterwave Refund Initiated",
+    },
+    {
+      value: "REFUND_APPROVAL_INITIATED",
+      label: "Refund Approval Initiated",
+    },
+    {
+      value: "FLUTTERWAVE_INITIATION_ERROR",
+      label: "Flutterwave Initiation Error",
+    },
+    { value: "FLUTTERWAVE_NETWORK_ERROR", label: "Flutterwave Network Error" },
+    { value: "REFUND_WEBHOOK_APPROVED", label: "Webhook: Refund Approved" },
+    { value: "REFUND_WEBHOOK_REJECTED", label: "Webhook: Refund Rejected" },
 
     // Category actions
     { value: "CREATE_CATEGORY", label: "Create Category" },
@@ -207,16 +229,29 @@ const AuditLogsTab = () => {
         return <Package className="h-4 w-4 text-teal-500" />;
 
       // Refund actions
+      case "REFUND_REQUESTED":
       case "REFUND_APPROVED":
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case "REFUND_REJECTED":
+      case "REFUND_ADMIN_REJECTED":
+      case "REFUND_WEBHOOK_REJECTED":
         return <XCircle className="h-4 w-4 text-red-500" />;
+      case "REFUND_PROCESSING_STARTED":
+        return <Clock className="h-4 w-4 text-blue-500" />; // ⏳ Processing icon
       case "REFUND_APPROVAL_FAILED":
       case "REFUND_APPROVAL_ERROR":
       case "REFUND_REJECTION_ERROR":
+      case "FLUTTERWAVE_INITIATION_ERROR":
+      case "FLUTTERWAVE_NETWORK_ERROR":
         return <XCircle className="h-4 w-4 text-red-500" />;
       case "VIEW_REFUND_REQUESTS":
         return <Eye className="h-4 w-4 text-gray-500" />;
+      case "FLUTTERWAVE_REFUND_INITIATED":
+        return <RefreshCw className="h-4 w-4 text-blue-500" />;
+      case "REFUND_APPROVAL_INITIATED:":
+        return <RefreshCw className="h-4 w-4 text-blue-500" />;
+      case "REFUND_WEBHOOK_APPROVED":
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
       case "USER_REFUND_REQUEST":
         return <RefreshCw className="h-4 w-4 text-blue-500" />;
 

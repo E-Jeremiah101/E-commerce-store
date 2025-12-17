@@ -26,8 +26,8 @@ import Recovery from "../components/Recovery.jsx";
 import AuditLogsTab from "../components/AuditLogsTab.jsx";
 import Transactions from "../components/Transactions.jsx";
 import toast from "react-hot-toast";
+import StoreSettings from "../components/StoreSettings.jsx";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
-import { Link } from "react-router-dom";
 
 // Define constants at the top
 const STORAGE_KEY = "admin_active_tab";
@@ -43,6 +43,7 @@ const tabs = [
   { id: "OrderRecovery", label: "Recovery", icon: Headset },
   { id: "Transactions", label: "Transactions", icon: CreditCard },
   { id: "audit", label: "Audit Logs", icon: FileText },
+  { id: "Settings", label: "Settings", icon: Settings },
 ];
 
 const clearCache = async () => {
@@ -122,13 +123,10 @@ const AdminPage = () => {
 
         {/* Clear Cache Button in Sidebar */}
         <div className="mt-auto px-3 py-4">
-          <Link to={"/store-settings"}>
-            <Settings />
-          </Link>
 
           <button
             onClick={clearCache}
-            className="w-full flex items-center justify-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+            className="w-full flex items-center justify-center px-3 py-2 bg-blue-600 hover:bg-blue-400 text-white text-sm font-medium rounded-lg transition-colors"
           >
             Clear Featured Cache
           </button>
@@ -140,13 +138,10 @@ const AdminPage = () => {
         <div className="flex justify-between items-center px-2 mb-3">
           <h2 className="text-white text-lg font-semibold">Admin Dashboard</h2>
 
-          <Link to={"/store-settings"}>
-            <Settings />
-          </Link>
 
           <button
             onClick={clearCache}
-            className="px-3 py-1 bg-red-600 text-white text-xs rounded"
+            className="px-3 py-1 bg-blue-500 text-white text-xs rounded"
           >
             Clear Cache
           </button>
@@ -183,6 +178,7 @@ const AdminPage = () => {
         {activeTab === "OrderRecovery" && <Recovery />}
         {activeTab === "Transactions" && <Transactions />}
         {activeTab === "audit" && <AuditLogsTab />}
+        {activeTab === "Settings" && <StoreSettings />}
       </div>
     </div>
   );

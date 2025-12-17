@@ -4,8 +4,6 @@ import "react-toastify/dist/ReactToastify.css";
 import axios from "../lib/axios";
 import { Eye, Search } from "lucide-react";
 import { motion } from "framer-motion";
-import { Loader } from "lucide-react";
-import { useUserStore } from "../stores/useUserStore.js"; 
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
@@ -19,11 +17,12 @@ const AdminRefundsTab = () => {
   const [dateFilter, setDateFilter] = useState("");
   const [selectedReason, setSelectedReason] = useState(null);
   const [loadingStates, setLoadingStates] = useState({});
+  const [showRejectModal, setShowRejectModal] = useState(null); // { orderId, refundId }
+  const [rejectionReason, setRejectionReason] = useState("");
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
- 
 
   // Fetch all refund requests
   useEffect(() => {
@@ -75,21 +74,57 @@ const AdminRefundsTab = () => {
     setFilteredRefunds(filtered);
   }, [searchTerm, statusFilter, dateFilter, refunds]);
 
+  // Add after your existing useEffect
+  useEffect(() => {
+    // Real-time refresh every 30 seconds for Processing refunds
+    const interval = setInterval(() => {
+      const hasProcessing = refunds.some((r) => r.status === "Processing");
+      if (hasProcessing) {
+        fetchRefundsSilently();
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [refunds]);
+
+  // Silent refresh function
+  const fetchRefundsSilently = async () => {
+    try {
+      const res = await axios.get("/refunds");
+      setRefunds(res.data || []);
+      setFilteredRefunds(res.data || []);
+    } catch (err) {
+      console.error("Silent refresh failed:", err);
+    }
+  };
+
   // Approve refund
-  const handleApprove = async (orderId, refundId, action) => {
+  const handleApprove = async (orderId, refundId) => {
     try {
       setLoadingStates((prev) => ({ ...prev, [refundId]: "approving" }));
-      await axios.put(`/refunds/${orderId}/${refundId}/approve`);
-      toast.success("Refund approved successfully");
-      const processedAt = new Date().toISOString();
+
+      const response = await axios.put(
+        `/refunds/${orderId}/${refundId}/approve`
+      );
+
+      // Show success toast with processing message
+      toast.success(response.data.message || "Refund initiated successfully");
+
+      // Update UI to show Processing state
       setRefunds((prev) =>
         prev.map((r) =>
-          r.refundId === refundId ? { ...r, status: "Approved" } : r
+          r.refundId === refundId
+            ? {
+                ...r,
+                status: "Processing", // Show as Processing, not Approved
+                processedAt: new Date().toISOString(),
+              }
+            : r
         )
       );
     } catch (err) {
-      console.error("Approve refund failed:", err);
-      toast.error(err.response?.data?.message || "Failed to approve refund");
+      console.error("Initiate refund failed:", err);
+      toast.error(err.response?.data?.message || "Failed to initiate refund");
     } finally {
       setLoadingStates((prev) => ({ ...prev, [refundId]: null }));
     }
@@ -109,16 +144,22 @@ const AdminRefundsTab = () => {
   const handlePageClick = (pageNum) => setCurrentPage(pageNum);
 
   // Reject refund
-  const handleReject = async (orderId, refundId) => {
+  const handleReject = async (
+    orderId,
+    refundId,
+    reason = "Rejected by admin"
+  ) => {
     try {
       setLoadingStates((prev) => ({ ...prev, [refundId]: "rejecting" }));
-      await axios.put(`/refunds/${orderId}/${refundId}/reject`);
-      toast.success("Refund rejected ");
+      await axios.put(`/refunds/${orderId}/${refundId}/reject`, {
+        reason: reason.trim() || "Rejected by admin",
+      });
+      toast.success("Refund rejected successfully ");
       const processedAt = new Date().toISOString();
       setRefunds((prev) =>
         prev.map((r) =>
           r.refundId === refundId
-            ? { ...r, status: "Rejected", processedAt }
+            ? { ...r, status: "Rejected", processedAt, rejectionReason: reason }
             : r
         )
       );
@@ -129,7 +170,7 @@ const AdminRefundsTab = () => {
       setLoadingStates((prev) => ({ ...prev, [refundId]: null }));
     }
   };
-  const {settings} = useStoreSettings()
+  const { settings } = useStoreSettings();
 
   if (loading)
     return (
@@ -181,6 +222,7 @@ const AdminRefundsTab = () => {
           >
             <option value="">All Statuses</option>
             <option value="Pending">Pending</option>
+            <option value="Processing">Processing</option>
             <option value="Approved">Approved</option>
             <option value="Rejected">Rejected</option>
           </select>
@@ -194,6 +236,33 @@ const AdminRefundsTab = () => {
             />
           </div>
         </div>
+        {/* Processing Status Banner */}
+        {refunds.some((r) => r.status === "Processing") && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-blue-600 text-lg">⏳</span>
+                </div>
+                <div>
+                  <h3 className="font-medium text-blue-900">
+                    Active Refund Processing
+                  </h3>
+                  <p className="text-sm text-blue-700">
+                    Some refunds are being processed. Status will update
+                    automatically.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={fetchRefundsSilently}
+                className="px-4 py-2 bg-white border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 text-sm font-medium transition-colors"
+              >
+                Refresh Now
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Refunds Table */}
         <div className="overflow-x-auto no-scroll">
@@ -264,7 +333,7 @@ const AdminRefundsTab = () => {
                         : "—"}
                     </td>
 
-                    <td
+                    {/* <td
                       className={`px-4 py-2 border font-medium ${
                         r.status === "Approved"
                           ? "text-green-600"
@@ -274,42 +343,73 @@ const AdminRefundsTab = () => {
                       }`}
                     >
                       {r.status}
+                    </td> */}
+                    <td className="px-4 py-2 border">
+                      {/* Status Badge */}
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          r.status === "Approved"
+                            ? "bg-green-100 text-green-800"
+                            : r.status === "Rejected"
+                            ? "bg-red-100 text-red-800"
+                            : r.status === "Processing"
+                            ? "bg-blue-100 text-blue-800 animate-pulse" // New state
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {r.status}
+                        {r.status === "Processing"}
+                      </span>
+                      {r.status === "Rejected" && r.rejectionReason && (
+                        <div className="mt-1 text-xs text-gray-600 max-w-xs">
+                          <span className="font-medium">Reason:</span>{" "}
+                          {r.rejectionReason}
+                        </div>
+                      )}
                     </td>
 
                     <td className="px-4 py-2 border text-center space-x-2">
+                      {/* Only show buttons for Pending refunds */}
                       {r.status === "Pending" && (
-                        <>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() =>
-                                handleApprove(r.orderId, r.refundId)
-                              }
-                              className="px-2 py-1  bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-                              disabled={
-                                loadingStates[r.refundId] === "approving" ||
-                                loadingStates[r.refundId] === "rejecting"
-                              }
-                            >
-                              {loadingStates[r.refundId] === "approving"
-                                ? "Approving..."
-                                : "Approve"}
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleReject(r.orderId, r.refundId)
-                              }
-                              className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
-                              disabled={
-                                loadingStates[r.refundId] === "rejecting" ||
-                                loadingStates[r.refundId] === "approving"
-                              }
-                            >
-                              {loadingStates[r.refundId] === "rejecting"
-                                ? "Rejecting..."
-                                : "Reject"}
-                            </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleApprove(r.orderId, r.refundId)}
+                            className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors text-sm font-medium"
+                            disabled={loadingStates[r.refundId]}
+                          >
+                            {loadingStates[r.refundId] === "approving" ? (
+                              <>
+                                <span className="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                                Initiating...
+                              </>
+                            ) : (
+                              "Approve"
+                            )}
+                          </button>
+                          <button
+                            onClick={() =>
+                              setShowRejectModal({
+                                orderId: r.orderId,
+                                refundId: r.refundId,
+                                productName: r.productName,
+                              })
+                            }
+                            className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors text-sm font-medium"
+                            disabled={loadingStates[r.refundId]}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Show info message for Processing refunds */}
+                      {r.status === "Processing" && (
+                        <div className="text-blue-600 text-sm bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-block w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+                            Refund is being processed...
                           </div>
-                        </>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -324,6 +424,95 @@ const AdminRefundsTab = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Rejection Reason Modal */}
+        {showRejectModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-4">
+                Reject Refund: {showRejectModal.productName}
+              </h3>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason for Rejection *
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg p-3 h-32 focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="Explain why this refund is being rejected (this will be sent to the customer)..."
+                  required
+                />
+                {/* Optional: Common reasons quick-select */}
+                <div className="mb-3">
+                  <p className="text-sm text-gray-600 mb-2">Common Reasons:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      "Item not in original condition",
+                      "Missing original packaging/accessories",
+                      "Return outside 48-hour policy window",
+                      "Signs of wear or damage",
+                      "Product has been used/altered",
+                    ].map((reason) => (
+                      <button
+                        key={reason}
+                        type="button"
+                        onClick={() => setRejectionReason(reason)}
+                        className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+                      >
+                        {reason}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-500 mt-1">
+                  Minimum 5 characters. This reason will be emailed to the
+                  customer.
+                </p>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setShowRejectModal(null);
+                    setRejectionReason("");
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (
+                      !rejectionReason.trim() ||
+                      rejectionReason.trim().length < 5
+                    ) {
+                      toast.error(
+                        "Please enter a reason (at least 5 characters)"
+                      );
+                      return;
+                    }
+
+                    handleReject(
+                      showRejectModal.orderId,
+                      showRejectModal.refundId,
+                      rejectionReason
+                    );
+                    setShowRejectModal(null);
+                    setRejectionReason("");
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  disabled={
+                    !rejectionReason.trim() || rejectionReason.trim().length < 5
+                  }
+                >
+                  Confirm Rejection
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ✅ Product Preview Modal */}
         {selectedProduct && (
@@ -352,7 +541,11 @@ const AdminRefundsTab = () => {
                 {selectedProduct.productName || "Deleted Product"}
               </h2>
               <p className="text-gray-500 text-sm mb-2">
-                Price: {formatPrice(selectedProduct?.productPrice, settings?.currency)|| 0}
+                Price:{" "}
+                {formatPrice(
+                  selectedProduct?.productPrice,
+                  settings?.currency
+                ) || 0}
               </p>
               <p className="text-sm text-gray-600 mb-1">
                 <strong>Quantity:</strong> {selectedProduct.quantity}
@@ -443,3 +636,4 @@ const AdminRefundsTab = () => {
 };
 
 export default AdminRefundsTab;
+

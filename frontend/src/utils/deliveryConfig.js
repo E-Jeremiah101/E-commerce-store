@@ -19,7 +19,7 @@ const NIGERIA_DELIVERY_ZONES = {
       id: "zone_2",
       name: "Edo State",
       description: "Other parts of Edo State",
-      fee: 15, // ₦1500
+      fee: 5 , // ₦1500
       coverage: ["Edo"], // State coverage
     },
     { 
@@ -27,7 +27,7 @@ const NIGERIA_DELIVERY_ZONES = {
       name: "South-South Region",
       description: "Neighboring states",
       fee: 20,
-      states: ["Delta", "Ondo", "Ekiti", "Kogi", "Anambra"],
+      states: ["Delta", "Ondo", "Ekiti", "Kogi", "Anambra"], 
     },
     {
       id: "zone_4",

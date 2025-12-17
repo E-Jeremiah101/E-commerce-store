@@ -26,7 +26,6 @@ import useTrackVisitors from "./stores/useTrackVisitors.js";
 import ViewOrderPage from "./pages/ViewOrderPage.jsx";
 import SavedProductsPage from "./pages/SavedProductsPage.jsx";
 import RequestReturnPage from "./pages/RequestReturnPage.jsx";
-import StoreSettings from "./components/StoreSettings.jsx";
 
 
 function App() {
@@ -119,7 +118,6 @@ function App() {
         <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
         <Route path="/vieworders/:id" element={<ViewOrderPage />} />
         <Route path="/vieworders/:id/return" element={<RequestReturnPage />} />
-        <Route path="/store-settings" element={<StoreSettings />} />
 
         <Route
           path="Personal-info"

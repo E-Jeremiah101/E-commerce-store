@@ -230,7 +230,7 @@ const ViewOrderPage = () => {
                  </div>
                </li>
              ))}
-           </ul>
+           </ul> 
          </div>
        </div>
 

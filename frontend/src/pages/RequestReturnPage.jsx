@@ -71,15 +71,29 @@ const RequestReturnPage = () => {
       toast.success("Refund request submitted successfully!");
       setRefundData({ productId: "", quantity: 1, reason: "" });
 
-      // Navigate back to order details page
-      setTimeout(() => {
-        navigate(`/vieworders/${id}`);
-      }, 1500);
+      setTimeout(() => navigate(`/vieworders/${id}`), 1500);
     } catch (err) {
       console.error(err);
-      toast.error(
-        err.response?.data?.message || "Failed to submit refund request"
-      );
+
+      // Handle specific error cases
+      if (err.response?.data?.details?.maxAllowed) {
+        // Show quantity error with suggestion
+        const { maxAllowed, requested, suggestion } = err.response.data.details;
+        toast.error(
+          `You can only refund ${maxAllowed} item(s). ${suggestion}`,
+          { autoClose: 5000 }
+        );
+
+        // Auto-update quantity field
+        setRefundData((prev) => ({
+          ...prev,
+          quantity: Math.min(prev.quantity, maxAllowed),
+        }));
+      } else {
+        toast.error(
+          err.response?.data?.message || "Failed to submit refund request"
+        );
+      }
     } finally {
       setSaving(false);
     }

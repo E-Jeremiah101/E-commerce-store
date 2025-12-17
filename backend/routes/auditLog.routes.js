@@ -17,12 +17,5 @@ router.get("/stats", protectRoute, adminRoute, getAuditLogStats);
 router.get("/export", protectRoute, adminRoute, exportAuditLogs);
 router.get("/:id", protectRoute, adminRoute, getAuditLogById);
 router.get("/price-history", protectRoute, adminRoute, getPriceHistory);
-// router.get("/price-history", protectRoute, adminRoute, getPriceHistory);
-// router.get(
-//   "/price-history/:productId",
-//   protectRoute,
-//   adminRoute,
-//   getProductPriceHistory
-// );
 
 export default router;

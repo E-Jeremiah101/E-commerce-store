@@ -42,12 +42,21 @@ const auditLogSchema = new mongoose.Schema(
         "AUTO_INVENTORY_ADJUSTMENT",
 
         // Refund actions
+        "REFUND_REQUESTED",
         "REFUND_APPROVED",
         "REFUND_REJECTED",
+        "REFUND_PROCESSING_STARTED",
+        "REFUND_APPROVAL_INITIATED",
         "REFUND_APPROVAL_FAILED",
         "REFUND_APPROVAL_ERROR",
         "REFUND_REJECTION_ERROR",
         "VIEW_REFUND_REQUESTS",
+        "REFUND_ADMIN_REJECTED",
+        "FLUTTERWAVE_REFUND_INITIATED",
+        "FLUTTERWAVE_INITIATION_ERROR",
+        "FLUTTERWAVE_NETWORK_ERROR",
+        "REFUND_WEBHOOK_APPROVED",
+        "REFUND_WEBHOOK_REJECTED",
 
         // Auth actions
         "LOGIN",
