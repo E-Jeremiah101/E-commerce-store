@@ -73,6 +73,11 @@ export default function StoreSettings() {
         setForm((prev) => ({
           ...prev,
           ...data,
+          storeName: data.storeName || "",
+          logo: data.logo || "",
+          supportEmail: data.supportEmail || "",
+          phoneNumber: data.phoneNumber || "",
+          currency: data.currency || "NGN",
           warehouseLocation: {
             ...prev.warehouseLocation,
             ...(data.warehouseLocation || {}),
@@ -257,6 +262,56 @@ export default function StoreSettings() {
               {uploading && (
                 <p className="text-xs text-blue-500 mt-1">Uploading logo...</p>
               )}
+            </div>
+          </div>
+
+          {/* Basic Store Info Section */}
+          <div className="border-t pt-8">
+            <h3 className="font-medium text-lg mb-4">Store Information</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Basic store details and contact information
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Input
+                label="Store Name"
+                name="storeName"
+                value={form.storeName}
+                onChange={handleNestedChange}
+                placeholder="e.g., My Awesome Store"
+                required
+              />
+
+              <Select
+                label="Currency"
+                name="currency"
+                value={form.currency}
+                onChange={handleNestedChange}
+                options={[
+                  { value: "NGN", label: "NGN (₦)" },
+                  { value: "USD", label: "USD ($)" },
+                  { value: "EUR", label: "EUR (€)" },
+                  { value: "GBP", label: "GBP (£)" },
+                ]}
+              />
+
+              <Input
+                label="Support Email"
+                name="supportEmail"
+                value={form.supportEmail}
+                onChange={handleNestedChange}
+                type="email"
+                placeholder="support@example.com"
+              />
+
+              <Input
+                label="Phone Number"
+                name="phoneNumber"
+                value={form.phoneNumber}
+                onChange={handleNestedChange}
+                type="tel"
+                placeholder="+234 800 000 0000"
+              />
             </div>
           </div>
 
