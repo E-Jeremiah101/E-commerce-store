@@ -29,6 +29,11 @@ const AdminOrdersPage = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
+  // Reset page when search/sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, sortBy, sortOrder]);
+
   const { user } = useUserStore();
 
   // Fetch orders
@@ -53,7 +58,10 @@ const AdminOrdersPage = () => {
   }, [searchQuery, sortBy, sortOrder]);
 
   const handleSearchKeyDown = (e) => {
-    if (e.key === "Enter") setSearchQuery(search);
+    if (e.key === "Enter") {
+      setSearchQuery(search);
+      setCurrentPage(1); // Also reset on enter
+    }
   };
 
   const handleStatusChange = async (orderId, newStatus) => {
@@ -72,24 +80,23 @@ const AdminOrdersPage = () => {
     }
   };
 
-    const toggleDropdown = (orderId) => {
-      setOpenDropdownId(openDropdownId === orderId ? null : orderId);
+  const toggleDropdown = (orderId) => {
+    setOpenDropdownId(openDropdownId === orderId ? null : orderId);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest(".dropdown-container")) {
+        setOpenDropdownId(null);
+      }
     };
 
-    // Close dropdown when clicking outside
-    useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (!event.target.closest(".dropdown-container")) {
-          setOpenDropdownId(null);
-        }
-      };
-
-      document.addEventListener("click", handleClickOutside);
-      return () => {
-        document.removeEventListener("click", handleClickOutside);
-      };
-    }, []);
-
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, []);
 
   // Pagination logic
   const totalOrders = orders.length;
@@ -116,7 +123,7 @@ const AdminOrdersPage = () => {
         return "bg-yellow-500 text-white";
     }
   };
-  const {settings} = useStoreSettings();
+  const { settings } = useStoreSettings();
 
   if (loading)
     return (
@@ -143,8 +150,6 @@ const AdminOrdersPage = () => {
 
   return (
     <>
-
-
       <motion.div
         className="px-4 lg:px-6"
         initial={{ opacity: 0, y: 20 }}
@@ -164,7 +169,10 @@ const AdminOrdersPage = () => {
           <div className="flex gap-2 flex-wrap">
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setCurrentPage(1); // Reset page on sort change
+              }}
               className="px-3 py-2 rounded-lg text-gray-500"
             >
               <option value="date">Sort by Date</option>
@@ -174,7 +182,10 @@ const AdminOrdersPage = () => {
 
             <select
               value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
+              onChange={(e) => {
+                setSortOrder(e.target.value);
+                setCurrentPage(1); // Reset page on sort order change
+              }}
               className="px-3 py-2 rounded-lg  text-gray-500"
             >
               {sortBy === "date" ? (
@@ -230,7 +241,7 @@ const AdminOrdersPage = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-300">
                   {displayedOrders.map((order) => (
-                    <tr key={order._id} className="hover:bg-gray-750">
+                    <tr key={order._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2 mb-1 relative">
@@ -314,7 +325,7 @@ const AdminOrdersPage = () => {
                       </td>
 
                       <td className="px-6 py-4">
-                        <div className="flex  align-middle flex-row gap-3">
+                        <div className="flex align-middle flex-row gap-3">
                           <div>
                             <button
                               onClick={() =>
@@ -332,9 +343,12 @@ const AdminOrdersPage = () => {
                                 e.stopPropagation();
                                 toggleDropdown(order._id);
                               }}
-                              className="p-1 hover:bg-gray-500 rounded transition-colors"
+                              className="p-1 hover:bg-gray-200 rounded transition-colors"
                             >
-                              <MoreVertical className=" text-gray-700" size={23} />
+                              <MoreVertical
+                                className="text-gray-700"
+                                size={23}
+                              />
                             </button>
 
                             {/* Dropdown menu */}

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { nigeriaLocations } from "../../frontend/src/utils/nigeriaLocation.js";
+// import { nigeriaLocations } from "../../frontend/src/utils/nigeriaLocation.js";
+import { NIGERIAN_LOCATIONS } from "../../frontend/src/utils/nigerianLocations.js";
 
 const addressSchema = new mongoose.Schema({
   label: { type: String, default: "Home" },
@@ -14,14 +15,30 @@ const addressSchema = new mongoose.Schema({
 
 addressSchema.pre("validate", function (next) {
   const { state, city, lga } = this;
-  const validState = nigeriaLocations[state];
-  if (!validState) return next(new Error("Invalid state"));
+
+  console.log("Validating address:", { state, city, lga });
+
+  const stateKey = state?.toUpperCase();
+  const validState = NIGERIAN_LOCATIONS[stateKey];
+
+  if (!validState) {
+    return next(new Error(`Invalid state: ${state}`));
+  }
+
   const validCity = validState.cities[city];
-  if (!validCity) return next(new Error("Invalid city for selected state"));
-  if (!validCity.includes(lga))
-    return next(new Error("Invalid LGA for selected city"));
+  if (!validCity) {
+    return next(
+      new Error(`Invalid city: ${city} for selected state: ${state}`)
+    );
+  }
+
+  if (!validCity.lgAs.includes(lga)) {
+    return next(new Error(`Invalid LGA: ${lga} for selected city: ${city}`));
+  }
+
   next();
 });
+
 
 const previousPasswordSchema = new mongoose.Schema({
   password: { type: String, required: true },
