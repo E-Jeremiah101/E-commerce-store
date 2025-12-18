@@ -1279,22 +1279,7 @@ export const getOrderById = async (req, res) => {
       order.user &&
       req.user._id.toString() === order.user._id.toString()
     ) {
-      // Log when user views their own order
-      await logUserAction(
-        req,
-        ACTIONS.VIEW_USER_ORDER,
-        ENTITY_TYPES.ORDER,
-        order._id,
-        `Order #${order.orderNumber}`,
-        {
-          viewed: {
-            orderNumber: order.orderNumber,
-            status: order.status,
-            totalAmount: order.totalAmount,
-          },
-        },
-        "User viewed their order details"
-      );
+
     }
 
     res.json({ success: true, order });
