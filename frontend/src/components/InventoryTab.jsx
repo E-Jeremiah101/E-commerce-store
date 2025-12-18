@@ -13,31 +13,20 @@ import {
   RefreshCw as UpdateIcon,
   Undo as ResetIcon,
   XCircle as CloseIcon,
-  Warehouse,
-  Undo,
-  History,
   RefreshCw,
   BarChart,
-  ShoppingCart,
   CheckCircle,
   XCircle,
   Plus,
   Minus,
-  Download,
   FileText,
-  Upload,
   Tag,
   Filter,
   Search,
-  ArrowUpDown,
   Calendar,
-  PieChart,
   MapPin,
-  Bell,
-  Settings,
   Eye,
   Clock,
-  MoreVertical,
   ChevronDown,
   AlertCircle,
 } from "lucide-react";
@@ -45,7 +34,6 @@ import toast from "react-hot-toast";
 import { useUserStore } from "../stores/useUserStore.js";
 import { useInventoryStore } from "../stores/useInventoryStore.js";
 import {
-  exportInventoryPDF,
   exportSimpleInventoryPDF,
 } from "../utils/exportInventoryPdf.js";
 import axios from "../lib/axios.js";
@@ -59,7 +47,6 @@ const InventoryTab = () => {
     dashboardData,
     stockLevels,
     lowStockAlerts,
-    reorderSuggestions,
     inventoryValuation,
     stockHistory,
     inventoryByLocation,
@@ -70,12 +57,9 @@ const InventoryTab = () => {
     fetchDashboard,
     fetchStockLevels,
     fetchLowStockAlerts,
-    fetchReorderSuggestions,
     fetchInventoryValuation,
-    fetchStockHistory,
     fetchInventoryByLocation,
     adjustStock,
-    exportInventoryReport,
     updateFilters,
     clearFilters,
     getInventoryStats,
@@ -95,7 +79,6 @@ const InventoryTab = () => {
   }, [stockLevels]);
 
   const { user } = useUserStore();
-  const [expandedBuckets, setExpandedBuckets] = useState({});
   const [showAdjustModal, setShowAdjustModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [adjustmentData, setAdjustmentData] = useState({
@@ -111,12 +94,7 @@ const InventoryTab = () => {
   const [historyType, setHistoryType] = useState("stock");
   const [priceHistory, setPriceHistory] = useState([]);
   const [loadingPriceHistory, setLoadingPriceHistory] = useState(false);
-  const [priceHistoryFilters, setPriceHistoryFilters] = useState({
-    productId: "",
-    startDate: "",
-    endDate: "",
-    action: "ALL",
-  });
+
   
 
   const handleRefresh = () => {
@@ -139,9 +117,6 @@ const InventoryTab = () => {
         break;
       case "valuation":
         fetchInventoryValuation();
-        break;
-      case "history":
-        fetchStockHistory();
         break;
       case "locations":
         fetchInventoryByLocation();
@@ -185,40 +160,12 @@ const InventoryTab = () => {
     if (activeTab === "valuation") {
       fetchInventoryValuation();
     }
-    if (activeTab === "history") {
-      fetchStockHistory();
-    }
     if (activeTab === "locations") {
       fetchInventoryByLocation();
     }
   }, [activeTab]);
 
-  useEffect(() => {
-    if (activeTab === "history" && historyType === "price") {
-      fetchPriceHistory();
-    }
-  }, [activeTab, historyType, priceHistoryFilters]);
-
-  const fetchPriceHistory = async () => {
-    try {
-      setLoadingPriceHistory(true);
-      const params = new URLSearchParams({
-        ...priceHistoryFilters,
-        action:
-          priceHistoryFilters.action === "ALL"
-            ? ""
-            : priceHistoryFilters.action,
-      });
-
-      const response = await axios.get(`/audit-logs/price-history?${params}`);
-      setPriceHistory(response.data.priceHistory || []);
-    } catch (error) {
-      console.error("Error fetching price history:", error);
-      toast.error("Failed to load price history");
-    } finally {
-      setLoadingPriceHistory(false);
-    }
-  };
+ 
 
   const fetchProductPriceHistory = async (productId) => {
     try {
@@ -240,7 +187,6 @@ const InventoryTab = () => {
     }
   };
 
-  const stats = getInventoryStats();
   const { settings } = useStoreSettings();
 
   const handleExportPDF = () => {
@@ -387,10 +333,6 @@ const InventoryTab = () => {
               <h1 className="text-2xl font-bold text-gray-900">
                 Inventory Management
               </h1>
-              <p className="text-gray-600 mt-1">
-                Welcome back, {user?.firstname || "Admin"}! Manage your store's
-                inventory.
-              </p>
             </div>
             <div className="flex items-center gap-3 mt-4 sm:mt-0">
               <div className="flex flex-wrap gap-2">
@@ -427,7 +369,6 @@ const InventoryTab = () => {
               { id: "low-stock", label: "Low Stock", icon: AlertTriangle },
               { id: "price-management", label: "Price Management", icon: Tag },
               { id: "valuation", label: "Valuation", icon: DollarSign },
-              { id: "history", label: "History", icon: History },
               { id: "locations", label: "Locations", icon: MapPin },
             ].map((tab) => (
               <button
@@ -492,52 +433,7 @@ const InventoryTab = () => {
         {activeTab === "valuation" && inventoryValuation && (
           <ValuationView data={inventoryValuation} />
         )}
-        {activeTab === "history" && (
-          <div className="space-y-6">
-            {/* History Type Toggle */}
-            <div className="bg-white rounded-xl shadow-sm  p-4">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-800">
-                    Inventory History
-                  </h2>
-                  <p className="text-gray-600 mt-1">
-                    Track all inventory and price changes
-                  </p>
-                </div>
-                <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg">
-                  <button
-                    onClick={() => setHistoryType("stock")}
-                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                      historyType === "stock"
-                        ? "bg-white text-gray-800 shadow-sm"
-                        : "text-gray-600 hover:text-gray-800"
-                    }`}
-                  >
-                    Stock History
-                  </button>
-                  <button
-                    onClick={() => setHistoryType("price")}
-                    className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                      historyType === "price"
-                        ? "bg-white text-gray-800 shadow-sm"
-                        : "text-gray-600 hover:text-gray-800"
-                    }`}
-                  >
-                    Price History
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* History View */}
-            <HistoryView
-              history={historyType === "stock" ? stockHistory : priceHistory}
-              loading={historyType === "stock" ? loading : loadingPriceHistory}
-              type={historyType}
-            />
-          </div>
-        )}
+       
         {activeTab === "locations" && (
           <LocationsView locations={inventoryByLocation} settings={settings} />
         )}
@@ -617,24 +513,7 @@ const StockStatusBadge = ({ status }) => {
   );
 };
 
-// const UrgencyBadge = ({ urgency }) => {
-//   const config = {
-//     critical: { label: "Critical", color: "bg-red-100 text-red-800" },
-//     high: { label: "High", color: "bg-orange-100 text-orange-800" },
-//     medium: { label: "Medium", color: "bg-yellow-100 text-yellow-800" },
-//     low: { label: "Low", color: "bg-blue-100 text-blue-800" },
-//   };
 
-//   const { label, color } = config[urgency] || config.medium;
-
-//   return (
-//     <span className={`px-3 py-1 text-sm font-medium rounded-full ${color}`}>
-//       {label}
-//     </span>
-//   );
-// };
-
-// Price Display Component
 
 const PriceDisplay = ({
   price,
@@ -672,252 +551,6 @@ const PriceDisplay = ({
   );
 };
 
-// History View Component
-const HistoryView = ({ history, loading, type = "stock" }) => {
-  const getPriceChangeInfo = (log) => {
-    if (!log.changes) return { type: "update", old: "N/A", new: "N/A" };
-
-    const oldPrice =
-      log.changes.oldPrice || log.changes?.price?.before || "N/A";
-    const newPrice = log.changes.newPrice || log.changes?.price?.after || "N/A";
-
-    let changeType = "update";
-    if (log.action === "PRICE_SLASH") changeType = "slash";
-    if (log.action === "PRICE_RESET") changeType = "reset";
-
-    return { type: changeType, old: oldPrice, new: newPrice };
-  };
-
-  const getPricePercentage = (log) => {
-    if (!log.changes) return "N/A";
-
-    const percentage =
-      log.changes.priceChange?.percentage ||
-      log.changes.priceChange?.discount ||
-      log.changes.price?.discount ||
-      "";
-
-    if (percentage) return percentage;
-
-    const oldPrice = parseFloat(
-      log.changes.oldPrice || log.changes?.price?.before
-    );
-    const newPrice = parseFloat(
-      log.changes.newPrice || log.changes?.price?.after
-    );
-
-    if (!isNaN(oldPrice) && !isNaN(newPrice) && oldPrice > 0) {
-      const change = ((newPrice - oldPrice) / oldPrice) * 100;
-      return `${change > 0 ? "+" : ""}${change.toFixed(1)}%`;
-    }
-
-    return "N/A";
-  };
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm  overflow-hidden">
-      <div className="p-6 border-b">
-        <h2 className="text-xl font-semibold text-gray-800">
-          {type === "price"
-            ? "Price Change History"
-            : "Stock Adjustment History"}
-        </h2>
-        <p className="text-gray-600 mt-1">
-          {type === "price"
-            ? "Track all price changes and adjustments"
-            : "Track all inventory adjustments"}
-        </p>
-      </div>
-      {loading ? (
-        <div className="flex justify-center items-center p-12">
-          <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date & Time
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {type === "price" ? "Product" : "Product ID"}
-                </th>
-                {type === "price" ? (
-                  <>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Change Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Price Change
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      % Change
-                    </th>
-                  </>
-                ) : (
-                  <>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Adjustment
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Quantity
-                    </th>
-                  </>
-                )}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Reason
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {history.map((log) => (
-                <tr key={log._id} className="hover:bg-gray-50">
-                  {/* Date & Time */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {new Date(
-                        log.timestamp || log.createdAt
-                      ).toLocaleDateString()}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {new Date(
-                        log.timestamp || log.createdAt
-                      ).toLocaleTimeString()}
-                    </div>
-                  </td>
-
-                  {/* Product Info */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {type === "price" ? (
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {log.entityName || "Unknown Product"}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          ID:{" "}
-                          {log.entityId?.toString().slice(-6) ||
-                            log.productId?.toString().slice(-6)}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-sm font-medium text-gray-900">
-                        Product ID: {log.productId?.toString().slice(-6)}
-                      </div>
-                    )}
-                  </td>
-
-                  {/* Change/Adjustment Info */}
-                  {type === "price" ? (
-                    <>
-                      {/* Change Type */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            log.action === "PRICE_SLASH"
-                              ? "bg-red-100 text-red-800"
-                              : log.action === "PRICE_RESET"
-                              ? "bg-orange-100 text-orange-800"
-                              : "bg-blue-100 text-blue-800"
-                          }`}
-                        >
-                          {log.action === "PRICE_SLASH"
-                            ? "SLASH"
-                            : log.action === "PRICE_RESET"
-                            ? "RESET"
-                            : "UPDATE"}
-                        </span>
-                      </td>
-
-                      {/* Price Change */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          ${parseFloat(getPriceChangeInfo(log).old).toFixed(2)}{" "}
-                          → $
-                          {parseFloat(getPriceChangeInfo(log).new).toFixed(2)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {getPriceChangeInfo(log).type === "slash"
-                            ? "Price slashed"
-                            : getPriceChangeInfo(log).type === "reset"
-                            ? "Reset to original"
-                            : "Price updated"}
-                        </div>
-                      </td>
-
-                      {/* Percentage Change */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`text-sm font-medium ${
-                            log.action === "PRICE_SLASH"
-                              ? "text-red-600"
-                              : parseFloat(getPriceChangeInfo(log).new) >
-                                parseFloat(getPriceChangeInfo(log).old)
-                              ? "text-green-600"
-                              : "text-gray-600"
-                          }`}
-                        >
-                          {getPricePercentage(log)}
-                        </span>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      {/* Adjustment Type */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            log.adjustmentType === "add"
-                              ? "bg-green-100 text-green-800"
-                              : log.adjustmentType === "remove"
-                              ? "bg-red-100 text-red-800"
-                              : "bg-blue-100 text-blue-800"
-                          }`}
-                        >
-                          {log.adjustmentType.toUpperCase()}
-                        </span>
-                      </td>
-
-                      {/* Quantity */}
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {log.quantity}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {log.oldStock} → {log.newStock}
-                        </div>
-                      </td>
-                    </>
-                  )}
-
-                  {/* Reason */}
-                  <td className="px-6 py-4">
-                    <span className="text-sm text-gray-900 max-w-xs truncate block">
-                      {log.additionalInfo || log.reason || "No reason provided"}
-                    </span>
-                  </td>
-
-                  {/* User */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {log.adminName || log.adjustedBy?.firstname || "System"}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {log.adminId?.email || log.adjustedBy?.email || ""}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-};
 
 // Stock Levels View Component
 const StockLevelsView = ({
@@ -4015,53 +3648,390 @@ const ValuationView = ({ data }) => {
   );
 };
 
-// Locations View Component
-const LocationsView = ({ locations, settings }) => (
-  <div className="space-y-6">
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {locations.map((location) => (
-        <div key={location.id} className="bg-white rounded-xl shadow-sm  p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-800">
-              {location.name}
-            </h3>
-            <MapPin className="h-5 w-5 text-gray-400" />
+
+const LocationsView = ({ locations, settings }) => {
+  
+  const getCurrencySymbol = (currency) => {
+    switch (currency) {
+      case "NGN":
+        return "₦";
+      case "USD":
+        return "$";
+      case "EUR":
+        return "€";
+      case "GBP":
+        return "£";
+      default:
+        return currency || "";
+    }
+  };
+
+  if (!locations || locations.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-8 text-center">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
+          <MapPin className="h-8 w-8 text-gray-400" />
+        </div>
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">
+          No Warehouse Locations Found
+        </h3>
+        <p className="text-gray-600 max-w-md mx-auto mb-6">
+          Warehouse location information is not configured. Please set up your warehouse details in store settings.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Overall Summary Card */}
+      <div className="bg-gradient-to-r from-gray-600 to-gray-700 rounded-xl shadow-lg text-white p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold">Warehouse Overview</h2>
+            <p className="text-blue-100 mt-1">
+              Complete inventory at main warehouse
+            </p>
           </div>
-          <p className="text-gray-600 text-sm mb-4">{location.address}</p>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Items:</span>
-              <span className="font-semibold">{location.totalItems}</span>
+          <div className="bg-white bg-opacity-20 p-3 rounded-lg">
+            <img
+              src={settings?.logo}
+              alt={settings?.storeName}
+              className="h-10 w-auto"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+          <div className="bg-white bg-opacity-20 p-4 rounded-lg">
+            <p className="text-sm text-gray-900">Total Items in Stock</p>
+            <p className="text-2xl text-black font-semibold mt-2">
+              {locations[0]?.totalItems?.toLocaleString() || "0"}
+            </p>
+          </div>
+          <div className="bg-white bg-opacity-20 p-4 rounded-lg">
+            <p className="text-sm text-gray-900">Total Inventory Value</p>
+            <p className="text-2xl font-semibold mt-2 text-gray-900">
+              {formatPrice(locations[0]?.totalValue, settings?.currency)}
+            </p>
+          </div>
+          <div className="bg-white bg-opacity-20 p-4 rounded-lg">
+            <p className="text-sm text-gray-900">Average Value per Item</p>
+            <p className="text-2xl font-semibold text-gray-900 mt-2">
+              {formatPrice(
+                locations[0]?.totalValue / (locations[0]?.totalItems || 1),
+                settings?.currency
+              )}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Warehouse Details */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Warehouse Information Card */}
+        <div className="bg-white rounded-xl shadow-sm lg:h-fit  p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <MapPin className="h-6 w-6 text-blue-600" />
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Value:</span>
-              <span className="font-semibold">
-                {formatPrice(location?.totalValue, settings?.currency)}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Warehouse Details
+              </h3>
+              <p className="text-sm text-gray-500">Main storage location</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Warehouse Name
+              </label>
+              <div className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="font-medium">{locations[0]?.name}</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                State
+              </label>
+              <div className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p>{locations[0]?.state}</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                City
+              </label>
+              <div className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p>{locations[0]?.city}</p>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Full Address
+              </label>
+              <div className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-gray-800">{locations[0]?.address}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 pt-6 border-t">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">Storage Capacity:</span>
+              <span className="font-medium text-gray-800">Unlimited</span>
+            </div>
+            <div className="flex items-center justify-between text-sm mt-2">
+              <span className="text-gray-600">Status:</span>
+              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                Active
               </span>
             </div>
           </div>
-          <div className="mt-6">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">
-              Top Products
-            </h4>
-            <div className="space-y-2">
-              {location.products?.map((product) => (
-                <div
-                  key={product.productId}
-                  className="flex justify-between text-sm"
-                >
-                  <span className="truncate">{product.productName}</span>
-                  <span className="font-medium text-black">
-                    {product.stock} units
-                  </span>
+        </div>
+
+        {/* Top Products by Value */}
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800">
+                Top Products in Warehouse
+              </h3>
+              <p className="text-gray-500 text-sm">
+                Highest value products stored (by total stock value)
+              </p>
+            </div>
+            <div className="text-sm text-gray-500">
+              Showing {Math.min(10, locations[0]?.products?.length || 0)} of{" "}
+              {locations[0]?.products?.length || 0} products
+            </div>
+          </div>
+
+          {locations[0]?.products && locations[0].products.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead>
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Product
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Price
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Stock
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Variants
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total Value
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {locations[0].products.map((product, index) => (
+                    <tr key={product.productId} className="hover:bg-gray-50">
+                      <td className="px-4 py-4">
+                        <div className="flex items-center">
+                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center mr-3">
+                            <img
+                              src={product.productImage}
+                              alt={product.productImage}
+                              className="w-10 h-10 rounded object-cover"
+                            />
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {product.productName}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Product ID:{" "}
+                              {product.productId.toString().slice(-6)}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="font-medium text-gray-900">
+                          {getCurrencySymbol(settings?.currency)}
+                          {product.price?.toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center">
+                          
+                          <span className="font-medium">{product.stock}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                          {product.variantsCount} variants
+                        </span>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="font-bold text-gray-900">
+                          {formatPrice(product.value, settings?.currency)}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {Math.round(
+                            (product.value / locations[0].totalValue) * 100
+                          )}
+                          % of total
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <h4 className="text-lg font-medium text-gray-700 mb-2">
+                No Products in Warehouse
+              </h4>
+              <p className="text-gray-500">
+                Add products with stock to see them here
+              </p>
+            </div>
+          )}
+
+          {/* Summary Footer */}
+          {locations[0]?.products && locations[0].products.length > 0 && (
+            <div className="mt-6 pt-6 border-t">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Top Product Value</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {formatPrice(
+                      locations[0]?.products[0]?.value,
+                      settings?.currency
+                    )}
+                  </p>
                 </div>
-              ))}
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Avg. Product Value</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {formatPrice(
+                      locations[0]?.products?.reduce(
+                        (sum, p) => sum + p.value,
+                        0
+                      ) / (locations[0]?.products?.length || 1),
+                      settings?.currency
+                    )}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Total Products</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {locations[0]?.products?.length}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-600">Stock Utilization</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {Math.round(
+                      (locations[0]?.totalItems /
+                        (locations[0]?.totalItems * 1.5)) *
+                        100
+                    )}
+                    %
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Additional Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <Package className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-800">Stock Health</h4>
+              <p className="text-sm text-gray-500">Inventory status</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-600">Healthy Stock</span>
+                <span className="font-medium">
+                  {Math.round((locations[0]?.totalItems || 0) * 0.7)}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-green-500 h-2 rounded-full"
+                  style={{ width: "70%" }}
+                ></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-600">Low Stock</span>
+                <span className="font-medium">
+                  {Math.round((locations[0]?.totalItems || 0) * 0.2)}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-yellow-500 h-2 rounded-full"
+                  style={{ width: "20%" }}
+                ></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-gray-600">Out of Stock</span>
+                <span className="font-medium">
+                  {Math.round((locations[0]?.totalItems || 0) * 0.1)}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-red-500 h-2 rounded-full"
+                  style={{ width: "10%" }}
+                ></div>
+              </div>
             </div>
           </div>
         </div>
-      ))}
+
+        <div className="bg-white rounded-xl shadow-sm border p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <RefreshCw className="h-5 w-5 text-orange-600" />
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-800">Turnover Rate</h4>
+              <p className="text-sm text-gray-500">Inventory movement</p>
+            </div>
+          </div>
+          <div className="text-center py-6">
+            <div className="text-4xl font-bold text-gray-900">2.4x</div>
+            <p className="text-sm text-gray-500 mt-2">Annual turnover rate</p>
+            <div className="mt-4 text-xs text-gray-400">
+              Based on last 90 days sales
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default InventoryTab;

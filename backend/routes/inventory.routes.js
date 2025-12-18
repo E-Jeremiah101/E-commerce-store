@@ -4,11 +4,8 @@ import {
   getStockLevels,
   getLowStockAlerts,
   adjustStock,
-  getStockHistory,
   getInventoryByLocation,
-  getReorderSuggestions,
   getInventoryValuation,
-  bulkUpdateStock,
   syncOrdersWithInventory,
   getInventoryAgingReport,
 } from "../controllers/inventory.controller.js";
@@ -20,29 +17,23 @@ const router = express.Router();
 // All routes are protected and admin only
 router.use(protectRoute, adminRoute);
 
-// 📊 Stock Dashboard
+//  Stock Dashboard 
 router.get("/dashboard", getInventoryDashboard);
 
-// 📦 Stock Levels
+//  Stock Levels
 router.get("/stock-levels", getStockLevels);
 
-// 🚨 Low Stock Alerts
+//  Low Stock Alerts
 router.get("/low-stock", getLowStockAlerts);
 
-// 🔄 Stock Adjustments
+//  Stock Adjustments
 router.post("/adjust/:productId", adjustStock);
-router.post("/bulk-adjust", bulkUpdateStock);
 
-// 📈 Stock History
-router.get("/history", getStockHistory);
-
-// 📍 Multi-location Inventory
+//  Multi-location Inventory
 router.get("/locations", getInventoryByLocation);
 
-// 📋 Reorder Management
-router.get("/reorder-suggestions", getReorderSuggestions); 
 
-// 💰 Inventory Valuation
+//  Inventory Valuation
 router.get("/valuation", getInventoryValuation);
 
 router.post("/sync-orders", syncOrdersWithInventory);

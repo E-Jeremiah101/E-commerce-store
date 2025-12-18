@@ -3,15 +3,12 @@ import toast from "react-hot-toast";
 import axios from "../lib/axios";
 
 export const useInventoryStore = create((set, get) => ({
-  // State
   activeTab: "dashboard",
   loading: false,
   dashboardData: null,
   stockLevels: [],
   lowStockAlerts: [],
-  reorderSuggestions: [],
   inventoryValuation: null,
-  stockHistory: [],
   inventoryAging: [],
   inventoryByLocation: [],
   pagination: {
@@ -30,7 +27,6 @@ export const useInventoryStore = create((set, get) => ({
     sortOrder: "asc",
   },
 
-  // Actions
 
   // 📊 Get Dashboard Data
   fetchDashboard: async () => {
@@ -123,7 +119,7 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  // 🔄 Adjust Stock
+  // // 🔄 Adjust Stock
   adjustStock: async (productId, adjustmentData) => {
     set({ loading: true });
     try {
@@ -154,34 +150,7 @@ export const useInventoryStore = create((set, get) => ({
   },
   
 
-  // 📈 Get Stock History
-  fetchStockHistory: async (productId = null, page = 1) => {
-    set({ loading: true });
-    try {
-      const params = {
-        page,
-        limit: 20,
-        ...(productId && { productId }),
-      };
-
-      const res = await axios.get("/inventory/history", { params });
-
-      set({
-        stockHistory: res.data.history,
-        pagination: res.data.pagination,
-        loading: false,
-      });
-
-      return res.data;
-    } catch (error) {
-      console.error("Error fetching stock history:", error);
-      toast.error("Failed to load stock history");
-      set({ loading: false });
-      throw error;
-    }
-  },
-
-  // 📍 Get Inventory by Location
+  //  Get Inventory by Location
   fetchInventoryByLocation: async () => {
     set({ loading: true });
     try {
@@ -201,29 +170,8 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  // 📋 Get Reorder Suggestions
-  fetchReorderSuggestions: async (threshold = 15) => {
-    set({ loading: true });
-    try {
-      const res = await axios.get("/inventory/reorder-suggestions", {
-        params: { threshold },
-      });
 
-      set({
-        reorderSuggestions: res.data.suggestions,
-        loading: false,
-      });
-
-      return res.data;
-    } catch (error) {
-      console.error("Error fetching reorder suggestions:", error);
-      toast.error("Failed to load reorder suggestions");
-      set({ loading: false });
-      throw error;
-    }
-  },
-
-  // 💰 Get Inventory Valuation
+  // Get Inventory Valuation
   fetchInventoryValuation: async (groupBy = "category") => {
     set({ loading: true });
     try {
@@ -245,40 +193,40 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  // 📤 Bulk Update Stock
-  bulkUpdateStock: async (updates) => {
-    set({ loading: true });
-    try {
-      const res = await axios.post("/inventory/bulk-adjust", { updates });
+  // //  Bulk Update Stock
+  // bulkUpdateStock: async (updates) => {
+  //   set({ loading: true });
+  //   try {
+  //     const res = await axios.post("/inventory/bulk-adjust", { updates });
 
-      if (res.data.errorCount > 0) {
-        toast.error(`Completed with ${res.data.errorCount} errors`);
-      } else {
-        toast.success(`Updated ${res.data.successCount} products successfully`);
-      }
+  //     if (res.data.errorCount > 0) {
+  //       toast.error(`Completed with ${res.data.errorCount} errors`);
+  //     } else {
+  //       toast.success(`Updated ${res.data.successCount} products successfully`);
+  //     }
 
-      // Refresh data
-      get().fetchStockLevels(get().pagination.currentPage);
-      get().fetchDashboard();
+  //     // Refresh data
+  //     get().fetchStockLevels(get().pagination.currentPage);
+  //     get().fetchDashboard();
 
-      set({ loading: false });
-      return res.data;
-    } catch (error) {
-      console.error("Error in bulk update:", error);
-      toast.error("Failed to perform bulk update");
-      set({ loading: false });
-      throw error;
-    }
-  },
+  //     set({ loading: false });
+  //     return res.data;
+  //   } catch (error) {
+  //     console.error("Error in bulk update:", error);
+  //     toast.error("Failed to perform bulk update");
+  //     set({ loading: false });
+  //     throw error;
+  //   }
+  // },
 
-  // 🎛️ Update Filters
+  //  Update Filters
   updateFilters: (newFilters) => {
     set((state) => ({
       filters: { ...state.filters, ...newFilters },
     }));
   },
 
-  // 🗑️ Clear Filters
+  // Clear Filters
   clearFilters: () => {
     set({
       filters: {
@@ -329,7 +277,7 @@ export const useInventoryStore = create((set, get) => ({
     };
   },
 
-  // 🔍 Search Products
+  // Search Products
   searchInventory: async (query) => {
     set({ loading: true });
     try {
@@ -351,10 +299,10 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  // 🎯 Set Active Tab (for UI state)
+  //  Set Active Tab (for UI state)
   setActiveTab: (tab) => set({ activeTab: tab }),
 
-  // 🔄 Reset State
+  // Reset State
   resetInventoryState: () => {
     set({
       dashboardData: null,

@@ -70,14 +70,14 @@ const { settings } = useStoreSettings();
         <div className="container mx-auto px-4 py-3 flex items-center justify-between ">
           {/* Left: Logo */}
           <Link to={"/"} className="flex sm:hidden items-center gap-2">
-            {settings?.logo && (
+            {/* {settings?.logo && (
               <img
                 src={settings?.logo}
                 alt={settings?.storeName}
                 className="h-10 w-auto"
               />
-            )}
-            <span className="font-bold text-xl">{settings?.storeName}</span>
+            )} */}
+            <span className="font-bold text-[1.5rem]">{settings?.storeName}</span>
           </Link>
 
           {/* Right: Actions */}
@@ -350,12 +350,12 @@ const { settings } = useStoreSettings();
           <div className="flex justify-between items-center">
             {/* Left: Logo */}
             <Link to={"/"} className="flex items-center gap-2">
-              <img
+              {/* <img
                 src={settings?.logo}
                 alt={settings?.storeName}
                 className="h-10 w-auto"
-              />
-              <span className=" font-bold text-xl">{settings?.storeName}</span>
+              /> */}
+              <span className=" font-bold text-[1.5rem]">{settings?.storeName}</span>
             </Link>
 
             <nav className=" hidden md:flex items-center gap-6  tracking-widest">

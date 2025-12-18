@@ -17,7 +17,7 @@ const Footer = () => {
       <div className=" text-black ">
         <div className="flex m-0 justify-center  py-16 lg:px-16    overflow-hidden whitespace-nowrap">
           <div>
-            <table className="border-separate lg:border-spacing-x-40 border-spacing-x-11  border-spacing-y-4">
+            <table className="border-separate lg:border-spacing-x-40 border-spacing-x-11 border-spacing-y-4">
               <thead className="text-lg">
                 <tr className="">
                   <th className=" ">Links</th>

@@ -1,42 +1,9 @@
 import Product from "../models/product.model.js";
 import InventoryLog from "../models/inventoryLog.model.js";
-import mongoose from "mongoose";
 import Order from "../models/order.model.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
-
-
-const logInventoryAction = async (
-  req,
-  action,
-  productId,
-  changes = {},
-  additionalInfo = ""
-) => {
-  try {
-    // Only log if user is an admin
-    if (!req.user || req.user.role !== "admin") {
-      return;
-    }
-
-    const product = await Product.findById(productId);
-    if (!product) return;
-
-    await AuditLogger.log({
-      adminId: req.user._id,
-      adminName: `${req.user.firstname} ${req.user.lastname}`,
-      action,
-      entityType: ENTITY_TYPES.PRODUCT,
-      entityId: product._id,
-      entityName: product.name,
-      changes,
-      ...AuditLogger.getRequestInfo(req),
-      additionalInfo,
-    });
-  } catch (error) {
-    console.error("Failed to log inventory action:", error);
-  }
-};
+import storeSettings from "../models/storeSettings.model.js"
 
 // Helper for variant-specific inventory logging
 const logVariantInventoryAction = async (
@@ -239,7 +206,7 @@ export const syncInventoryWithStoreOrders = async () => {
   }
 };
 
-// 1. 📊 STOCK DASHBOARD - VARIANT-ONLY VERSION
+// 1. STOCK DASHBOARD - VARIANT-ONLY VERSION
 export const getInventoryDashboard = async (req, res) => {
   try {
     // Fetch products WITH variants ONLY
@@ -482,107 +449,7 @@ export const syncOrdersWithInventory = async (req, res) => {
     res.status(500).json({ message: "Sync failed", error: error.message });
   }
 };
-// 1. 📊 STOCK DASHBOARD
 
-
-// 2. 📦 STOCK LEVELS
-// export const getStockLevels = async (req, res) => {
-//   try {
-//     const {
-//       page = 1,
-//       limit = 20,
-//       search = "",
-//       category = "",
-//       lowStock = false,
-//       includeVariants = true,
-//     } = req.query;
-
-//     const skip = (page - 1) * limit;
-
-//     let filter = { archived: { $ne: true } };
-
-//     // Search by name
-//     if (search) {
-//       filter.name = { $regex: search, $options: "i" };
-//     }
-
-//     // Filter by category
-//     if (category) {
-//       filter.category = category;
-//     }
-
-//     // Low stock filter
-//     if (lowStock === "true") {
-//       filter.countInStock = { $lte: 10, $gt: 0 };
-//     }
-//     if (includeVariants === "true") {
-//       selectFields += " variants";
-//     }
-
-//     const products = await Product.find(filter)
-//       .select("name price countInStock category images variants sku sizes and colors")
-//       .skip(skip)
-//       .limit(parseInt(limit))
-//       .sort({ countInStock: 1 });
-
-//     const total = await Product.countDocuments(filter);
-
-//     // Transform data for frontend
-//     const stockLevels = products.map((product) => {
-//       const variantsStock =
-//         product.variants?.reduce((sum, v) => sum + v.countInStock, 0) || 0;
-//       const totalStock = product.countInStock + variantsStock;
-
-//       let status = "healthy";
-//       if (totalStock === 0) status = "out";
-//       else if (totalStock <= 10) status = "low";
-
-
-//       const transformedVariants = (product.variants || []).map((variant) => ({
-//         _id: variant._id,
-//         id: variant._id.toString(),
-//         size: variant.size,
-//         color: variant.color,
-//         countInStock: variant.countInStock || 0,
-//         sku: variant.sku || product.sku,
-//         price: variant.price || product.price,
-//       }));
-
-//       return {
-//         id: product._id,
-//         name: product.name,
-//         image: product.images?.[0] || "",
-//         sku: product.sku || "N/A",
-//         category: product.category,
-//         price: product.price,
-//         mainStock: product.countInStock,
-//         variantsStock: variantsStock,
-//         totalStock: totalStock,
-//         status: status,
-//         variantsCount: product.variants?.length || 0,
-//         variants: transformedVariants,
-//         variants: transformedVariants,
-//         sizes: product.sizes || [],
-//         colors: product.colors || [],
-//         lastUpdated: product.updatedAt,
-//       };
-//     });
-
-//     res.json({
-//       stockLevels,
-//       pagination: {
-//         currentPage: parseInt(page),
-//         totalPages: Math.ceil(total / limit),
-//         totalProducts: total,
-//         hasNextPage: page * limit < total,
-//         hasPrevPage: page > 1,
-//       },
-//     });
-//   } catch (error) {
-//     console.error("Error getting stock levels:", error);
-//     res.status(500).json({ message: "Server error", error: error.message });
-//   }
-// };
 export const getStockLevels = async (req, res) => {
   try {
     const {
@@ -959,210 +826,90 @@ export const adjustStock = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-// 5. 📈 STOCK HISTORY
-export const getStockHistory = async (req, res) => {
-  try {
-    const {
-      productId,
-      variantId,
-      startDate,
-      endDate,
-      page = 1,
-      limit = 20,
-    } = req.query;
 
-    const skip = (page - 1) * limit;
-
-    let filter = {};
-
-    if (productId) {
-      filter.productId = new mongoose.Types.ObjectId(productId);
-    }
-
-    if (variantId) {
-      filter.variantId = variantId;
-    }
-
-    if (startDate || endDate) {
-      filter.createdAt = {};
-      if (startDate) filter.createdAt.$gte = new Date(startDate);
-      if (endDate) filter.createdAt.$lte = new Date(endDate);
-    }
-
-    const history = await InventoryLog.find(filter)
-      .populate("adjustedBy", "firstname lastname email")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit));
-
-    const total = await InventoryLog.countDocuments(filter);
-
-    res.json({
-      history,
-      pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
-        hasNextPage: page * limit < total,
-        hasPrevPage: page > 1,
-      },
-    });
-  } catch (error) {
-    console.error("Error getting stock history:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-// 6. 📍 MULTI-LOCATION INVENTORY (Simplified)
+// 6. MULTI-LOCATION INVENTORY (Simplified)
 export const getInventoryByLocation = async (req, res) => {
   try {
-    const products = await Product.find({ archived: { $ne: true } }).select(
-      "name price countInStock category"
+    const settings = await storeSettings.findOne();
+
+    // Fetch products WITH variants ONLY
+    const products = await Product.find({
+      archived: { $ne: true },
+      "variants.0": { $exists: true }, // Only products with variants
+    }).select("name price category variants images");
+
+    console.log(
+      `📊 Found ${products.length} products with variants for location view`
     );
 
-    // Simulate locations
+    // Main warehouse location
     const locations = [
-      { id: "main", name: "Main Warehouse", address: "123 Store St" },
-      { id: "store1", name: "Retail Store", address: "456 Mall Rd" },
+      {
+        id: "main",
+        name: "Main Warehouse",
+        state: `${settings?.warehouseLocation?.state || "Not Set"}`,
+        city: `${settings?.warehouseLocation?.city || "Not Set"}`,
+        address: `${settings?.warehouseLocation?.address || "Not Set"}`,
+      },
     ];
 
-    const inventoryByLocation = locations.map((location) => {
-      // Simulate stock distribution
-      const locationProducts = products.map((product) => {
-        let locationStock;
-        if (location.id === "main") {
-          locationStock = Math.floor(product.countInStock * 0.6);
-        } else {
-          locationStock = Math.floor(product.countInStock * 0.4);
-        }
+    // Process all products for the main warehouse
+    const locationProducts = [];
+    let totalLocationValue = 0;
+    let totalLocationItems = 0;
 
-        return {
+    products.forEach((product) => {
+      // Calculate total stock from ALL variants of this product
+      const productTotalStock = product.variants.reduce(
+        (sum, variant) => sum + (variant.countInStock || 0),
+        0
+      );
+
+      if (productTotalStock > 0) {
+        // Calculate product value (using product price as base)
+        const productValue = product.price * productTotalStock;
+
+        locationProducts.push({
           productId: product._id,
           productName: product.name,
-          stock: locationStock,
-          value: locationStock * product.price,
-        };
-      });
+          productImage: product.images,
+          stock: productTotalStock,
+          value: productValue,
+          price: product.price,
+          variantsCount: product.variants.length,
+        });
 
-      const totalValue = locationProducts.reduce((sum, p) => sum + p.value, 0);
-      const totalItems = locationProducts.reduce((sum, p) => sum + p.stock, 0);
-
-      return {
-        ...location,
-        totalValue,
-        totalItems,
-        products: locationProducts.slice(0, 5),
-      };
+        totalLocationValue += productValue;
+        totalLocationItems += productTotalStock;
+      }
     });
+
+    // Sort products by value (highest first)
+    locationProducts.sort((a, b) => b.value - a.value);
+
+    const inventoryByLocation = locations.map((location) => ({
+      ...location,
+      totalValue: totalLocationValue,
+      totalItems: totalLocationItems,
+      products: locationProducts.slice(0, 10), // Top 10 products
+    }));
+
+    console.log(
+      `✅ Location data: ${totalLocationItems} total items, ${totalLocationValue} total value`
+    );
 
     res.json({
       locations: inventoryByLocation,
       summary: {
         totalLocations: locations.length,
-        totalValueAcrossLocations: inventoryByLocation.reduce(
-          (sum, loc) => sum + loc.totalValue,
-          0
-        ),
-        totalItemsAcrossLocations: inventoryByLocation.reduce(
-          (sum, loc) => sum + loc.totalItems,
-          0
-        ),
+        totalValueAcrossLocations: totalLocationValue,
+        totalItemsAcrossLocations: totalLocationItems,
+        averageValuePerItem:
+          totalLocationItems > 0 ? totalLocationValue / totalLocationItems : 0,
       },
     });
   } catch (error) {
     console.error("Error getting inventory by location:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
-
-// 7. 📋 REORDER MANAGEMENT - VARIANT-LEVEL SUGGESTIONS
-export const getReorderSuggestions = async (req, res) => {
-  try {
-    const reorderThreshold = req.query.threshold || 10;
-
-    // Find products with variants
-    const products = await Product.find({
-      archived: { $ne: true },
-      "variants.0": { $exists: true }
-    }).select("name price category images variants");
-
-    const suggestions = [];
-
-    products.forEach((product) => {
-      product.variants.forEach((variant) => {
-        const variantStock = variant.countInStock || 0;
-        
-        // Only create suggestion for low/out of stock variants
-        if (variantStock <= reorderThreshold) {
-          const variantName = `${variant.color || "Default"} - ${variant.size || "One Size"}`;
-          const variantPrice = variant.price || product.price;
-          
-          // Calculate suggested order quantity
-          let suggestedOrder = 0;
-          let urgency = "medium";
-          
-          if (variantStock === 0) {
-            suggestedOrder = reorderThreshold * 3; // More for out of stock
-            urgency = "critical";
-          } else if (variantStock <= 5) {
-            suggestedOrder = reorderThreshold * 2 - variantStock;
-            urgency = "high";
-          } else {
-            suggestedOrder = reorderThreshold * 2 - variantStock;
-            urgency = "medium";
-          }
-          
-          // Ensure minimum order
-          suggestedOrder = Math.max(suggestedOrder, 10);
-          
-          const estimatedCost = suggestedOrder * variantPrice;
-
-          suggestions.push({
-            id: `${product._id}-${variant._id}`,
-            productId: product._id,
-            variantId: variant._id,
-            name: product.name,
-            variantName: variantName,
-            category: product.category,
-            currentStock: variantStock,
-            reorderThreshold,
-            suggestedOrder,
-            unitPrice: variantPrice,
-            estimatedCost,
-            leadTime: "7 days",
-            urgency,
-            supplier: "Default Supplier",
-            image: product.images?.[0] || "",
-            size: variant.size,
-            color: variant.color,
-            sku: variant.sku || product.sku || "N/A"
-          });
-        }
-      });
-    });
-
-    // Sort by urgency
-    suggestions.sort((a, b) => {
-      const urgencyOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-      return urgencyOrder[a.urgency] - urgencyOrder[b.urgency];
-    });
-
-    const totalCost = suggestions.reduce((sum, s) => sum + s.estimatedCost, 0);
-
-    console.log(`📋 Generated ${suggestions.length} reorder suggestions (variant-level)`);
-
-    res.json({
-      suggestions,
-      summary: {
-        totalSuggestions: suggestions.length,
-        totalEstimatedCost: totalCost,
-        criticalCount: suggestions.filter((s) => s.urgency === "critical").length,
-        highPriorityCount: suggestions.filter((s) => s.urgency === "high").length,
-        variantSuggestions: suggestions.length, // All are variant-level
-      },
-    });
-  } catch (error) {
-    console.error("Error getting reorder suggestions:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
@@ -1361,151 +1108,7 @@ export const getInventoryValuation = async (req, res) => {
     console.error("Error getting inventory valuation:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
-};
-export const bulkUpdateStock = async (req, res) => {
-  try {
-    const { updates } = req.body;
-
-    if (!Array.isArray(updates) || updates.length === 0) {
-      return res.status(400).json({ message: "No updates provided" });
-    }
-
-    const results = [];
-    const errors = [];
-
-    for (const update of updates) {
-      try {
-        const product = await Product.findById(update.productId);
-        if (!product) {
-          errors.push({
-            productId: update.productId,
-            error: "Product not found",
-          });
-          continue;
-        }
-
-        const oldStock = product.countInStock;
-        let newStock;
-
-        switch (update.adjustmentType) {
-          case "add":
-            newStock = oldStock + update.quantity;
-            break;
-          case "remove":
-            newStock = oldStock - update.quantity;
-            if (newStock < 0) {
-              errors.push({
-                productId: update.productId,
-                productName: product.name,
-                error: "Insufficient stock",
-              });
-              continue;
-            }
-            break;
-          case "set":
-            newStock = update.quantity;
-            if (newStock < 0) {
-              errors.push({
-                productId: update.productId,
-                productName: product.name,
-                error: "Stock cannot be negative",
-              });
-              continue;
-            }
-            break;
-          default:
-            errors.push({
-              productId: update.productId,
-              productName: product.name,
-              error: "Invalid adjustment type",
-            });
-            continue;
-        }
-
-        product.countInStock = newStock;
-        await product.save();
-
-        // Log the adjustment
-        const inventoryLog = new InventoryLog({
-          productId: product._id,
-          adjustmentType: update.adjustmentType,
-          quantity: Math.abs(update.quantity),
-          oldStock,
-          newStock,
-          reason: update.reason || "Bulk update",
-          adjustedBy: req.user._id,
-        });
-
-        await inventoryLog.save();
-
-         // Individual audit log for each successful adjustment
-        await logVariantInventoryAction(
-          req,
-          ACTIONS.UPDATE_INVENTORY,
-          update.productId,
-          update.variantId,
-          {
-            variant: {
-              name: variantName,
-              before: { countInStock: oldStock },
-              after: { countInStock: newStock }
-            },
-            adjustment: {
-              type: update.adjustmentType,
-              quantity: Math.abs(update.quantity),
-              reason: update.reason || "Bulk update"
-            },
-            bulkUpdate: true
-          },
-          `Bulk update: ${update.adjustmentType} ${Math.abs(update.quantity)} units`
-        );
-
-
-        results.push({
-          productId: product._id,
-          productName: product.name,
-          adjustmentType: update.adjustmentType,
-          quantity: update.quantity,
-          oldStock,
-          newStock,
-          success: true,
-        });
-      } catch (error) {
-        errors.push({
-          productId: update.productId,
-          error: error.message,
-        });
-      }
-    }
-
-    res.json({
-      message: "Bulk update completed",
-      successCount: results.length,
-      errorCount: errors.length,
-      results,
-      errors: errors.length > 0 ? errors : undefined,
-    });
-  } catch (error) {
-    console.error("Error in bulk update:", error);
-    await AuditLogger.log({
-      adminId: req.user?._id,
-      adminName: req.user
-        ? `${req.user.firstname} ${req.user.lastname}`
-        : "System",
-      action: "BULK_INVENTORY_UPDATE_FAILED",
-      entityType: ENTITY_TYPES.SYSTEM,
-      entityId: null,
-      entityName: "Failed Bulk Update",
-      changes: {
-        error: error.message,
-        attemptData: req.body,
-      },
-      ...AuditLogger.getRequestInfo(req),
-      additionalInfo: "Bulk inventory update failed",
-    });
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
+}; 
 
 // SEARCH INVENTORY
 export const searchInventory = async (req, res) => {
