@@ -218,7 +218,7 @@ export const useInventoryStore = create((set, get) => ({
   //     throw error;
   //   }
   // },
-
+ 
   //  Update Filters
   updateFilters: (newFilters) => {
     set((state) => ({

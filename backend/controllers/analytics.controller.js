@@ -38,6 +38,7 @@ export const getAnalytics = async (range = "weekly") => {
     visitors: 0,
     grossRevenue: 0,
     totalRefunded: 0,
+    totalDeliveryFee: 0,
     netRevenue: 0,
     pendingOrders: 0,
     processingOrders: 0,
@@ -47,7 +48,7 @@ export const getAnalytics = async (range = "weekly") => {
     refundsApproved: 0,
     refundsPending: 0,
     refundsRejected: 0,
-    averageUnitValue: 0, // ADD THIS
+    averageUnitValue: 0,
     totalUnitsSold: 0,
   };
 
@@ -149,6 +150,12 @@ const getRealisticGrowthPercentage = (currentValue, metricType) => {
     analyticsData.totalRefunded,
     prevAnalyticsData.totalRefunded,
     "refunded"
+  );
+
+  analyticsData.deliveryFeeChange = calculateChange(
+    analyticsData.totalDeliveryFee || 0,
+    prevAnalyticsData.totalDeliveryFee || 0,
+    "deliveryFee"
   );
 
   // Calculate AOV (Average Order Value) and its change
@@ -339,11 +346,23 @@ async function getAnalyticsData(startDate, endDate) {
         status: { $nin: ["Cancelled"] },
       },
     },
+    
     {
       $group: {
         _id: null,
-        grossRevenue: { $sum: "$totalAmount" },
+        grossRevenue: {
+          $sum: {
+            $cond: [
+              { $gt: ["$subTotal", 0] },
+              "$subTotal",
+              {
+                $subtract: ["$totalAmount", { $ifNull: ["$deliveryFee", 0] }],
+              },
+            ],
+          },
+        },
         totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
+        totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } }, // Add this
       },
     },
   ]);
@@ -397,6 +416,8 @@ async function getAnalyticsData(startDate, endDate) {
   const grossRevenue = revenue[0]?.grossRevenue || 0;
   const totalRefunded = revenue[0]?.totalRefunded || 0;
   const netRevenue = grossRevenue - totalRefunded;
+  const totalAmount = revenue[0]?.totalAmount || 0;
+  const totalDeliveryFee = revenue[0]?.totalDeliveryFee || 0; 
 
   const totalUnits = unitValueData[0]?.totalUnits || 0;
   const totalProductRevenue = unitValueData[0]?.totalRevenue || 0;
@@ -419,11 +440,13 @@ async function getAnalyticsData(startDate, endDate) {
     grossRevenue: grossRevenue,
     totalRefunded: totalRefunded,
     netRevenue: netRevenue,
+    totalDeliveryFee: totalDeliveryFee,
+    totalAmount: totalAmount, // Optional: for reference
     refundsApproved: refundSummary.Approved,
     refundsPending: refundSummary.Pending,
     refundsRejected: refundSummary.Rejected,
     refundsProcessing: refundSummary.Processing,
-    averageUnitValue: Math.round(averageUnitValue), 
+    averageUnitValue: Math.round(averageUnitValue),
     totalUnitsSold: totalUnits,
   };
 
@@ -468,10 +491,12 @@ async function getSalesDataByRange(range, startDate, endDate) {
         },
       },
       sales: { $sum: 1 },
-      revenue: { $sum: "$totalAmount" },
+      revenue: { $sum: { $ifNull: ["$subTotal", 0] } },
       refunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
+      deliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } }, 
+      totalAmount: { $sum: { $ifNull: ["$totalAmount", 0] } },
     },
-  };
+  }; 
 
   const data = await Order.aggregate([
     matchStage,
@@ -484,6 +509,8 @@ async function getSalesDataByRange(range, startDate, endDate) {
     sales: item.sales,
     revenue: item.revenue,
     refunded: item.refunded,
+    deliveryFee: item.deliveryFee || 0, // Separate
+    totalAmount: item.totalAmount || 0, // Optional
     netRevenue: item.revenue - item.refunded,
   }));
 }

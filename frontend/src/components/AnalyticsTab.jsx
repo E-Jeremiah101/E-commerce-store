@@ -53,7 +53,17 @@ const AnalyticsTab = () => {
       try {
         setIsLoading(true);
         const res = await axios.get(`/analytics?range=${selectedRange}`);
-
+        console.log("📊 API Response:", res.data);
+        console.log("📈 Sales Data:", res.data.salesData);
+        console.log(
+          "💰 Revenue in salesData:",
+          res.data.salesData?.map((d) => ({
+            date: d.date,
+            sales: d.sales,
+            revenue: d.revenue,
+            deliveryFee: d.deliveryFee,
+          }))
+        );
         const {
           analyticsData,
           salesData,
@@ -104,12 +114,23 @@ const AnalyticsTab = () => {
         }
 
         // Process sales data
-        const mappedSales = salesData.map((d) => ({
-          rawDate: d.date,
-          name: formatDateLabel(d.date, selectedRange),
-          sales: Number(d.sales) || 0,
-          revenue: Number(d.revenue) || 0,
-        }));
+        // Replace your mapping with this:
+        const mappedSales = salesData.map((d) => {
+          // Try to get totalAmount if available, otherwise calculate
+          const totalRevenue =
+            Number(d.totalAmount) ||
+            Number(d.revenue || 0) + Number(d.deliveryFee || 0);
+
+          return {
+            rawDate: d.date,
+            name: formatDateLabel(d.date, selectedRange),
+            sales: Number(d.sales) || 0,
+            revenue: totalRevenue,
+            deliveryFee: Number(d.deliveryFee) || 0,
+          };
+        });
+
+        console.log("🔄 Mapped Sales Data (sample):", mappedSales.slice(0, 3));
         setSalesData(mappedSales);
 
         const labels = mappedSales.map((s) => s.name);
@@ -305,7 +326,6 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
             </div>
           </div>
         </div>
-
         {/* Main Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           {/* Total Products Card */}
@@ -489,7 +509,6 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
             </div>
           </div>
         </div>
-
         {/* Second Row - Charts and Additional Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Purchase Rate Card */}
@@ -746,7 +765,6 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
             </div>
           </div>
         </div>
-
         {/* Revenue Section */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-8">
           <h3 className="text-lg font-semibold text-gray-800 mb-6">
@@ -896,9 +914,240 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
             </ResponsiveContainer>
           </div>
         </div>
+        
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-8">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6">
+            Logistics & Delivery
+          </h3>
 
+          {/* Delivery Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* Total Delivery Fees Card */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-amber-100 p-2 rounded-lg">
+                  <svg
+                    className="h-5 w-5 text-amber-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-600 font-medium">Delivery Fees</p>
+                  <p className="text-gray-500 text-xs">To logistics partner</p>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {formatPrice(
+                  analyticsData?.totalDeliveryFee,
+                  settings?.currency
+                ) || "0"}
+              </h3>
+              <div className="flex items-center gap-2">
+                {analyticsData.deliveryFeeChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span
+                  className={`text-sm ${
+                    analyticsData.deliveryFeeChange >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {analyticsData.deliveryFeeChange >= 0 ? "+" : ""}
+                  {analyticsData.deliveryFeeChange?.toFixed(1) || "0.0"}% from
+                  last period
+                </span>
+              </div>
+            </div>
+
+            {/* Average Delivery Fee per Order Card */}
+            <div className="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl p-6 border border-teal-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-teal-100 p-2 rounded-lg">
+                  <svg
+                    className="h-5 w-5 text-teal-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-600 font-medium">Avg. Delivery Fee</p>
+                  <p className="text-gray-500 text-xs">Per order</p>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {analyticsData.allOrders > 0
+                  ? formatPrice(
+                      analyticsData.totalDeliveryFee / analyticsData.allOrders,
+                      settings?.currency
+                    )
+                  : formatPrice(0, settings?.currency)}
+              </h3>
+              <p className="text-gray-500 text-sm">
+                Based on {analyticsData.allOrders || 0} orders
+              </p>
+            </div>
+
+            {/* Delivery Rate Card */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-blue-100 p-2 rounded-lg">
+                  <svg
+                    className="h-5 w-5 text-blue-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-600 font-medium">Delivery Rate</p>
+                  <p className="text-gray-500 text-xs">Orders with delivery</p>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {analyticsData.allOrders > 0
+                  ? `${(
+                      (analyticsData.deliveredOrders /
+                        analyticsData.allOrders) *
+                      100
+                    ).toFixed(1)}%`
+                  : "0%"}
+              </h3>
+              <p className="text-gray-500 text-sm">
+                {analyticsData.deliveredOrders || 0} of{" "}
+                {analyticsData.allOrders || 0} delivered
+              </p>
+            </div>
+
+            {/* Logistics Efficiency Card */}
+            <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-6 border border-purple-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-purple-100 p-2 rounded-lg">
+                  <svg
+                    className="h-5 w-5 text-purple-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-600 font-medium">
+                    Fee to Revenue Ratio
+                  </p>
+                  <p className="text-gray-500 text-xs">
+                    Delivery vs product revenue
+                  </p>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {analyticsData.grossRevenue > 0
+                  ? `${(
+                      (analyticsData.totalDeliveryFee /
+                        analyticsData.grossRevenue) *
+                      100
+                    ).toFixed(1)}%`
+                  : "0%"}
+              </h3>
+              <p className="text-gray-500 text-sm">
+                {formatPrice(
+                  analyticsData.totalDeliveryFee,
+                  settings?.currency
+                )}{" "}
+                / {formatPrice(analyticsData.grossRevenue, settings?.currency)}
+              </p>
+            </div>
+          </div>
+
+          {/* Delivery Fee Trend Chart */}
+          <div className="mt-6">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-gray-700 font-medium">Delivery Fee Trend</h4>
+              <div className="flex gap-2">
+                <button className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg">
+                  Delivery Fees
+                </button>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={salesData}>
+                <defs>
+                  <linearGradient
+                    id="colorDeliveryFee"
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="name" stroke="#6B7280" fontSize={12} />
+                <YAxis
+                  stroke="#6B7280"
+                  fontSize={12}
+                  tickFormatter={(value) =>
+                    `${formatPrice(
+                      (value / 1000).toFixed(0),
+                      settings?.currency
+                    )}K`
+                  }
+                />
+                <Tooltip
+                  content={<DeliveryTooltip />}
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="deliveryFee"
+                  stroke="#F59E0B"
+                  strokeWidth={2}
+                  fill="url(#colorDeliveryFee)"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
         {/* Additional Analytics Cards */}
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <AnalyticsCard
             title="Pending Refunds"
@@ -953,7 +1202,6 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
             subtitle={`${analyticsData.refundsRejected || 0} rejected`}
           />
         </div>
-
         {/* Product Sales Analysis Table */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mt-8">
           <div className="flex justify-between items-center mb-6">
@@ -1368,6 +1616,52 @@ const AnalyticsCard = ({
     )}
   </motion.div>
 );
+
+// Add this component in your AnalyticsTab component
+const DeliveryTooltip = ({ active, payload, label, settings }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0]?.payload;
+    return (
+      <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
+        <p className="font-medium text-gray-800 mb-2">{label}</p>
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600 text-sm">Delivery Fees:</span>
+            <span className="font-medium text-amber-600">
+              {formatPrice(data?.deliveryFee || 0, settings?.currency)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600 text-sm">Orders:</span>
+            <span className="font-medium text-blue-600">
+              {data?.sales || 0}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600 text-sm">Avg. Fee per Order:</span>
+            <span className="font-medium text-green-600">
+              {data?.sales > 0
+                ? formatPrice(
+                    (data?.deliveryFee || 0) / data?.sales,
+                    settings?.currency
+                  )
+                : formatPrice(0, settings?.currency)}
+            </span>
+          </div>
+          <div className="pt-2 border-t border-gray-100">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 text-sm">Product Revenue:</span>
+              <span className="font-medium text-purple-600">
+                {formatPrice(data?.revenue || 0, settings?.currency)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 // Tooltip components
 const MiniChartTooltip = ({ active, payload }) =>
