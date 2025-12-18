@@ -2,7 +2,13 @@ import { useEffect, useState } from "react";
 import axios from "../lib/axios";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { MoreVertical, Calendar, X } from "lucide-react";
+import {
+  MoreVertical,
+  Calendar,
+  X,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
@@ -14,16 +20,37 @@ const AdminOrdersPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
-   const [dateRange, setDateRange] = useState({
-     startDate: "",
-     endDate: "",
-   });
-    const [showDatePicker, setShowDatePicker] = useState(false);
+  const [dateRange, setDateRange] = useState({
+    startDate: "",
+    endDate: "",
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const navigate = useNavigate();
   const [openDropdownId, setOpenDropdownId] = useState(null);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Helper function to convert string to Date
+  const stringToDate = (dateString) => {
+    if (!dateString) return null;
+    return new Date(dateString);
+  };
+
+  // Helper function to convert Date to string (YYYY-MM-DD)
+  const dateToString = (date) => {
+    if (!date) return "";
+    return date.toISOString().split("T")[0];
+  };
+
+  // Helper function to get Date object from string or Date
+  const getDateObject = (dateInput) => {
+    if (!dateInput) return null;
+    if (dateInput instanceof Date) return dateInput;
+    return new Date(dateInput);
+  };
 
   // Debounce search
   useEffect(() => {
@@ -38,32 +65,27 @@ const AdminOrdersPage = () => {
     setCurrentPage(1);
   }, [searchQuery, sortBy, sortOrder]);
 
-
   // Fetch orders
   const fetchOrders = async () => {
     try {
       setIsFetching(true);
+      const params = {
+        search: searchQuery,
+        sortBy,
+        sortOrder,
+      };
 
-        const params = {
-          search: searchQuery,
-          sortBy,
-          sortOrder,
-        };
+      if (dateRange.startDate && dateRange.startDate.trim() !== "") {
+        params.startDate = dateRange.startDate;
+      }
+      if (dateRange.endDate && dateRange.endDate.trim() !== "") {
+        params.endDate = dateRange.endDate;
+      }
 
-        // Only add date params if they have values
-        if (dateRange.startDate && dateRange.startDate.trim() !== "") {
-          params.startDate = dateRange.startDate;
-        }
+      console.log("Fetching orders with params:", params);
 
-        if (dateRange.endDate && dateRange.endDate.trim() !== "") {
-          params.endDate = dateRange.endDate;
-        }
       const { data } = await axios.get("/admin/orders", {
-        params: {
-          search: searchQuery,
-          sortBy,
-          sortOrder,
-        },
+        params,
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setOrders(data.orders);
@@ -77,38 +99,249 @@ const AdminOrdersPage = () => {
 
   useEffect(() => {
     fetchOrders();
-  }, [searchQuery, sortBy, sortOrder]);
+  }, [searchQuery, sortBy, sortOrder, dateRange]);
 
+  // Handle search key down
   const handleSearchKeyDown = (e) => {
     if (e.key === "Enter") {
       setSearchQuery(search);
-      setCurrentPage(1); // Also reset on enter
+      setCurrentPage(1);
     }
   };
-const handleDateChange = (type, value) => {
-  setDateRange((prev) => ({
-    ...prev,
-    [type]: value,
-  }));
-};
 
-const clearDateFilter = () => {
-  setDateRange({ startDate: "", endDate: "" });
-  setCurrentPage(1);
-};
+  // Date Functions
+  const formatDateForDisplay = (dateString) => {
+    if (!dateString) return "";
+    const date = getDateObject(dateString);
+    if (!date || isNaN(date.getTime())) return "";
 
-const formatDateForDisplay = (dateString) => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-};
-const toggleDatePicker = () => {
-  setShowDatePicker(!showDatePicker);
-};
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const handleDateChange = (type, value) => {
+    setDateRange((prev) => ({
+      ...prev,
+      [type]: value,
+    }));
+    setCurrentPage(1);
+  };
+
+  const clearDateFilter = () => {
+    setDateRange({ startDate: "", endDate: "" });
+    setCurrentPage(1);
+  };
+
+  const toggleDatePicker = () => {
+    setShowDatePicker(!showDatePicker);
+  };
+
+  // Close date picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDatePicker && !event.target.closest(".date-picker-container")) {
+        setShowDatePicker(false);
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [showDatePicker]);
+
+  // Quick date presets
+  const applyDatePreset = (preset) => {
+    const today = new Date();
+
+    switch (preset) {
+      case "today":
+        const todayStr = dateToString(today);
+        setDateRange({ startDate: todayStr, endDate: todayStr });
+        break;
+      case "yesterday":
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = dateToString(yesterday);
+        setDateRange({ startDate: yesterdayStr, endDate: yesterdayStr });
+        break;
+      case "last7days":
+        const last7 = new Date(today);
+        last7.setDate(last7.getDate() - 7);
+        setDateRange({
+          startDate: dateToString(last7),
+          endDate: dateToString(today),
+        });
+        break;
+      case "thisMonth":
+        const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+        const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        setDateRange({
+          startDate: dateToString(firstDay),
+          endDate: dateToString(lastDay),
+        });
+        break;
+      case "lastMonth":
+        const firstDayLast = new Date(
+          today.getFullYear(),
+          today.getMonth() - 1,
+          1
+        );
+        const lastDayLast = new Date(today.getFullYear(), today.getMonth(), 0);
+        setDateRange({
+          startDate: dateToString(firstDayLast),
+          endDate: dateToString(lastDayLast),
+        });
+        break;
+      case "last30days":
+        const last30 = new Date(today);
+        last30.setDate(last30.getDate() - 30);
+        setDateRange({
+          startDate: dateToString(last30),
+          endDate: dateToString(today),
+        });
+        break;
+      case "thisYear":
+        const firstDayYear = new Date(today.getFullYear(), 0, 1);
+        setDateRange({
+          startDate: dateToString(firstDayYear),
+          endDate: dateToString(today),
+        });
+        break;
+      default:
+        break;
+    }
+    setShowDatePicker(false);
+  };
+
+  // Calendar navigation
+  const prevMonth = () => {
+    setCurrentMonth(
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
+    );
+  };
+
+  const nextMonth = () => {
+    setCurrentMonth(
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
+    );
+  };
+
+  const selectDate = (date) => {
+    const dateStr = dateToString(date);
+
+    if (!dateRange.startDate || (dateRange.startDate && dateRange.endDate)) {
+      // Start new selection
+      setDateRange({ startDate: dateStr, endDate: "" });
+    } else if (dateRange.startDate && !dateRange.endDate) {
+      // Complete the range
+      const start = getDateObject(dateRange.startDate);
+      const end = date;
+
+      if (end < start) {
+        // If selected date is before start date, swap them
+        setDateRange({ startDate: dateStr, endDate: dateRange.startDate });
+      } else {
+        setDateRange({ ...dateRange, endDate: dateStr });
+      }
+    }
+  };
+
+  // Generate calendar days
+  const generateCalendarDays = () => {
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDay = firstDay.getDay();
+
+    const days = [];
+
+    // Previous month's days
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = startingDay - 1; i >= 0; i--) {
+      const date = new Date(year, month - 1, prevMonthLastDay - i);
+      days.push({
+        date,
+        isCurrentMonth: false,
+        isToday: false,
+        dateStr: dateToString(date),
+      });
+    }
+
+    // Current month's days
+    const today = dateToString(new Date());
+    for (let i = 1; i <= daysInMonth; i++) {
+      const date = new Date(year, month, i);
+      const dateStr = dateToString(date);
+      days.push({
+        date,
+        isCurrentMonth: true,
+        isToday: dateStr === today,
+        dateStr,
+      });
+    }
+
+    // Next month's days (to fill the grid)
+    const totalCells = 42; // 6 weeks * 7 days
+    const remainingCells = totalCells - days.length;
+    for (let i = 1; i <= remainingCells; i++) {
+      const date = new Date(year, month + 1, i);
+      days.push({
+        date,
+        isCurrentMonth: false,
+        isToday: false,
+        dateStr: dateToString(date),
+      });
+    }
+
+    return days;
+  };
+
+  // Check if a date is in the selected range
+  const isDateInRange = (dateStr) => {
+    if (!dateRange.startDate) return false;
+
+    const date = getDateObject(dateStr);
+    const start = getDateObject(dateRange.startDate);
+    const end = getDateObject(dateRange.endDate);
+
+    if (!date || isNaN(date.getTime())) return false;
+    if (!start || isNaN(start.getTime())) return false;
+
+    if (end && !isNaN(end.getTime())) {
+      return date >= start && date <= end;
+    } else if (start && !end) {
+      return dateStr === dateRange.startDate;
+    }
+    return false;
+  };
+
+  // Check if a date is the start or end of the range
+  const isRangeEdge = (dateStr) => {
+    return dateStr === dateRange.startDate || dateStr === dateRange.endDate;
+  };
+
+  // Day names for calendar header
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
@@ -202,7 +435,6 @@ const toggleDatePicker = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        {/* Search & Sort */}
         {/* Search & Filter Section */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-5 bg-white rounded-lg shadow-md p-4">
           <div className="flex flex-col md:flex-row gap-3 w-full">
@@ -213,145 +445,231 @@ const toggleDatePicker = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              className="px-3 py-2 rounded-lg border placeholder-gray-400 focus:ring-1 text-gray-500 w-full md:w-1/3"
+              className="px-3 py-2 rounded-lg border border-gray-300 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 w-full md:w-1/3"
             />
 
-            {/* Date Range Filter */}
-            <div className="relative flex items-center gap-2">
-              <button
-                onClick={toggleDatePicker}
-                className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-              >
-                <Calendar size={18} />
-                {dateRange.startDate || dateRange.endDate ? (
-                  <span className="text-sm">
-                    {formatDateForDisplay(dateRange.startDate)} -{" "}
-                    {formatDateForDisplay(dateRange.endDate)}
-                  </span>
-                ) : (
-                  <span className="text-sm">Select Date Range</span>
-                )}
-              </button>
+            {/* Enhanced Date Range Filter - DROPDOWN STYLE */}
+            <div className="relative date-picker-container">
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <button
+                    onClick={toggleDatePicker}
+                    className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                  >
+                    <Calendar size={18} />
+                    {dateRange.startDate || dateRange.endDate ? (
+                      <span className="text-sm font-medium">
+                        {formatDateForDisplay(dateRange.startDate)} -{" "}
+                        {formatDateForDisplay(dateRange.endDate)}
+                      </span>
+                    ) : (
+                      <span className="text-sm">Select Date Range</span>
+                    )}
+                  </button>
 
-              {(dateRange.startDate || dateRange.endDate) && (
-                <button
-                  onClick={clearDateFilter}
-                  className="p-2 text-gray-500 hover:text-gray-700"
-                  title="Clear date filter"
-                >
-                  <X size={18} />
-                </button>
-              )}
-
-              {/* Date Picker Modal */}
-              {showDatePicker && (
-                <div className="absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 w-80">
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="font-semibold text-gray-700">
-                      Select Date Range
-                    </h3>
+                  {(dateRange.startDate || dateRange.endDate) && (
                     <button
-                      onClick={toggleDatePicker}
-                      className="text-gray-500 hover:text-gray-700"
+                      onClick={clearDateFilter}
+                      className="absolute -right-2 -top-2 p-1 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors"
+                      title="Clear date filter"
                     >
-                      <X size={18} />
+                      <X size={14} />
                     </button>
-                  </div>
+                  )}
+                </div>
+              </div>
 
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        From Date
-                      </label>
-                      <input
-                        type="date"
-                        value={dateRange.startDate}
-                        onChange={(e) =>
-                          handleDateChange("startDate", e.target.value)
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        max={dateRange.endDate || undefined}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        To Date
-                      </label>
-                      <input
-                        type="date"
-                        value={dateRange.endDate}
-                        onChange={(e) =>
-                          handleDateChange("endDate", e.target.value)
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        min={dateRange.startDate || undefined}
-                      />
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
+              {/* Date Picker Dropdown (not modal) */}
+              {showDatePicker && (
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-[500px]">
+                  <div className="p-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-semibold text-gray-800">
+                        Select Date Range
+                      </h3>
                       <button
-                        onClick={() => {
-                          // Set to today
-                          const today = new Date().toISOString().split("T")[0];
-                          setDateRange({
-                            startDate: today,
-                            endDate: today,
-                          });
-                        }}
-                        className="flex-1 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+                        onClick={toggleDatePicker}
+                        className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
                       >
-                        Today
-                      </button>
-                      <button
-                        onClick={() => {
-                          // Set to last 7 days
-                          const end = new Date();
-                          const start = new Date();
-                          start.setDate(start.getDate() - 7);
-
-                          setDateRange({
-                            startDate: start.toISOString().split("T")[0],
-                            endDate: end.toISOString().split("T")[0],
-                          });
-                        }}
-                        className="flex-1 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200"
-                      >
-                        Last 7 Days
+                        <X size={18} />
                       </button>
                     </div>
 
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => {
-                          // Set to this month
-                          const now = new Date();
-                          const firstDay = new Date(
-                            now.getFullYear(),
-                            now.getMonth(),
-                            1
-                          );
-                          const lastDay = new Date(
-                            now.getFullYear(),
-                            now.getMonth() + 1,
-                            0
-                          );
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Calendar Section */}
+                      <div>
+                        {/* Calendar Header */}
+                        <div className="flex items-center justify-between mb-4">
+                          <button
+                            onClick={prevMonth}
+                            className="p-2 hover:bg-gray-100 rounded-lg"
+                          >
+                            <ChevronLeft size={18} />
+                          </button>
+                          <h4 className="font-semibold text-gray-800 text-sm">
+                            {monthNames[currentMonth.getMonth()]}{" "}
+                            {currentMonth.getFullYear()}
+                          </h4>
+                          <button
+                            onClick={nextMonth}
+                            className="p-2 hover:bg-gray-100 rounded-lg"
+                          >
+                            <ChevronRight size={18} />
+                          </button>
+                        </div>
 
-                          setDateRange({
-                            startDate: firstDay.toISOString().split("T")[0],
-                            endDate: lastDay.toISOString().split("T")[0],
-                          });
-                        }}
-                        className="flex-1 px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
-                      >
-                        This Month
-                      </button>
-                      <button
-                        onClick={clearDateFilter}
-                        className="flex-1 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
-                      >
-                        Clear
-                      </button>
+                        {/* Calendar Grid */}
+                        <div className="mb-4">
+                          {/* Day Names */}
+                          <div className="grid grid-cols-7 gap-1 mb-2">
+                            {dayNames.map((day) => (
+                              <div
+                                key={day}
+                                className="text-center text-xs font-medium text-gray-500 py-1"
+                              >
+                                {day}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Calendar Days */}
+                          <div className="grid grid-cols-7 gap-1">
+                            {generateCalendarDays().map((day, index) => {
+                              const isSelected = isDateInRange(day.dateStr);
+                              const isEdge = isRangeEdge(day.dateStr);
+
+                              return (
+                                <button
+                                  key={index}
+                                  onClick={() => selectDate(day.date)}
+                                  className={`
+                                    h-7 text-xs rounded transition-colors
+                                    ${
+                                      !day.isCurrentMonth
+                                        ? "text-gray-400"
+                                        : "text-gray-800"
+                                    }
+                                    ${day.isToday ? "font-bold" : ""}
+                                    ${
+                                      isSelected
+                                        ? "bg-blue-50 text-blue-600"
+                                        : ""
+                                    }
+                                    ${
+                                      isEdge
+                                        ? "bg-blue-600 text-white font-medium"
+                                        : ""
+                                    }
+                                    ${
+                                      !isEdge && isSelected
+                                        ? "hover:bg-blue-100"
+                                        : ""
+                                    }
+                                    ${
+                                      day.isCurrentMonth && !isSelected
+                                        ? "hover:bg-gray-100"
+                                        : ""
+                                    }
+                                  `}
+                                  title={day.date.toLocaleDateString()}
+                                >
+                                  {day.date.getDate()}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Presets & Inputs Section */}
+                      <div className="flex flex-col">
+                        {/* Date Inputs */}
+                        <div className="mb-4">
+                          <div className="mb-3">
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              From Date
+                            </label>
+                            <input
+                              type="date"
+                              value={dateRange.startDate}
+                              onChange={(e) =>
+                                handleDateChange("startDate", e.target.value)
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              max={dateRange.endDate || undefined}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              To Date
+                            </label>
+                            <input
+                              type="date"
+                              value={dateRange.endDate}
+                              onChange={(e) =>
+                                handleDateChange("endDate", e.target.value)
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              min={dateRange.startDate || undefined}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Quick Presets */}
+                        <div className="flex-1">
+                          <h4 className="text-xs font-medium text-gray-700 mb-2">
+                            Quick Select
+                          </h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            {[
+                              { label: "Today", value: "today" },
+                              { label: "Yesterday", value: "yesterday" },
+                              { label: "Last 7 Days", value: "last7days" },
+                              { label: "Last 30 Days", value: "last30days" },
+                              { label: "This Month", value: "thisMonth" },
+                              { label: "Last Month", value: "lastMonth" },
+                              { label: "This Year", value: "thisYear" },
+                              {
+                                label: "Clear All",
+                                value: "clear",
+                                className:
+                                  "col-span-2 bg-red-50 text-red-600 hover:bg-red-100",
+                              },
+                            ].map((preset) => (
+                              <button
+                                key={preset.value}
+                                onClick={() =>
+                                  preset.value === "clear"
+                                    ? clearDateFilter()
+                                    : applyDatePreset(preset.value)
+                                }
+                                className={`
+                                  px-3 py-2 text-xs rounded-lg transition-colors
+                                  ${
+                                    preset.className ||
+                                    "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                                  }
+                                `}
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Apply Button */}
+                        <div className="mt-4 pt-4 border-t">
+                          <button
+                            onClick={() => {
+                              toggleDatePicker();
+                              fetchOrders();
+                            }}
+                            className="w-full px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                          >
+                            Apply Filter
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -367,7 +685,7 @@ const toggleDatePicker = () => {
                 setSortBy(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-3 py-2 rounded-lg border text-gray-500"
+              className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="date">Sort by Date</option>
               <option value="totalAmount">Sort by Total Amount</option>
@@ -380,7 +698,7 @@ const toggleDatePicker = () => {
                 setSortOrder(e.target.value);
                 setCurrentPage(1);
               }}
-              className="px-3 py-2 rounded-lg border text-gray-500"
+              className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               {sortBy === "date" ? (
                 <>
@@ -438,7 +756,7 @@ const toggleDatePicker = () => {
         ) : (
           <>
             {/* Orders Table */}
-            <div className="overflow-x-auto  rounded-lg shadow-lg">
+            <div className="overflow-x-auto rounded-lg shadow-lg">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
