@@ -70,10 +70,6 @@ export const getUserOrders = async (req, res) => {
 
     const formattedOrders = orders.map((order) => {
        const refunds = order.refunds || [];
-      //  If any refund for this order has status "Approved"
-      const hasApprovedRefund = order.refunds?.some(
-        (refund) => refund.status === "Approved"
-      );
 
       let displayStatus = order.status;
       const totalProducts = order.products.length;
@@ -1261,7 +1257,7 @@ export const getOrderById = async (req, res) => {
      }
    }
     // Log order view by admin (if admin is viewing)
-    if (req.user && req.user.role === "admin") {
+    if ( req.user.role === "admin") {
       await logOrderAction(
         req,
         ACTIONS.VIEW_ORDER_DETAILS,
