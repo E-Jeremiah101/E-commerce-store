@@ -779,6 +779,10 @@ export const getAllOrders = async (req, res) => {
   try {
     const { sortBy, sortOrder = "desc", search } = req.query;
 
+    // Get date parameters safely with default values
+    const startDate = req.query.startDate;
+    const endDate = req.query.endDate;
+
     // Build search filter
     let searchFilter = {};
     if (search) {
@@ -791,10 +795,52 @@ export const getAllOrders = async (req, res) => {
           ...(isObjectId ? [{ _id: search }] : []),
           { "user.firstname": { $regex: search, $options: "i" } },
           { "user.lastname": { $regex: search, $options: "i" } },
-        ], 
+        ],
       };
     }
 
+    if (
+      (startDate && startDate.trim() !== "") ||
+      (endDate && endDate.trim() !== "")
+    ) {
+      console.log("Processing date filter...");
+      const dateFilter = {};
+      // Add date range filter if provided
+      if (startDate && startDate.trim() !== "") {
+        const start = new Date(startDate);
+        console.log("Parsed start date:", start);
+        if (!isNaN(start.getTime())) {
+          start.setHours(0, 0, 0, 0);
+          dateFilter.$gte = start;
+          console.log("Valid start date:", dateFilter.$gte);
+        } else {
+          console.log("Invalid start date format:", startDate);
+        }
+      }
+
+      if (endDate && endDate.trim() !== "") {
+        const end = new Date(endDate);
+        console.log("Parsed end date:", end);
+        if (!isNaN(end.getTime())) {
+          end.setHours(23, 59, 59, 999);
+          dateFilter.$lte = end;
+          console.log("Valid end date:", dateFilter.$lte);
+        } else {
+          console.log("Invalid end date format:", endDate);
+        }
+      }
+
+      // Only add date filter if we have valid dates
+      if (Object.keys(dateFilter).length > 0) {
+        searchFilter.createdAt = dateFilter;
+        console.log("Final date filter applied:", dateFilter);
+      } else {
+        console.log("No valid dates for filter");
+      }
+    } else {
+      console.log("No date parameters provided");
+    }
+console.log("Final search filter:", searchFilter);
     // Fetch all orders with basic sorting (newest first by default)
     let orders = await Order.find(searchFilter)
       .populate("user", "firstname lastname email phone address")
@@ -802,6 +848,7 @@ export const getAllOrders = async (req, res) => {
       .sort({ createdAt: -1 }) // Newest orders first by default
       .populate("refunds.product", "name image")
       .lean();
+      console.log(`Found ${orders.length} orders with filter`);
 
     // Define priority: Pending orders always first, then sort by other criteria
     const statusOrder = [
@@ -901,7 +948,6 @@ export const getAllOrders = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 export const updateOrderStatus = async (req, res) => {
   try {
     const settings = await storeSettings.findOne();

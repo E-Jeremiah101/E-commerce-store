@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "../lib/axios";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useUserStore } from "../stores/useUserStore";
-import { MoreVertical } from "lucide-react";
+import { MoreVertical, Calendar, X } from "lucide-react";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
@@ -15,6 +14,11 @@ const AdminOrdersPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
+   const [dateRange, setDateRange] = useState({
+     startDate: "",
+     endDate: "",
+   });
+    const [showDatePicker, setShowDatePicker] = useState(false);
   const navigate = useNavigate();
   const [openDropdownId, setOpenDropdownId] = useState(null);
   // Pagination state
@@ -34,14 +38,32 @@ const AdminOrdersPage = () => {
     setCurrentPage(1);
   }, [searchQuery, sortBy, sortOrder]);
 
-  const { user } = useUserStore();
 
   // Fetch orders
   const fetchOrders = async () => {
     try {
       setIsFetching(true);
+
+        const params = {
+          search: searchQuery,
+          sortBy,
+          sortOrder,
+        };
+
+        // Only add date params if they have values
+        if (dateRange.startDate && dateRange.startDate.trim() !== "") {
+          params.startDate = dateRange.startDate;
+        }
+
+        if (dateRange.endDate && dateRange.endDate.trim() !== "") {
+          params.endDate = dateRange.endDate;
+        }
       const { data } = await axios.get("/admin/orders", {
-        params: { search: searchQuery, sortBy, sortOrder },
+        params: {
+          search: searchQuery,
+          sortBy,
+          sortOrder,
+        },
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       setOrders(data.orders);
@@ -63,6 +85,30 @@ const AdminOrdersPage = () => {
       setCurrentPage(1); // Also reset on enter
     }
   };
+const handleDateChange = (type, value) => {
+  setDateRange((prev) => ({
+    ...prev,
+    [type]: value,
+  }));
+};
+
+const clearDateFilter = () => {
+  setDateRange({ startDate: "", endDate: "" });
+  setCurrentPage(1);
+};
+
+const formatDateForDisplay = (dateString) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+const toggleDatePicker = () => {
+  setShowDatePicker(!showDatePicker);
+};
 
   const handleStatusChange = async (orderId, newStatus) => {
     try {
@@ -157,23 +203,171 @@ const AdminOrdersPage = () => {
         transition={{ duration: 0.8 }}
       >
         {/* Search & Sort */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-5 bg-white rounded-lg shadow-md p-4 ">
-          <input
-            type="text"
-            placeholder="Search by ORD/EC0STORE/Id"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={handleSearchKeyDown}
-            className="px-3 py-2 rounded-lg border placeholder-gray-400 focus:ring-1  text-gray-500 w-full md:w-1/3"
-          />
-          <div className="flex gap-2 flex-wrap">
+        {/* Search & Filter Section */}
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-5 bg-white rounded-lg shadow-md p-4">
+          <div className="flex flex-col md:flex-row gap-3 w-full">
+            {/* Text Search */}
+            <input
+              type="text"
+              placeholder="Search by ORD/EC0STORE/Id"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              className="px-3 py-2 rounded-lg border placeholder-gray-400 focus:ring-1 text-gray-500 w-full md:w-1/3"
+            />
+
+            {/* Date Range Filter */}
+            <div className="relative flex items-center gap-2">
+              <button
+                onClick={toggleDatePicker}
+                className="px-3 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+              >
+                <Calendar size={18} />
+                {dateRange.startDate || dateRange.endDate ? (
+                  <span className="text-sm">
+                    {formatDateForDisplay(dateRange.startDate)} -{" "}
+                    {formatDateForDisplay(dateRange.endDate)}
+                  </span>
+                ) : (
+                  <span className="text-sm">Select Date Range</span>
+                )}
+              </button>
+
+              {(dateRange.startDate || dateRange.endDate) && (
+                <button
+                  onClick={clearDateFilter}
+                  className="p-2 text-gray-500 hover:text-gray-700"
+                  title="Clear date filter"
+                >
+                  <X size={18} />
+                </button>
+              )}
+
+              {/* Date Picker Modal */}
+              {showDatePicker && (
+                <div className="absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg z-50 p-4 w-80">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="font-semibold text-gray-700">
+                      Select Date Range
+                    </h3>
+                    <button
+                      onClick={toggleDatePicker}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        From Date
+                      </label>
+                      <input
+                        type="date"
+                        value={dateRange.startDate}
+                        onChange={(e) =>
+                          handleDateChange("startDate", e.target.value)
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        max={dateRange.endDate || undefined}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        To Date
+                      </label>
+                      <input
+                        type="date"
+                        value={dateRange.endDate}
+                        onChange={(e) =>
+                          handleDateChange("endDate", e.target.value)
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        min={dateRange.startDate || undefined}
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        onClick={() => {
+                          // Set to today
+                          const today = new Date().toISOString().split("T")[0];
+                          setDateRange({
+                            startDate: today,
+                            endDate: today,
+                          });
+                        }}
+                        className="flex-1 px-3 py-2 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+                      >
+                        Today
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Set to last 7 days
+                          const end = new Date();
+                          const start = new Date();
+                          start.setDate(start.getDate() - 7);
+
+                          setDateRange({
+                            startDate: start.toISOString().split("T")[0],
+                            endDate: end.toISOString().split("T")[0],
+                          });
+                        }}
+                        className="flex-1 px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200"
+                      >
+                        Last 7 Days
+                      </button>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          // Set to this month
+                          const now = new Date();
+                          const firstDay = new Date(
+                            now.getFullYear(),
+                            now.getMonth(),
+                            1
+                          );
+                          const lastDay = new Date(
+                            now.getFullYear(),
+                            now.getMonth() + 1,
+                            0
+                          );
+
+                          setDateRange({
+                            startDate: firstDay.toISOString().split("T")[0],
+                            endDate: lastDay.toISOString().split("T")[0],
+                          });
+                        }}
+                        className="flex-1 px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
+                      >
+                        This Month
+                      </button>
+                      <button
+                        onClick={clearDateFilter}
+                        className="flex-1 px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sort Options */}
+          <div className="flex gap-2 flex-wrap mt-3 md:mt-0">
             <select
               value={sortBy}
               onChange={(e) => {
                 setSortBy(e.target.value);
-                setCurrentPage(1); // Reset page on sort change
+                setCurrentPage(1);
               }}
-              className="px-3 py-2 rounded-lg text-gray-500"
+              className="px-3 py-2 rounded-lg border text-gray-500"
             >
               <option value="date">Sort by Date</option>
               <option value="totalAmount">Sort by Total Amount</option>
@@ -184,9 +378,9 @@ const AdminOrdersPage = () => {
               value={sortOrder}
               onChange={(e) => {
                 setSortOrder(e.target.value);
-                setCurrentPage(1); // Reset page on sort order change
+                setCurrentPage(1);
               }}
-              className="px-3 py-2 rounded-lg  text-gray-500"
+              className="px-3 py-2 rounded-lg border text-gray-500"
             >
               {sortBy === "date" ? (
                 <>
@@ -207,6 +401,35 @@ const AdminOrdersPage = () => {
             </select>
           </div>
         </div>
+
+        {/* Date filter summary */}
+        {(dateRange.startDate || dateRange.endDate) && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar size={16} className="text-blue-600" />
+                <span className="text-sm text-blue-700">
+                  Showing orders from{" "}
+                  <strong>
+                    {formatDateForDisplay(dateRange.startDate) ||
+                      "any start date"}
+                  </strong>
+                  {" to "}
+                  <strong>
+                    {formatDateForDisplay(dateRange.endDate) || "any end date"}
+                  </strong>
+                </span>
+              </div>
+              <button
+                onClick={clearDateFilter}
+                className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+              >
+                <X size={14} />
+                Clear filter
+              </button>
+            </div>
+          </div>
+        )}
 
         {totalOrders === 0 ? (
           <p className="flex justify-center mt-7 tracking-widest">
