@@ -27,6 +27,27 @@ const couponSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+     couponReason: {
+      type: String,
+      enum: ["first_order", "third_order_milestone", "every_five_orders", "high_value_order", "general"],
+      default: "general"
+    },
+    usedAt: {
+      type: Date,
+      default: null
+    },
+    usedInOrder: {
+      type: String,
+      default: null
+    },
+    deactivatedAt: {
+      type: Date,
+      default: null
+    },
+    deactivationReason: {
+      type: String,
+      default: null
+    } 
   },
   {
     timestamps: true,

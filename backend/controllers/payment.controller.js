@@ -552,11 +552,11 @@ async function checkCouponEligibility(userId, orderAmount) {
     const orderCount = await Order.countDocuments({
       user: userId,
       paymentStatus: "paid",
-    });
+   
 
           // IMPORTANT: Exclude orders created in the last 5 minutes to avoid counting current order
-    //   createdAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) }
-    // });
+      // createdAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) }
+    });
 
     console.log(
       `Checking coupon eligibility for user ${userId}: ${orderCount} orders, ${orderAmount}`
@@ -570,12 +570,17 @@ async function checkCouponEligibility(userId, orderAmount) {
 
     if (activeCoupon) {
       console.log(
-        `User ${userId} already has active coupon: ${activeCoupon.code}`
+        `[COUPON DEBUG] User ${userId} already has active coupon: ${activeCoupon.code} (expires: ${activeCoupon.expirationDate})`
       );
       return null;
     }
 
-    if (orderCount === 1) {
+    const hasReceivedFirstOrderCoupon = await Coupon.exists({
+      userId: userId,
+      couponReason: "first_order",
+    });
+
+    if (orderCount === 0 && !hasReceivedFirstOrderCoupon) {
       console.log(`User ${userId} eligible for FIRST ORDER coupon`);
       return {
         discountPercentage: 10,
@@ -583,7 +588,7 @@ async function checkCouponEligibility(userId, orderAmount) {
         reason: "first_order",
         emailType: "welcome_coupon",
       };
-    } else if (orderCount === 3) {
+    } else if (orderCount === 2) {
       console.log(`User ${userId} eligible for THIRD ORDER coupon`);
       return {
         discountPercentage: 15,
@@ -591,9 +596,11 @@ async function checkCouponEligibility(userId, orderAmount) {
         reason: "third_order_milestone",
         emailType: "loyalty_coupon",
       };
-    } else if (orderCount >= 5 && orderCount % 5 === 0) {
+    } else if (orderCount > 0 && (orderCount + 1) % 5 === 0) {
       console.log(
-        `User ${userId} eligible for VIP coupon (${orderCount} orders)`
+        `[COUPON DEBUG] User ${userId} eligible for VIP coupon (making ${
+          orderCount + 1
+        }th order)`
       );
       return {
         discountPercentage: 20,

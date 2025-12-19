@@ -21,7 +21,7 @@ export const getAllTransactions = async (req, res) => {
           order.flutterwaveRef ||
           order.orderNumber,
         customer: {
-          name: `${order.user.firstname} ${order.user.lastname}`,
+          name: `${order.user.firstname} ${order.user.lastname }`,
           email: order.user.email,
         },
         amount: order.totalAmount - (order.totalRefunded || 0),
