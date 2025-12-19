@@ -601,26 +601,31 @@ export const getStockLevels = async (req, res) => {
 
 
 
+
 export const getLowStockAlerts = async (req, res) => {
   try {
     const lowStockThreshold = req.query.threshold || 10;
 
-    // Find products with variants that have low stock
+    // Find ALL products with variants (not just those with low stock)
     const products = await Product.find({
       archived: { $ne: true },
       "variants.0": { $exists: true }, // Has variants
-      "variants.countInStock": { $lte: lowStockThreshold },
     }).select("name price category images variants");
 
+    console.log(
+      `📊 Found ${products.length} products with variants for low stock alerts`
+    );
+
     const alerts = [];
+    let totalOutOfStock = 0;
+    let totalLowStock = 0;
 
     products.forEach((product) => {
       product.variants.forEach((variant) => {
+        const variantStock = variant.countInStock || 0;
+
         // Check low stock variants
-        if (
-          variant.countInStock <= lowStockThreshold &&
-          variant.countInStock > 0
-        ) {
+        if (variantStock <= lowStockThreshold && variantStock > 0) {
           alerts.push({
             id: `${product._id}-${variant._id}`,
             productId: product._id,
@@ -630,12 +635,11 @@ export const getLowStockAlerts = async (req, res) => {
             }`,
             image: product.images?.[0] || "",
             category: product.category,
-            currentStock: variant.countInStock,
+            currentStock: variantStock,
             threshold: lowStockThreshold,
             status: "low",
             price: variant.price || product.price,
-            valueAtRisk:
-              (variant.price || product.price) * variant.countInStock,
+            valueAtRisk: (variant.price || product.price) * variantStock,
             variantId: variant._id,
             variantInfo: {
               color: variant.color,
@@ -643,10 +647,11 @@ export const getLowStockAlerts = async (req, res) => {
               sku: variant.sku,
             },
           });
+          totalLowStock++;
         }
 
         // Check out of stock variants
-        if (variant.countInStock === 0) {
+        if (variantStock === 0) {
           alerts.push({
             id: `${product._id}-${variant._id}-out`,
             productId: product._id,
@@ -668,9 +673,14 @@ export const getLowStockAlerts = async (req, res) => {
               sku: variant.sku,
             },
           });
+          totalOutOfStock++;
         }
       });
     });
+
+    console.log(
+      `🚨 Found ${totalOutOfStock} out of stock variants and ${totalLowStock} low stock variants`
+    );
 
     // Sort by urgency
     alerts.sort((a, b) => {
@@ -679,14 +689,13 @@ export const getLowStockAlerts = async (req, res) => {
       return a.currentStock - b.currentStock;
     });
 
-    console.log(`🚨 Found ${alerts.length} variant alerts`);
-
     res.json({
       alerts,
       summary: {
-        totalLowStock: alerts.length,
+        totalOutOfStock,
+        totalLowStock,
+        totalAlerts: alerts.length,
         totalValueAtRisk: alerts.reduce((sum, a) => sum + a.valueAtRisk, 0),
-        variantAlerts: alerts.length, // All alerts are variants
         mostUrgent: alerts.slice(0, 3),
       },
     });
@@ -695,7 +704,6 @@ export const getLowStockAlerts = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 
 export const adjustStock = async (req, res) => {
   try {
@@ -856,14 +864,27 @@ export const getInventoryByLocation = async (req, res) => {
     // Process all products for the main warehouse
     const locationProducts = [];
     let totalLocationValue = 0;
-    let totalLocationItems = 0;
+    let totalLocationItems = 0; // Total stock items (items with stock > 0)
+    let totalOutOfStockVariants = 0; // Count of variants with 0 stock
+    let totalVariants = 0;
 
     products.forEach((product) => {
       // Calculate total stock from ALL variants of this product
-      const productTotalStock = product.variants.reduce(
-        (sum, variant) => sum + (variant.countInStock || 0),
-        0
-      );
+      let productTotalStock = 0;
+      let productOutOfStockVariants = 0;
+      let productVariantsCount = product.variants.length;
+
+      product.variants.forEach((variant) => {
+        const variantStock = variant.countInStock || 0;
+        productTotalStock += variantStock;
+
+        if (variantStock === 0) {
+          productOutOfStockVariants++;
+          totalOutOfStockVariants++;
+        }
+
+        totalVariants++;
+      });
 
       if (productTotalStock > 0) {
         // Calculate product value (using product price as base)
@@ -872,15 +893,28 @@ export const getInventoryByLocation = async (req, res) => {
         locationProducts.push({
           productId: product._id,
           productName: product.name,
-          productImage: product.images,
+          productImage:product.images,
           stock: productTotalStock,
           value: productValue,
           price: product.price,
-          variantsCount: product.variants.length,
+          variantsCount: productVariantsCount,
+          outOfStockVariants: productOutOfStockVariants,
         });
 
         totalLocationValue += productValue;
         totalLocationItems += productTotalStock;
+      } else {
+        // Product is completely out of stock
+        locationProducts.push({
+          productId: product._id,
+          productName: product.name,
+          stock: 0,
+          value: 0,
+          price: product.price,
+          variantsCount: productVariantsCount,
+          outOfStockVariants: productOutOfStockVariants,
+        });
+        // Don't add to totalLocationItems since stock is 0
       }
     });
 
@@ -890,7 +924,10 @@ export const getInventoryByLocation = async (req, res) => {
     const inventoryByLocation = locations.map((location) => ({
       ...location,
       totalValue: totalLocationValue,
-      totalItems: totalLocationItems,
+      totalItems: totalLocationItems, // Items with stock > 0
+      totalVariants: totalVariants, // Total variant count
+      outOfStockVariants: totalOutOfStockVariants, // Variants with 0 stock
+      inStockVariants: totalVariants - totalOutOfStockVariants, // Variants with stock > 0
       products: locationProducts.slice(0, 10), // Top 10 products
     }));
 
@@ -903,7 +940,9 @@ export const getInventoryByLocation = async (req, res) => {
       summary: {
         totalLocations: locations.length,
         totalValueAcrossLocations: totalLocationValue,
-        totalItemsAcrossLocations: totalLocationItems,
+        totalItemsAcrossLocations: totalLocationItems, // Items with stock
+        totalVariantsAcrossLocations: totalVariants, // All variants
+        outOfStockVariantsAcrossLocations: totalOutOfStockVariants, // Out of stock variants
         averageValuePerItem:
           totalLocationItems > 0 ? totalLocationValue / totalLocationItems : 0,
       },

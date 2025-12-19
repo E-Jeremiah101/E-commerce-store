@@ -411,7 +411,7 @@ const InventoryTab = () => {
         )}
         
         {activeTab === "low-stock" && (
-          <LowStockView alerts={lowStockAlerts} onAdjust={handleAdjustStock} />
+          <LowStockView alerts={lowStockAlerts || []} onAdjust={handleAdjustStock} />
         )}
         {activeTab === "price-management" && (
           <PriceManagementView
@@ -2498,6 +2498,12 @@ const DashboardView = ({ data, settings }) => (
 
 // Low Stock View Component
 const LowStockView = ({ alerts, onAdjust }) => {
+  // Calculate counts from alerts
+  const outOfStockCount = alerts.filter(a => a.status === "out").length;
+  const lowStockCount = alerts.filter(a => a.status === "low").length;
+  const totalAlerts = alerts.length;
+
+  // Group by product for summary
   const groupedAlerts = alerts.reduce((groups, alert) => {
     const productId = alert.productId || alert.id.split("-")[0];
     if (!groups[productId]) {
@@ -2538,33 +2544,40 @@ const LowStockView = ({ alerts, onAdjust }) => {
     return urgencyOrder[urgencyA] - urgencyOrder[urgencyB];
   });
 
+  const affectedProducts = Object.keys(groupedAlerts).length;
+
   return (
     <div className="p-6">
-      {/* Header */}
+      {/* Header with accurate counts */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
               Stock Alert Dashboard
             </h1>
-
+            <p className="text-gray-600 mt-2">
+              {totalAlerts} total alerts across {affectedProducts} products
+            </p>
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-right">
-              <p className="text-sm text-gray-500">Priority Items</p>
+              <p className="text-sm text-gray-500">Out of Stock</p>
               <p className="text-2xl font-bold text-red-600">
-                {
-                  alerts.filter(
-                    (a) => a.status === "out" || a.currentStock <= 2
-                  ).length
-                }
+                {outOfStockCount}
+              </p>
+            </div>
+            <div className="h-8 w-px bg-gray-300"></div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">Low Stock</p>
+              <p className="text-2xl font-bold text-yellow-600">
+                {lowStockCount}
               </p>
             </div>
             <div className="h-8 w-px bg-gray-300"></div>
             <div className="text-right">
               <p className="text-sm text-gray-500">Total Alerts</p>
               <p className="text-2xl font-bold text-gray-900">
-                {alerts.length}
+                {totalAlerts}
               </p>
             </div>
           </div>
@@ -2574,21 +2587,16 @@ const LowStockView = ({ alerts, onAdjust }) => {
       {/* Filter Tabs */}
       <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
         <button className="px-4 py-2 rounded-full bg-red-100 text-red-700 font-medium text-sm">
-          Out of Stock ({alerts.filter((a) => a.status === "out").length})
+          Out of Stock ({outOfStockCount})
         </button>
         <button className="px-4 py-2 rounded-full bg-orange-100 text-orange-700 font-medium text-sm">
           Critical ({alerts.filter((a) => a.currentStock <= 2).length})
         </button>
         <button className="px-4 py-2 rounded-full bg-yellow-100 text-yellow-700 font-medium text-sm">
-          Low Stock (
-          {
-            alerts.filter((a) => a.status === "low" && a.currentStock > 2)
-              .length
-          }
-          )
+          Low Stock ({lowStockCount})
         </button>
         <button className="px-4 py-2 rounded-full bg-blue-100 text-blue-700 font-medium text-sm">
-          All Products ({Object.keys(groupedAlerts).length})
+          All Products ({affectedProducts})
         </button>
       </div>
 
@@ -2789,13 +2797,13 @@ const LowStockView = ({ alerts, onAdjust }) => {
         <div className="flex flex-wrap justify-center gap-6 text-center">
           <div>
             <div className="text-2xl font-bold text-gray-900">
-              {alerts.length}
+              {totalAlerts}
             </div>
             <div className="text-sm text-gray-600">Total Alerts</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-red-600">
-              {alerts.filter((a) => a.status === "out").length}
+              {outOfStockCount}
             </div>
             <div className="text-sm text-gray-600">Out of Stock</div>
           </div>
@@ -2807,7 +2815,7 @@ const LowStockView = ({ alerts, onAdjust }) => {
           </div>
           <div>
             <div className="text-2xl font-bold text-blue-600">
-              {Object.keys(groupedAlerts).length}
+              {affectedProducts}
             </div>
             <div className="text-sm text-gray-600">Affected Products</div>
           </div>
@@ -3649,22 +3657,9 @@ const ValuationView = ({ data }) => {
 };
 
 
+
+
 const LocationsView = ({ locations, settings }) => {
-  
-  const getCurrencySymbol = (currency) => {
-    switch (currency) {
-      case "NGN":
-        return "₦";
-      case "USD":
-        return "$";
-      case "EUR":
-        return "€";
-      case "GBP":
-        return "£";
-      default:
-        return currency || "";
-    }
-  };
 
   if (!locations || locations.length === 0) {
     return (
@@ -3682,6 +3677,8 @@ const LocationsView = ({ locations, settings }) => {
     );
   }
 
+  const location = locations[0];
+
   return (
     <div className="space-y-6">
       {/* Overall Summary Card */}
@@ -3693,36 +3690,136 @@ const LocationsView = ({ locations, settings }) => {
               Complete inventory at main warehouse
             </p>
           </div>
-          <div className="bg-white bg-opacity-20 p-3 rounded-lg">
+          <div className="bg-white bg-opacity-20 p-4 md:p-5 rounded-lg">
             <img
               src={settings?.logo}
               alt={settings?.storeName}
-              className="h-10 w-auto"
+              className="h-16 md:h-20 w-auto" // Responsive height
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
           <div className="bg-white bg-opacity-20 p-4 rounded-lg">
             <p className="text-sm text-gray-900">Total Items in Stock</p>
-            <p className="text-2xl text-black font-semibold mt-2">
-              {locations[0]?.totalItems?.toLocaleString() || "0"}
+            <p className="text-2xl font-semibold mt-2 text-black">
+              {location?.totalItems?.toLocaleString() || "0"}
             </p>
+            <p className="text-xs text-gray-900 mt-1">Units with stock</p>
           </div>
           <div className="bg-white bg-opacity-20 p-4 rounded-lg">
             <p className="text-sm text-gray-900">Total Inventory Value</p>
-            <p className="text-2xl font-semibold mt-2 text-gray-900">
-              {formatPrice(locations[0]?.totalValue, settings?.currency)}
+            <p className="text-2xl font-smibold mt-2 text-black">
+              {formatPrice(location?.totalValue, settings?.currency)}
             </p>
+            <p className="text-xs text-gray-800 mt-1">Current value</p>
           </div>
           <div className="bg-white bg-opacity-20 p-4 rounded-lg">
-            <p className="text-sm text-gray-900">Average Value per Item</p>
-            <p className="text-2xl font-semibold text-gray-900 mt-2">
-              {formatPrice(
-                locations[0]?.totalValue / (locations[0]?.totalItems || 1),
-                settings?.currency
-              )}
+            <p className="text-sm text-gray-900">Total Variants</p>
+            <p className="text-2xl font-semibold mt-2 text-black">
+              {location?.totalVariants?.toLocaleString() || "0"}
             </p>
+            <p className="text-xs text-gray-800 mt-1">All SKUs</p>
+          </div>
+          <div className="bg-white bg-opacity-20 p-4 rounded-lg">
+            <p className="text-sm text-gray-900">Out of Stock</p>
+            <p className="text-2xl font-semibold mt-2 text-black">
+              {location?.outOfStockVariants || "0"}
+            </p>
+            <p className="text-xs text-gray-800 mt-1">Variants with 0 stock</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stock Health Breakdown */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          Stock Health
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-green-800">
+                In Stock
+              </span>
+              <span className="text-lg font-bold text-green-800">
+                {location?.inStockVariants || 0}
+              </span>
+            </div>
+            <div className="w-full bg-green-100 rounded-full h-2">
+              <div
+                className="bg-green-600 h-2 rounded-full"
+                style={{
+                  width: `${(
+                    ((location?.inStockVariants || 0) /
+                      (location?.totalVariants || 1)) *
+                    100
+                  ).toFixed(0)}%`,
+                }}
+              ></div>
+            </div>
+            <p className="text-xs text-green-600 mt-2">
+              {(
+                ((location?.inStockVariants || 0) /
+                  (location?.totalVariants || 1)) *
+                100
+              ).toFixed(1)}
+              % of variants
+            </p>
+          </div>
+
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-red-800">
+                Out of Stock
+              </span>
+              <span className="text-lg font-bold text-red-800">
+                {location?.outOfStockVariants || 0}
+              </span>
+            </div>
+            <div className="w-full bg-red-100 rounded-full h-2">
+              <div
+                className="bg-red-600 h-2 rounded-full"
+                style={{
+                  width: `${(
+                    ((location?.outOfStockVariants || 0) /
+                      (location?.totalVariants || 1)) *
+                    100
+                  ).toFixed(0)}%`,
+                }}
+              ></div>
+            </div>
+            <p className="text-xs text-red-600 mt-2">
+              {(
+                ((location?.outOfStockVariants || 0) /
+                  (location?.totalVariants || 1)) *
+                100
+              ).toFixed(1)}
+              % of variants
+            </p>
+          </div>
+
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-blue-800">
+                Stock Utilization
+              </span>
+              <span className="text-lg font-bold text-blue-800">
+                {formatPrice(location?.totalValue, settings?.currency)}
+              </span>
+            </div>
+            <div className="w-full bg-blue-100 rounded-full h-2">
+              <div
+                className="bg-blue-600 h-2 rounded-full"
+                style={{
+                  width: `${Math.min(
+                    100,
+                    ((location?.totalValue || 0) / 1000000) * 100
+                  )}%`,
+                }}
+              ></div>
+            </div>
+            <p className="text-xs text-blue-600 mt-2">Total inventory value</p>
           </div>
         </div>
       </div>
@@ -3730,7 +3827,7 @@ const LocationsView = ({ locations, settings }) => {
       {/* Warehouse Details */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Warehouse Information Card */}
-        <div className="bg-white rounded-xl shadow-sm lg:h-fit  p-6">
+        <div className="bg-white rounded-xl shadow-sm p-6 h-fit">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-blue-100 rounded-lg">
               <MapPin className="h-6 w-6 text-blue-600" />
@@ -3749,7 +3846,7 @@ const LocationsView = ({ locations, settings }) => {
                 Warehouse Name
               </label>
               <div className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="font-medium">{locations[0]?.name}</p>
+                <p className="font-medium">{location?.name}</p>
               </div>
             </div>
 
@@ -3758,7 +3855,7 @@ const LocationsView = ({ locations, settings }) => {
                 State
               </label>
               <div className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p>{locations[0]?.state}</p>
+                <p>{location?.state}</p>
               </div>
             </div>
 
@@ -3767,7 +3864,7 @@ const LocationsView = ({ locations, settings }) => {
                 City
               </label>
               <div className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p>{locations[0]?.city}</p>
+                <p>{location?.city}</p>
               </div>
             </div>
 
@@ -3776,21 +3873,29 @@ const LocationsView = ({ locations, settings }) => {
                 Full Address
               </label>
               <div className="px-4 py-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-gray-800">{locations[0]?.address}</p>
+                <p className="text-gray-800">{location?.address}</p>
               </div>
             </div>
           </div>
 
           <div className="mt-6 pt-6 border-t">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600">Storage Capacity:</span>
-              <span className="font-medium text-gray-800">Unlimited</span>
-            </div>
-            <div className="flex items-center justify-between text-sm mt-2">
-              <span className="text-gray-600">Status:</span>
-              <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
-                Active
-              </span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Storage Capacity:</span>
+                <span className="font-medium text-gray-800">Unlimited</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Status:</span>
+                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                  Active
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600">Last Stock Take:</span>
+                <span className="font-medium text-gray-800">
+                  {new Date().toLocaleDateString()}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -3807,12 +3912,12 @@ const LocationsView = ({ locations, settings }) => {
               </p>
             </div>
             <div className="text-sm text-gray-500">
-              Showing {Math.min(10, locations[0]?.products?.length || 0)} of{" "}
-              {locations[0]?.products?.length || 0} products
+              Showing {Math.min(10, location?.products?.length || 0)} of{" "}
+              {location?.products?.length || 0} products
             </div>
           </div>
 
-          {locations[0]?.products && locations[0].products.length > 0 ? (
+          {location?.products && location.products.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
@@ -3821,13 +3926,13 @@ const LocationsView = ({ locations, settings }) => {
                       Product
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Price
+                      Variants
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Stock
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Variants
+                      Out of Stock
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Total Value
@@ -3835,61 +3940,80 @@ const LocationsView = ({ locations, settings }) => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {locations[0].products.map((product, index) => (
-                    <tr key={product.productId} className="hover:bg-gray-50">
-                      <td className="px-4 py-4">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center mr-3">
-                            <img
-                              src={product.productImage}
-                              alt={product.productImage}
-                              className="w-10 h-10 rounded object-cover"
-                            />
-                          </div>
-                          <div>
-                            <div className="font-medium text-gray-900">
-                              {product.productName}
+                  {location.products.map((product, index) => {
+                    const outOfStockPercentage =
+                      product.variantsCount > 0
+                        ? Math.round(
+                            (product.outOfStockVariants /
+                              product.variantsCount) *
+                              100
+                          )
+                        : 0;
+
+                    return (
+                      <tr key={product.productId} className="hover:bg-gray-50">
+                        <td className="px-4 py-4">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center mr-3">
+                              <img
+                                src={product.productImage}
+                                alt={product.productImage}
+                                className="w-10 h-10 rounded object-cover"
+                              />
                             </div>
-                            <div className="text-xs text-gray-500">
-                              Product ID:{" "}
-                              {product.productId.toString().slice(-6)}
+
+                            <div>
+                              <div className="font-medium text-gray-900">
+                                {product.productName}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                ID: {product.productId.toString().slice(-6)}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="font-medium text-gray-900">
-                          {getCurrencySymbol(settings?.currency)}
-                          {product.price?.toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="flex items-center">
-                          
-                          <span className="font-medium">{product.stock}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-4">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
-                          {product.variantsCount} variants
-                        </span>
-                      </td>
-                      <td className="px-4 py-4">
-                        <div className="font-bold text-gray-900">
-                          {formatPrice(product.value, settings?.currency)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {Math.round(
-                            (product.value / locations[0].totalValue) * 100
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                            {product.variantsCount}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center">
+                            <span className="font-medium">{product.stock}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          {product.outOfStockVariants > 0 ? (
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-red-600">
+                                {product.outOfStockVariants} variants
+                              </span>
+                              <span className="text-xs text-red-500">
+                                {outOfStockPercentage}% of product
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-green-600">
+                              All in stock
+                            </span>
                           )}
-                          % of total
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="font-bold text-gray-900">
+                            {formatPrice(product.value, settings?.currency)}
+                          </div>
+                          {product.value > 0 && (
+                            <div className="text-xs text-gray-500">
+                              {Math.round(
+                                (product.value / location.totalValue) * 100
+                              )}
+                              % of total
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -3904,134 +4028,57 @@ const LocationsView = ({ locations, settings }) => {
               </p>
             </div>
           )}
-
-          {/* Summary Footer */}
-          {locations[0]?.products && locations[0].products.length > 0 && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">Top Product Value</p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {formatPrice(
-                      locations[0]?.products[0]?.value,
-                      settings?.currency
-                    )}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">Avg. Product Value</p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {formatPrice(
-                      locations[0]?.products?.reduce(
-                        (sum, p) => sum + p.value,
-                        0
-                      ) / (locations[0]?.products?.length || 1),
-                      settings?.currency
-                    )}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">Total Products</p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {locations[0]?.products?.length}
-                  </p>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-600">Stock Utilization</p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {Math.round(
-                      (locations[0]?.totalItems /
-                        (locations[0]?.totalItems * 1.5)) *
-                        100
-                    )}
-                    %
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Additional Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Package className="h-5 w-5 text-purple-600" />
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-800">Stock Health</h4>
-              <p className="text-sm text-gray-500">Inventory status</p>
-            </div>
+      {/* Key Metrics */}
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">
+          Key Metrics
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="text-center p-4 border rounded-lg">
+            <p className="text-sm text-gray-600">Avg. Stock per Variant</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {location?.totalVariants > 0
+                ? (location?.totalItems / location?.totalVariants).toFixed(1)
+                : "0"}
+            </p>
           </div>
-          <div className="space-y-4">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Healthy Stock</span>
-                <span className="font-medium">
-                  {Math.round((locations[0]?.totalItems || 0) * 0.7)}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-green-500 h-2 rounded-full"
-                  style={{ width: "70%" }}
-                ></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Low Stock</span>
-                <span className="font-medium">
-                  {Math.round((locations[0]?.totalItems || 0) * 0.2)}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-yellow-500 h-2 rounded-full"
-                  style={{ width: "20%" }}
-                ></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-gray-600">Out of Stock</span>
-                <span className="font-medium">
-                  {Math.round((locations[0]?.totalItems || 0) * 0.1)}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-red-500 h-2 rounded-full"
-                  style={{ width: "10%" }}
-                ></div>
-              </div>
-            </div>
+          <div className="text-center p-4 border rounded-lg">
+            <p className="text-sm text-gray-600">Avg. Value per Item</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {formatPrice(
+                location?.totalItems > 0
+                  ? location?.totalValue / location?.totalItems
+                  : 0,
+                settings?.currency
+              )}
+            </p>
           </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border p-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 bg-orange-100 rounded-lg">
-              <RefreshCw className="h-5 w-5 text-orange-600" />
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-800">Turnover Rate</h4>
-              <p className="text-sm text-gray-500">Inventory movement</p>
-            </div>
+          <div className="text-center p-4 border rounded-lg">
+            <p className="text-sm text-gray-600">Stock Health Score</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {location?.totalVariants > 0
+                ? Math.round(
+                    ((location?.inStockVariants || 0) /
+                      location?.totalVariants) *
+                      100
+                  )
+                : 100}
+              %
+            </p>
           </div>
-          <div className="text-center py-6">
-            <div className="text-4xl font-bold text-gray-900">2.4x</div>
-            <p className="text-sm text-gray-500 mt-2">Annual turnover rate</p>
-            <div className="mt-4 text-xs text-gray-400">
-              Based on last 90 days sales
-            </div>
+          <div className="text-center p-4 border rounded-lg">
+            <p className="text-sm text-gray-600">Value at Risk</p>
+            <p className="text-2xl font-bold text-red-600">
+              {formatPrice(0, settings?.currency)}{" "}
+              {/* This would need calculation of out-of-stock value */}
+            </p>
           </div>
         </div>
       </div>
     </div>
   );
 };
-
 export default InventoryTab;
