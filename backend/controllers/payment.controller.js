@@ -554,6 +554,10 @@ async function checkCouponEligibility(userId, orderAmount) {
       paymentStatus: "paid",
     });
 
+          // IMPORTANT: Exclude orders created in the last 5 minutes to avoid counting current order
+    //   createdAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) }
+    // });
+
     console.log(
       `Checking coupon eligibility for user ${userId}: ${orderCount} orders, ${orderAmount}`
     );

@@ -229,8 +229,10 @@ export const signup = async (req, res) => {
             </div>
             
             <div class="footer">
-              <p>🌍  ${settings?.storeName} | Sustainable Living Made Easy</p>
-              <p>📍 Lagos, Nigeria | 📧 ${settings?.supportEmail}</p>
+              <p> ${settings?.storeName} | Sustainable Living Made Easy</p>
+              <p>📍 ${settings.warehouseLocation.state}, Nigeria | 📧 ${
+               settings?.supportEmail
+             }</p>
               <p style="font-size: 12px; margin-top: 15px;">
                 &copy; ${new Date().getFullYear()} ${
                settings?.storeName
