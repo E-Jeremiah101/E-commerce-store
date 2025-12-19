@@ -10,7 +10,17 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { formatPrice } from "../utils/currency.js";
-import { useStoreSettings } from "./StoreSettingsContext.jsx";
+import { useStoreSettings } from "./StoreSettingsContext.jsx"
+
+const STATUS_WORKFLOW = {
+  Pending: ["Processing", "Shipped", "Delivered", "Cancelled"],
+  Processing: ["Shipped", "Delivered", "Cancelled"],
+  Shipped: ["Delivered", "Cancelled"],
+  Delivered: [],
+  Cancelled: [], 
+  Refunded: [],
+  "Partially Refunded": [],
+};
 
 const AdminOrdersPage = () => {
   const [orders, setOrders] = useState([]);
@@ -33,11 +43,13 @@ const AdminOrdersPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Helper function to convert string to Date
-  const stringToDate = (dateString) => {
-    if (!dateString) return null;
-    return new Date(dateString);
-  };
+const getValidNextStatuses = (currentStatus) => {
+  return STATUS_WORKFLOW[currentStatus] || [];
+};
+
+const hasRefunds = (order) => {
+  return order.refunds && order.refunds.length > 0;
+};
 
   // Helper function to convert Date to string (YYYY-MM-DD)
   const dateToString = (date) => {
@@ -789,7 +801,7 @@ const AdminOrdersPage = () => {
                             <span className="text-gray-900 font-semibold pt-1">
                               {order.orderNumber}
                             </span>
-                            {!order.isProcessed && (
+                            {order.status === "Pending" && (
                               <span className="bg-red-500 text-white px-1 py-0.5 text-[0.44rem] rounded absolute top-0 left-0 tracking-wider z-50">
                                 NEW
                               </span>
@@ -891,9 +903,8 @@ const AdminOrdersPage = () => {
                                 size={23}
                               />
                             </button>
-
                             {/* Dropdown menu */}
-                            {openDropdownId === order._id && (
+                            {/* {openDropdownId === order._id && (
                               <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
                                 <div className="py-1">
                                   <div className="px-4 py-2 text-xs text-gray-400 border-b border-gray-700">
@@ -970,7 +981,58 @@ const AdminOrdersPage = () => {
                                   )}
                                 </div>
                               </div>
+                            )} */}
+                            {openDropdownId === order._id && (
+                              <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
+                                <div className="py-1">
+                                  <div className="px-4 py-2 text-xs text-gray-400 border-b border-gray-700">
+                                    Change Status
+                                  </div>
+
+                                  {getValidNextStatuses(order.status).map(
+                                    (statusOption) => {
+                                      // Special handling for refund statuses
+                                      if (
+                                        statusOption === "Refunded" ||
+                                        statusOption === "Partially Refunded"
+                                      ) {
+                                        // Only show refund options if order is delivered AND has refunds
+                                        if (
+                                          order.status !== "Delivered" &&
+                                          !hasRefunds(order)
+                                        ) {
+                                          return null;
+                                        }
+                                      }
+
+                                      return (
+                                        <button
+                                          key={statusOption}
+                                          onClick={() =>
+                                            handleStatusChange(
+                                              order._id,
+                                              statusOption
+                                            )
+                                          }
+                                          className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                                        >
+                                          {statusOption}
+                                        </button>
+                                      );
+                                    }
+                                  )}
+
+                                  {/* Show message if no valid next statuses */}
+                                  {getValidNextStatuses(order.status).length ===
+                                    0 && (
+                                    <div className="px-4 py-2 text-xs text-gray-400">
+                                      No further status changes available
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
                             )}
+                            
                           </div>
                         </div>
                       </td>

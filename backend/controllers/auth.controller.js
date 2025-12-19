@@ -197,7 +197,11 @@ export const signup = async (req, res) => {
         <body>
           <div class="container">
             <div class="header">
-              <div class="icon">${settings?.logo}</div>
+              <div class="icon">
+  <img src="${
+    settings?.logo
+  }" alt="Logo" style="max-height:50px; display:block; margin: 0 auto 8px;" />
+</div>
               <h1>Welcome to  ${settings?.storeName}</h1>
               <p>Sustainable Shopping, Beautiful Living</p>
             </div>

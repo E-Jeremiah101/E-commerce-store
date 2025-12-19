@@ -679,6 +679,81 @@ export const supportRecoverOrder = async (req, res) => {
 
     await order.save();
     console.log("✅ Order recovered successfully:", order.orderNumber);
+    
+    const recoveryNote = `Recovered via ${searchMethod.replace(
+      "_",
+      " "
+    )} - Reference: ${referenceUsed}`;
+    
+    (async () => {
+      try {
+        const emailSent = await sendRecoveryOrderEmail(
+          customer_email,
+          order,
+          recoveryNote
+        );
+
+        if (emailSent) {
+          console.log(`📧 Recovery email sent to: ${customer_email}`);
+
+          // Log email success
+          await AuditLogger.log({
+            adminId: req.user?._id,
+            adminName: req.user
+              ? `${req.user.firstname} ${req.user.lastname}`
+              : "System",
+            action: "ORDER_RECOVERY_EMAIL_SENT",
+            entityType: ENTITY_TYPES.ORDER,
+            entityId: order._id,
+            entityName: `Order #${order.orderNumber}`,
+            changes: {
+              emailSentTo: customer_email,
+              searchMethod,
+              referenceUsed,
+            },
+            additionalInfo: "Recovery notification email sent to customer",
+          });
+        } else {
+          console.log(`❌ Failed to send recovery email to: ${customer_email}`);
+
+          // Log email failure
+          await AuditLogger.log({
+            adminId: req.user?._id,
+            adminName: req.user
+              ? `${req.user.firstname} ${req.user.lastname}`
+              : "System",
+            action: "ORDER_RECOVERY_EMAIL_FAILED",
+            entityType: ENTITY_TYPES.ORDER,
+            entityId: order._id,
+            entityName: `Order #${order.orderNumber}`,
+            changes: {
+              reason: "sendRecoveryOrderEmail returned false",
+              attemptedTo: customer_email,
+            },
+            additionalInfo: "Recovery email function failed",
+          });
+        }
+      } catch (emailError) {
+        console.error("❌ Email sending error:", emailError.message);
+
+        // Don't fail the recovery just because email failed
+        await AuditLogger.log({
+          adminId: req.user?._id,
+          adminName: req.user
+            ? `${req.user.firstname} ${req.user.lastname}`
+            : "System",
+          action: "ORDER_RECOVERY_EMAIL_FAILED",
+          entityType: ENTITY_TYPES.ORDER,
+          entityId: order._id,
+          entityName: `Order #${order.orderNumber}`,
+          changes: {
+            emailError: emailError.message,
+            attemptedTo: customer_email,
+          },
+          additionalInfo: "Order recovered but email notification failed",
+        });
+      }
+    })();
     await logOrderAction(
       req,
       "ORDER_RECOVERY_SUCCESS",
@@ -914,7 +989,7 @@ console.log("Final search filter:", searchFilter);
           user: order.user,
           status: order.status,
           refundStatus,
-          isProcessed: order.isProcessed || false, // Ensure it has a value
+          isProcessed: order.isProcessed || false,
           deliveredAt: order.deliveredAt,
           updatedAt: order.updatedAt,
           totalAmount: order.totalAmount,
@@ -1289,3 +1364,234 @@ export const getOrderById = async (req, res) => {
   }
 };
   
+
+// Add this function near the top or with other helper functions
+const sendRecoveryOrderEmail = async (to, order, recoveryInfo) => {
+  if (!to || !order) return;
+
+  let customerName = "";
+  try {
+    const userDoc = await User.findById(order.user).select(
+      "firstname lastname"
+    );
+    if (userDoc) {
+      customerName =
+        userDoc.firstname || userDoc.lastname || order.user?.name || "Customer";
+    }
+  } catch (err) {
+    console.error("Error fetching user name for email:", err);
+  }
+
+  // Use paymentMethod from order instead of paymentData
+  const paymentMethod = order.paymentMethod || {};
+  const tx_ref = order.flutterwaveRef || "N/A";
+  const transaction_id = order.flutterwaveTransactionId || "N/A";
+  const payment_type = paymentMethod.method || "N/A";
+  const settings = await storeSettings.findOne();
+  const formatter = new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency: settings?.currency || "NGN",
+  });
+
+  // Prepare items array
+  const items = order.products || order.items || [];
+
+  const productRows = items
+    .map((item) => {
+      let details = "";
+      if (item.selectedSize) details += `Size: ${item.selectedSize} `;
+      if (item.selectedColor) details += `| Color: ${item.selectedColor}`;
+
+      return `
+        <tr>
+          <td style="padding: 8px 12px; border:1px solid #eee;">
+            <p style="display:block; margin-top: 1px; margin-bottom:1px;">${
+              item.name || item.productName || "Item"
+            }</p>
+            <img src="${item.image}" alt="${
+        item.name
+      }" width="60" height="60" style="border-radius: 6px; object-fit: cover;" />
+            ${
+              details
+                ? `<br/><small style="color:#666;">${details || ""}</small>`
+                : ""
+            }
+          </td>
+          <td style="padding: 8px 12px; text-align:center; border:1px solid #eee;">${
+            item.quantity || 1
+          }</td>
+          <td style="padding: 8px 12px; text-align:right; border:1px solid #eee;">${formatter.format(
+            item.price || item.unitPrice || 0
+          )}</td>
+        </tr>`;
+    })
+    .join("");
+
+  const totalAmount = order.totalAmount || order.totalPrice || order.total || 0;
+  const subtotal = order.subtotal || order.subTotal || 0;
+  const discount = order.discount || 0;
+  const deliveryFee = order.deliveryFee || 0;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; background-color: #f6f8fa; padding: 20px;">
+      <div style="max-width: 700px; margin: auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.06);">
+        <div style="background: #f59e0b; padding: 22px; text-align: center; color: #fff;">
+          <img src="${
+            settings?.logo
+          }" alt="${settings?.storeName}" style="max-height:50px; display:block; margin: 0 auto 8px;" />
+          <h1 style="margin:0; font-size:20px;">Order Recovered Successfully</h1>
+          <div style="margin-top:6px; font-size:15px;">${
+            order.orderNumber || "N/A"
+          }</div>
+        </div>
+
+        <div style="padding: 22px; color:#333;">
+          <p style="margin:0 0 8px;">Hi <strong>${customerName}</strong>,</p>
+          <p style="margin:0 0 16px;">Great news! Our support team has successfully recovered your order. Your payment has been confirmed and the order is now back in our system. Below are your order details.</p>
+
+          ${
+            recoveryInfo
+              ? `<div style="background-color: #fffbeb; border: 1px solid #f59e0b; border-radius: 5px; padding: 12px; margin: 16px 0;">
+                   <p style="margin:0; color: #92400e; font-size: 14px;">
+                     <strong>Recovery Note:</strong> ${recoveryInfo}
+                   </p>
+                 </div>`
+              : ""
+          }
+
+          <h3 style="margin:18px 0 8px;"> Order Summary</h3>
+          <table style="width:100%; border-collapse: collapse; margin-top:8px;">
+            <thead>
+              <tr style="background:#f7faf7;">
+                <th style="padding:10px; text-align:left; border:1px solid #eee;">Product</th>
+                <th style="padding:10px; text-align:center; border:1px solid #eee;">Qty</th>
+                <th style="padding:10px; text-align:right; border:1px solid #eee;">Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${
+                productRows ||
+                `<tr><td colspan="3" style="padding:12px;text-align:center;color:#777;">No items listed</td></tr>`
+              }
+            </tbody>
+          </table>
+          
+          <div style="margin-top: 20px; padding: 16px; background-color: #f8f9fa; border-radius: 5px;">
+            <p style="margin: 0 0 8px 0; font-size: 16px;">
+              <strong>Original Subtotal:</strong> ${formatter.format(subtotal)}
+            </p>
+            ${
+              discount > 0
+                ? `<p style="margin: 0 0 8px 0; font-size: 16px;">
+                     <strong>Coupon Discount:</strong> - ${formatter.format(discount)}
+                   </p>`
+                : ""
+            }
+            ${
+              deliveryFee > 0
+                ? `<p style="margin: 0 0 8px 0; font-size: 16px;">
+                     <strong>Delivery Fee:</strong> ${formatter.format(deliveryFee)}
+                   </p>`
+                : ""
+            }
+            <p style="margin: 0; font-size: 18px; font-weight: bold; color: #10b981;">
+              <strong>Final Total:</strong> ${formatter.format(totalAmount)}
+            </p>
+          </div>
+
+          <div style="margin: 20px 0;">
+            <p style="margin:0 0 6px;">
+              <strong>Delivery Address:</strong> ${
+                order.deliveryAddress || "No address provided"
+              }<br/>
+              <strong>Phone:</strong> ${order.phone || "No phone provided"}<br/>
+              <strong>Email:</strong> ${to}
+            </p>
+          </div>
+
+          <h3 style="margin:18px 0 8px;"> Payment Details</h3>
+          <div style="background-color: #f8f9fa; padding: 12px; border-radius: 5px;">
+            <p style="margin:0 0 6px;">
+              <strong>Payment Status:</strong> <span style="color: #10b981; font-weight: bold;">${
+                order.paymentStatus || "Confirmed"
+              }</span><br/>
+              <strong>Payment Type:</strong> ${payment_type}<br/>
+              <strong>Transaction Ref:</strong> ${tx_ref}<br/>
+              <strong>Transaction ID:</strong> ${transaction_id}
+            </p>
+          </div>
+
+          <p style="margin-top:20px; color:#555;">
+            Your order is now being processed. We'll send another email once your order ships.
+          </p>
+
+          <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+            <p style="margin:0; color:#6b7280; font-size: 14px;">
+              <strong>Note:</strong> This order was recovered by our support team. 
+              If you have any questions about this recovery, please reply to this email.
+            </p>
+          </div>
+        </div>
+
+        <div style="background: #1e293b; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
+          <p style="margin: 0 0 10px 0;">
+            <p style="margin-top:18px;">Thanks for choosing <strong>${
+              settings?.storeName
+            }</strong> </p>
+          </p>
+          <p style="margin: 0;">Need help? Contact us at 
+            <a href="mailto:${
+              settings?.supportEmail
+            }" style="color: #10b981; text-decoration: none;">${
+    settings?.supportEmail
+  }</a>
+          </p>
+          <p style="margin: 10px 0 0 0; font-size: 12px;">
+            Order recovered on ${new Date().toLocaleDateString()}
+          </p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Plain text fallback
+  const text = [
+    `${settings?.storeName || "Store"} — Order Recovered`,
+    `Order Number: ${order.orderNumber || "N/A"}`,
+    `Customer: ${customerName}`,
+    `Total: ${formatter.format(totalAmount)}`,
+    `Delivery Address: ${order.deliveryAddress || "No address provided"}`,
+    `Phone: ${order.phone || "No phone provided"}`,
+    `Payment Status: ${order.paymentStatus || "Confirmed"}`,
+    `Payment Type: ${payment_type}`,
+    `Transaction Ref: ${tx_ref}`,
+    `Transaction ID: ${transaction_id}`,
+    ``,
+    `Items:`,
+    ...items.map(
+      (it) =>
+        ` - ${it.quantity || 1} x ${it.name || "Item"} — ${formatter.format(
+          it.price
+        )}`
+    ),
+    ``,
+    `This order was recovered by our support team. If you have any questions, please contact us.`,
+    ``,
+    `Thanks for shopping with ${settings?.storeName}!`,
+  ].join("\n");
+
+  try {
+    await sendEmail({
+      to,
+      subject: `${
+        settings?.storeName || "Store"
+      } — Order Recovered #${order.orderNumber || "N/A"}`,
+      html,
+      text,
+    });
+    return true;
+  } catch (error) {
+    console.error("Failed to send recovery email:", error);
+    return false;
+  }
+};

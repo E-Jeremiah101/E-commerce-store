@@ -585,11 +585,6 @@ const OrderSummary = () => {
           <dl className="flex items-center justify-between gap-4">
             <dt className="text-base font-normal text-gray-600">
               Shipping
-              {deliveryZone && (
-                <span className="text-xs text-gray-500 block">
-                  ({deliveryZone})
-                </span>
-              )}
             </dt>
             <dd
               className="text-base font-medium  text-black

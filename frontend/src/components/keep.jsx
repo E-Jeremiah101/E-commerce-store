@@ -1,3784 +1,2149 @@
 
-// import React, { useState, useEffect } from "react";
-// import { motion } from "framer-motion";
+// import path from "path";
+// import dotenv from "dotenv";
+// import { fileURLToPath } from "url";
+// import axios from "axios";
+// import mongoose from "mongoose";
 // import {
-//   ShoppingBag,
-//   Layers,
-//   Package,
-//   AlertTriangle,
-//   TrendingUp,
-//   TrendingDown,
-//   DollarSign,
-//   TrendingDown as SlashIcon,
-//   RefreshCw as UpdateIcon,
-//   Undo as ResetIcon,
-//   XCircle as CloseIcon,
-//   History,
-//   RefreshCw,
-//   BarChart,
-//   CheckCircle,
-//   XCircle,
-//   Plus,
-//   Minus,
-//   FileText,
-//   Tag,
-//   Filter,
-//   Search,
-//   Calendar,
-//   MapPin,
-//   Eye,
-//   Clock,
-//   ChevronDown,
-//   AlertCircle,
-// } from "lucide-react";
-// import toast from "react-hot-toast";
-// import { useUserStore } from "../stores/useUserStore.js";
-// import { useInventoryStore } from "../stores/useInventoryStore.js";
-// import {
-//   exportInventoryPDF,
-//   exportSimpleInventoryPDF,
-// } from "../utils/exportInventoryPdf.js";
-// import axios from "../lib/axios.js";
-// import { formatPrice } from "../utils/currency.js";
-// import { useStoreSettings } from "./StoreSettingsContext.jsx";
+//   acquireWebhookLock,
+//   releaseWebhookLock,
+//   storeReservation,
+//   getReservation,
+//   deleteReservation,
+//   storeReleasedReservation,
+//   getReleasedReservation,
+// } from "../lib/redis.js";
+// import Coupon from "../models/coupon.model.js";
+// import Order from "../models/order.model.js";
+// import User from "../models/user.model.js";
+// import Product from "../models/product.model.js";
+// import { sendEmail } from "../lib/mailer.js";
+// import { flw } from "../lib/flutterwave.js";
+// import redis from "../lib/redis.js";
+// import { calculateDeliveryFee } from "../service/deliveryConfig.js";
+// import storeSettings from "../models/storeSettings.model.js"
 
-// const InventoryTab = () => {
-//   const {
-//     // State
-//     loading,
-//     dashboardData,
-//     stockLevels,
-//     lowStockAlerts,
-  
-//     inventoryValuation,
-//     stockHistory,
-//     inventoryByLocation,
-//     inventoryAging,
-//     fetchInventoryAging,
+ 
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
+// dotenv.config({ path: path.join(__dirname, "../../.env") });
 
-//     // Actions
-//     fetchDashboard,
-//     fetchStockLevels,
-//     fetchLowStockAlerts,
-//     fetchInventoryValuation,
-//     fetchStockHistory,
-//     fetchInventoryByLocation,
-//     adjustStock,
-//     exportInventoryReport,
-//     updateFilters,
-//     clearFilters,
-//     getInventoryStats,
-//     setActiveTab,
-//     activeTab,
-//     updateProductPrice,
+// // 1. First define all helper functions
 
-//     // Computed
-//     pagination,
-//     filters,
-//   } = useInventoryStore();
+// async function clearStaleDatabaseReservations() {
+//   console.log("🔍 Checking for VERY stale reservations (30+ minutes old)...");
 
-//   useEffect(() => {
-//     console.log("📊 Stock Levels Data:", stockLevels);
-//     console.log("📊 First Product:", stockLevels[0]);
-//     console.log("📊 First Product Variants:", stockLevels[0]?.variants);
-//   }, [stockLevels]);
+//   try {
+//     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
 
-//   const { user } = useUserStore();
-//   const [expandedBuckets, setExpandedBuckets] = useState({});
-//   const [showAdjustModal, setShowAdjustModal] = useState(false);
-//   const [selectedProduct, setSelectedProduct] = useState(null);
-//   const [adjustmentData, setAdjustmentData] = useState({
-//     adjustmentType: "add",
-//     quantity: 1,
-//     reason: "restock",
-//     notes: "",
-//   });
-//   const [showPriceModal, setShowPriceModal] = useState(false);
-//   const [selectedProductForPrice, setSelectedProductForPrice] = useState(null);
+//     const productsWithReservations = await Product.find({
+//       $or: [{ reserved: { $gt: 0 } }, { "variants.reserved": { $gt: 0 } }],
+//       updatedAt: { $lt: thirtyMinutesAgo }, // Only very old reservations
+//     });
 
-//   // History state
-//   const [historyType, setHistoryType] = useState("stock");
-//   const [priceHistory, setPriceHistory] = useState([]);
-//   const [loadingPriceHistory, setLoadingPriceHistory] = useState(false);
-//   const [priceHistoryFilters, setPriceHistoryFilters] = useState({
-//     productId: "",
-//     startDate: "",
-//     endDate: "",
-//     action: "ALL",
-//   });
-  
-
-//   const handleRefresh = () => {
-//     toast.loading("Refreshing data...");
-//     switch (activeTab) {
-//       case "dashboard":
-//         fetchDashboard();
-//         break;
-//       case "stock-levels":
-//         fetchStockLevels(pagination.currentPage, filters);
-//         break;
-//       case "low-stock":
-//         fetchLowStockAlerts(10);
-//         break;
-//       case "price-management":
-//         fetchStockLevels(pagination.currentPage, {
-//           ...filters,
-//           sortBy: "price",
-//         });
-//         break;
-//       case "valuation":
-//         fetchInventoryValuation();
-//         break;
-//       case "locations":
-//         fetchInventoryByLocation();
-//         break;
-//       default:
-//         fetchDashboard();
+//     for (const product of productsWithReservations) {
+//       // Only release reservations that are 30+ minutes old
+//       // This handles true edge cases without interfering with normal flow
 //     }
-
-//     setTimeout(() => {
-//       toast.dismiss();
-//       toast.success("Data refreshed successfully!");
-//     }, 1000);
-//   };
-
-//   const handlePriceAction = (product) => {
-//     setSelectedProductForPrice(product);
-//     setShowPriceModal(true);
-//   };
-
-//   const handlePriceUpdate = (updatedProduct) => {
-//     setSelectedProductForPrice(updatedProduct);
-//   };
-
-//   useEffect(() => {
-//     fetchDashboard();
-//   }, []);
-
-//   useEffect(() => {
-//     if (activeTab === "stock-levels") {
-//       fetchStockLevels(1, filters);
-//     }
-//     if (activeTab === "low-stock") {
-//       fetchLowStockAlerts(10);
-//     }
-//     if (activeTab === "valuation") {
-//       fetchInventoryAging();
-//     }
-//     if (activeTab === "price-management") {
-//       fetchStockLevels(1, { ...filters, sortBy: "price" });
-//     }
-//     if (activeTab === "valuation") {
-//       fetchInventoryValuation();
-//     }
-//     if (activeTab === "locations") {
-//       fetchInventoryByLocation();
-//     }
-//   }, [activeTab]);
+//   } catch (error) {
+//     console.error("❌ Error in cleanup:", error);
+//   }
+// }
 
 
+// // 2. Reservation functions using Redis
+// async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
+//   const session = await mongoose.startSession();
 
-//   const fetchPriceHistory = async () => {
-//     try {
-//       setLoadingPriceHistory(true);
-//       const params = new URLSearchParams({
-//         ...priceHistoryFilters,
-//         action:
-//           priceHistoryFilters.action === "ALL"
-//             ? ""
-//             : priceHistoryFilters.action,
-//       });
+//   try {
+//     await session.withTransaction(async () => {
+//       for (const item of products) {
+//         if (!item._id) continue;
 
-//       const response = await axios.get(`/audit-logs/price-history?${params}`);
-//       setPriceHistory(response.data.priceHistory || []);
-//     } catch (error) {
-//       console.error("Error fetching price history:", error);
-//       toast.error("Failed to load price history");
-//     } finally {
-//       setLoadingPriceHistory(false);
-//     }
-//   };
+//         console.log(`🔄 Reserving ${item.quantity} of ${item.name}`);
 
-//   const fetchProductPriceHistory = async (productId) => {
-//     try {
-//       setLoadingPriceHistory(true);
-//       const response = await axios.get(
-//         `/audit-logs/price-history/${productId}`
-//       );
+//         const product = await Product.findById(item._id).session(session);
+//         if (!product) throw new Error(`Product ${item.name} not found`);
 
-//       if (response.data.success) {
-//         setPriceHistory(response.data.priceHistory);
-//         setHistoryType("price");
-//         setActiveTab("history");
-//       }
-//     } catch (error) {
-//       console.error("Error fetching product price history:", error);
-//       toast.error("Failed to load price history");
-//     } finally {
-//       setLoadingPriceHistory(false);
-//     }
-//   };
+//         // FIXED: Use flexible matching for variants (same as frontend)
+//         if (item.size || item.color) {
+//           const variantIndex = product.variants.findIndex((v) => {
+//             const sizeMatches = item.size
+//               ? v.size === item.size
+//               : !v.size || v.size === "" || v.size === "Standard";
+//             const colorMatches = item.color
+//               ? v.color === item.color
+//               : !v.color || v.color === "" || v.color === "Standard";
+//             return sizeMatches && colorMatches;
+//           });
 
-//   const stats = getInventoryStats();
-//   const { settings } = useStoreSettings();
+//           if (variantIndex === -1) {
+//             throw new Error(
+//               `Variant ${item.size || "Any"}/${
+//                 item.color || "Any"
+//               } not found for ${item.name}`
+//             );
+//           }
 
-//   const handleExportPDF = () => {
-//     try {
-//       const exportData = stockLevels.flatMap((product) => {
-//         if (!product.variants || product.variants.length === 0) {
-//           return [
-//             {
-//               name: product.name,
-//               product: product.name,
-//               category: product.category,
-//               countInStock: product.totalStock || 0,
-//               stock: product.totalStock || 0,
-//               price: product.price || 0,
-//               totalValue: product.totalValue || 0,
-//             },
-//           ];
+//           const variant = product.variants[variantIndex];
+//           console.log(
+//             `📦 BEFORE - ${item.name} ${item.size || ""}/${
+//               item.color || ""
+//             }: Stock=${variant.countInStock}, Reserved=${variant.reserved || 0}`
+//           );
+
+//           // Check stock
+//           if (variant.countInStock < item.quantity) {
+//             throw new Error(
+//               `Only ${variant.countInStock} available, but ${item.quantity} requested`
+//             );
+//           }
+
+//           // ACTUALLY DEDUCT INVENTORY HERE
+//           variant.countInStock -= item.quantity;
+//           variant.reserved = (variant.reserved || 0) + item.quantity;
+
+//           console.log(
+//             `📦 AFTER - ${item.name} ${item.size || ""}/${
+//               item.color || ""
+//             }: Stock=${variant.countInStock}, Reserved=${variant.reserved}`
+//           );
+
+//           // Update total product stock
+//           product.countInStock = product.variants.reduce(
+//             (total, v) => total + v.countInStock,
+//             0
+//           );
+//         }
+//         // Handle simple products (no variants)
+//         else {
+//           console.log(
+//             `📦 BEFORE - ${item.name}: Stock=${
+//               product.countInStock
+//             }, Reserved=${product.reserved || 0}`
+//           );
+
+//           if (product.countInStock < item.quantity) {
+//             throw new Error(
+//               `Only ${product.countInStock} available, but ${item.quantity} requested`
+//             );
+//           }
+
+//           // ACTUALLY DEDUCT INVENTORY HERE
+//           product.countInStock -= item.quantity;
+//           product.reserved = (product.reserved || 0) + item.quantity;
+
+//           console.log(
+//             `📦 AFTER - ${item.name}: Stock=${product.countInStock}, Reserved=${product.reserved}`
+//           );
 //         }
 
-//         return product.variants.map((variant) => ({
-//           name: product.name,
-//           product: product.name,
-//           category: product.category,
-//           color: variant.color,
-//           size: variant.size,
-//           countInStock: variant.countInStock || 0,
-//           stock: variant.countInStock || 0,
-//           price: variant.price || product.price || 0,
-//           sku: variant.sku,
-//           variantValue: variant.variantValue || 0,
-//         }));
-//       });
-
-//       exportSimpleInventoryPDF(exportData);
-//       toast.success("PDF exported successfully!");
-//     } catch (error) {
-//       console.error("Export error:", error);
-//       toast.error("Failed to export PDF");
-//     }
-//   };
-
-//   const handleAdjustStock = (product) => {
-//     console.log("🔄 Adjusting product:", product);
-//     setSelectedProduct({
-//       id: product.id,
-//       name: product.name,
-//       image: product.image,
-//       category: product.category,
-//       price: product.price,
-//       variants: product.variants || [],
+//         await product.save({ session });
+//         console.log(
+//           `✅ Successfully reserved ${item.quantity} of ${item.name}`
+//         );
+//       }
 //     });
 
-//     setAdjustmentData({
-//       adjustmentType: "add",
-//       quantity: 1,
-//       reason: "restock",
-//       notes: "",
+//     // Store reservation in Redis
+//     await storeReservation(reservationId, {
+//       products,
+//       createdAt: new Date(),
+//       expiresAt: new Date(Date.now() + timeoutMinutes * 60 * 1000),
+//       timeoutMinutes: timeoutMinutes,
 //     });
-//     setShowAdjustModal(true);
-//   };
 
-//   const submitAdjustment = async (adjustmentDataWithVariant) => {
-//     if (!selectedProduct) return;
+//     console.log(`🎉 ALL inventory reserved successfully: ${reservationId}`);
+//     return true;
+//   } catch (error) {
+//     console.error("❌ Reservation failed:", error);
 
+//     // Release any partial reservations
 //     try {
-//       await adjustStock(selectedProduct.id, adjustmentDataWithVariant);
-//       setShowAdjustModal(false);
-//       setSelectedProduct(null);
-
-//       if (activeTab === "stock-levels") {
-//         fetchStockLevels(pagination.currentPage, filters);
-//       }
-//       if (activeTab === "low-stock") {
-//         fetchLowStockAlerts(10);
-//       }
-//       if (activeTab === "dashboard") {
-//         fetchDashboard();
-//       }
-//     } catch (error) {
-//       console.error("Adjustment error:", error);
+//       await releaseInventory(reservationId);
+//     } catch (releaseError) {
+//       console.error("Failed to release inventory after failure:", releaseError);
 //     }
-//   };
 
-//   const handleSearch = (e) => {
-//     const searchValue = e.target.value;
-//     updateFilters({ search: searchValue });
-//     if (activeTab === "stock-levels") {
-//       setTimeout(
-//         () => fetchStockLevels(1, { ...filters, search: searchValue }),
-//         500
-//       );
-//     }
-//   };
+//     throw error;
+//   } finally {
+//     await session.endSession();
+//   }
+// }
 
-//   const handleSyncOrders = async () => {
-//     try {
-//       toast.loading("Syncing orders with inventory...");
-//       const res = await axios.post("/inventory/sync-orders");
-//       toast.dismiss();
-//       toast.success(`Synced ${res.data.synced || 0} orders successfully!`);
-//       fetchDashboard();
-//     } catch (error) {
-//       toast.dismiss();
-//       toast.error("Failed to sync orders");
-//     }
-//   };
-
-//   if (loading && !dashboardData) {
-//     return (
-//       <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-br from-gray-50 to-white">
-//         <div className="flex space-x-2 mb-6">
-//           <div
-//             className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
-//             style={{ animationDelay: "0ms" }}
-//           ></div>
-//           <div
-//             className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
-//             style={{ animationDelay: "150ms" }}
-//           ></div>
-//           <div
-//             className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
-//             style={{ animationDelay: "300ms" }}
-//           ></div>
-//         </div>
-//         <p className="text-gray-600 font-medium animate-pulse">
-//           Please wait, Loading data...
-//         </p>
-//       </div>
-//     );
+// async function releaseInventory(reservationId) {
+//   // Check if we've already processed this release
+//   const alreadyReleased = await getReleasedReservation(reservationId);
+//   if (alreadyReleased) {
+//     console.log(`🔄 Release already processed for: ${reservationId}`);
+//     return;
 //   }
 
-//   return (
-//     <div className="min-h-screen bg-gray-50">
-//       {/* Header */}
-//       <motion.div
-//         initial={{ opacity: 0, y: -20 }}
-//         animate={{ opacity: 1, y: 0 }}
-//         transition={{ duration: 0.5 }}
-//         className="bg-white shadow-sm border-b"
-//       >
-//         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-//           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-6">
-//             <div>
-//               <h1 className="text-2xl font-bold text-gray-900">
-//                 Inventory Management
-//               </h1>
-//               <p className="text-gray-600 mt-1">
-//                 Welcome back, {user?.firstname || "Admin"}! Manage your store's
-//                 inventory.
-//               </p>
-//             </div>
-//             <div className="flex items-center gap-3 mt-4 sm:mt-0">
-//               <div className="flex flex-wrap gap-2">
-//                 <button
-//                   onClick={handleExportPDF}
-//                   className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-//                 >
-//                   <FileText className="h-4 w-4" />
-//                   Export PDF
-//                 </button>
-//               </div>
-//               <button
-//                 onClick={handleSyncOrders}
-//                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-//               >
-//                 <RefreshCw className="h-4 w-4" />
-//                 Sync Orders
-//               </button>
-//               <button
-//                 onClick={handleRefresh}
-//                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-//               >
-//                 <RefreshCw className="h-4 w-4" />
-//                 Refresh
-//               </button>
-//             </div>
-//           </div>
+//   const reservation = await getReservation(reservationId);
+//   if (!reservation) {
+//     console.log(`No reservation found: ${reservationId}`);
+//     return;
+//   }
 
-//           {/* Tabs */}
-//           <div className="flex space-x-1 overflow-x-auto pb-2">
-//             {[
-//               { id: "dashboard", label: "Dashboard", icon: BarChart },
-//               { id: "stock-levels", label: "Stock Levels", icon: Package },
-//               { id: "low-stock", label: "Low Stock", icon: AlertTriangle },
-//               { id: "price-management", label: "Price Management", icon: Tag },
-//               { id: "valuation", label: "Valuation", icon: DollarSign },
-//               { id: "history", label: "History", icon: History },
-//               { id: "locations", label: "Locations", icon: MapPin },
-//             ].map((tab) => (
-//               <button
-//                 key={tab.id}
-//                 onClick={() => setActiveTab(tab.id)}
-//                 className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition-colors whitespace-nowrap ${
-//                   activeTab === tab.id
-//                     ? "bg-blue-600 text-white"
-//                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-//                 }`}
-//               >
-//                 <tab.icon className="h-4 w-4" />
-//                 {tab.label}
-//               </button>
-//             ))}
-//           </div>
-//         </div>
-//       </motion.div>
+//   console.log(`🔄 Releasing reservation: ${reservationId}`);
 
-//       {/* Main Content */}
-//       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-//         {activeTab === "dashboard" && dashboardData && (
-//           <DashboardView data={dashboardData} settings={settings} />
-//         )}
-//         {activeTab === "stock-levels" && (
-//           <StockLevelsView
-//             stockLevels={stockLevels}
-//             settings={settings}
-//             onAdjust={handleAdjustStock}
-//             loading={loading}
-//             onSearch={handleSearch}
-//             filters={filters}
-//             updateFilters={updateFilters}
-//             clearFilters={clearFilters}
-//             pagination={pagination}
-//             onPageChange={(page) => fetchStockLevels(page, filters)}
-//             onViewPriceHistory={fetchProductPriceHistory}
-//             onPriceAction={handlePriceAction}
-//           />
-//         )}
-        
-//         {activeTab === "low-stock" && (
-//           <LowStockView alerts={lowStockAlerts} onAdjust={handleAdjustStock} />
-//         )}
-//         {activeTab === "price-management" && (
-//           <PriceManagementView
-//             products={stockLevels}
-//             settings={settings}
-//             loading={loading}
-//             onPriceAction={handlePriceAction}
-//             filters={filters}
-//             updateFilters={updateFilters}
-//             clearFilters={clearFilters}
-//             pagination={pagination}
-//             onPageChange={(page) =>
-//               fetchStockLevels(page, { ...filters, sortBy: "price" })
+//   const session = await mongoose.startSession();
+//   try {
+//     await session.withTransaction(async () => {
+//       for (const item of reservation.products) {
+//         if (!item._id) continue;
+
+//         const product = await Product.findById(item._id).session(session);
+//         if (!product) {
+//           console.log(`Product not found for ID: ${item._id}`);
+//           continue;
+//         }
+
+//         // FIXED: Use flexible matching for variants
+//         if (item.size || item.color) {
+//           const variantIndex = product.variants.findIndex((v) => {
+//             const sizeMatches = item.size
+//               ? v.size === item.size
+//               : !v.size || v.size === "" || v.size === "Standard";
+//             const colorMatches = item.color
+//               ? v.color === item.color
+//               : !v.color || v.color === "" || v.color === "Standard";
+//             return sizeMatches && colorMatches;
+//           });
+
+//           if (variantIndex !== -1) {
+//             const variant = product.variants[variantIndex];
+
+//             // ✅ FIXED: Add safety check - only release if we have enough reserved
+//             const reservedToRelease = Math.min(
+//               item.quantity,
+//               variant.reserved || 0
+//             );
+
+//             if (reservedToRelease > 0) {
+//               variant.countInStock += reservedToRelease;
+//               variant.reserved = Math.max(
+//                 0,
+//                 (variant.reserved || 0) - reservedToRelease
+//               );
+
+//               console.log(
+//                 `✅ Released ${reservedToRelease} of ${item.name} variant - Stock now: ${variant.countInStock}, Reserved: ${variant.reserved}`
+//               );
+//             } else {
+//               console.log(
+//                 `⚠️ No reserved stock to release for ${item.name} ${
+//                   item.size || ""
+//                 }/${item.color || ""}`
+//               );
 //             }
-//             updateProductPrice={updateProductPrice}
-//           />
-//         )}
-//         {activeTab === "valuation" && <AgingReportView data={inventoryAging} />}
-//         {activeTab === "valuation" && inventoryValuation && (
-//           <ValuationView data={inventoryValuation} />
-//         )}
-//         {activeTab === "history" && (
-//           <div className="space-y-6">
-//             {/* History Type Toggle */}
-//             <div className="bg-white rounded-xl shadow-sm  p-4">
-//               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-//                 <div>
-//                   <h2 className="text-xl font-semibold text-gray-800">
-//                     Inventory History
-//                   </h2>
-//                   <p className="text-gray-600 mt-1">
-//                     Track all inventory and price changes
-//                   </p>
-//                 </div>
-//                 <div className="flex space-x-2 bg-gray-100 p-1 rounded-lg">
-//                   <button
-//                     onClick={() => setHistoryType("stock")}
-//                     className={`px-4 py-2 rounded-md font-medium transition-colors ${
-//                       historyType === "stock"
-//                         ? "bg-white text-gray-800 shadow-sm"
-//                         : "text-gray-600 hover:text-gray-800"
-//                     }`}
-//                   >
-//                     Stock History
-//                   </button>
-//                   <button
-//                     onClick={() => setHistoryType("price")}
-//                     className={`px-4 py-2 rounded-md font-medium transition-colors ${
-//                       historyType === "price"
-//                         ? "bg-white text-gray-800 shadow-sm"
-//                         : "text-gray-600 hover:text-gray-800"
-//                     }`}
-//                   >
-//                     Price History
-//                   </button>
-//                 </div>
-//               </div>
-//             </div>
 
-//             {/* History View */}
-//             <HistoryView
-//               history={historyType === "stock" ? stockHistory : priceHistory}
-//               loading={historyType === "stock" ? loading : loadingPriceHistory}
-//               type={historyType}
-//             />
-//           </div>
-//         )}
-//         {activeTab === "locations" && (
-//           <LocationsView locations={inventoryByLocation} settings={settings} />
-//         )}
-//       </div>
-
-//       {/* Adjust Stock Modal */}
-//       {showAdjustModal && selectedProduct && (
-//         <AdjustStockModal
-//           product={selectedProduct}
-//           data={adjustmentData}
-//           onChange={setAdjustmentData}
-//           onSubmit={submitAdjustment}
-//           onClose={() => setShowAdjustModal(false)}
-//         />
-//       )}
-
-//       {/* Price Management Modal */}
-//       {showPriceModal && selectedProductForPrice && (
-//         <PriceManagementModal
-//           product={selectedProductForPrice}
-//           onClose={() => {
-//             setShowPriceModal(false);
-//             setSelectedProductForPrice(null);
-//           }}
-//           onUpdate={handlePriceUpdate}
-//         />
-//       )}
-//     </div>
-//   );
-// };
-
-// // Helper Components
-// const StatCard = ({ title, value, icon: Icon, trend, color }) => {
-//   const colorClasses = {
-//     blue: "bg-blue-50 text-blue-600 border-blue-200",
-//     yellow: "bg-yellow-50 text-yellow-600 border-yellow-200",
-//     red: "bg-red-50 text-red-600 border-red-200",
-//     green: "bg-green-50 text-green-600 border-green-200",
-//   };
-
-//   return (
-//     <div className={`rounded-xl border p-6 ${colorClasses[color]}`}>
-//       <div className="flex justify-between items-start">
-//         <div>
-//           <p className="text-sm font-medium opacity-80">{title}</p>
-//           <p className="text-2xl font-bold mt-2">{value}</p>
-//           <div className="flex items-center gap-1 mt-2">
-//             {trend?.startsWith("+") ? (
-//               <TrendingUp className="h-4 w-4" />
-//             ) : (
-//               <TrendingDown className="h-4 w-4" />
-//             )}
-//             <span className="text-sm">{trend}</span>
-//           </div>
-//         </div>
-//         <div className="p-3 rounded-lg bg-white bg-opacity-50">
-//           <Icon className="h-6 w-6" />
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// const StockStatusBadge = ({ status }) => {
-//   const config = {
-//     healthy: { label: "Healthy", color: "bg-green-100 text-green-800" },
-//     low: { label: "Low Stock", color: "bg-yellow-100 text-yellow-800" },
-//     out: { label: "Out of Stock", color: "bg-red-100 text-red-800" },
-//   };
-
-//   const { label, color } = config[status] || config.healthy;
-
-//   return (
-//     <span className={`px-2 py-1 text-xs font-medium rounded-full ${color}`}>
-//       {label}
-//     </span>
-//   );
-// };
-
-
-// // Price Display Component
-
-// const PriceDisplay = ({
-//   price,
-//   previousPrice,
-//   isPriceSlashed,
-//   discountPercentage,
-// }) => {
-//   if (isPriceSlashed && previousPrice) {
-//     const discount =
-//       discountPercentage ||
-//       (((previousPrice - price) / previousPrice) * 100).toFixed(1);
-//       const {settings} =useStoreSettings()
-
-//     return (
-//       <div className="flex flex-col">
-//         <div className="flex items-center gap-2">
-//           <span className="font-semibold text-green-700">
-//             {formatPrice(price, settings?.currency)}
-//           </span>
-//           <span className="text-gray-500 line-through text-sm">
-//             {formatPrice(previousPrice, settings?.currency)}
-//           </span>
-//           <span className="bg-red-100 text-red-800 text-xs font-medium px-1.5 py-0.5 rounded">
-//             {discount}% OFF
-//           </span>
-//         </div>
-//       </div>
-//     );
-//   }
-//  const {settings} = useStoreSettings()
-//   return (
-//     <span className="font-semibold text-gray-900">
-//       {formatPrice(price, settings?.currency)}
-//     </span>
-//   );
-// };
-
-
-// // Stock Levels View Component
-// const StockLevelsView = ({
-//   stockLevels,
-//   onAdjust,
-//   loading,
-//   onSearch,
-//   filters,
-//   settings,
-//   updateFilters,
-//   clearFilters,
-//   pagination,
-//   onPageChange,
-//   onPriceAction,
-// }) => {
-//   const [expandedProducts, setExpandedProducts] = useState({});
-
-//   const toggleProductExpand = (productId) => {
-//     setExpandedProducts((prev) => ({
-//       ...prev,
-//       [productId]: !prev[productId],
-//     }));
-//   };
-
-//   return (
-//     <div className="bg-white rounded-xl shadow-sm  overflow-hidden">
-//       <div className="p-6 border-b">
-//         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-//           <h2 className="text-xl font-semibold text-gray-800">Stock Levels</h2>
-//           <div className="flex items-center gap-3">
-//             <div className="relative">
-//               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-//               <input
-//                 type="text"
-//                 placeholder="Search products..."
-//                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//                 value={filters.search || ""}
-//                 onChange={onSearch}
-//               />
-//             </div>
-//             <select
-//               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//               value={filters.category || ""}
-//               onChange={(e) => updateFilters({ category: e.target.value })}
-//             >
-//               <option value="">All Categories</option>
-//             </select>
-//             <button
-//               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-//               onClick={() => clearFilters()}
-//             >
-//               <Filter className="h-4 w-4" />
-//             </button>
-//           </div>
-//         </div>
-//       </div>
-//       {loading ? (
-//         <div className="flex justify-center items-center p-12">
-//           <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
-//         </div>
-//       ) : (
-//         <div className="overflow-x-auto">
-//           <table className="min-w-full divide-y divide-gray-200">
-//             <thead className="bg-gray-50">
-//               <tr>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Product
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Category
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Price
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Total Stock
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Status
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Value
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Actions
-//                 </th>
-//               </tr>
-//             </thead>
-//             <tbody className="bg-white divide-y divide-gray-200">
-//               {stockLevels.map((product) => (
-//                 <React.Fragment key={product.id}>
-//                   {/* Product Summary Row */}
-//                   <tr className="hover:bg-gray-50">
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <div className="flex items-center">
-//                         {product.image && (
-//                           <img
-//                             src={product.image}
-//                             alt={product.name}
-//                             className="h-10 w-10 rounded object-cover mr-3"
-//                           />
-//                         )}
-//                         <div>
-//                           <div className="text-sm font-medium text-gray-900">
-//                             {product.name}
-//                           </div>
-//                           <div className="text-xs text-gray-500">
-//                             {product.variantsCount} variants
-//                           </div>
-//                           {product.variantsCount > 0 && (
-//                             <button
-//                               onClick={() => toggleProductExpand(product.id)}
-//                               className="text-xs text-blue-600 hover:text-blue-800 mt-1"
-//                             >
-//                               {expandedProducts[product.id] ? "Hide" : "Show"}{" "}
-//                               variants
-//                             </button>
-//                           )}
-//                         </div>
-//                       </div>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
-//                         {product.category}
-//                       </span>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <PriceDisplay
-//                         price={product.price}
-//                         previousPrice={product.previousPrice}
-//                         isPriceSlashed={product.isPriceSlashed}
-//                         discountPercentage={product.discountPercentage}
-//                       />
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <div className="text-sm font-medium text-gray-900">
-//                         {product.totalStock || 0}
-//                       </div>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <StockStatusBadge status={product.status} />
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <div className="text-sm font-medium text-gray-900">
-//                         {formatPrice(product?.totalValue, settings?.currency) || "0"}
-//                       </div>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-//                       <div className="flex items-center gap-2">
-//                         <button
-//                           onClick={() =>
-//                             onAdjust({
-//                               ...product,
-//                               variants: product.variants || [],
-//                             })
-//                           }
-//                           className="text-blue-600 hover:text-blue-900"
-//                           title="Adjust Stock"
-//                         >
-//                           Adjust
-//                         </button>
-//                         <span className="text-gray-300">|</span>
-//                         <button
-//                           onClick={() => onPriceAction(product)}
-//                           className="text-green-600 hover:text-green-900"
-//                           title="Manage Price"
-//                         >
-//                           Price
-//                         </button>
-
-                        
-//                       </div>
-//                     </td>
-//                   </tr>
-
-//                   {/* Variant Rows */}
-//                   {expandedProducts[product.id] &&
-//                     product.variants &&
-//                     product.variants.length > 0 && (
-//                       <>
-//                         {product.variants.map((variant) => (
-//                           <tr
-//                             key={variant._id}
-//                             className="bg-gray-50 hover:bg-gray-100"
-//                           >
-//                             <td className="px-6 py-3 pl-10">
-//                               <div className="flex items-center">
-//                                 <div className="ml-2">
-//                                   <div className="text-sm text-gray-900 flex items-center gap-2">
-//                                     <span className="font-medium">
-//                                       {variant.color || "Default"}
-//                                     </span>
-//                                     <span className="text-gray-500">-</span>
-//                                     <span className="font-medium">
-//                                       {variant.size || "One Size"}
-//                                     </span>
-//                                   </div>
-//                                   <div className="text-xs text-gray-500">
-//                                     SKU: {variant.sku || "N/A"}
-//                                   </div>
-//                                 </div>
-//                               </div>
-//                             </td>
-//                             <td className="px-6 py-3">
-//                               <span className="text-xs text-gray-500">
-//                                 Variant
-//                               </span>
-//                             </td>
-//                             <td className="px-6 py-3">
-//                               <span className="text-sm font-medium text-gray-900">
-//                                 {formatPrice(variant?.price, settings?.currency)|| "0"}
-//                               </span>
-//                             </td>
-//                             <td className="px-6 py-3">
-//                               <div className="text-sm font-medium text-gray-900">
-//                                 {variant.countInStock}
-//                               </div>
-//                             </td>
-//                             <td className="px-6 py-3">
-//                               <StockStatusBadge
-//                                 status={
-//                                   variant.countInStock === 0
-//                                     ? "out"
-//                                     : variant.countInStock <= 5
-//                                     ? "low"
-//                                     : "healthy"
-//                                 }
-//                               />
-//                             </td>
-//                             <td className="px-6 py-3">
-//                               <div className="text-sm text-gray-900">
-//                                 {formatPrice(variant?.variantValue, settings?.currency) || "0"}
-//                               </div>
-//                             </td>
-//                             <td className="px-6 py-3 text-sm font-medium">
-//                               <button
-//                                 onClick={() =>
-//                                   onAdjust({
-//                                     ...product,
-//                                     variantId: variant._id,
-//                                     variantName: `${
-//                                       variant.color || "Default"
-//                                     } - ${variant.size || "One Size"}`,
-//                                     currentStock: variant.countInStock,
-//                                   })
-//                                 }
-//                                 className="text-blue-600 hover:text-blue-900 text-xs"
-//                               >
-//                                 Adjust Variant
-//                               </button>
-//                             </td>
-//                           </tr>
-//                         ))}
-//                       </>
-//                     )}
-//                 </React.Fragment>
-//               ))}
-//             </tbody>
-//           </table>
-//         </div>
-//       )}
-
-//       {/* Pagination */}
-//       <div className="flex justify-center gap-2 p-4 border-t">
-//         <button
-//           onClick={() => onPageChange(pagination.currentPage - 1)}
-//           disabled={!pagination.hasPrevPage}
-//           className={`px-3 py-1 rounded ${
-//             pagination.hasPrevPage
-//               ? "bg-gray-200 hover:bg-gray-300"
-//               : "bg-gray-100 text-gray-400 cursor-not-allowed"
-//           }`}
-//         >
-//           Previous
-//         </button>
-//         <button
-//           onClick={() => onPageChange(pagination.currentPage + 1)}
-//           disabled={!pagination.hasNextPage}
-//           className={`px-3 py-1 rounded ${
-//             pagination.hasNextPage
-//               ? "bg-gray-200 hover:bg-gray-300"
-//               : "bg-gray-100 text-gray-400 cursor-not-allowed"
-//           }`}
-//         >
-//           Next
-//         </button>
-//       </div>
-//     </div>
-//   );
-// };
-
-// // Price Management View Component
-// const PriceManagementView = ({
-//   products,
-//   loading,
-//   settings,
-//   onPriceAction,
-//   filters,
-//   updateFilters,
-//   clearFilters,
-//   pagination,
-//   onPageChange,
-//   updateProductPrice,
-// }) => {
-//   const [priceFilters, setPriceFilters] = useState({
-//     minPrice: "",
-//     maxPrice: "",
-//     showSlashedOnly: false,
-//     sortBy: "price",
-//     sortOrder: "asc",
-//   });
-
-//   const getCurrencySymbol = (currency) => {
-//     switch (currency) {
-//       case "NGN":
-//         return "₦";
-//       case "USD":
-//         return "$";
-//       case "EUR":
-//         return "€";
-//       case "GBP":
-//         return "£";
-//       default:
-//         return currency || "";
-//     }
-//   };
-
-//   const [searchInput, setSearchInput] = useState(filters.search || "");
-//   const [selectedProducts, setSelectedProducts] = useState([]);
-//   const [bulkPriceChange, setBulkPriceChange] = useState({
-//     action: "increase",
-//     type: "percentage",
-//     value: "",
-//     reason: "",
-//   });
-
-//   const [showBulkModal, setShowBulkModal] = useState(false);
-
-//   useEffect(() => {
-//     const timer = setTimeout(() => {
-//       if (searchInput !== filters.search) {
-//         updateFilters({ search: searchInput });
-//         if (onPageChange) {
-//           setTimeout(() => onPageChange(1), 100);
-//         }
-//       }
-//     }, 500);
-
-//     return () => clearTimeout(timer);
-//   }, [searchInput, filters.search, updateFilters, onPageChange]);
-
-//   useEffect(() => {
-//     if (filters.search !== searchInput) {
-//       setSearchInput(filters.search || "");
-//     }
-//   }, [filters.search]);
-
-//   const handleSearch = (e) => {
-//     setSearchInput(e.target.value);
-//   };
-
-//   const clearAllFilters = () => {
-//     setSearchInput("");
-//     setPriceFilters({
-//       minPrice: "",
-//       maxPrice: "",
-//       showSlashedOnly: false,
-//       sortBy: "price",
-//       sortOrder: "asc",
-//     });
-//     clearFilters();
-//   };
-
-//   const filteredProducts = products
-//     .filter((product) => {
-//       if (
-//         priceFilters.minPrice &&
-//         product.price < parseFloat(priceFilters.minPrice)
-//       )
-//         return false;
-//       if (
-//         priceFilters.maxPrice &&
-//         product.price > parseFloat(priceFilters.maxPrice)
-//       )
-//         return false;
-//       if (priceFilters.showSlashedOnly && !product.isPriceSlashed) return false;
-//       return true;
-//     })
-//     .sort((a, b) => {
-//       const sortKey = priceFilters.sortBy;
-//       const order = priceFilters.sortOrder === "asc" ? 1 : -1;
-
-//       if (sortKey === "price") {
-//         return (a.price - b.price) * order;
-//       } else if (sortKey === "name") {
-//         return a.name.localeCompare(b.name) * order;
-//       } else if (sortKey === "discount") {
-//         const discountA = productDiscount(a);
-//         const discountB = productDiscount(b);
-//         return (discountA - discountB) * order;
-//       }
-//       return 0;
-//     });
-
-//   const productDiscount = (product) => {
-//     if (!product.isPriceSlashed || !product.previousPrice) return 0;
-//     return (
-//       ((product.previousPrice - product.price) / product.previousPrice) * 100
-//     );
-//   };
-
-//   const toggleSelectProduct = (productId) => {
-//     setSelectedProducts((prev) =>
-//       prev.includes(productId)
-//         ? prev.filter((id) => id !== productId)
-//         : [...prev, productId]
-//     );
-//   };
-
-//   const toggleSelectAll = () => {
-//     if (selectedProducts.length === filteredProducts.length) {
-//       setSelectedProducts([]);
-//     } else {
-//       setSelectedProducts(filteredProducts.map((p) => p.id));
-//     }
-//   };
-
-//   const handleBulkPriceChange = async () => {
-//     if (!bulkPriceChange.value || selectedProducts.length === 0) {
-//       toast.error("Please select products and enter a value");
-//       return;
-//     }
-
-//     if (!updateProductPrice) {
-//       toast.error("Price update function not available");
-//       return;
-//     }
-
-//     try {
-//       toast.loading(
-//         `Updating prices for ${selectedProducts.length} products...`
-//       );
-
-//       const promises = selectedProducts.map((productId) => {
-//         const product = products.find((p) => p.id === productId);
-//         if (!product) return Promise.resolve();
-
-//         let newPrice;
-//         const currentPrice = product.price;
-
-//         if (bulkPriceChange.type === "percentage") {
-//           const percentage = parseFloat(bulkPriceChange.value);
-//           if (bulkPriceChange.action === "increase") {
-//             newPrice = currentPrice * (1 + percentage / 100);
-//           } else {
-//             newPrice = currentPrice * (1 - percentage / 100);
+//             // Update total product stock
+//             product.countInStock = product.variants.reduce(
+//               (total, v) => total + v.countInStock,
+//               0
+//             );
 //           }
 //         } else {
-//           const amount = parseFloat(bulkPriceChange.value);
-//           if (bulkPriceChange.action === "increase") {
-//             newPrice = currentPrice + amount;
+//           // Simple product - add safety check
+//           const reservedToRelease = Math.min(
+//             item.quantity,
+//             product.reserved || 0
+//           );
+
+//           if (reservedToRelease > 0) {
+//             product.countInStock += reservedToRelease;
+//             product.reserved = Math.max(
+//               0,
+//               (product.reserved || 0) - reservedToRelease
+//             );
+//             console.log(
+//               `✅ Released ${reservedToRelease} of ${item.name} - Stock now: ${product.countInStock}, Reserved: ${product.reserved}`
+//             );
 //           } else {
-//             newPrice = currentPrice - amount;
+//             console.log(`⚠️ No reserved stock to release for ${item.name}`);
 //           }
 //         }
 
-//         newPrice = Math.max(newPrice, 0.01);
-//         return updateProductPrice(productId, newPrice, bulkPriceChange.reason);
-//       });
+//         await product.save({ session });
+//       }
+//     });
 
-//       await Promise.all(promises);
-//       toast.dismiss();
-//       toast.success(
-//         `Updated ${selectedProducts.length} products successfully!`
+//     // ✅ Mark this reservation as released to prevent duplicate processing
+//     await storeReleasedReservation(reservationId, {
+//       releasedAt: new Date(),
+//       originalReservation: reservation,
+//     });
+
+//     // Remove the original reservation
+//     await deleteReservation(reservationId);
+
+//     console.log(`🎉 Successfully released reservation: ${reservationId}`);
+//   } catch (error) {
+//     console.error("❌ Release failed:", error);
+//   } finally {
+//     await session.endSession();
+//   }
+// }
+
+// async function confirmInventory(reservationId) {
+//   const reservation = await getReservation(reservationId);
+//   if (!reservation) {
+//     console.log(`No reservation found to confirm: ${reservationId}`);
+//     return;
+//   }
+
+//   console.log(`🔄 Confirming reservation: ${reservationId}`);
+
+//   const session = await mongoose.startSession();
+//   try {
+//     await session.withTransaction(async () => {
+//       for (const item of reservation.products) {
+//         if (!item._id) continue;
+
+//         const product = await Product.findById(item._id).session(session);
+//         if (!product) continue;
+
+//         // FIXED: Use flexible matching for variants
+//         if (item.size || item.color) {
+//           const variantIndex = product.variants.findIndex((v) => {
+//             const sizeMatches = item.size
+//               ? v.size === item.size
+//               : !v.size || v.size === "" || v.size === "Standard";
+//             const colorMatches = item.color
+//               ? v.color === item.color
+//               : !v.color || v.color === "" || v.color === "Standard";
+//             return sizeMatches && colorMatches;
+//           });
+
+//           if (variantIndex !== -1) {
+//             const variant = product.variants[variantIndex];
+
+//             console.log(
+//               `📊 BEFORE CONFIRMATION - ${item.name} ${item.size || ""}/${
+//                 item.color || ""
+//               }: Stock=${variant.countInStock}, Reserved=${
+//                 variant.reserved || 0
+//               }`
+//             );
+
+//             // Remove reservation flag - stock is already at the reduced level from reservation
+//             variant.reserved = Math.max(
+//               0,
+//               (variant.reserved || 0) - item.quantity
+//             );
+
+//             console.log(
+//               `✅ CONFIRMED ${item.name} ${item.size || ""}/${
+//                 item.color || ""
+//               } - Final: Stock=${variant.countInStock}, Reserved=${
+//                 variant.reserved
+//               }`
+//             );
+
+//             console.log(
+//               `📊 INVENTORY REDUCTION: ${item.name} ${item.size || ""}/${
+//                 item.color || ""
+//               } - Stock permanently reduced by ${item.quantity} units`
+//             );
+//           } else {
+//             console.log(
+//               `❌ Variant not found for confirmation: ${item.name} ${
+//                 item.size || ""
+//               }/${item.color || ""}`
+//             );
+//           }
+//         } else {
+//           // Simple product - remove reservation flag only (stock already reduced)
+//           console.log(
+//             `📊 BEFORE CONFIRMATION - ${item.name}: Stock=${
+//               product.countInStock
+//             }, Reserved=${product.reserved || 0}`
+//           );
+
+//           product.reserved = Math.max(
+//             0,
+//             (product.reserved || 0) - item.quantity
+//           );
+
+//           console.log(
+//             `✅ CONFIRMED ${item.name} - Final: Stock=${product.countInStock}, Reserved=${product.reserved}`
+//           );
+
+//           console.log(
+//             `📊 INVENTORY REDUCTION: ${item.name} - Stock permanently reduced by ${item.quantity} units`
+//           );
+//         }
+
+//         await product.save({ session });
+//       }
+//     });
+
+//     await deleteReservation(reservationId);
+//     console.log(`🎉 Successfully CONFIRMED reservation: ${reservationId}`);
+//   } catch (error) {
+//     console.error("❌ Confirmation failed:", error);
+//     throw error;
+//   } finally {
+//     await session.endSession();
+//   }
+// }
+// setInterval(async () => {
+//   console.log("🕒 Running Redis reservation cleanup...");
+
+//   try {
+//     // Get all Redis reservation keys
+//     const keys = await redis.keys("reservation:*");
+//     console.log(`📊 Found ${keys.length} Redis reservations`);
+
+//     let releasedCount = 0;
+//     let expiredButStuckCount = 0;
+
+//     // Get all active reservation IDs from Redis
+//     const activeReservationIds = new Set();
+//     for (const key of keys) {
+//       const reservationId = key.replace("reservation:", "");
+//       activeReservationIds.add(reservationId);
+
+//       const reservationData = await getReservation(reservationId);
+//       if (reservationData) {
+//         const now = new Date();
+//         const expiresAt = new Date(reservationData.expiresAt);
+
+//         // If reservation has expired, release it
+//         if (now > expiresAt) {
+//           console.log(`⏰ Releasing expired reservation: ${reservationId}`);
+//           try {
+//             await releaseInventory(reservationId);
+//             releasedCount++;
+//           } catch (error) {
+//             console.error(`❌ Failed to release ${reservationId}:`, error);
+//           }
+//         } else {
+//           const ttl = Math.floor((expiresAt - now) / 1000);
+//           console.log(`⏰ ${reservationId}: ${ttl} seconds remaining`);
+//         }
+//       }
+//     }
+
+//     // ONLY check for stuck reservations that are NOT in Redis
+//     const stuckProducts = await Product.find({
+//       $or: [{ reserved: { $gt: 0 } }, { "variants.reserved": { $gt: 0 } }],
+//     });
+
+//     for (const product of stuckProducts) {
+//       let needsFix = false;
+
+//       // Check if this product has any active Redis reservations
+//       const hasActiveReservation = await checkProductHasActiveReservation(
+//         product,
+//         activeReservationIds
 //       );
 
-//       setShowBulkModal(false);
-//       setSelectedProducts([]);
-//       setBulkPriceChange({
-//         action: "increase",
-//         type: "percentage",
-//         value: "",
-//         reason: "",
-//       });
+//       if (!hasActiveReservation) {
+//         // Only fix reservations that don't have active Redis entries
+//         if (product.reserved > 0) {
+//           console.log(
+//             `🔄 Found STUCK main reservation for ${product.name}: ${product.reserved} units (no active Redis reservation)`
+//           );
+//           product.countInStock += product.reserved;
+//           product.reserved = 0;
+//           needsFix = true;
+//         }
 
-//       if (onPageChange && pagination) {
-//         onPageChange(pagination.currentPage);
+//         // Check variants
+//         if (product.variants && product.variants.length > 0) {
+//           product.variants.forEach((variant, index) => {
+//             if (variant.reserved > 0) {
+//               console.log(
+//                 `🔄 Found STUCK variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units (no active Redis reservation)`
+//               );
+//               product.variants[index].countInStock += variant.reserved;
+//               product.variants[index].reserved = 0;
+//               needsFix = true;
+//             }
+//           });
+//         }
 //       }
-//     } catch (error) {
-//       toast.dismiss();
-//       toast.error("Failed to update some prices");
-//       console.error("Bulk price update error:", error);
+
+//       if (needsFix) {
+//         await product.save();
+//         expiredButStuckCount++;
+//         console.log(`✅ Fixed STUCK reservations for ${product.name}`);
+//       }
 //     }
-//   };
 
-//   const calculateSummary = () => {
-//     const totalProducts = filteredProducts.length;
-//     const slashedProducts = filteredProducts.filter(
-//       (p) => p.isPriceSlashed
-//     ).length;
-//     const avgPrice =
-//       totalProducts > 0
-//         ? filteredProducts.reduce((sum, p) => sum + p.price, 0) / totalProducts
-//         : 0;
-//     const totalValue = filteredProducts.reduce(
-//       (sum, p) => sum + p.totalValue,
-//       0
-//     );
+//     if (releasedCount > 0 || expiredButStuckCount > 0) {
+//       console.log(
+//         `✅ Released ${releasedCount} expired reservations and fixed ${expiredButStuckCount} stuck reservations`
+//       );
+//     } else {
+//       console.log("✅ No expired or stuck reservations found");
+//     }
+//   } catch (error) {
+//     console.error("❌ Error in reservation cleanup:", error);
+//   }
+// }, 30000);
 
-//     let maxDiscount = 0;
-//     let maxDiscountProduct = null;
-//     filteredProducts.forEach((p) => {
-//       if (p.isPriceSlashed && p.previousPrice) {
-//         const discount = ((p.previousPrice - p.price) / p.previousPrice) * 100;
-//         if (discount > maxDiscount) {
-//           maxDiscount = discount;
-//           maxDiscountProduct = p;
+// // Helper function to check if a product has active Redis reservations
+// async function checkProductHasActiveReservation(product, activeReservationIds) {
+//   // This would require storing product IDs in Redis reservations
+//   // For now, we'll assume any reservation in Redis might be for this product
+//   // and be conservative (don't release if there are any active reservations)
+//   return activeReservationIds.size > 0;
+// }
+ 
+// // 4. Add the immediate cleanup function (run this once)
+// async function clearAllReservations() {
+//   console.log("🧹 Clearing all stale reservations from database...");
+
+//   try {
+//     const session = await mongoose.startSession();
+
+//     await session.withTransaction(async () => {
+//       // Find all products with reserved inventory
+//       const productsWithReservations = await Product.find({
+//         $or: [{ reserved: { $gt: 0 } }, { "variants.reserved": { $gt: 0 } }],
+//       }).session(session);
+
+//       console.log(
+//         `📊 Found ${productsWithReservations.length} products with reservations`
+//       );
+
+//       for (const product of productsWithReservations) {
+//         let changed = false;
+
+//         // Clear main product reservations
+//         if (product.reserved > 0) {
+//           console.log(
+//             `🔄 Clearing main reservation for ${product.name}: ${product.reserved} units`
+//           );
+//           product.countInStock += product.reserved;
+//           product.reserved = 0;
+//           changed = true;
+//         }
+
+//         // Clear variant reservations
+//         if (product.variants && product.variants.length > 0) {
+//           product.variants.forEach((variant, index) => {
+//             if (variant.reserved > 0) {
+//               console.log(
+//                 `🔄 Clearing variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units`
+//               );
+//               product.variants[index].countInStock += variant.reserved;
+//               product.variants[index].reserved = 0;
+//               changed = true;
+//             }
+//           });
+
+//           // Update total stock
+//           if (changed) {
+//             product.countInStock = product.variants.reduce(
+//               (total, v) => total + v.countInStock,
+//               0
+//             );
+//           }
+//         }
+
+//         if (changed) {
+//           await product.save({ session });
+//           console.log(`✅ Cleared reservations for ${product.name}`);
 //         }
 //       }
 //     });
 
-//     return {
-//       totalProducts,
-//       slashedProducts,
-//       avgPrice,
-//       totalValue,
-//       maxDiscount,
-//       maxDiscountProduct,
-//       discountRate:
-//         totalProducts > 0 ? (slashedProducts / totalProducts) * 100 : 0,
-//     };
-//   };
-
-//   const summary = calculateSummary();
-
-//   return (
-//     <div className="space-y-6">
-//       {/* Summary Stats */}
-//       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-//         <div className="bg-white p-4 rounded-lg shadow ">
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <p className="text-sm text-gray-600">Total Products</p>
-//               <p className="text-xl font-bold">{summary.totalProducts}</p>
-//             </div>
-//             <Package className="h-8 w-8 text-blue-400" />
-//           </div>
-//           <div className="mt-2 text-xs text-gray-500">
-//             {summary.slashedProducts} with discounts
-//           </div>
-//         </div>
-
-//         <div className="bg-white p-4 rounded-lg shadow ">
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <p className="text-sm text-gray-600">Average Price</p>
-//               <p className="text-xl font-bold">
-//                 {formatPrice(summary?.avgPrice, settings?.currency)}
-//               </p>
-//             </div>
-//             <DollarSign className="h-8 w-8 text-green-400" />
-//           </div>
-//           <div className="mt-2 text-xs text-gray-500">Across all products</div>
-//         </div>
-
-//         <div className="bg-white p-4 rounded-lg shadow ">
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <p className="text-sm text-gray-600">Discount Rate</p>
-//               <p className="text-xl font-bold">
-//                 {summary.discountRate.toFixed(1)}%
-//               </p>
-//             </div>
-//             <Tag className="h-8 w-8 text-red-400" />
-//           </div>
-//           <div className="mt-2 text-xs text-gray-500">
-//             {summary.slashedProducts} discounted products
-//           </div>
-//         </div>
-
-//         <div className="bg-white p-4 rounded-lg shadow ">
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <p className="text-sm text-gray-600">Total Value</p>
-//               <p className="text-xl font-bold">
-//                 {formatPrice(summary?.totalValue, settings?.currency)}
-//               </p>
-//             </div>
-//             <TrendingUp className="h-8 w-8 text-purple-400" />
-//           </div>
-//           <div className="mt-2 text-xs text-gray-500">
-//             Current inventory value
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Controls Bar */}
-//       <div className="bg-white rounded-xl shadow-sm  p-4">
-//         <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-//           <div className="flex items-center gap-2">
-//             <input
-//               type="checkbox"
-//               checked={selectedProducts.length === filteredProducts.length}
-//               onChange={toggleSelectAll}
-//               className="h-4 w-4 rounded border-gray-300"
-//             />
-//             <span className="text-sm text-gray-600">
-//               {selectedProducts.length} of {filteredProducts.length} selected
-//             </span>
-//           </div>
-
-//           <div className="flex flex-wrap gap-3">
-//             {/* Search */}
-//             <div className="relative">
-//               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-//               <input
-//                 type="text"
-//                 placeholder="Search products..."
-//                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//                 value={searchInput}
-//                 onChange={handleSearch}
-//               />
-//             </div>
-
-//             {/* Price Range */}
-//             <div className="flex items-center gap-2">
-//               <input
-//                 type="number"
-//                 placeholder={`Min ${getCurrencySymbol(settings?.currency)}`}
-//                 value={priceFilters.minPrice}
-//                 onChange={(e) =>
-//                   setPriceFilters((prev) => ({
-//                     ...prev,
-//                     minPrice: e.target.value,
-//                   }))
-//                 }
-//                 className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-//                 min="0"
-//                 step="0.01"
-//               />
-//               <span className="text-gray-400">-</span>
-//               <input
-//                 type="number"
-//                 placeholder={`Max ${getCurrencySymbol(settings?.currency)}`}
-//                 value={priceFilters.maxPrice}
-//                 onChange={(e) =>
-//                   setPriceFilters((prev) => ({
-//                     ...prev,
-//                     maxPrice: e.target.value,
-//                   }))
-//                 }
-//                 className="w-24 px-3 py-2 border border-gray-300 rounded-lg text-sm"
-//                 min="0"
-//                 step="0.01"
-//               />
-//             </div>
-
-//             {/* Filters */}
-//             <select
-//               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-//               value={priceFilters.sortBy}
-//               onChange={(e) =>
-//                 setPriceFilters((prev) => ({ ...prev, sortBy: e.target.value }))
-//               }
-//             >
-//               <option value="price">Sort by Price</option>
-//               <option value="name">Sort by Name</option>
-//               <option value="discount">Sort by Discount</option>
-//             </select>
-
-//             <select
-//               className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-//               value={priceFilters.sortOrder}
-//               onChange={(e) =>
-//                 setPriceFilters((prev) => ({
-//                   ...prev,
-//                   sortOrder: e.target.value,
-//                 }))
-//               }
-//             >
-//               <option value="asc">Ascending</option>
-//               <option value="desc">Descending</option>
-//             </select>
-
-//             <button
-//               onClick={() =>
-//                 setPriceFilters((prev) => ({
-//                   ...prev,
-//                   showSlashedOnly: !prev.showSlashedOnly,
-//                 }))
-//               }
-//               className={`px-3 py-2 rounded-lg text-sm font-medium ${
-//                 priceFilters.showSlashedOnly
-//                   ? "bg-red-100 text-red-700 border border-red-300"
-//                   : "bg-gray-100 text-gray-700 border border-gray-300"
-//               }`}
-//             >
-//               {priceFilters.showSlashedOnly
-//                 ? "Showing Discounted"
-//                 : "Show Discounted"}
-//             </button>
-
-//             <button
-//               onClick={clearAllFilters}
-//               className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm hover:bg-gray-200"
-//             >
-//               Clear All
-//             </button>
-
-//             {selectedProducts.length > 0 && (
-//               <button
-//                 onClick={() => setShowBulkModal(true)}
-//                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-//               >
-//                 Bulk Update ({selectedProducts.length})
-//               </button>
-//             )}
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Products Table */}
-//       <div className="bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden">
-//         <div className="overflow-x-auto">
-//           <table className="min-w-full divide-y divide-gray-200">
-//             <thead className="bg-gray-50">
-//               <tr>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
-//                   <input
-//                     type="checkbox"
-//                     checked={
-//                       selectedProducts.length === filteredProducts.length &&
-//                       filteredProducts.length > 0
-//                     }
-//                     onChange={toggleSelectAll}
-//                     className="h-4 w-4 rounded border-gray-300"
-//                   />
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Product
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Current Price
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Original Price
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Discount
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Stock Value
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Status
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Actions
-//                 </th>
-//               </tr>
-//             </thead>
-//             <tbody className="bg-white divide-y divide-gray-200">
-//               {loading ? (
-//                 <tr>
-//                   <td colSpan="8" className="px-6 py-12 text-center">
-//                     <div className="flex justify-center">
-//                       <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
-//                     </div>
-//                   </td>
-//                 </tr>
-//               ) : filteredProducts.length === 0 ? (
-//                 <tr>
-//                   <td
-//                     colSpan="8"
-//                     className="px-6 py-12 text-center text-gray-500"
-//                   >
-//                     No products found. Try adjusting your filters.
-//                   </td>
-//                 </tr>
-//               ) : (
-//                 filteredProducts.map((product) => {
-//                   const discount = productDiscount(product);
-//                   const isSelected = selectedProducts.includes(product.id);
-
-//                   return (
-//                     <tr
-//                       key={product.id}
-//                       className={`hover:bg-gray-50 ${
-//                         isSelected ? "bg-blue-50" : ""
-//                       }`}
-//                     >
-//                       <td className="px-6 py-4">
-//                         <input
-//                           type="checkbox"
-//                           checked={isSelected}
-//                           onChange={() => toggleSelectProduct(product.id)}
-//                           className="h-4 w-4 rounded border-gray-300"
-//                         />
-//                       </td>
-//                       <td className="px-6 py-4">
-//                         <div className="flex items-center">
-//                           {product.image && (
-//                             <img
-//                               src={product.image}
-//                               alt={product.name}
-//                               className="h-10 w-10 rounded object-cover mr-3"
-//                             />
-//                           )}
-//                           <div>
-//                             <div className="text-sm font-medium text-gray-900">
-//                               {product.name}
-//                             </div>
-//                             <div className="text-xs text-gray-500">
-//                               {product.category}
-//                             </div>
-//                           </div>
-//                         </div>
-//                       </td>
-//                       <td className="px-6 py-4">
-//                         <div className="text-lg font-bold text-gray-900">
-//                           {formatPrice(product?.price, settings?.currency)}
-//                         </div>
-//                         <div className="text-xs text-gray-500">per unit</div>
-//                       </td>
-//                       <td className="px-6 py-4">
-//                         {product.isPriceSlashed && product.previousPrice ? (
-//                           <>
-//                             <div className="text-sm text-gray-500 line-through">
-//                               {formatPrice(product?.previousPrice, settings?.currency)}
-//                             </div>
-//                             <div className="text-xs text-gray-500">
-//                               Original
-//                             </div>
-//                           </>
-//                         ) : (
-//                           <div className="text-sm text-gray-400">-</div>
-//                         )}
-//                       </td>
-//                       <td className="px-6 py-4">
-//                         {product.isPriceSlashed && discount > 0 ? (
-//                           <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-//                             {discount.toFixed(1)}% OFF
-//                           </div>
-//                         ) : (
-//                           <div className="text-sm text-gray-400">-</div>
-//                         )}
-//                       </td>
-//                       <td className="px-6 py-4">
-//                         <div className="text-sm font-medium text-gray-900">
-//                           {formatPrice(product?.totalValue, settings?.currency )|| 0}
-//                         </div>
-//                         <div className="text-xs text-gray-500">
-//                           {product.totalStock || 0} units
-//                         </div>
-//                       </td>
-//                       <td className="px-6 py-4">
-//                         <StockStatusBadge status={product.status} />
-//                         {product.isPriceSlashed && (
-//                           <div className="mt-1">
-//                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700">
-//                               <Tag className="h-3 w-3 mr-1" />
-//                               Discounted
-//                             </span>
-//                           </div>
-//                         )}
-//                       </td>
-//                       <td className="px-6 py-4">
-//                         <div className="flex items-center gap-2">
-//                           <button
-//                             onClick={() => onPriceAction(product)}
-//                             className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700"
-//                           >
-//                             Manage Price
-//                           </button>
-//                         </div>
-//                       </td>
-//                     </tr>
-//                   );
-//                 })
-//               )}
-//             </tbody>
-//           </table>
-//         </div>
-
-//         {/* Pagination */}
-//         {filteredProducts.length > 0 && (
-//           <div className="flex justify-between items-center p-4 border-t">
-//             <div className="text-sm text-gray-600">
-//               Showing {filteredProducts.length} products
-//             </div>
-//             <div className="flex gap-2">
-//               <button
-//                 onClick={() => onPageChange(pagination.currentPage - 1)}
-//                 disabled={!pagination.hasPrevPage}
-//                 className={`px-3 py-1 rounded text-sm ${
-//                   pagination.hasPrevPage
-//                     ? "bg-gray-200 hover:bg-gray-300"
-//                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
-//                 }`}
-//               >
-//                 Previous
-//               </button>
-//               <span className="px-3 py-1 text-sm text-gray-700">
-//                 Page {pagination.currentPage} of {pagination.totalPages}
-//               </span>
-//               <button
-//                 onClick={() => onPageChange(pagination.currentPage + 1)}
-//                 disabled={!pagination.hasNextPage}
-//                 className={`px-3 py-1 rounded text-sm ${
-//                   pagination.hasNextPage
-//                     ? "bg-gray-200 hover:bg-gray-300"
-//                     : "bg-gray-100 text-gray-400 cursor-not-allowed"
-//                 }`}
-//               >
-//                 Next
-//               </button>
-//             </div>
-//           </div>
-//         )}
-//       </div>
-
-//       {/* Bulk Update Modal */}
-//       {showBulkModal && (
-//         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-scroll no-scroll">
-//           <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
-//             <div className="p-6">
-//               <div className="flex justify-between items-start mb-6">
-//                 <div>
-//                   <h3 className="text-lg font-semibold text-gray-800">
-//                     Bulk Price Update
-//                   </h3>
-//                   <p className="text-sm text-gray-500 mt-1">
-//                     Update prices for {selectedProducts.length} selected
-//                     products
-//                   </p>
-//                 </div>
-//                 <button
-//                   onClick={() => setShowBulkModal(false)}
-//                   className="text-gray-400 hover:text-gray-600"
-//                 >
-//                   <XCircle className="h-5 w-5" />
-//                 </button>
-//               </div>
-
-//               <div className="space-y-4">
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     Action
-//                   </label>
-//                   <div className="grid grid-cols-2 gap-3">
-//                     <button
-//                       onClick={() =>
-//                         setBulkPriceChange((prev) => ({
-//                           ...prev,
-//                           action: "increase",
-//                         }))
-//                       }
-//                       className={`p-3 rounded-lg border flex flex-col items-center gap-2 ${
-//                         bulkPriceChange.action === "increase"
-//                           ? "border-green-500 bg-green-50 text-green-700"
-//                           : "border-gray-300 hover:bg-gray-50"
-//                       }`}
-//                     >
-//                       <TrendingUp className="h-5 w-5" />
-//                       <span className="text-sm font-medium">Increase</span>
-//                     </button>
-//                     <button
-//                       onClick={() =>
-//                         setBulkPriceChange((prev) => ({
-//                           ...prev,
-//                           action: "decrease",
-//                         }))
-//                       }
-//                       className={`p-3 rounded-lg border flex flex-col items-center gap-2 ${
-//                         bulkPriceChange.action === "decrease"
-//                           ? "border-red-500 bg-red-50 text-red-700"
-//                           : "border-gray-300 hover:bg-gray-50"
-//                       }`}
-//                     >
-//                       <TrendingDown className="h-5 w-5" />
-//                       <span className="text-sm font-medium">Decrease</span>
-//                     </button>
-//                   </div>
-//                 </div>
-
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     Type
-//                   </label>
-//                   <div className="grid grid-cols-2 gap-3">
-//                     <button
-//                       onClick={() =>
-//                         setBulkPriceChange((prev) => ({
-//                           ...prev,
-//                           type: "percentage",
-//                         }))
-//                       }
-//                       className={`p-3 rounded-lg border flex flex-col items-center gap-2 ${
-//                         bulkPriceChange.type === "percentage"
-//                           ? "border-blue-500 bg-blue-50 text-blue-700"
-//                           : "border-gray-300 hover:bg-gray-50"
-//                       }`}
-//                     >
-//                       <span className="text-lg">%</span>
-//                       <span className="text-sm font-medium">Percentage</span>
-//                     </button>
-//                     <button
-//                       onClick={() =>
-//                         setBulkPriceChange((prev) => ({
-//                           ...prev,
-//                           type: "amount",
-//                         }))
-//                       }
-//                       className={`p-3 rounded-lg border flex flex-col items-center gap-2 ${
-//                         bulkPriceChange.type === "amount"
-//                           ? "border-blue-500 bg-blue-50 text-blue-700"
-//                           : "border-gray-300 hover:bg-gray-50"
-//                       }`}
-//                     >
-//                       <DollarSign className="h-5 w-5" />
-//                       <span className="text-sm font-medium">Fixed Amount</span>
-//                     </button>
-//                   </div>
-//                 </div>
-
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     Value
-//                   </label>
-//                   <div className="relative">
-//                     {bulkPriceChange.type === "percentage" ? (
-//                       <div className="flex items-center">
-//                         <input
-//                           type="number"
-//                           value={bulkPriceChange.value}
-//                           onChange={(e) =>
-//                             setBulkPriceChange((prev) => ({
-//                               ...prev,
-//                               value: e.target.value,
-//                             }))
-//                           }
-//                           className="w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//                           placeholder="0.00"
-//                           min="0"
-//                           step="0.01"
-//                         />
-//                         <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-//                           %
-//                         </span>
-//                       </div>
-//                     ) : (
-//                       <div className="flex items-center">
-//                         <span className="absolute left-3 text-gray-500">₦</span>
-//                         <input
-//                           type="number"
-//                           value={bulkPriceChange.value}
-//                           onChange={(e) =>
-//                             setBulkPriceChange((prev) => ({
-//                               ...prev,
-//                               value: e.target.value,
-//                             }))
-//                           }
-//                           className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//                           placeholder="0.00"
-//                           min="0"
-//                           step="0.01"
-//                         />
-//                       </div>
-//                     )}
-//                   </div>
-//                   <p className="text-xs text-gray-500 mt-1">
-//                     {bulkPriceChange.action === "increase"
-//                       ? "Increase"
-//                       : "Decrease"}{" "}
-//                     by {bulkPriceChange.value || "0"}{" "}
-//                     {bulkPriceChange.type === "percentage" ? "%" : "₦"}
-//                   </p>
-//                 </div>
-
-//                 <div>
-//                   <label className="block text-sm font-medium text-gray-700 mb-2">
-//                     Reason (Optional)
-//                   </label>
-//                   <input
-//                     type="text"
-//                     value={bulkPriceChange.reason}
-//                     onChange={(e) =>
-//                       setBulkPriceChange((prev) => ({
-//                         ...prev,
-//                         reason: e.target.value,
-//                       }))
-//                     }
-//                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//                     placeholder="e.g., Seasonal sale, Clearance"
-//                   />
-//                 </div>
-
-//                 <div className="bg-gray-50 p-4 rounded-lg">
-//                   <h4 className="text-sm font-medium text-gray-700 mb-2">
-//                     Summary
-//                   </h4>
-//                   <div className="space-y-1 text-sm">
-//                     <div className="flex justify-between">
-//                       <span className="text-gray-600">Products to update:</span>
-//                       <span className="font-medium">
-//                         {selectedProducts.length}
-//                       </span>
-//                     </div>
-//                     <div className="flex justify-between">
-//                       <span className="text-gray-600">Action:</span>
-//                       <span className="font-medium capitalize">
-//                         {bulkPriceChange.action} {bulkPriceChange.type}
-//                       </span>
-//                     </div>
-//                     <div className="flex justify-between">
-//                       <span className="text-gray-600">Value:</span>
-//                       <span className="font-medium">
-//                         {bulkPriceChange.value || "0"}{" "}
-//                         {bulkPriceChange.type === "percentage" ? "%" : "₦"}
-//                       </span>
-//                     </div>
-//                   </div>
-//                 </div>
-//               </div>
-
-//               <div className="flex justify-end gap-3 mt-8 pt-6 border-t">
-//                 <button
-//                   onClick={() => setShowBulkModal(false)}
-//                   className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-//                 >
-//                   Cancel
-//                 </button>
-//                 <button
-//                   onClick={handleBulkPriceChange}
-//                   disabled={
-//                     !bulkPriceChange.value || selectedProducts.length === 0
-//                   }
-//                   className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:bg-blue-300 disabled:cursor-not-allowed"
-//                 >
-//                   Apply to {selectedProducts.length} Products
-//                 </button>
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// // Price Management Modal Component
-// const PriceManagementModal = ({ product, onClose, onUpdate }) => {
-//   const { slashProductPrice, resetProductPrice, updateProductPrice } =
-//     useInventoryStore();
-//   const [newPrice, setNewPrice] = useState("");
-//   const [reason, setReason] = useState("");
-//   const [action, setAction] = useState("update");
-//   const [loading, setLoading] = useState(false);
-//   const {settings} = useStoreSettings()
-
-//   const handleSubmit = async () => {
-//     if (!newPrice && action !== "reset") {
-//       toast.error("Please enter a price");
-//       return;
-//     }
-
-//     setLoading(true);
-//     try {
-//       let result;
-
-//       switch (action) {
-//         case "slash":
-//           result = await slashProductPrice(
-//             product.id,
-//             parseFloat(newPrice),
-//             reason
-//           );
-//           break;
-//         case "reset":
-//           result = await resetProductPrice(product.id, reason);
-//           break;
-//         case "update":
-//         default:
-//           result = await updateProductPrice(
-//             product.id,
-//             parseFloat(newPrice),
-//             reason
-//           );
-//           break;
-//       }
-
-//       toast.success(result.message || "Price updated successfully");
-//       if (onUpdate) {
-//         onUpdate(result.product);
-//       }
-//       onClose();
-      
-//     } catch (error) {
-//       console.error("Price update error:", error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-// const getCurrencySymbol = (currency) => {
-//   switch (currency) {
-//     case "NGN":
-//       return "₦";
-//     case "USD":
-//       return "$";
-//     case "EUR":
-//       return "€";
-//     case "GBP":
-//       return "£";
-//     default:
-//       return currency || "";
+//     await session.endSession();
+//     console.log("🎉 All stale reservations cleared successfully");
+//   } catch (error) {
+//     console.error("❌ Failed to clear reservations:", error);
 //   }
-// };
-//   return (
-//     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-//       <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-//         <div className="p-6">
-//           {/* Header */}
-//           <div className="flex justify-between items-start mb-6">
-//             <div>
-//               <h3 className="text-lg font-semibold text-gray-800">
-//                 Manage Price
-//               </h3>
-//               <p className="text-sm text-gray-500 mt-1">{product.name}</p>
-//             </div>
-//             <button
-//               onClick={onClose}
-//               className="text-gray-400 hover:text-gray-600 p-1"
-//             >
-//               <XCircle className="h-5 w-5" />
-//             </button>
-//           </div>
+// }
 
-//           {/* Current Price Info */}
-//           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-//             <div className="flex justify-between items-center mb-2">
-//               <span className="text-gray-600">Current Price:</span>
-//               <PriceDisplay
-//                 price={product.price}
-//                 previousPrice={product.previousPrice}
-//                 isPriceSlashed={product.isPriceSlashed}
-//                 discountPercentage={product.discountPercentage}
-//               />
-//             </div>
-//             {product.isPriceSlashed && product.previousPrice && (
-//               <div className="flex justify-between items-center text-sm">
-//                 <span className="text-gray-500">Original Price:</span>
-//                 <span className="text-gray-500 line-through">
-//                   {formatPrice(product?.previousPrice, settings?.currency)}
-//                 </span>
-//               </div>
-//             )}
-//           </div>
+// // 5. Run the immediate cleanup once
+// mongoose.connection.on("connected", async () => {
+//   console.log("✅ MongoDB connected - starting reservation cleanup...");
+//   await clearAllReservations();
+// });
 
-//           {/* Action Selection */}
-//           <div className="mb-6">
-//             <label className="block text-sm font-medium text-gray-700 mb-3">
-//               Select Action
-//             </label>
-//             <div className="grid grid-cols-3 gap-3">
-//               {[
-//                 {
-//                   value: "update",
-//                   label: "Update",
-//                   icon: UpdateIcon,
-//                   color: "bg-blue-50 border-blue-200 text-blue-700",
-//                 },
-//                 {
-//                   value: "slash",
-//                   label: "Slash",
-//                   icon: SlashIcon,
-//                   color: "bg-red-50 border-red-200 text-red-700",
-//                   disabled: product.isPriceSlashed,
-//                 },
-//                 {
-//                   value: "reset",
-//                   label: "Reset",
-//                   icon: ResetIcon,
-//                   color: "bg-gray-50 border-gray-200 text-gray-700",
-//                   disabled: !product.isPriceSlashed,
-//                 },
-//               ].map((type) => (
-//                 <button
-//                   key={type.value}
-//                   type="button"
-//                   onClick={() => setAction(type.value)}
-//                   disabled={type.disabled}
-//                   className={`p-4 rounded-lg border flex flex-col items-center gap-2 transition-all ${
-//                     action === type.value
-//                       ? `${type.color} ring-2 ring-offset-1 ring-opacity-30`
-//                       : "border-gray-300 hover:bg-gray-50"
-//                   } ${type.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
-//                 >
-//                   <type.icon className="h-5 w-5" />
-//                   <span className="text-sm font-medium">{type.label}</span>
-//                 </button>
-//               ))}
-//             </div>
-//           </div>
+// mongoose.connection.on("error", (err) => {
+//   console.error("❌ MongoDB connection error:", err);
+// });
 
-//           {/* Price Input (only for update and slash) */}
-//           {action !== "reset" && (
-//             <div className="mb-4">
-//               <label className="block text-sm font-medium text-gray-700 mb-2">
-//                 New Price
-//               </label>
-//               <div className="relative">
-//                 <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-//                   {`${getCurrencySymbol(settings?.currency)}`}
-//                 </span>
-//                 <input
-//                   type="number"
-//                   value={newPrice}
-//                   onChange={(e) => setNewPrice(e.target.value)}
-//                   className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//                   placeholder="0.00"
-//                   min="0"
-//                   step="0.01"
-//                 />
-//               </div>
-//               {action === "slash" &&
-//                 newPrice &&
-//                 parseFloat(newPrice) >= product.price && (
-//                   <p className="text-red-500 text-xs mt-1">
-//                     Slash price must be lower than current price
-//                   </p>
-//                 )}
-//             </div>
-//           )}
+// async function checkCouponEligibility(userId, orderAmount) {
+//   try {
+//     const orderCount = await Order.countDocuments({
+//       user: userId,
+//       paymentStatus: "paid",
+//     });
 
-//           {/* Reason Input */}
-//           <div className="mb-6">
-//             <label className="block text-sm font-medium text-gray-700 mb-2">
-//               Reason {action !== "reset" && "(Optional)"}
-//             </label>
-//             <input
-//               type="text"
-//               value={reason}
-//               onChange={(e) => setReason(e.target.value)}
-//               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//               placeholder="e.g., Sale, Clearance, Promotion"
-//             />
-//           </div>
-
-//           {/* Summary */}
-//           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-//             <h4 className="text-sm font-medium text-gray-700 mb-2">Summary</h4>
-//             <div className="space-y-1 text-sm">
-//               <div className="flex justify-between">
-//                 <span className="text-gray-600">Action:</span>
-//                 <span className="font-medium capitalize">{action}</span>
-//               </div>
-//               {action !== "reset" && newPrice && (
-//                 <div className="flex justify-between">
-//                   <span className="text-gray-600">New Price:</span>
-//                   <span className="font-medium">
-//                     {formatPrice(parseFloat(newPrice), settings?.currency)}
-//                   </span>
-//                 </div>
-//               )}
-//               {action === "reset" && (
-//                 <div className="flex justify-between">
-//                   <span className="text-gray-600">Will reset to:</span>
-//                   <span className="font-medium text-blue-600">
-//                     {formatPrice(product?.previousPrice, settings?.currency)}
-//                   </span>
-//                 </div>
-//               )}
-//             </div>
-//           </div>
-
-//           {/* Actions */}
-//           <div className="flex justify-end gap-3">
-//             <button
-//               onClick={onClose}
-//               className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-//             >
-//               Cancel
-//             </button>
-//             <button
-//               onClick={handleSubmit}
-//               disabled={
-//                 loading ||
-//                 (action !== "reset" && !newPrice) ||
-//                 (action === "slash" &&
-//                   newPrice &&
-//                   parseFloat(newPrice) >= product.price)
-//               }
-//               className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:bg-blue-300 disabled:cursor-not-allowed"
-//             >
-//               {loading ? (
-//                 <div className="flex items-center gap-2">
-//                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-//                   Processing...
-//                 </div>
-//               ) : action === "reset" ? (
-//                 "Reset Price"
-//               ) : (
-//                 "Apply Changes"
-//               )}
-//             </button>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// // Adjust Stock Modal Component
-// const AdjustStockModal = ({ product, data, onChange, onSubmit, onClose }) => {
-//   const [selectedVariant, setSelectedVariant] = useState("main");
-
-//   const options = (product.variants || []).map((variant) => ({
-//     id: variant._id,
-//     label: `${variant.color || "Default"} - ${variant.size || "One Size"}`,
-//     description: `Current stock: ${variant.countInStock || 0}`,
-//     currentStock: variant.countInStock || 0,
-//     variantInfo: variant,
-//   }));
-
-//   useEffect(() => {
-//     if (options.length > 0 && !selectedVariant) {
-//       setSelectedVariant(options[0].id);
-//     }
-//   }, [options, selectedVariant]);
-
-//   const handleSubmit = () => {
-//     if (!selectedVariant) {
-//       toast.error("Please select a variant");
-//       return;
-//     }
-
-//     const submitData = { ...data, variantId: selectedVariant };
-//     onSubmit(submitData);
-//   };
-
-//   const selectedOption = options.find((opt) => opt.id === selectedVariant);
-
-//   if (options.length === 0) {
-//     return (
-//       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-//         <motion.div
-//           initial={{ opacity: 0, scale: 0.9 }}
-//           animate={{ opacity: 1, scale: 1 }}
-//           className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
-//         >
-//           <div className="p-6">
-//             <div className="text-center py-8">
-//               <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-//               <h3 className="text-lg font-semibold text-gray-800 mb-2">
-//                 No Variants Available
-//               </h3>
-//               <p className="text-gray-600">
-//                 This product has no variants to adjust.
-//               </p>
-//             </div>
-//             <div className="flex justify-end">
-//               <button
-//                 onClick={onClose}
-//                 className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-//               >
-//                 Close
-//               </button>
-//             </div>
-//           </div>
-//         </motion.div>
-//       </div>
+//     console.log(
+//       `Checking coupon eligibility for user ${userId}: ${orderCount} orders, ${orderAmount}`
 //     );
-//   }
 
-//   return (
-//     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-//       <motion.div
-//         initial={{ opacity: 0, scale: 0.9 }}
-//         animate={{ opacity: 1, scale: 1 }}
-//         className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
-//       >
-//         <div className="p-6">
-//           {/* Header */}
-//           <div className="flex justify-between items-start mb-6">
-//             <div>
-//               <h3 className="text-lg font-semibold text-gray-800">
-//                 Restock: {product.name}
-//               </h3>
-//               <p className="text-sm text-gray-500 mt-1">
-//                 Select variant to restock
-//               </p>
-//             </div>
-//             <button
-//               onClick={onClose}
-//               className="text-gray-400 hover:text-gray-600 p-1"
-//             >
-//               <XCircle className="h-5 w-5" />
-//             </button>
-//           </div>
+//     const activeCoupon = await Coupon.findOne({
+//       userId: userId,
+//       isActive: true,
+//       expirationDate: { $gt: new Date() },
+//     });
 
-//           <div className="space-y-6">
-//             {/* Selection Options */}
-//             <div className="space-y-3">
-//               <label className="block text-sm font-medium text-gray-700">
-//                 Select what to restock
-//               </label>
-//               <div className="space-y-2">
-//                 {options.map((option) => (
-//                   <div
-//                     key={option.id}
-//                     className={`p-4 border rounded-lg cursor-pointer transition-all ${
-//                       selectedVariant === option.id
-//                         ? "border-blue-500 bg-blue-50 shadow-sm"
-//                         : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
-//                     }`}
-//                     onClick={() => setSelectedVariant(option.id)}
-//                   >
-//                     <div className="flex items-center justify-between">
-//                       <div>
-//                         <div className="font-medium text-gray-900">
-//                           {option.label}
-//                         </div>
-//                         <div className="text-sm text-gray-600 mt-1">
-//                           {option.description}
-//                         </div>
-//                       </div>
-//                       <div className="flex items-center gap-2">
-//                         <div
-//                           className={`px-2 py-1 text-xs font-medium rounded-full ${
-//                             option.currentStock === 0
-//                               ? "bg-red-100 text-red-800"
-//                               : option.currentStock <= 5
-//                               ? "bg-yellow-100 text-yellow-800"
-//                               : "bg-green-100 text-green-800"
-//                           }`}
-//                         >
-//                           {option.currentStock === 0
-//                             ? "OUT"
-//                             : option.currentStock <= 5
-//                             ? "LOW"
-//                             : "OK"}
-//                         </div>
-//                         {selectedVariant === option.id && (
-//                           <div className="w-5 h-5 rounded-full bg-blue-600 flex items-center justify-center">
-//                             <CheckCircle className="h-3 w-3 text-white" />
-//                           </div>
-//                         )}
-//                       </div>
-//                     </div>
-//                   </div>
-//                 ))}
-//               </div>
-//             </div>
+//     if (activeCoupon) {
+//       console.log(
+//         `User ${userId} already has active coupon: ${activeCoupon.code}`
+//       );
+//       return null;
+//     }
 
-//             {/* Adjustment Type */}
-//             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-3">
-//                 Adjustment Type
-//               </label>
-//               <div className="grid grid-cols-3 gap-3">
-//                 {[
-//                   {
-//                     value: "add",
-//                     label: "Add Stock",
-//                     icon: Plus,
-//                     color: "bg-green-50 border-green-200 text-green-700",
-//                   },
-//                   {
-//                     value: "remove",
-//                     label: "Remove",
-//                     icon: Minus,
-//                     color: "bg-red-50 border-red-200 text-red-700",
-//                   },
-//                   {
-//                     value: "set",
-//                     label: "Set Exact",
-//                     icon: RefreshCw,
-//                     color: "bg-blue-50 border-blue-200 text-blue-700",
-//                   },
-//                 ].map((type) => (
-//                   <button
-//                     key={type.value}
-//                     type="button"
-//                     onClick={() =>
-//                       onChange({ ...data, adjustmentType: type.value })
-//                     }
-//                     className={`p-4 rounded-lg border flex flex-col items-center gap-2 transition-all ${
-//                       data.adjustmentType === type.value
-//                         ? `${type.color} ring-2 ring-offset-1 ring-opacity-30`
-//                         : "border-gray-300 hover:bg-gray-50"
-//                     }`}
-//                   >
-//                     <type.icon className="h-5 w-5" />
-//                     <span className="text-sm font-medium">{type.label}</span>
-//                   </button>
-//                 ))}
-//               </div>
-//             </div>
-
-//             {/* Quantity */}
-//             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-2">
-//                 Quantity
-//               </label>
-//               <div className="flex items-center gap-3">
-//                 <input
-//                   type="number"
-//                   min="1"
-//                   value={data.quantity}
-//                   onChange={(e) =>
-//                     onChange({
-//                       ...data,
-//                       quantity: parseInt(e.target.value) || 1,
-//                     })
-//                   }
-//                   className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//                 />
-//                 <div className="text-sm text-gray-500 min-w-[120px]">
-//                   Current: {selectedOption?.currentStock || 0}
-//                 </div>
-//               </div>
-//             </div>
-
-//             {/* Reason */}
-//             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-2">
-//                 Reason
-//               </label>
-//               <select
-//                 value={data.reason}
-//                 onChange={(e) => onChange({ ...data, reason: e.target.value })}
-//                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//               >
-//                 <option value="restock">Restock</option>
-//                 <option value="sale">Sale</option>
-//                 <option value="return">Return</option>
-//                 <option value="damage">Damage/Loss</option>
-//                 <option value="adjustment">Manual Adjustment</option>
-//                 <option value="other">Other</option>
-//               </select>
-//             </div>
-
-//             {/* Notes */}
-//             <div>
-//               <label className="block text-sm font-medium text-gray-700 mb-2">
-//                 Notes (Optional)
-//               </label>
-//               <textarea
-//                 value={data.notes}
-//                 onChange={(e) => onChange({ ...data, notes: e.target.value })}
-//                 rows="2"
-//                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-//                 placeholder="Add any notes about this adjustment..."
-//               />
-//             </div>
-
-//             {/* Summary */}
-//             <div className="bg-gray-50 p-4 rounded-lg">
-//               <h4 className="text-sm font-medium text-gray-700 mb-2">
-//                 Summary
-//               </h4>
-//               <div className="space-y-1 text-sm">
-//                 <div className="flex justify-between">
-//                   <span className="text-gray-600">Selected:</span>
-//                   <span className="font-medium">{selectedOption?.label}</span>
-//                 </div>
-//                 <div className="flex justify-between">
-//                   <span className="text-gray-600">Action:</span>
-//                   <span className="font-medium capitalize">
-//                     {data.adjustmentType} stock
-//                   </span>
-//                 </div>
-//                 <div className="flex justify-between">
-//                   <span className="text-gray-600">Quantity:</span>
-//                   <span className="font-medium">{data.quantity} units</span>
-//                 </div>
-//                 <div className="flex justify-between">
-//                   <span className="text-gray-600">New stock will be:</span>
-//                   <span className="font-medium text-blue-600">
-//                     {data.adjustmentType === "add"
-//                       ? (selectedOption?.currentStock || 0) + data.quantity
-//                       : data.adjustmentType === "remove"
-//                       ? (selectedOption?.currentStock || 0) - data.quantity
-//                       : data.quantity}{" "}
-//                     units
-//                   </span>
-//                 </div>
-//               </div>
-//             </div>
-//           </div>
-
-//           {/* Actions */}
-//           <div className="flex justify-end gap-3 mt-8 pt-6 border-t">
-//             <button
-//               onClick={onClose}
-//               className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-//             >
-//               Cancel
-//             </button>
-//             <button
-//               onClick={handleSubmit}
-//               className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-//             >
-//               Apply Restock
-//             </button>
-//           </div>
-//         </div>
-//       </motion.div>
-//     </div>
-//   );
-// };
-
-// // Dashboard View Component
-// const DashboardView = ({ data, settings }) => (
-//   <div className="space-y-6">
-//     {/* Stats Cards */}
-//     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-//       <StatCard
-//         title="Total Stock Value"
-//         value={`${formatPrice(data?.summary?.totalStockValue, settings?.currency) || "0"}`}
-//         icon={DollarSign}
-//         trend="+12.5%"
-//         color="blue"
-//       />
-//       <StatCard
-//         title="Low Stock"
-//         value={data.summary?.lowStockCount || 0}
-//         icon={AlertTriangle}
-//         trend="+3"
-//         color="yellow"
-//       />
-//       <StatCard
-//         title="Total Products"
-//         value={data.summary?.totalProducts || 0}
-//         icon={Layers}
-//         trend="+5"
-//         color="green"
-//       />
-//     </div>
-
-//     {/* Fast Moving / Top Selling Products */}
-//     <div className="bg-white rounded-xl shadow-sm  p-6">
-//       <div className="flex items-center justify-between mb-6">
-//         <div>
-//           <h3 className="text-lg font-semibold text-gray-800">
-//             {data.summary?.hasOrderData
-//               ? "Top Selling Products (Last 30 Days)"
-//               : "Fast Moving Products"}
-//           </h3>
-//           <p className="text-gray-600 mt-1">
-//             {data.summary?.hasOrderData
-//               ? "Based on actual delivered orders"
-//               : "Based on current stock levels"}
-//           </p>
-//         </div>
-//         <div className="flex items-center gap-2">
-//           <Calendar className="h-4 w-4 text-gray-400" />
-//           <span className="text-sm text-gray-500">Last 30 days</span>
-//         </div>
-//       </div>
-
-//       {data.fastMovingProducts && data.fastMovingProducts.length > 0 ? (
-//         <div className="space-y-4">
-//           {data.fastMovingProducts.map((product, index) => (
-//             <div
-//               key={product.id}
-//               className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg  border border-gray-100"
-//             >
-//               <div className="flex items-center gap-4">
-//                 <div
-//                   className={`w-8 h-8 rounded-full flex items-center justify-center ${
-//                     index === 0
-//                       ? "bg-yellow-100 text-yellow-800 border-2 border-yellow-300"
-//                       : index === 1
-//                       ? "bg-gray-100 text-gray-800 border-2 border-gray-300"
-//                       : index === 2
-//                       ? "bg-orange-100 text-orange-800 border-2 border-orange-300"
-//                       : "bg-blue-100 text-blue-800 border-2 border-blue-300"
-//                   }`}
-//                 >
-//                   <span className="font-bold text-sm">#{index + 1}</span>
-//                 </div>
-
-//                 <div className="relative">
-//                   {product.image ? (
-//                     <img
-//                       src={product.image}
-//                       alt={product.name}
-//                       className="h-12 w-12 rounded-lg object-cover border"
-//                     />
-//                   ) : (
-//                     <div className="h-12 w-12 rounded-lg bg-gray-100 border flex items-center justify-center">
-//                       <Package className="h-6 w-6 text-gray-400" />
-//                     </div>
-//                   )}
-//                 </div>
-
-//                 <div>
-//                   <p className="font-medium text-gray-900">{product.name}</p>
-//                   <div className="flex items-center gap-3 mt-1">
-//                     {product.category && (
-//                       <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-//                         {product.category}
-//                       </span>
-//                     )}
-//                     <div className="flex items-center gap-2">
-//                       <div className="flex items-center gap-1">
-//                         <ShoppingBag className="h-3 w-3 text-green-600" />
-//                         <span className="text-sm font-medium text-green-700">
-//                           {product.totalQuantitySold ||
-//                             product.currentStock ||
-//                             0}{" "}
-//                           {product.source === "orders" ? "sold" : "in stock"}
-//                         </span>
-//                       </div>
-//                       {product.orderCount > 0 && (
-//                         <>
-//                           <span className="text-xs text-gray-400">•</span>
-//                           <span className="text-xs text-gray-500">
-//                             {product.orderCount} orders
-//                           </span>
-//                         </>
-//                       )}
-//                     </div>
-//                   </div>
-//                 </div>
-//               </div>
-
-//               <div className="text-right">
-//                 <p className="font-bold text-gray-900 text-lg">
-//                   {formatPrice(product?.value, settings?.currency)}
-//                 </p>
-//                 <p className="text-sm text-gray-500">
-//                   {product.source === "orders" ? "Revenue" : "Stock Value"}
-//                 </p>
-
-//                 {product.price > 0 && (
-//                   <p className="text-xs text-gray-500 mt-1">
-//                     {formatPrice(product?.price, settings?.currency)} each
-//                   </p>
-//                 )}
-//               </div>
-//             </div>
-//           ))}
-//         </div>
-//       ) : (
-//         <div className="text-center py-12">
-//           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-4">
-//             <ShoppingBag className="h-8 w-8 text-blue-400" />
-//           </div>
-//           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-//             No Sales Data Available
-//           </h3>
-//           <p className="text-gray-600 max-w-md mx-auto">
-//             Top selling products will appear here once orders are delivered and
-//             processed.
-//           </p>
-//         </div>
-//       )}
-//     </div>
-
-//     {/* Alerts Summary */}
-//     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-//       <div className="bg-white rounded-xl shadow-sm p-6">
-//         <div className="flex items-center justify-between mb-4">
-//           <h3 className="text-lg font-semibold text-gray-800">
-//             Low Stock Alerts
-//           </h3>
-//           <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full">
-//             {data.alerts?.lowStock?.length || 0} items
-//           </span>
-//         </div>
-//         <div className="space-y-3">
-//           {data.alerts?.lowStock?.slice(0, 5).map((product) => (
-//             <div
-//               key={product.id}
-//               className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg"
-//             >
-//               <div className="flex items-center gap-3">
-//                 {product.image && (
-//                   <img
-//                     src={product.image}
-//                     alt={product.name}
-//                     className="w-10 h-10 rounded object-cover"
-//                   />
-//                 )}
-//                 <div>
-//                   <p className="font-medium text-gray-800">{product.name}</p>
-//                   <p className="text-sm text-gray-500">{product.category}</p>
-//                 </div>
-//               </div>
-//               <div className="text-right">
-//                 <p className="font-bold text-yellow-700">
-//                   {product.currentStock} left
-//                 </p>
-//                 <p className="text-xs text-gray-500">
-//                   Threshold: {product.threshold}
-//                 </p>
-//               </div>
-//             </div>
-//           ))}
-//         </div>
-//       </div>
-
-//       <div className="bg-white rounded-xl shadow-sm  p-6">
-//         <div className="flex items-center justify-between mb-4">
-//           <h3 className="text-lg font-semibold text-gray-800">Out of Stock</h3>
-//           <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
-//             {data.alerts?.outOfStock?.length || 0} items
-//           </span>
-//         </div>
-//         <div className="space-y-3">
-//           {data.alerts?.outOfStock?.slice(0, 5).map((product) => (
-//             <div
-//               key={product.id}
-//               className="flex items-center justify-between p-3 bg-red-50 rounded-lg"
-//             >
-//               <div className="flex items-center gap-3">
-//                 {product.image && (
-//                   <img
-//                     src={product.image}
-//                     alt={product.name}
-//                     className="w-10 h-10 rounded object-cover"
-//                   />
-//                 )}
-//                 <div>
-//                   <p className="font-medium text-gray-800">{product.name}</p>
-//                   <p className="text-sm text-gray-500">{product.category}</p>
-//                 </div>
-//               </div>
-//               <div className="text-right">
-//                 <span className="px-2 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full">
-//                   OUT OF STOCK
-//                 </span>
-//               </div>
-//             </div>
-//           ))}
-//         </div>
-//       </div>
-//     </div>
-//   </div>
-// );
-
-
-
-// // Low Stock View Component
-// const LowStockView = ({ alerts, onAdjust }) => {
-//   const groupedAlerts = alerts.reduce((groups, alert) => {
-//     const productId = alert.productId || alert.id.split("-")[0];
-//     if (!groups[productId]) {
-//       groups[productId] = {
-//         productId,
-//         name: alert.name,
-//         image: alert.image,
-//         category: alert.category,
-//         price: alert.price,
-//         alerts: [],
+//     if (orderCount === 1) {
+//       console.log(`User ${userId} eligible for FIRST ORDER coupon`);
+//       return {
+//         discountPercentage: 10,
+//         codePrefix: "WELCOME",
+//         reason: "first_order",
+//         emailType: "welcome_coupon",
+//       };
+//     } else if (orderCount === 3) {
+//       console.log(`User ${userId} eligible for THIRD ORDER coupon`);
+//       return {
+//         discountPercentage: 15,
+//         codePrefix: "LOYAL",
+//         reason: "third_order_milestone",
+//         emailType: "loyalty_coupon",
+//       };
+//     } else if (orderCount >= 5 && orderCount % 5 === 0) {
+//       console.log(
+//         `User ${userId} eligible for VIP coupon (${orderCount} orders)`
+//       );
+//       return {
+//         discountPercentage: 20,
+//         codePrefix: "VIP",
+//         reason: "every_five_orders",
+//         emailType: "vip_coupon",
+//       };
+//     } else if (orderAmount > 175000) {
+//       console.log(
+//         `User ${userId} eligible for BIG SPENDER coupon (${orderAmount})`
+//       );
+//       return {
+//         discountPercentage: 15,
+//         codePrefix: "BIGSPEND",
+//         reason: "high_value_order",
+//         emailType: "bigspender_coupon",
 //       };
 //     }
-//     groups[productId].alerts.push(alert);
-//     return groups;
-//   }, {});
 
-//   const calculateProductUrgency = (alerts) => {
-//     if (alerts.some((a) => a.status === "out")) return "critical";
-//     if (alerts.some((a) => a.currentStock <= 2)) return "high";
-//     if (alerts.some((a) => a.status === "low")) return "medium";
-//     return "low";
+//     console.log(
+//       `User ${userId} not eligible for coupon (${orderCount} orders, ${orderAmount})`
+//     );
+//     return null;
+//   } catch (error) {
+//     console.error("Error checking coupon eligibility:", error);
+//     return null;
+//   }
+// }
+
+// async function createNewCoupon(userId, options = {}) {
+//   const {
+//     discountPercentage = 10,
+//     daysValid = 30,
+//     couponType = "GIFT",
+//     reason = "general",
+//   } = options;
+
+//   try {
+//     console.log(`Starting coupon creation for user ${userId}...`);
+
+//     const newCode =
+//       couponType + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+//     console.log(`Generated coupon code: ${newCode}`);
+
+//     const coupon = await Coupon.findOneAndUpdate(
+//       { userId: userId },
+//       {
+//         code: newCode,
+//         discountPercentage,
+//         expirationDate: new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000),
+//         isActive: true,
+//         couponReason: reason,
+//         deactivatedAt: null,
+//         deactivationReason: null,
+//         usedAt: null,
+//         usedInOrder: null,
+//       },
+//       {
+//         upsert: true,
+//         new: true,
+//         runValidators: true,
+//         setDefaultsOnInsert: true,
+//       }
+//     );
+
+//     console.log(
+//       `Successfully ${coupon.isNew ? "CREATED" : "UPDATED"} coupon: ${
+//         coupon.code
+//       } for user ${userId}`
+//     );
+//     return coupon;
+//   } catch (error) {
+//     console.error("Failed to create/update coupon:", error);
+//     return null;
+//   }
+// }
+
+// function generateOrderNumber() {
+//   return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+// }
+
+// function createPaymentMethodData(flutterwaveData) {
+//   const paymentType = flutterwaveData.payment_type || "card";
+
+//   return {
+//     method: paymentType,
+//     status: "PAID",
+//     card: {
+//       brand: flutterwaveData.card?.brand || "Unknown",
+//       last4: flutterwaveData.card?.last_4digits || null,
+//       exp_month: flutterwaveData.card?.exp_month || null,
+//       exp_year: flutterwaveData.card?.exp_year || null,
+//       type: flutterwaveData.card?.type || null,
+//       issuer: flutterwaveData.card?.issuer || null,
+//     },
 //   };
+// }
 
-//   const getUrgencyColor = (urgency) => {
-//     const colors = {
-//       critical: "bg-gradient-to-r from-red-500 to-red-600",
-//       high: "bg-gradient-to-r from-orange-500 to-orange-600",
-//       medium: "bg-gradient-to-r from-yellow-500 to-yellow-600",
-//       low: "bg-gradient-to-r from-blue-500 to-blue-600",
-//     };
-//     return colors[urgency] || colors.medium;
-//   };
+// async function processOrderCreation(transactionData) {
+//   const {
+//     transaction_id,
+//     tx_ref,
+//     data,
+//     meta,
+//     userId,
+//     parsedProducts,
+//     couponCode,
+//     reservationId,
+//   } = transactionData;
 
-//   const sortedProducts = Object.values(groupedAlerts).sort((a, b) => {
-//     const urgencyA = calculateProductUrgency(a.alerts);
-//     const urgencyB = calculateProductUrgency(b.alerts);
-//     const urgencyOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-//     return urgencyOrder[urgencyA] - urgencyOrder[urgencyB];
+//   console.log(` STARTING order processing for: ${tx_ref}`);
+
+//   // 1. IMMEDIATE DUPLICATE CHECK
+//   const existingOrder = await Order.findOne({
+//     $or: [
+//       { flutterwaveTransactionId: transaction_id },
+//       { flutterwaveRef: tx_ref },
+//     ],
 //   });
 
-//   return (
-//     <div className="p-6">
-//       {/* Header */}
-//       <div className="mb-8">
-//         <div className="flex items-center justify-between">
-//           <div>
-//             <h1 className="text-3xl font-bold text-gray-900">
-//               Stock Alert Dashboard
-//             </h1>
+//   if (existingOrder) {
+//     console.log(` ORDER ALREADY EXISTS: ${existingOrder.orderNumber}`);
+//     return { order: existingOrder, isNew: false };
+//   }
 
-//           </div>
-//           <div className="flex items-center space-x-4">
-//             <div className="text-right">
-//               <p className="text-sm text-gray-500">Priority Items</p>
-//               <p className="text-2xl font-bold text-red-600">
-//                 {
-//                   alerts.filter(
-//                     (a) => a.status === "out" || a.currentStock <= 2
-//                   ).length
-//                 }
-//               </p>
-//             </div>
-//             <div className="h-8 w-px bg-gray-300"></div>
-//             <div className="text-right">
-//               <p className="text-sm text-gray-500">Total Alerts</p>
-//               <p className="text-2xl font-bold text-gray-900">
-//                 {alerts.length}
-//               </p>
-//             </div>
-//           </div>
-//         </div>
-//       </div>
+//   // 2. CREATE ORDER (inventory already reserved)
+//   try {
+//     console.log(` CREATING NEW ORDER for user: ${userId}`);
 
-//       {/* Filter Tabs */}
-//       <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
-//         <button className="px-4 py-2 rounded-full bg-red-100 text-red-700 font-medium text-sm">
-//           Out of Stock ({alerts.filter((a) => a.status === "out").length})
-//         </button>
-//         <button className="px-4 py-2 rounded-full bg-orange-100 text-orange-700 font-medium text-sm">
-//           Critical ({alerts.filter((a) => a.currentStock <= 2).length})
-//         </button>
-//         <button className="px-4 py-2 rounded-full bg-yellow-100 text-yellow-700 font-medium text-sm">
-//           Low Stock (
-//           {
-//             alerts.filter((a) => a.status === "low" && a.currentStock > 2)
-//               .length
-//           }
-//           )
-//         </button>
-//         <button className="px-4 py-2 rounded-full bg-blue-100 text-blue-700 font-medium text-sm">
-//           All Products ({Object.keys(groupedAlerts).length})
-//         </button>
-//       </div>
+//     const user = await User.findById(userId);
+//     if (!user) throw new Error("User not found");
 
-//       {/* Product Cards Grid */}
-//       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-//         {sortedProducts.map((group) => {
-//           const urgency = calculateProductUrgency(group.alerts);
-//           const outOfStockVariants = group.alerts.filter(
-//             (a) => a.status === "out"
-//           );
-//           const lowStockVariants = group.alerts.filter(
-//             (a) => a.status === "low" && a.currentStock > 0
-//           );
-
-//           return (
-//             <div
-//               key={group.productId}
-//               className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200 flex flex-col justify-between p-5"
-//             >
-//               {/* Urgency Indicator */}
-//               <div
-//                 className={`h-2 rounded-b-full mb-2 ${getUrgencyColor(
-//                   urgency
-//                 )}`}
-//               ></div>
-
-//               {/* Product Header */}
-//               <div className="flex items-start justify-between mb-4">
-//                 <div className="flex items-start space-x-4">
-//                   <div className="relative">
-//                     {group.image ? (
-//                       <img
-//                         src={group.image}
-//                         alt={group.name}
-//                         className="h-16 w-16 rounded-xl object-cover border"
-//                       />
-//                     ) : (
-//                       <div className="h-16 w-16 rounded-xl bg-gray-100 flex items-center justify-center">
-//                         <Package className="h-8 w-8 text-gray-400" />
-//                       </div>
-//                     )}
-//                     {urgency === "critical" && (
-//                       <div className="absolute -top-1 -right-1">
-//                         <AlertCircle className="h-5 w-5 text-red-500 fill-red-100" />
-//                       </div>
-//                     )}
-//                   </div>
-//                   <div>
-//                     <h3 className="font-semibold text-gray-900 line-clamp-1">
-//                       {group.name}
-//                     </h3>
-//                     <p className="text-sm text-gray-500 mt-1">
-//                       {group.category}
-//                     </p>
-//                     <div className="flex items-center mt-2">
-//                       <div
-//                         className={`px-2 py-1 rounded-full text-xs font-medium ${
-//                           urgency === "critical"
-//                             ? "bg-red-100 text-red-700"
-//                             : urgency === "high"
-//                             ? "bg-orange-100 text-orange-700"
-//                             : "bg-yellow-100 text-yellow-700"
-//                         }`}
-//                       >
-//                         {urgency === "critical"
-//                           ? "Out of Stock"
-//                           : urgency === "high"
-//                           ? "Critical"
-//                           : "Low Stock"}
-//                       </div>
-//                       <span className="text-xs text-gray-400 mx-2">•</span>
-//                       <span className="text-xs text-gray-500">
-//                         {group.alerts.length} variant
-//                         {group.alerts.length !== 1 ? "s" : ""}
-//                       </span>
-//                     </div>
-//                   </div>
-//                 </div>
-//               </div>
-
-//               {/* Stock Status Visualization */}
-//               <div className="mb-6">
-//                 <div className="flex justify-between items-center mb-2">
-//                   <span className="text-sm font-medium text-gray-700">
-//                     Stock Levels
-//                   </span>
-//                   <span className="text-xs text-gray-500">
-//                     {outOfStockVariants.length} out, {lowStockVariants.length}{" "}
-//                     low
-//                   </span>
-//                 </div>
-
-//                 <div className="space-y-2">
-//                   {group.alerts.map((alert, index) => (
-//                     <div
-//                       key={index}
-//                       className="flex items-center justify-between"
-//                     >
-//                       <div className="flex items-center">
-//                         <div
-//                           className={`w-3 h-3 rounded-full mr-3 ${
-//                             alert.status === "out"
-//                               ? "bg-red-500"
-//                               : alert.currentStock <= 2
-//                               ? "bg-orange-500"
-//                               : "bg-yellow-500"
-//                           }`}
-//                         ></div>
-//                         <span className="text-sm text-gray-700">
-//                           {alert.variantName ||
-//                             (alert.variantInfo
-//                               ? `${alert.variantInfo.color || ""} - ${
-//                                   alert.variantInfo.size || ""
-//                                 }`
-//                               : "Variant")}
-//                         </span>
-//                       </div>
-//                       <div className="flex items-center space-x-2">
-//                         {alert.status === "out" ? (
-//                           <span className="text-xs font-medium text-red-600">
-//                             OUT
-//                           </span>
-//                         ) : (
-//                           <div className="flex items-center">
-//                             <div className="relative w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
-//                               <div
-//                                 className={`absolute h-full ${
-//                                   alert.currentStock <= 2
-//                                     ? "bg-orange-500"
-//                                     : "bg-yellow-500"
-//                                 }`}
-//                                 style={{
-//                                   width: `${Math.min(
-//                                     100,
-//                                     (alert.currentStock / 10) * 100
-//                                   )}%`,
-//                                 }}
-//                               ></div>
-//                             </div>
-//                             <span className="text-xs font-medium text-gray-700 ml-2 min-w-[2rem]">
-//                               {alert.currentStock}
-//                             </span>
-//                           </div>
-//                         )}
-//                       </div>
-//                     </div>
-//                   ))}
-//                 </div>
-//               </div>
-
-//               {/* Action Button */}
-//               <div>
-//                 <button
-//                   onClick={() =>
-//                     onAdjust({
-//                       id: group.productId,
-//                       name: group.name,
-//                       image: group.image,
-//                       category: group.category,
-//                       price: group.price,
-//                       variants: group.alerts.map((a) => ({
-//                         _id: a.variantId,
-//                         color: a.variantInfo?.color,
-//                         size: a.variantInfo?.size,
-//                         countInStock: a.currentStock,
-//                         sku: a.variantInfo?.sku,
-//                       })),
-//                     })
-//                   }
-//                   className="w-full py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-medium transition-all duration-200 flex items-center justify-center"
-//                 >
-//                   <Plus className="h-5 w-5 mr-2" />
-//                   Restock Product
-//                 </button>
-//               </div>
-//             </div>
-//           );
-//         })}
-//       </div>
-
-//       {/* Empty State */}
-//       {sortedProducts.length === 0 && (
-//         <div className="text-center py-16">
-//           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-//             <CheckCircle className="h-8 w-8 text-green-600" />
-//           </div>
-//           <h3 className="text-xl font-semibold text-gray-900 mb-2">
-//             All Stock Levels Are Healthy!
-//           </h3>
-//           <p className="text-gray-600 max-w-md mx-auto">
-//             No products are currently low on stock. You're doing great!
-//           </p>
-//         </div>
-//       )}
-
-//       {/* Stats Footer */}
-//       <div className="mt-8 pt-6 border-t border-gray-200">
-//         <div className="flex flex-wrap justify-center gap-6 text-center">
-//           <div>
-//             <div className="text-2xl font-bold text-gray-900">
-//               {alerts.length}
-//             </div>
-//             <div className="text-sm text-gray-600">Total Alerts</div>
-//           </div>
-//           <div>
-//             <div className="text-2xl font-bold text-red-600">
-//               {alerts.filter((a) => a.status === "out").length}
-//             </div>
-//             <div className="text-sm text-gray-600">Out of Stock</div>
-//           </div>
-//           <div>
-//             <div className="text-2xl font-bold text-orange-600">
-//               {alerts.filter((a) => a.currentStock <= 2).length}
-//             </div>
-//             <div className="text-sm text-gray-600">Critical Items</div>
-//           </div>
-//           <div>
-//             <div className="text-2xl font-bold text-blue-600">
-//               {Object.keys(groupedAlerts).length}
-//             </div>
-//             <div className="text-sm text-gray-600">Affected Products</div>
-//           </div>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// // Aging Report View Component
-// const AgingReportView = ({ data }) => {
-//   const [expandedBuckets, setExpandedBuckets] = useState({});
-
-//   if (!data) return null;
-
-//   const getBucketColor = (bucketLabel) => {
-//     if (bucketLabel.includes("Fresh"))
-//       return "bg-gradient-to-r from-green-500 to-green-600";
-//     if (bucketLabel.includes("Aging"))
-//       return "bg-gradient-to-r from-yellow-500 to-yellow-600";
-//     if (bucketLabel.includes("Stale"))
-//       return "bg-gradient-to-r from-orange-500 to-orange-600";
-//     return "bg-gradient-to-r from-red-500 to-red-600";
-//   };
-
-//   const handleToggleExpand = (bucketId) => {
-//     setExpandedBuckets((prev) => ({
-//       ...prev,
-//       [bucketId]: !prev[bucketId],
+//     const products = parsedProducts.map((p) => ({
+//       product: p._id,
+//       name: p.name || "Unknown Product",
+//       image: (p.images && p.images[0]) || "/placeholder.png",
+//       quantity: p.quantity || 1,
+//       price: p.price || 0,
+//       selectedSize: p.size || "",
+//       selectedColor: p.color || "",
+//       selectedCategory: p.category || "",
 //     }));
-//   };
 
-//   const {settings} = useStoreSettings()
+//     const order = new Order({
+//       user: user._id,
+//       products,
+//       subtotal: Number(meta.originalTotal) || Number(data.amount) || 0,
+//       discount: Number(meta.discountAmount) || 0,
+//       deliveryFee: Number(meta.deliveryFee) || 0, 
+//       deliveryZone: meta.deliveryZone || "Same City",
+//       totalAmount: Number(meta.finalTotal) || Number(data.amount) || 0,
+//       orderNumber: generateOrderNumber(),
+//       couponCode: couponCode || null,
+//       deliveryAddress: meta.deliveryAddress || "No address provided",
+//       phone: meta.phoneNumber || "No phone provided",
+//       flutterwaveRef: tx_ref,
+//       flutterwaveTransactionId: transaction_id,
+//       paymentStatus: "paid",
+//       status: "Pending",
+//       paymentMethod: createPaymentMethodData(data),
+//       isProcessed: false,
+//     });
 
-//   return (
-//     <div className="space-y-6">
-//       {/* Summary Cards */}
-//       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-//         <div className="bg-white rounded-xl shadow-sm  p-6">
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <p className="text-sm text-gray-600">Aging Score</p>
-//               <div className="flex items-center gap-2 mt-1">
-//                 <div className="text-2xl font-bold text-gray-900">
-//                   {data.summary?.agingScore || 0}/5
-//                 </div>
-//                 <div
-//                   className={`w-3 h-3 rounded-full ${
-//                     data.summary?.agingScore <= 2
-//                       ? "bg-green-500"
-//                       : data.summary?.agingScore <= 3
-//                       ? "bg-yellow-500"
-//                       : "bg-red-500"
-//                   }`}
-//                 ></div>
-//               </div>
-//             </div>
-//             <TrendingDown className="h-8 w-8 text-gray-300" />
-//           </div>
-//           <p className="text-xs text-gray-500 mt-2">
-//             {data.summary?.agingScore <= 2
-//               ? "Excellent turnover"
-//               : data.summary?.agingScore <= 3
-//               ? "Good turnover"
-//               : "Needs attention"}
-//           </p>
-//         </div>
+//     await order.save();
+//     console.log(` SUCCESS: Created order ${order.orderNumber}`);
 
-//         <div className="bg-white rounded-xl shadow-sm p-6">
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <p className="text-sm text-gray-600">Fresh Stock</p>
-//               <p className="text-2xl font-bold text-green-600 mt-1">
-//                 {data.summary?.freshPercentage || 0}%
-//               </p>
-//             </div>
-//             <Package className="h-8 w-8 text-green-300" />
-//           </div>
-//           <p className="text-xs text-gray-500 mt-2">Last 30 days</p>
-//         </div>
-
-//         <div className="bg-white rounded-xl shadow-sm p-6">
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <p className="text-sm text-gray-600">Stale Stock</p>
-//               <p className="text-2xl font-bold text-orange-600 mt-1">
-//                 {data.summary?.stalePercentage || 0}%
-//               </p>
-//             </div>
-//             <AlertTriangle className="h-8 w-8 text-orange-300" />
-//           </div>
-//           <p className="text-xs text-gray-500 mt-2">Over 90 days</p>
-//         </div>
-
-//         <div className="bg-white rounded-xl shadow-sm  p-6">
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <p className="text-sm text-gray-600">Total Items</p>
-//               <p className="text-2xl font-bold text-gray-900 mt-1">
-//                 {data.summary?.totalItems?.toLocaleString() || 0}
-//               </p>
-//             </div>
-//             <Layers className="h-8 w-8 text-blue-300" />
-//           </div>
-//           <p className="text-xs text-gray-500 mt-2">All stock units</p>
-//         </div>
-//       </div>
-
-//       {/* Aging Buckets Visualization */}
-//       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 md:p-8">
-//         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-//           <div>
-//             <h3 className="text-xl md:text-2xl font-bold text-gray-900">
-//               Inventory Age Distribution
-//             </h3>
-//             <p className="text-gray-600 mt-2 max-w-2xl">
-//               Visual breakdown of inventory based on how long items have been in
-//               stock
-//             </p>
-//           </div>
-//           <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
-//             <Calendar className="h-4 w-4 text-blue-600" />
-//             <span className="text-sm font-medium text-blue-700">
-//               As of {new Date().toLocaleDateString()}
-//             </span>
-//           </div>
-//         </div>
-
-//         {/* Summary Cards */}
-//         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-//           <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4">
-//             <div className="flex items-center justify-between">
-//               <div>
-//                 <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">
-//                   Fresh Stock
-//                 </p>
-//                 <p className="text-2xl font-bold text-gray-900 mt-1">
-//                   {data.agingBuckets?.find((b) => b.label.includes("Fresh"))
-//                     ?.totalItems || 0}
-//                 </p>
-//                 <p className="text-sm text-blue-600 mt-1">Last 30 days</p>
-//               </div>
-//               <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
-//                 <Package className="h-5 w-5 text-blue-600" />
-//               </div>
-//             </div>
-//           </div>
-
-//           <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl p-4">
-//             <div className="flex items-center justify-between">
-//               <div>
-//                 <p className="text-xs font-medium text-yellow-700 uppercase tracking-wide">
-//                   Aging Stock
-//                 </p>
-//                 <p className="text-2xl font-bold text-gray-900 mt-1">
-//                   {data.agingBuckets?.find((b) => b.label.includes("Aging"))
-//                     ?.totalItems || 0}
-//                 </p>
-//                 <p className="text-sm text-yellow-600 mt-1">31-90 days</p>
-//               </div>
-//               <div className="w-10 h-10 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-//                 <Clock className="h-5 w-5 text-yellow-600" />
-//               </div>
-//             </div>
-//           </div>
-
-//           <div className="bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200 rounded-xl p-4">
-//             <div className="flex items-center justify-between">
-//               <div>
-//                 <p className="text-xs font-medium text-orange-700 uppercase tracking-wide">
-//                   Stale Stock
-//                 </p>
-//                 <p className="text-2xl font-bold text-gray-900 mt-1">
-//                   {data.agingBuckets?.find((b) => b.label.includes("Stale"))
-//                     ?.totalItems || 0}
-//                 </p>
-//                 <p className="text-sm text-orange-600 mt-1">91-180 days</p>
-//               </div>
-//               <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
-//                 <AlertTriangle className="h-5 w-5 text-orange-600" />
-//               </div>
-//             </div>
-//           </div>
-
-//           <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-xl p-4">
-//             <div className="flex items-center justify-between">
-//               <div>
-//                 <p className="text-xs font-medium text-red-700 uppercase tracking-wide">
-//                   Old Stock
-//                 </p>
-//                 <p className="text-2xl font-bold text-gray-900 mt-1">
-//                   {data.agingBuckets?.find((b) => b.label.includes("Old"))
-//                     ?.totalItems || 0}
-//                 </p>
-//                 <p className="text-sm text-red-600 mt-1">180+ days</p>
-//               </div>
-//               <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
-//                 <AlertCircle className="h-5 w-5 text-red-600" />
-//               </div>
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* Main Visualization */}
-//         <div className="space-y-6 md:space-y-8">
-//           {data.agingBuckets?.map((bucket, index) => {
-//             const percentage = Math.round(
-//               (bucket.totalValue / data.summary.totalValue) * 100
-//             );
-//             const bucketColor = getBucketColor(bucket.label);
-//             const bucketId = `bucket-${index}`;
-//             const isExpanded = expandedBuckets[bucketId];
-
-//             return (
-//               <div
-//                 key={index}
-//                 className="group hover:bg-gray-50 transition-all duration-200 p-4 rounded-xl border border-gray-200"
-//               >
-//                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
-//                   <div className="flex items-center gap-4">
-//                     <div
-//                       className={`w-12 h-12 rounded-xl ${
-//                         bucketColor.includes("gradient")
-//                           ? "bg-gradient-to-br from-green-500/20 to-green-600/20"
-//                           : `${bucketColor} bg-opacity-20`
-//                       } flex items-center justify-center`}
-//                     >
-//                       <div
-//                         className={`w-6 h-6 rounded-full ${bucketColor}`}
-//                       ></div>
-//                     </div>
-//                     <div>
-//                       <h4 className="font-bold text-gray-900 text-lg">
-//                         {bucket.label}
-//                       </h4>
-//                       <p className="text-gray-600 text-sm mt-1">
-//                         {bucket.totalItems} units • {" "} 
-//                         {formatPrice(bucket?.totalValue, settings?.currency)} value
-//                       </p>
-//                     </div>
-//                   </div>
-
-//                   <div className="text-right">
-//                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full">
-//                       <div className="text-2xl font-bold text-gray-900">
-//                         {percentage}%
-//                       </div>
-//                       <div className="text-sm text-gray-600">
-//                         of total value
-//                       </div>
-//                     </div>
-//                   </div>
-//                 </div>
-
-//                 {/* Progress Bar */}
-//                 <div className="relative mb-6">
-//                   <div className="flex justify-between text-sm text-gray-600 mb-2">
-//                     <span>0%</span>
-//                     <span className="font-medium">{percentage}%</span>
-//                     <span>100%</span>
-//                   </div>
-//                   <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-//                     <div
-//                       className={`h-full rounded-full transition-all duration-500 ${bucketColor}`}
-//                       style={{ width: `${percentage}%` }}
-//                     >
-//                       <div className="h-full w-full rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-pulse"></div>
-//                     </div>
-//                   </div>
-//                 </div>
-
-//                 {/* Sample Items with Expand/Collapse */}
-//                 {bucket.products.length > 0 && (
-//                   <div className="mt-6 pt-6 border-t border-gray-200">
-//                     <div className="flex items-center justify-between mb-4">
-//                       <h5 className="font-medium text-gray-700 flex items-center gap-2">
-//                         <Eye className="h-4 w-4" />
-//                         {isExpanded ? "All Items" : "Top Items"} in this
-//                         Category
-//                       </h5>
-//                       <span className="text-xs text-gray-500">
-//                         {isExpanded
-//                           ? `${bucket.products.length} items`
-//                           : `Showing ${Math.min(
-//                               bucket.products.length,
-//                               3
-//                             )} of ${bucket.products.length}`}
-//                       </span>
-//                     </div>
-
-//                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-//                       {(isExpanded
-//                         ? bucket.products
-//                         : bucket.products.slice(0, 3)
-//                       ).map((item, idx) => (
-//                         <div
-//                           key={idx}
-//                           className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200"
-//                         >
-//                           <div className="flex items-start justify-between">
-//                             <div className="flex-1">
-//                               <p className="font-medium text-gray-900 text-sm truncate">
-//                                 {item.name}
-//                               </p>
-//                               <p className="text-xs text-gray-500 mt-1">
-//                                 {item.variantName}
-//                               </p>
-//                               <div className="flex items-center gap-3 mt-3">
-//                                 <div className="flex items-center gap-1">
-//                                   <Clock className="h-3 w-3 text-gray-400" />
-//                                   <span className="text-xs font-medium text-gray-700">
-//                                     {item.ageInDays}d old
-//                                   </span>
-//                                 </div>
-//                                 <div className="flex items-center gap-1">
-//                                   <Package className="h-3 w-3 text-gray-400" />
-//                                   <span className="text-xs font-medium text-gray-700">
-//                                     {item.stock} units
-//                                   </span>
-//                                 </div>
-//                               </div>
-//                             </div>
-//                             <div className="ml-3">
-//                               <div className="px-2 py-1 bg-gray-100 rounded text-xs font-medium text-gray-700">
-//                                 {formatPrice(Math.round(item.totalValue),settings?.currency) }
-//                               </div>
-//                             </div>
-//                           </div>
-//                         </div>
-//                       ))}
-//                     </div>
-
-//                     {bucket.products.length > 3 && (
-//                       <div className="mt-4 text-center">
-//                         <button
-//                           onClick={() => handleToggleExpand(bucketId)}
-//                           className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center justify-center gap-1 mx-auto"
-//                         >
-//                           <span>
-//                             {isExpanded
-//                               ? "Show less"
-//                               : `View all ${bucket.products.length} items`}
-//                           </span>
-//                           <ChevronDown
-//                             className={`h-4 w-4 transition-transform duration-200 ${
-//                               isExpanded ? "rotate-180" : ""
-//                             }`}
-//                           />
-//                         </button>
-//                       </div>
-//                     )}
-//                   </div>
-//                 )}
-//               </div>
-//             );
-//           })}
-//         </div>
-
-//         {/* Legend */}
-//         <div className="mt-8 pt-6 border-t border-gray-200">
-//           <h5 className="font-medium text-gray-700 mb-4">Color Legend</h5>
-//           <div className="flex flex-wrap gap-4">
-//             {[
-//               { label: "Fresh (0-30 days)", color: "bg-green-500" },
-//               { label: "Aging (31-90 days)", color: "bg-yellow-500" },
-//               { label: "Stale (91-180 days)", color: "bg-orange-500" },
-//               { label: "Old (180+ days)", color: "bg-red-500" },
-//             ].map((item, idx) => (
-//               <div key={idx} className="flex items-center gap-2">
-//                 <div className={`w-3 h-3 rounded-full ${item.color}`}></div>
-//                 <span className="text-sm text-gray-600">{item.label}</span>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-
-
-//       </div>
-
-//       {/* Slow Movers */}
-//       {data.slowMovers && data.slowMovers.length > 0 && (
-//         <div className="bg-white rounded-xl shadow-sm border p-6">
-//           <div className="flex items-center justify-between mb-4">
-//             <div>
-//               <h3 className="text-lg font-semibold text-gray-800">
-//                 Slow Moving Items
-//               </h3>
-//               <p className="text-gray-600 text-sm">
-//                 Highest value items aging in inventory
-//               </p>
-//             </div>
-//             <AlertTriangle className="h-5 w-5 text-yellow-500" />
-//           </div>
-
-//           <div className="space-y-3">
-//             {data.slowMovers.map((item, index) => (
-//               <div
-//                 key={index}
-//                 className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors duration-200"
-//               >
-//                 <div className="flex items-center gap-3">
-//                   <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
-//                     <Package className="h-4 w-4 text-yellow-600" />
-//                   </div>
-//                   <div>
-//                     <p className="font-medium text-gray-800">{item.name}</p>
-//                     <p className="text-sm text-gray-600">{item.variantName}</p>
-//                   </div>
-//                 </div>
-//                 <div className="text-right">
-//                   <p className="font-bold text-gray-900">
-//                     ₦{item.totalValue?.toLocaleString()}
-//                   </p>
-//                   <div className="flex items-center gap-2 text-sm text-gray-500">
-//                     <span>{item.ageInDays} days old</span>
-//                     <span>•</span>
-//                     <span>{item.stock} units</span>
-//                   </div>
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       )}
-
-//       {/* Recommendations */}
-//       {data.recommendations && data.recommendations.length > 0 && (
-//         <div className="bg-white rounded-xl shadow-sm  p-6">
-//           <h3 className="text-lg font-semibold text-gray-800 mb-4">
-//             Recommendations
-//           </h3>
-
-//           <div className="space-y-4">
-//             {data.recommendations.map((rec, index) => (
-//               <div
-//                 key={index}
-//                 className={`p-4 rounded-lg border transition-all duration-200 hover:shadow-sm ${
-//                   rec.type === "urgent"
-//                     ? "bg-red-50 border-red-200 hover:bg-red-100"
-//                     : rec.type === "warning"
-//                     ? "bg-yellow-50 border-yellow-200 hover:bg-yellow-100"
-//                     : rec.type === "success"
-//                     ? "bg-green-50 border-green-200 hover:bg-green-100"
-//                     : "bg-blue-50 border-blue-200 hover:bg-blue-100"
-//                 }`}
-//               >
-//                 <div className="flex items-start gap-3">
-//                   {rec.type === "urgent" && (
-//                     <AlertCircle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
-//                   )}
-//                   {rec.type === "warning" && (
-//                     <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-//                   )}
-//                   {rec.type === "success" && (
-//                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-//                   )}
-//                   <div className="flex-1">
-//                     <h4 className="font-medium text-gray-800">{rec.title}</h4>
-//                     <p className="text-gray-600 text-sm mt-1">{rec.message}</p>
-//                     <button className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">
-//                       {rec.action}
-//                       <span className="transition-transform duration-200 group-hover:translate-x-1">
-//                         →
-//                       </span>
-//                     </button>
-//                   </div>
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// };
-
-// // Valuation View Component
-// const ValuationView = ({ data }) => {
-//   const valuationArray = data.valuation || [];
-
-//   const calculateSummary = () => {
-//     if (data.valuation?.summary) {
-//       return data.valuation.summary;
+//     // 3. CONFIRM INVENTORY (convert reservation to permanent)
+//     if (reservationId) {
+//       await confirmInventory(reservationId);
 //     }
 
-//     const totalValue = valuationArray.reduce(
-//       (sum, cat) => sum + (cat.totalValue || 0),
-//       0
-//     );
-//     const totalProducts = valuationArray.reduce(
-//       (sum, cat) => sum + (cat.totalProducts || 0),
-//       0
-//     );
-//     const totalVariants = valuationArray.reduce(
-//       (sum, cat) => sum + (cat.totalVariants || 0),
-//       0
-//     );
-//     const totalStock = valuationArray.reduce((sum, cat) => {
-//       if (cat.totalStock) return sum + cat.totalStock;
-//       return (
-//         sum +
-//         (cat.products?.reduce((pSum, p) => pSum + (p.totalStock || 0), 0) || 0)
+//     // 4. CLEAR CART
+//     await User.findByIdAndUpdate(userId, { cartItems: [] });
+
+//     // 5. HANDLE COUPON APPLICATION (if coupon was used in this order)
+//     if (couponCode?.trim()) {
+//       await Coupon.findOneAndUpdate(
+//         { code: couponCode.trim().toUpperCase(), userId, isActive: true },
+//         { isActive: false, usedAt: new Date(), usedInOrder: tx_ref }
 //       );
+//       console.log(` Coupon applied: ${couponCode}`);
+//     }
+
+//     return { order, isNew: true };
+//   } catch (error) {
+//     // Handle duplicate order error
+//     if (error.code === 11000) {
+//       console.log(`🔄 Duplicate key error - finding existing order...`);
+//       const existingOrder = await Order.findOne({
+//         $or: [
+//           { flutterwaveTransactionId: transaction_id },
+//           { flutterwaveRef: tx_ref },
+//         ],
+//       });
+
+//       if (existingOrder) {
+//         console.log(` Found existing order: ${existingOrder.orderNumber}`);
+//         return { order: existingOrder, isNew: false };
+//       }
+//     }
+
+//     console.error(`❌ ORDER CREATION FAILED:`, error);
+//     throw error;
+//   }
+// }
+
+// export const createCheckoutSession = async (req, res) => {
+//   try {
+//     const { products, couponCode, deliveryAddress, deliveryFee, deliveryZone } =
+//       req.body;
+//     const userId = req.user._id;
+
+
+//     if (!Array.isArray(products) || products.length === 0) {
+//       return res.status(400).json({ error: "Invalid or empty products array" });
+//     }
+
+//     const user = await User.findById(userId);
+//     if (!user) return res.status(404).json({ error: "User not found" });
+
+//     const defaultPhone =
+//       user.phones?.find((p) => p.isDefault) || user.phones?.[0];
+//     const defaultAddress =
+//       user.addresses?.find((a) => a.isDefault) || user.addresses?.[0];
+
+//     const addressString = defaultAddress
+//       ? (defaultAddress.address && defaultAddress.address.trim()) ||
+//         `${defaultAddress.landmark ? defaultAddress.landmark + ", " : ""}${
+//           defaultAddress.lga ? defaultAddress.lga + ", " : ""
+//         }${defaultAddress.city ? defaultAddress.city + ", " : ""}${
+//           defaultAddress.state || ""
+//         }`.trim()
+//       : "";
+
+//     if (!defaultPhone?.number?.trim() || !addressString) {
+//       return res.status(400).json({
+//         error: "You must add a phone number and address before checkout.",
+//       });
+//     }
+
+//     // === CHECK AVAILABILITY BEFORE RESERVATION ===
+//     console.log("🔍 Checking availability before reservation...");
+//     try {
+//       for (const item of products) {
+//         if (!item._id) continue;
+
+//         const product = await Product.findById(item._id);
+//         if (!product) {
+//           throw new Error(`Product ${item.name} not found`);
+//         }
+
+//         // Handle variants
+//         if (item.size || item.color) {
+//           const variantIndex = product.variants.findIndex((v) => {
+//             const sizeMatches = item.size
+//               ? v.size === item.size
+//               : !v.size || v.size === "" || v.size === "Standard";
+//             const colorMatches = item.color
+//               ? v.color === item.color
+//               : !v.color || v.color === "" || v.color === "Standard";
+//             return sizeMatches && colorMatches;
+//           });
+
+//           if (variantIndex === -1) {
+//             throw new Error(
+//               `Variant ${item.size || "Any"}/${
+//                 item.color || "Any"
+//               } not found for ${item.name}`
+//             );
+//           }
+
+//           const variant = product.variants[variantIndex];
+//           console.log(
+//             ` Availability check - ${item.name} ${item.size || ""}/${
+//               item.color || ""
+//             }: Stock=${variant.countInStock}, Requested=${item.quantity}`
+//           );
+
+//           if (variant.countInStock < item.quantity) {
+//             throw new Error(
+//               ` ${item.name} ${item.size || ""}/${
+//                 item.color || ""
+//               }, is out of stock, please update you cart`
+//             );
+//           }
+//         }
+//         // Handle simple products
+//         else {
+//           console.log(
+//             `📊 Availability check - ${item.name}: Stock=${product.countInStock}, Requested=${item.quantity}`
+//           );
+
+//           if (product.countInStock < item.quantity) {
+//             throw new Error(
+//               `Only ${product.countInStock} available for ${item.name}, but ${item.quantity} requested`
+//             );
+//           }
+//         }
+//       }
+//       console.log("✅ All items available for reservation");
+//     } catch (availabilityError) {
+//       console.error("❌ Availability check failed:", availabilityError.message);
+//       return res.status(400).json({
+//         error: availabilityError.message,
+//       });
+//     }
+//    let calculatedDeliveryFee = 0;
+//    let finalDeliveryFee = 0;
+
+//    if (deliveryAddress && deliveryAddress.state) {
+//      // Use frontend-provided fee if available, otherwise calculate
+//      if (deliveryFee !== undefined && deliveryFee !== null) {
+//        calculatedDeliveryFee = Number(deliveryFee);
+//        console.log("✅ Using frontend delivery fee:", calculatedDeliveryFee);
+//      } else {
+//        // Fallback: calculate on backend
+//        calculatedDeliveryFee = calculateDeliveryFee(
+//          deliveryAddress.state,
+//          deliveryAddress.city || "",
+//          deliveryAddress.lga || ""
+//        );
+//        console.log(
+//          "🔄 Calculated delivery fee on backend:",
+//          calculatedDeliveryFee
+//        );
+//      }
+//    }
+
+
+    
+  
+//     // Calculate totals
+//     const originalTotal = products.reduce((acc, p) => {
+//       const qty = p.quantity || 1;
+//       const price = Number(p.price) || 0;
+//       return acc + price * qty;
 //     }, 0);
 
-//     return {
-//       totalValue,
-//       totalProducts,
-//       totalVariants,
-//       totalStock,
-//       averageValuePerItem: totalStock > 0 ? totalValue / totalStock : 0,
+//     let discountAmount = 0;
+//     let validCoupon = null;
+
+//     if (couponCode && couponCode.trim() !== "") {
+//       try {
+//         validCoupon = await Coupon.findOne({
+//           code: couponCode.trim().toUpperCase(),
+//           userId,
+//           isActive: true,
+//           expirationDate: { $gt: new Date() },
+//         });
+
+//         if (validCoupon) {
+//           discountAmount = Math.round(
+//             (originalTotal * validCoupon.discountPercentage) / 100
+//           );
+//           console.log(
+//             `Coupon applied: ${couponCode} - Discount: ₦${discountAmount}`
+//           );
+//         } else {
+//           console.log(`Invalid or expired coupon: ${couponCode}`);
+//         }
+//       } catch (error) {
+//         console.error("Error validating coupon:", error);
+//       }
+//     }
+//     finalDeliveryFee = calculatedDeliveryFee;
+
+//     console.log(
+//       "Final delivery fee after free delivery check:",
+//       finalDeliveryFee
+//     );
+//     console.log("🛒 Original total:", originalTotal);
+
+//     const finalTotal = Math.max(0, originalTotal - discountAmount + finalDeliveryFee);
+//     const tx_ref = `ECOSTORE-${Date.now()}`;
+
+    
+//     const reservationId = `res_${tx_ref}`;
+//     try {
+//       await reserveInventory(products, reservationId, 4); // Reserve for 10 minutes
+//       console.log(`✅ Inventory reserved: ${reservationId}`);
+//     } catch (reservationError) {
+//       console.error("❌ Inventory reservation failed:", reservationError);
+//       return res.status(400).json({
+//         error:
+//           "Some items in your cart are no longer available. Please refresh your cart and try again.",
+//       });
+//     }
+
+//     const payload = {
+//       tx_ref,
+//       amount: finalTotal,
+//       currency: "NGN",
+//       redirect_url: `${process.env.CLIENT_URL}/purchase-success`,
+//       customer: {
+//         email: user.email,
+//         phonenumber: defaultPhone.number,
+//         firstname: user.firstname || "",
+//         lastname: user.lastname || "",
+//         name:
+//           (user.firstname || "") + (user.lastname ? ` ${user.lastname}` : ""),
+//       },
+//       payment_options: "card, banktransfer",
+//       meta: {
+//         userId: userId.toString(),
+//         products: JSON.stringify(
+//           products.map((p) => ({
+//             _id: p._id || p.id || null,
+//             name: p.name,
+//             images: p.images || [],
+//             quantity: p.quantity || 1,
+//             price: p.price,
+//             size: p.size || null,
+//             color: p.color || null,
+//             category: p.category || null,
+//           }))
+//         ),
+//         couponCode: couponCode || "",
+//         originalTotal,
+//         discountAmount,
+//         deliveryFee: finalDeliveryFee,
+//         deliveryZone: deliveryZone || "", 
+//         finalTotal,
+//         deliveryAddress: addressString || "",
+//         phoneNumber: defaultPhone.number || "",
+//         reservationId: reservationId, // Include reservation ID
+//       },
+//       customizations: {
+//         title: "EcoStore Purchase",
+//         description: "Payment for items in your cart",
+//         logo: process.env.STORE_LOGO || "https://yourstore.com/logo.png",
+//       },
 //     };
-//   };
 
-//   const summary = calculateSummary();
-//   const displayValuation = data.valuation?.summary
-//     ? data.valuation.categories || []
-//     : valuationArray;
+//     const response = await axios.post(
+//       "https://api.flutterwave.com/v3/payments",
+//       payload,
+//       {
+//         headers: {
+//           Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+//           "Content-Type": "application/json",
+//         },
+//         timeout: 20000,
+//       }
+//     );
 
-//     const {settings} = useStoreSettings()
+//     const link =
+//       response?.data?.data?.link || response?.data?.data?.authorization_url;
 
-//   return (
-//     <div className="space-y-6 mt-10">
-//       {/* Summary Stats Cards */}
-//       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-//         <div className="bg-white rounded-xl shadow-sm  p-6">
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <p className="text-sm text-gray-600">Total Inventory Value</p>
-//               <p className="text-2xl font-bold text-gray-900 mt-1">
-//                 {formatPrice(summary.totalValue,  settings?.currency) || "0"}
-//               </p>
-//             </div>
-//             <DollarSign className="h-8 w-8 text-blue-500" />
-//           </div>
-//         </div>
+//     if (!link) {
+//       // Release inventory if payment initialization fails
+//       await releaseInventory(reservationId);
+//       console.error("No payment link returned by Flutterwave:", response.data);
+//       return res.status(500).json({ message: "Failed to initialize payment" });
+//     }
 
-//         <div className="bg-white rounded-xl shadow-sm  p-6">
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <p className="text-sm text-gray-600">Total Products</p>
-//               <p className="text-2xl font-bold text-gray-900 mt-1">
-//                 {summary.totalProducts || "0"}
-//               </p>
-//             </div>
-//             <Package className="h-8 w-8 text-green-500" />
-//           </div>
-//         </div>
-
-//         <div className="bg-white rounded-xl shadow-sm p-6">
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <p className="text-sm text-gray-600">Total Variants</p>
-//               <p className="text-2xl font-bold text-gray-900 mt-1">
-//                 {summary.totalVariants || "0"}
-//               </p>
-//             </div>
-//             <Layers className="h-8 w-8 text-purple-500" />
-//           </div>
-//         </div>
-
-//         <div className="bg-white rounded-xl shadow-sm p-6">
-//           <div className="flex items-center justify-between">
-//             <div>
-//               <p className="text-sm text-gray-600">Avg. Value per Unit</p>
-//               <p className="text-2xl font-bold text-gray-900 mt-1">
-                
-//                 {summary.averageValuePerItem
-//                   ? formatPrice(summary.averageValuePerItem, settings?.currency)
-//                   : "0"}
-//               </p>
-//             </div>
-//             <TrendingUp className="h-8 w-8 text-orange-500" />
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Category Valuation Table */}
-//       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-//         <div className="p-6 border-b">
-//           <h3 className="text-lg font-semibold text-gray-800">
-//             Inventory Value by Category
-//           </h3>
-//           <p className="text-gray-600 text-sm mt-1">
-//             Distribution of inventory value across product categories
-//           </p>
-//         </div>
-
-//         <div className="overflow-x-auto">
-//           <table className="min-w-full divide-y divide-gray-200">
-//             <thead className="bg-gray-50">
-//               <tr>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Category
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Products
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Variants
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Stock Units
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Total Value
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   % of Total
-//                 </th>
-//                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-//                   Avg. Unit Value
-//                 </th>
-//               </tr>
-//             </thead>
-//             <tbody className="bg-white divide-y divide-gray-200">
-//               {displayValuation.map((category, index) => {
-//                 const totalStock =
-//                   category.totalStock ||
-//                   category.products?.reduce(
-//                     (sum, p) => sum + (p.totalStock || 0),
-//                     0
-//                   ) ||
-//                   0;
-//                 const avgUnitValue =
-//                   totalStock > 0 ? category.totalValue / totalStock : 0;
-//                 const percentage =
-//                   summary.totalValue > 0
-//                     ? (
-//                         (category.totalValue / summary.totalValue) *
-//                         100
-//                       ).toFixed(1)
-//                     : "0.0";
-
-//                 return (
-//                   <tr key={index} className="hover:bg-gray-50">
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <div className="flex items-center">
-//                         <span className="text-sm font-medium text-gray-900">
-//                           {category.category || "Uncategorized"}
-//                         </span>
-//                       </div>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <span className="text-sm text-gray-900">
-//                         {category.totalProducts}
-//                       </span>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <span className="text-sm text-gray-900">
-//                         {category.totalVariants}
-//                       </span>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <span className="text-sm text-gray-900">
-//                         {totalStock.toLocaleString()}
-//                       </span>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <span className="text-sm font-semibold text-gray-900">
-//                         {formatPrice(category?.totalValue, settings?.currency)}
-//                       </span>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <div className="flex items-center">
-//                         <div className="w-16 bg-gray-200 rounded-full h-2 mr-3">
-//                           <div
-//                             className="bg-blue-600 h-2 rounded-full"
-//                             style={{
-//                               width: `${Math.min(
-//                                 100,
-//                                 parseFloat(percentage)
-//                               )}%`,
-//                             }}
-//                           ></div>
-//                         </div>
-//                         <span className="text-sm font-medium text-gray-900">
-//                           {percentage}%
-//                         </span>
-//                       </div>
-//                     </td>
-//                     <td className="px-6 py-4 whitespace-nowrap">
-//                       <span className="text-sm text-gray-900">
-                        
-//                         {formatPrice(avgUnitValue, settings?.currency)}
-//                       </span>
-//                     </td>
-//                   </tr>
-//                 );
-//               })}
-
-//               {/* Total Row */}
-//               <tr className="bg-gray-50 font-semibold">
-//                 <td className="px-6 py-4 whitespace-nowrap">
-//                   <span className="text-sm font-bold text-gray-900">TOTAL</span>
-//                 </td>
-//                 <td className="px-6 py-4 whitespace-nowrap">
-//                   <span className="text-sm font-bold text-gray-900">
-//                     {summary.totalProducts}
-//                   </span>
-//                 </td>
-//                 <td className="px-6 py-4 whitespace-nowrap">
-//                   <span className="text-sm font-bold text-gray-900">
-//                     {summary.totalVariants}
-//                   </span>
-//                 </td>
-//                 <td className="px-6 py-4 whitespace-nowrap">
-//                   <span className="text-sm font-bold text-gray-900">
-//                     {summary.totalStock?.toLocaleString()}
-//                   </span>
-//                 </td>
-//                 <td className="px-6 py-4 whitespace-nowrap">
-//                   <span className="text-sm font-bold text-gray-900">
-//                     {formatPrice(summary?.totalValue, settings?.currency)}
-//                   </span>
-//                 </td>
-//                 <td className="px-6 py-4 whitespace-nowrap">
-//                   <span className="text-sm font-bold text-gray-900">100%</span>
-//                 </td>
-//                 <td className="px-6 py-4 whitespace-nowrap">
-//                   <span className="text-sm font-bold text-gray-900">
-                    
-//                     {formatPrice(summary?.averageValuePerItem, settings?.currency)}
-//                   </span>
-//                 </td>
-//               </tr>
-//             </tbody>
-//           </table>
-//         </div>
-//       </div>
-
-//       {/* Top Categories Summary */}
-//       {displayValuation.length > 0 && (
-//         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-//           <div className="bg-white rounded-xl shadow-sm p-6">
-//             <h4 className="text-sm font-medium text-gray-700 mb-4">
-//               Top 3 Categories by Value
-//             </h4>
-//             <div className="space-y-3">
-//               {displayValuation.slice(0, 3).map((category, index) => (
-//                 <div key={index} className="flex items-center justify-between">
-//                   <div className="flex items-center gap-2">
-//                     <div
-//                       className={`w-3 h-3 rounded-full ${
-//                         index === 0
-//                           ? "bg-yellow-500"
-//                           : index === 1
-//                           ? "bg-gray-400"
-//                           : "bg-orange-500"
-//                       }`}
-//                     ></div>
-//                     <span className="text-sm text-gray-600">
-//                       {category.category}
-//                     </span>
-//                   </div>
-//                   <span className="text-sm font-medium text-gray-900">
-//                     {Math.round(
-//                       (category.totalValue / summary.totalValue) * 100
-//                     )}
-//                     %
-//                   </span>
-//                 </div>
-//               ))}
-//             </div>
-//           </div>
-
-//           <div className="bg-white rounded-xl shadow-sm  p-6">
-//             <h4 className="text-sm font-medium text-gray-700 mb-4">
-//               Value Concentration
-//             </h4>
-//             <div className="text-sm text-gray-600">
-//               <p className="mb-2">
-//                 Top 3 categories hold{" "}
-//                 <span className="font-semibold text-gray-900">
-//                   {displayValuation
-//                     .slice(0, 3)
-//                     .reduce(
-//                       (sum, c) =>
-//                         sum +
-//                         Math.round((c.totalValue / summary.totalValue) * 100),
-//                       0
-//                     )}
-//                   %
-//                 </span>{" "}
-//                 of total value
-//               </p>
-//               <p className="text-xs text-gray-500">
-//                 {displayValuation
-//                   .slice(0, 3)
-//                   .reduce(
-//                     (sum, c) =>
-//                       sum +
-//                       Math.round((c.totalValue / summary.totalValue) * 100),
-//                     0
-//                   ) > 80
-//                   ? "High concentration - consider diversifying"
-//                   : "Good diversification"}
-//               </p>
-//             </div>
-//           </div>
-
-//           <div className="bg-white rounded-xl shadow-sm  p-6">
-//             <h4 className="text-sm font-medium text-gray-700 mb-4">
-//               Highest Value per Unit
-//             </h4>
-//             <div className="space-y-2">
-//               {displayValuation
-//                 .map((category) => {
-//                   const totalStock =
-//                     category.totalStock ||
-//                     category.products?.reduce(
-//                       (sum, p) => sum + (p.totalStock || 0),
-//                       0
-//                     ) ||
-//                     0;
-//                   return {
-//                     ...category,
-//                     avgUnitValue:
-//                       totalStock > 0 ? category.totalValue / totalStock : 0,
-//                   };
-//                 })
-//                 .sort((a, b) => b.avgUnitValue - a.avgUnitValue)
-//                 .slice(0, 3)
-//                 .map((category, index) => (
-//                   <div key={index} className="flex justify-between text-sm">
-//                     <span className="text-gray-600">{category.category}</span>
-//                     <span className="font-medium text-gray-900">
-                      
-//                       {formatPrice(category?.avgUnitValue, settings?.currency)}
-//                     </span>
-//                   </div>
-//                 ))}
-//             </div>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
+//     console.log("Flutterwave payment initialized:", tx_ref, "link:", link);
+//     return res.status(200).json({ link, tx_ref });
+//   } catch (err) {
+//     console.error("Error initializing Flutterwave payment:", err);
+//     return res.status(500).json({
+//       message: "Payment initialization failed",
+//       error: err?.message || String(err),
+//     });
+//   }
 // };
 
-// // Locations View Component
-// const LocationsView = ({ locations, settings }) => (
-//   <div className="space-y-6">
-//     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-//       {locations.map((location) => (
-//         <div key={location.id} className="bg-white rounded-xl shadow-sm  p-6">
-//           <div className="flex items-center justify-between mb-4">
-//             <h3 className="text-lg font-semibold text-gray-800">
-//               {location.name}
-//             </h3>
-//             <MapPin className="h-5 w-5 text-gray-400" />
+// export const handleFlutterwaveWebhook = async (req, res) => {
+//   console.log("🔔 WEBHOOK CALLED - LIVE MODE");
+//   console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
+//   console.log("🔐 Headers:", req.headers);
+
+//   const signature = req.headers["verif-hash"];
+//   console.log("Signature received:", signature ? "YES" : "NO");
+
+//   let transaction_id; // DECLARE IT HERE
+//   let lockAcquired = false;
+
+//   try {
+//     const signature = req.headers["verif-hash"];
+//     console.log("Signature received:", signature);
+
+//     if (!signature) {
+//       console.warn("Missing verif-hash header");
+//       return res.status(401).send("Missing signature");
+//     }
+
+//     if (signature !== process.env.FLW_WEBHOOK_HASH) {
+//       console.warn("Invalid webhook signature - possible forgery attempt");
+//       return res.status(401).send("Invalid signature");
+//     }
+
+//     console.log("Webhook signature validated successfully");
+
+//     const event = req.body;
+//     if (!event) {
+//       console.warn("Empty webhook event body");
+//       return res.status(400).send("No event body");
+//     }
+
+//     console.log(`Webhook received: ${event.event} for ${event.data?.tx_ref}`);
+
+//     const paymentCompletionEvents = [
+//       "charge.completed",
+//       "transfer.completed",
+//       "bank_transfer.completed",
+//     ];
+
+//     if (!paymentCompletionEvents.includes(event.event)) {
+//       console.log(
+//         `Ignoring non-payment-completion webhook event: ${event.event}`
+//       );
+//       return res.status(200).send("Ignored event type");
+//     }
+
+//     // MOVE THIS OUTSIDE OF NESTED TRY
+//     transaction_id = event.data?.id; // ASSIGN VALUE HERE
+//     const tx_ref = event.data?.tx_ref;
+//     const status = event.data?.status;
+//     const paymentType = event.data?.payment_type;
+
+//     // For bank transfers, be more flexible with status values
+//     if (paymentType === "banktransfer" || paymentType === "bank_transfer") {
+//       const isBankTransferSuccessful =
+//         status === "successful" ||
+//         status === "success" ||
+//         status === "completed" ||
+//         status === "credited";
+//       if (!isBankTransferSuccessful) {
+//         console.log(
+//           `Bank transfer not successful: ${status} for ${event.data?.tx_ref}`
+//         );
+
+//         // Release inventory
+//         const reservationId = event.data?.meta?.reservationId;
+//         if (reservationId) {
+//           await releaseInventory(reservationId);
+//         }
+
+//         return res.status(200).send("Bank transfer not completed");
+//       }
+//     } else {
+//       // For other payment types, use strict checking
+//       if (status !== "successful") {
+//         console.log(
+//           `Payment not successful: ${status} for ${event.data?.tx_ref}`
+//         );
+
+//         const reservationId = event.data?.meta?.reservationId;
+//         if (reservationId) {
+//           await releaseInventory(reservationId);
+//         }
+
+//         return res.status(200).send("Payment not successful");
+//       }
+//     }
+
+//     if (!transaction_id) {
+//       console.error("No transaction_id in webhook data");
+//       return res.status(400).send("Missing transaction_id");
+//     }
+
+//     console.log(
+//       ` ENTERING ORDER PROCESSING - Source: ${
+//         req.path
+//       }, TX: ${transaction_id}, Time: ${new Date().toISOString()}`
+//     );
+
+//     console.log(`Processing transaction: ${transaction_id}, status: ${status}`);
+
+//     // === REDIS-BASED DISTRIBUTED LOCKING ===
+//     console.log(`🔒 Attempting to acquire Redis lock for: ${transaction_id}`);
+//     lockAcquired = await acquireWebhookLock(transaction_id, 45000);
+
+//     if (!lockAcquired) {
+//       console.log(`⏳ Webhook already being processed: ${transaction_id}`);
+//       return res.status(200).send("Webhook already being processed");
+//     }
+//     console.log(`✅ Acquired Redis lock for: ${transaction_id}`);
+
+//     // === ENHANCED DUPLICATE PROTECTION ===
+//     const existingOrder = await Order.findOne({
+//       $or: [
+//         { flutterwaveTransactionId: transaction_id },
+//         { flutterwaveRef: tx_ref },
+//       ],
+//     });
+
+//     if (existingOrder) {
+//       console.log(
+//         `🔄 DUPLICATE: Order ${existingOrder.orderNumber} already exists`
+//       );
+
+//       // Release any reserved inventory
+//       const reservationId = event.data?.meta?.reservationId;
+//       if (reservationId) {
+//         await releaseInventory(reservationId);
+//       }
+
+//       return res.status(200).send("Order already processed");
+//     }
+
+//     if (status !== "successful") {
+//       console.log(`Payment not successful: ${status} for ${tx_ref}`);
+
+//       // Release inventory if payment failed
+//       const reservationId = event.data?.meta?.reservationId;
+//       if (reservationId) {
+//         await releaseInventory(reservationId);
+//       }
+
+//       return res.status(200).send("Payment not successful");
+//     }
+
+//     console.log(`Processing webhook for successful payment: ${tx_ref}`);
+
+//     let data;
+
+//     console.log(
+//       `Verifying real transaction with Flutterwave: ${transaction_id}`
+//     );
+//     const verifyResp = await flw.Transaction.verify({ id: transaction_id });
+
+//     if (!verifyResp?.data || verifyResp.data.status !== "successful") {
+//       console.error(`Webhook verification failed for: ${transaction_id}`);
+
+//       // Release inventory if verification fails
+//       const reservationId = event.data?.meta?.reservationId;
+//       if (reservationId) {
+//         await releaseInventory(reservationId);
+//       }
+
+//       return res.status(400).send("Payment verification failed");
+//     }
+
+//     data = verifyResp.data;
+//     console.log("Real transaction verified successfully");
+
+//     const meta_data = data.meta || event.meta_data || {};
+
+//     const deliveryFee = Number(meta_data.deliveryFee) || 0;
+//     const deliveryZone = meta_data.deliveryZone || "";
+
+//     let parsedProducts = [];
+//     if (meta_data.products) {
+//       try {
+//         if (typeof meta_data.products === "string") {
+//           parsedProducts = JSON.parse(meta_data.products);
+//         } else {
+//           parsedProducts = meta_data.products;
+//         }
+//         parsedProducts = parsedProducts.map((p) => ({
+//           _id: p._id || p.id || null,
+//           name: p.name,
+//           images: p.images || [],
+//           quantity: p.quantity || 1,
+//           price: p.price,
+//           size: p.size || null,
+//           color: p.color || null,
+//           category: p.category || null,
+//         }));
+//       } catch (error) {
+//         console.error("Error parsing products:", error);
+//         parsedProducts = [];
+//       }
+//     }
+
+//     let userId = meta_data.userId;
+//     const couponCode = meta_data.couponCode || "";
+//     const reservationId = meta_data.reservationId;
+//     const originalTotal =
+//       Number(meta_data.originalTotal) || Number(data.amount) || 0;
+//     const discountAmount = Number(meta_data.discountAmount) || 0;
+//     const finalTotal = Number(meta_data.finalTotal) || Number(data.amount) || 0;
+//     const deliveryAddress = meta_data.deliveryAddress || "";
+//     const phoneNumber = data.customer?.phone_number || "";
+
+//     console.log("UserId from meta_data:", userId);
+//     console.log("Reservation ID:", reservationId);
+//     console.log("Parsed products count:", parsedProducts.length);
+
+//     if (!userId) {
+//       console.error("Missing userId in webhook data");
+
+//       // Release inventory if no user ID
+//       if (reservationId) {
+//         await releaseInventory(reservationId);
+//       }
+
+//       return res.status(400).send("Missing userId");
+//     }
+
+//     // 2. FINAL DUPLICATE CHECK (in case order was created between first check and now)
+//     const finalDuplicateCheck = await Order.findOne({
+//       $or: [
+//         { flutterwaveTransactionId: transaction_id },
+//         { flutterwaveRef: tx_ref },
+//       ],
+//     });
+
+//     if (finalDuplicateCheck) {
+//       console.log(
+//         `🔄 LATE DUPLICATE: Order ${finalDuplicateCheck.orderNumber} created during processing`
+//       );
+
+//       // Release inventory
+//       if (reservationId) {
+//         await releaseInventory(reservationId);
+//       }
+
+//       return res.status(200).send("Order already processed");
+//     }
+
+//     console.log("Starting database transaction...");
+//     const session = await mongoose.startSession();
+
+//     try {
+//       await session.withTransaction(async () => {
+//         const transactionData = {
+//           transaction_id,
+//           tx_ref,
+//           data,
+//           meta: {
+//             userId: userId,
+//             products: meta_data.products,
+//             couponCode: couponCode,
+//             originalTotal: originalTotal,
+//             discountAmount: discountAmount,
+//             deliveryFee: deliveryFee, 
+//             deliveryZone: deliveryZone,
+//             finalTotal: finalTotal,
+//             deliveryAddress: deliveryAddress || "No address provided",
+//             phoneNumber:
+//               data.customer?.phone_number || phoneNumber || "No phone number",
+//           },
+//           userId,
+//           parsedProducts,
+//           couponCode,
+//           reservationId,
+//         };
+
+//         console.log("Processing order creation...");
+//         const { order, isNew } = await processOrderCreation(transactionData);
+
+//         console.log(
+//           `${isNew ? "Created new" : "Updated existing"} order: ${
+//             order.orderNumber
+//           } for user: ${userId}`
+//         );
+
+//         // ONLY send email and check coupons for NEW orders
+
+//         if (isNew) {
+//           try {
+//             console.log(`STARTING COUPON PROCESS FOR USER: ${userId}`);
+//             const couponEligibility = await checkCouponEligibility(
+//               userId,
+//               order.totalAmount
+//             );
+
+//             if (couponEligibility) {
+//               console.log(
+//                 `User eligible for ${couponEligibility.reason} coupon`
+//               );
+//               const newCoupon = await createNewCoupon(userId, {
+//                 discountPercentage: couponEligibility.discountPercentage,
+//                 couponType: couponEligibility.codePrefix,
+//                 reason: couponEligibility.reason,
+//                 daysValid: 30,
+//               });
+
+//               if (newCoupon && newCoupon.isActive) {
+//                 console.log(
+//                   `Successfully created ACTIVE coupon: ${newCoupon.code}`
+//                 );
+//                 try {
+//                   const user = await User.findById(userId);
+//                   if (user && user.email) {
+//                     await sendCouponEmail({
+//                       to: user.email,
+//                       coupon: newCoupon,
+//                       couponType: couponEligibility.emailType,
+//                       orderCount: await Order.countDocuments({
+//                         user: userId,
+//                         paymentStatus: "paid",
+//                       }),
+//                     });
+//                     console.log(`Coupon email sent for: ${newCoupon.code}`);
+//                   }
+//                 } catch (emailErr) {
+//                   console.error("Coupon email send failed:", emailErr);
+//                 }
+//               }
+//             }
+//           } catch (error) {
+//             console.error("Coupon creation failed:", error);
+//           }
+
+//           // SEND ORDER CONFIRMATION EMAIL ONLY FOR NEW ORDERS
+//           try {
+//             const user = await User.findById(userId);
+//             if (user && user.email) {
+//               await sendDetailedOrderEmail({
+//                 to: user.email,
+//                 order,
+//                 flutterwaveData: data,
+//               });
+//               console.log(
+//                 `✅ Confirmation email sent for NEW order: ${order.orderNumber}`
+//               );
+//             }
+//           } catch (emailErr) {
+//             console.error("Email send failed (webhook):", emailErr);
+//           }
+//         } else {
+//           console.log(
+//             `📧 Skipping email and coupons for existing order: ${order.orderNumber}`
+//           );
+//         }
+//       });
+
+//       console.log("Database transaction committed successfully");
+//     } catch (transactionError) {
+//       console.error("Transaction failed:", transactionError);
+
+//       // Release inventory if transaction fails
+//       if (reservationId) {
+//         await releaseInventory(reservationId);
+//       }
+
+//       throw transactionError;
+//     } finally {
+//       await session.endSession();
+//     }
+
+//     console.log(`Webhook processing completed successfully`);
+//     return res.status(200).send("Order processed successfully");
+//   } catch (err) {
+//     console.error(`Webhook processing error:`, err);
+
+//     // Release inventory on error
+//     const reservationId = req.body?.data?.meta?.reservationId;
+//     if (reservationId) {
+//       await releaseInventory(reservationId);
+//     }
+
+//     return res.status(500).send("Webhook processing failed");
+//   } finally {
+//     // Always release lock if we acquired it
+//     if (lockAcquired && transaction_id) {
+//       await releaseWebhookLock(transaction_id);
+//       console.log(`🔓 Webhook lock released for: ${transaction_id}`);
+//     }
+//   }
+// };
+
+// // ✅ HELPER FUNCTIONS
+// function isPaymentSuccessful(status, paymentType) {
+//   if (paymentType === "banktransfer" || paymentType === "bank_transfer") {
+//     return ["successful", "success", "completed", "credited"].includes(status);
+//   }
+//   return status === "successful";
+// }
+
+// function parseProducts(productsData) {
+//   if (!productsData) return [];
+
+//   try {
+//     const products =
+//       typeof productsData === "string"
+//         ? JSON.parse(productsData)
+//         : productsData;
+
+//     return products.map((p) => ({
+//       _id: p._id || p.id || null,
+//       name: p.name,
+//       images: p.images || [],
+//       quantity: p.quantity || 1,
+//       price: p.price,
+//       size: p.size || null,
+//       color: p.color || null,
+//       category: p.category || null,
+//     }));
+//   } catch (error) {
+//     console.error("Error parsing products:", error);
+//     return [];
+//   }
+// }
+
+// async function handlePostOrderActions(userId, order, flutterwaveData) {
+//   try {
+//     // Handle coupon eligibility
+//     const couponEligibility = await checkCouponEligibility(
+//       userId,
+//       order.totalAmount
+//     );
+
+//     if (couponEligibility) {
+//       const newCoupon = await createNewCoupon(userId, {
+//         discountPercentage: couponEligibility.discountPercentage,
+//         couponType: couponEligibility.codePrefix,
+//         reason: couponEligibility.reason,
+//         daysValid: 30,
+//       });
+
+//       if (newCoupon) {
+//         const user = await User.findById(userId);
+//         if (user?.email) {
+//           await sendCouponEmail({
+//             to: user.email,
+//             coupon: newCoupon,
+//             couponType: couponEligibility.emailType,
+//             orderCount: await Order.countDocuments({
+//               user: userId,
+//               paymentStatus: "paid",
+//             }),
+//           });
+//         }
+//       }
+//     }
+
+//     // Send order confirmation
+//     const user = await User.findById(userId);
+//     if (user?.email) {
+//       await sendDetailedOrderEmail({
+//         to: user.email,
+//         order,
+//         flutterwaveData,
+//       });
+//     }
+//   } catch (error) {
+//     console.error("Post-order actions failed:", error);
+//   }
+// }
+
+
+// async function withRetry(fn, retries = 3, delay = 200) {
+//   for (let attempt = 1; attempt <= retries; attempt++) {
+//     try {
+//       return await fn();
+//     } catch (err) {
+//       const transient =
+//         err?.codeName === "WriteConflict" ||
+//         (err?.errorLabels &&
+//           err.errorLabels.includes("TransientTransactionError"));
+
+//       if (transient && attempt < retries) {
+//         console.warn(`Transient error, retrying ${attempt}/${retries}...`);
+//         await new Promise((r) => setTimeout(r, delay * attempt));
+//         continue;
+//       }
+//       throw err;
+//     }
+//   }
+// }
+
+// export const checkoutSuccess = async (req, res) => {
+//   let lockAcquired = false;
+//   const { tx_ref, transaction_id } = req.body;
+
+//   console.log(
+//     ` ENTERING ORDER PROCESSING - Source: ${
+//       req.path
+//     }, TX: ${transaction_id}, Time: ${new Date().toISOString()}`
+//   );
+
+//   // ADD VALIDATION
+//   if (!transaction_id) {
+//     return res.status(400).json({
+//       error: "transaction_id is required",
+//       received: req.body,
+//     });
+//   }
+
+//   console.log(`🔄 checkoutSuccess called for transaction: ${transaction_id}`);
+
+//   try {
+//     // Duplicate protection
+//     const existingPaidOrder = await Order.findOne({
+//       $or: [
+//         { flutterwaveTransactionId: transaction_id },
+//         { flutterwaveRef: tx_ref },
+//       ],
+//       paymentStatus: "paid",
+//     });
+
+//     if (existingPaidOrder) {
+//       console.log(
+//         `🔄 CheckoutSuccess: Order already processed: ${existingPaidOrder.orderNumber}`
+//       );
+//       return res.status(200).json({
+//         success: true,
+//         message: "Order already processed",
+//         orderId: existingPaidOrder._id,
+//         orderNumber: existingPaidOrder.orderNumber,
+//       });
+//     }
+
+//     // Acquire lock
+//     lockAcquired = await acquireWebhookLock(transaction_id, 30000);
+//     if (!lockAcquired) {
+//       console.log(
+//         `checkoutSuccess: Lock already acquired for ${transaction_id}`
+//       );
+
+//       // Wait 1 second and check if order exists now
+//       await new Promise((resolve) => setTimeout(resolve, 1000));
+
+//       const orderNow = await Order.findOne({
+//         $or: [
+//           { flutterwaveTransactionId: transaction_id },
+//           { flutterwaveRef: tx_ref },
+//         ],
+//         paymentStatus: "paid",
+//       });
+
+//       if (orderNow) {
+//         return res.status(200).json({
+//           success: true,
+//           orderId: orderNow._id,
+//           orderNumber: orderNow.orderNumber,
+//         });
+//       }
+
+//       return res.status(200).json({
+//         success: false,
+//         message: "Please wait a moment and refresh the page",
+//       });
+//     }
+
+//     const verifyResp = await flw.Transaction.verify({ id: transaction_id });
+//     const data = verifyResp?.data;
+
+//     if (!data || data.status !== "successful") {
+//       return res.status(400).json({ error: "Payment verification failed" });
+//     }
+
+//     const meta = data.meta || {};
+//     const userId = meta.userId;
+//     const parsedProducts = meta.products ? JSON.parse(meta.products) : [];
+//     const couponCode = meta.couponCode || "";
+//     const reservationId = meta.reservationId;
+
+//     if (!userId) {
+//       return res
+//         .status(400)
+//         .json({ error: "Missing userId in payment metadata" });
+//     }
+
+//     let finalOrder;
+//     let isNewOrder = false;
+
+//     await withRetry(async () => {
+//       const session = await mongoose.startSession();
+
+//       try {
+//         await session.withTransaction(async () => {
+//           const transactionData = {
+//             transaction_id,
+//             tx_ref,
+//             data,
+//             meta,
+//             userId,
+//             parsedProducts,
+//             couponCode,
+//             reservationId,
+//           };
+
+//           const { order, isNew } = await processOrderCreation(transactionData);
+//           finalOrder = order;
+//           isNewOrder = isNew; // Store whether this is a new order
+
+//           // ONLY process coupons and send emails for NEW orders
+//           if (isNew) {
+//             // Handle coupon eligibility
+//             const couponEligibility = await checkCouponEligibility(
+//               userId,
+//               finalOrder.totalAmount
+//             );
+//             if (couponEligibility) {
+//               const newCoupon = await createNewCoupon(userId, {
+//                 discountPercentage: couponEligibility.discountPercentage,
+//                 couponType: couponEligibility.codePrefix,
+//                 reason: couponEligibility.reason,
+//                 daysValid: 30,
+//               });
+
+//               if (newCoupon) {
+//                 console.log(
+//                   `Created ${couponEligibility.reason} coupon: ${newCoupon.code}`
+//                 );
+//                 try {
+//                   const user = await User.findById(userId);
+//                   if (user && user.email) {
+//                     await sendCouponEmail({
+//                       to: user.email,
+//                       coupon: newCoupon,
+//                       couponType: couponEligibility.emailType,
+//                       orderCount: await Order.countDocuments({
+//                         user: userId,
+//                         paymentStatus: "paid",
+//                       }),
+//                     });
+//                   }
+//                 } catch (emailErr) {
+//                   console.error("Coupon email send failed:", emailErr);
+//                 }
+//               }
+//             }
+
+//             // Send confirmation email ONLY for new orders
+//             try {
+//               const user = await User.findById(userId);
+//               await sendDetailedOrderEmail({
+//                 to: user.email,
+//                 order,
+//                 flutterwaveData: data,
+//               });
+//               console.log(
+//                 `✅ Confirmation email sent for NEW order: ${order.orderNumber}`
+//               );
+//             } catch (emailErr) {
+//               console.error("Email send failed (checkoutSuccess):", emailErr);
+//             }
+//           } else {
+//             console.log(
+//               `📧 Skipping email for existing order: ${order.orderNumber}`
+//             );
+//           }
+//         });
+//       } finally {
+//         await session.endSession();
+//       }
+//     });
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Payment verified and order finalized",
+//       orderId: finalOrder._id,
+//       orderNumber: finalOrder.orderNumber,
+//       isNew: isNewOrder,
+//     });
+//   } catch (error) {
+//     console.error("checkoutSuccess failed:", error);
+
+//     // Release inventory on failure
+//     const reservationId = req.body.meta?.reservationId;
+//     if (reservationId) {
+//       await releaseInventory(reservationId);
+//     }
+
+//     return res.status(500).json({
+//       error: error.message || "Checkout failed",
+//     });
+//   } finally {
+//     // RELEASE LOCK
+//     if (lockAcquired) {
+//       await releaseWebhookLock(transaction_id);
+//     }
+//   }
+// };
+
+// // Update your email function to use paymentMethod instead of paymentData
+// export const sendDetailedOrderEmail = async ({
+//   to,
+//   order,
+// }) => {
+//   if (!to || !order) return;
+
+//   let customerName = "";
+//   try {
+//     const userDoc = await User.findById(order.user).select(
+//       "firstname lastname"
+//     );
+//     if (userDoc) {
+//       customerName =
+//         userDoc.firstname || userDoc.lastname || order.user?.name || "Customer";
+//     }
+//   } catch (err) {
+//     console.error("Error fetching user name for email:", err);
+//   }
+
+//   // Use paymentMethod from order instead of paymentData
+//   const paymentMethod = order.paymentMethod || {};
+//   const tx_ref = order.flutterwaveRef || "N/A";
+//   const transaction_id = order.flutterwaveTransactionId || "N/A";
+//   const payment_type = paymentMethod.method || "N/A";
+//   const settings = await storeSettings.findOne();
+//   const formatter = new Intl.NumberFormat(undefined, {
+//     style: "currency",
+//     currency: settings.currency,
+//   });
+
+//   // Prepare items array
+//   const items = order.products || order.items || [];
+
+//   const productRows = items
+//     .map((item) => {
+//       let details = "";
+//       if (item.selectedSize) details += `Size: ${item.selectedSize} `;
+//       if (item.selectedColor) details += `| Color: ${item.selectedColor}`;
+
+//       return `
+//         <tr>
+//           <td style="padding: 8px 12px; border:1px solid #eee;">
+//           <p display:block; margin-top: 1; margin-bottom:1>${
+//             item.name || item.productName || "Item"
+//           }</p>
+//             <img src="${item.image}" alt="${
+//         item.name
+//       }" width="60" height="60" style="border-radius: 6px; object-fit: cover;" />
+           
+//             ${
+//               details
+//                 ? `<br/><small style="color:#666;">${details || ""}</small>`
+//                 : ""
+//             }
+//           </td>
+//           <td style="padding: 8px 12px; text-align:center; border:1px solid #eee;">${
+//             item.quantity || 1
+//           }</td>
+//           <td style="padding: 8px 12px; text-align:right; border:1px solid #eee;">${formatter.format(
+//            item.price || item.unitPrice || 0
+//           )}
+            
+//           </td>
+//         </tr>`;
+//     })
+//     .join("");
+
+//   const totalAmount = order.totalAmount || order.totalPrice || order.total || 0;
+//   const subtotal = order.subtotal || order.subTotal || 0;
+//   const discount = order.discount || 0
+  
+
+  
+//   const html = `
+//     <div style="font-family: Arial, sans-serif; background-color: #f6f8fa; padding: 20px;">
+//       <div style="max-width: 700px; margin: auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.06);">
+//         <div style="background: #10b981; padding: 22px; text-align: center; color: #fff;">
+//           <img src="${settings?.logo}" alt="${
+//     settings?.storeName
+//   }" style="max-height:50px; display:block; margin: 0 auto 8px;" />
+//           <h1 style="margin:0; font-size:20px;">Order Confirmation</h1>
+//           <div style="margin-top:6px; font-size:15px;">${
+//             order.orderNumber || "N/A"
+//           }</div>
+//         </div>
+
+//         <div style="padding: 22px; color:#333;">
+//           <p style="margin:0 0 8px;">Hi <strong>${customerName}</strong>,</p>
+//           <p style="margin:0 0 16px;">Thank you for your order! We've received your payment and are now processing your purchase. Below are your order details.</p>
+
+//           <h3 style="margin:18px 0 8px;"> Order Summary</h3>
+//           <table style="width:100%; border-collapse: collapse; margin-top:8px;">
+//             <thead>
+//               <tr style="background:#f7faf7;">
+//                 <th style="padding:10px; text-align:left; border:1px solid #eee;">Product</th>
+//                 <th style="padding:10px; text-align:center; border:1px solid #eee;">Qty</th>
+//                 <th style="padding:10px; text-align:right; border:1px solid #eee;">Price</th>
+//               </tr>
+//             </thead>
+//             <tbody>
+//               ${
+//                 productRows ||
+//                 `<tr><td colspan="3" style="padding:12px;text-align:center;color:#777;">No items listed</td></tr>`
+//               }
+//             </tbody>
+//           </table>
+//           <p style="margin-top: 20px; font-size: 16px;">
+//             <strong>Original Subtotal:</strong> ${formatter.format(
+//               subtotal
+//             )} <br>
+           
+//                     ${
+//                       discount > 0
+//                         ? `
+//                     <p>
+//                       <strong>Coupon Discount:</strong> - ${formatter.format(
+//                         discount
+//                       )}
+//                     </p>
+//           `
+//                         : ""
+//                     }<br>
+//             <strong>Delivery Fee:</strong> ${formatter.format(
+//               order.deliveryFee
+//             )}<br>
+//             <strong>Final Total:</strong> ${formatter.format(totalAmount)}
+//           </p>
+
+//           <p style="margin:0;">
+//             <strong>Address:</strong> ${
+//               order.deliveryAddress || "No address provided"
+//             }<br/>
+//             <strong>Phone:</strong> ${order.phone || "No phone provided"}<br/>
+//             <strong>Email:</strong> ${to}
+//           </p>
+
+//           <h3 style="margin:18px 0 8px;"> Payment Details</h3>
+//           <p style="margin:0 0 6px;">
+//             <strong>Payment Status:</strong> ${
+//               order.paymentStatus || "Confirmed"
+//             }<br/>
+//             <strong>Payment Type:</strong> ${payment_type}<br/>
+//             <strong>Transaction Ref:</strong> ${tx_ref}<br/>
+//             <strong>Transaction ID:</strong> ${transaction_id}
+//           </p>
+
+
+//           <p style="margin-top:20px; color:#555;">We'll send another email once your order ships.</p>
+
+          
+//         </div>
+
+//         <div style="background: #1e293b; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
+//           <p style="margin: 0 0 10px 0;"><p style="margin-top:18px;">Thanks for choosing <strong> ${
+//             settings?.storeName
+//           }</strong> </p>
+//           <p style="margin: 0;">Need help? Contact us at <a href="mailto:${
+//             settings?.supportEmail
+//           }" 
+//              style="color: #10b981; text-decoration: none;">${
+//                settings?.supportEmail
+//              }</a></p>
+//         </div>
+//       </div>
+//     </div>
+//   `;
+
+//   // Plain text fallback
+//   const text = [
+//     `EcoStore — Order Confirmation`,
+//     ` ${order.orderNumber || "N/A"}`,
+//     `Customer: ${customerName}`,
+//     `Total: ${formatter.format(totalAmount)}`,
+//     `Delivery Address: ${order.deliveryAddress || "No address provided"}`,
+//     `Phone: ${order.phone || "No phone provided"}`,
+//     `Payment Status: ${order.paymentStatus || "Confirmed"}`,
+//     `Payment Type: ${payment_type}`,
+//     `Transaction Ref: ${tx_ref}`,
+//     `Transaction ID: ${transaction_id}`,
+//     ``,
+//     `Items:`,
+//     ...items.map(
+//       (it) =>
+//         ` - ${it.quantity || 1} x ${it.name || "Item"} — ${formatter.format(it.price)}`
+//     ),
+//     ``,
+//     `Thanks for shopping with  ${settings?.storeName}!`,
+//   ].join("\n");
+
+//   // Send email
+//   await sendEmail({
+//     to,
+//     subject: ` ${settings?.storeName} — Order Confirmation #${
+//       order.orderNumber || "N/A"
+//     }`,
+//     html,
+//     text,
+//   });
+// };
+
+// // Add this function after sendDetailedOrderEmail
+// export const sendCouponEmail = async ({
+//   to,
+//   coupon,
+//   couponType = "welcome_coupon",
+//   orderCount = 1,
+// }) => {
+//   if (!to || !coupon) return;
+//   const settings = await storeSettings.findOne();
+
+//   let subject = "";
+//   let title = "";
+//   let message = "";
+//   let couponValue = `${coupon.discountPercentage}% OFF`;
+
+//   // Different email content based on coupon type
+//   switch (couponType) {
+//     case "welcome_coupon":
+//       subject = ` Welcome to ${settings.storeName}! Here's Your ${couponValue} Gift`;
+//       title = `Welcome to the  ${settings.storeName} Family!`;
+//       message = `
+//         <p>Thank you for joining us! To welcome you to our eco-friendly community, 
+//         we're giving you a special discount on your next purchase.</p>
+//         <p>We're thrilled to have you as part of our mission to make the world greener, one purchase at a time.</p>
+//       `;
+//       break;
+
+//     case "loyalty_coupon":
+//       subject = `🌟 Loyalty Reward! ${couponValue} for Being an Amazing Customer`;
+//       title = "You're Amazing! Here's a Thank You Gift";
+//       message = `
+//         <p>Wow! You've already placed ${orderCount} orders with us. We're truly grateful 
+//         for your loyalty and trust in ${settings.storeName}.</p>
+//         <p>As a token of our appreciation, please enjoy this special discount on your next eco-friendly purchase.</p>
+//       `;
+//       break;
+
+//     case "vip_coupon":
+//       subject = `🏆 VIP Treatment! ${couponValue} Exclusive Reward`;
+//       title = `You're Now an ${settings.storeName} VIP!`;
+//       message = `
+//         <p>Congratulations! With ${orderCount} orders, you've officially reached VIP status 
+//         in our eco-friendly community.</p>
+//         <p>Thank you for being such a dedicated supporter of sustainable living. 
+//         Enjoy this exclusive VIP reward!</p>
+//       `;
+//       break;
+
+//     case "bigspender_coupon":
+//       subject = `💎 Premium Reward! ${couponValue} for Your Generous Order`;
+//       title = "Thank You for Your Generous Purchase!";
+//       message = `
+//         <p>We noticed your recent substantial investment in eco-friendly products, 
+//         and we're deeply grateful for your support!</p>
+//         <p>Your commitment to sustainable shopping helps us continue our mission. 
+//         Please accept this special reward for your next purchase.</p>
+//       `;
+//       break;
+
+//     default:
+//       subject = `🎁 Special ${couponValue} Gift from ${settings.storeName}`;
+//       title = "Here's a Special Gift For You!";
+//       message = `
+//         <p>Thank you for being a valued ${settings.storeName} customer! We appreciate your support 
+//         in making sustainable choices.</p>
+//         <p>Enjoy this discount on your next purchase of eco-friendly products.</p>
+//       `;
+//   }
+
+//   const html = `
+//     <div style="font-family: Arial, sans-serif; background-color: #f0f9f4; padding: 20px;">
+//       <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
+//         <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; color: #fff;">
+//           <img src="${
+//             settings?.logo
+//           }" alt="EcoStore Logo" style="max-height: 50px; display:block; margin: 0 auto 15px;" />
+//           <h1 style="margin:0; font-size: 28px; font-weight: bold;">${title}</h1>
+//           <div style="margin-top: 10px; font-size: 18px; opacity: 0.9;">Your Exclusive Discount Awaits!</div>
+//         </div>
+
+//         <div style="padding: 30px; color:#333;">
+//           ${message}
+
+//           <!-- Coupon Code Box -->
+//           <div style="background: linear-gradient(135deg, #fffbeb, #fed7aa); border: 2px dashed #d97706; border-radius: 12px; padding: 25px; text-align: center; margin: 25px 0;">
+//             <div style="font-size: 14px; color: #92400e; margin-bottom: 8px;">YOUR DISCOUNT CODE</div>
+//             <div style="font-size: 32px; font-weight: bold; color: #ea580c; letter-spacing: 3px; margin: 10px 0;">
+//               ${coupon.code}
+//             </div>
+//             <div style="font-size: 20px; color: #dc2626; font-weight: bold; margin: 8px 0;">
+//               ${couponValue}
+//             </div>
+//             <div style="font-size: 14px; color: #92400e;">
+//               Valid until: ${new Date(
+//                 coupon.expirationDate
+//               ).toLocaleDateString()}
+//             </div>
 //           </div>
-//           <p className="text-gray-600 text-sm mb-4">{location.address}</p>
-//           <div className="space-y-3">
-//             <div className="flex justify-between">
-//               <span className="text-gray-600">Total Items:</span>
-//               <span className="font-semibold">{location.totalItems}</span>
-//             </div>
-//             <div className="flex justify-between">
-//               <span className="text-gray-600">Total Value:</span>
-//               <span className="font-semibold">
-//                 {formatPrice(location?.totalValue, settings?.currency)}
-//               </span>
-//             </div>
+
+//           <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+//             <h3 style="margin:0 0 12px 0; color: #1e293b;">✨ How to Use Your Coupon:</h3>
+//             <ol style="margin: 0; padding-left: 20px; color: #475569;">
+//               <li>Shop your favorite eco-friendly products</li>
+//               <li>Proceed to checkout</li>
+//               <li>Enter code <strong style="color: #ea580c;">${
+//                 coupon.code
+//               }</strong> in the coupon field</li>
+//               <li>Enjoy your ${
+//                 coupon.discountPercentage
+//               }% discount instantly!</li>
+//             </ol>
 //           </div>
-//           <div className="mt-6">
-//             <h4 className="text-sm font-medium text-gray-700 mb-2">
-//               Top Products
-//             </h4>
-//             <div className="space-y-2">
-//               {location.products?.map((product) => (
-//                 <div
-//                   key={product.productId}
-//                   className="flex justify-between text-sm"
-//                 >
-//                   <span className="truncate">{product.productName}</span>
-//                   <span className="font-medium text-black">
-//                     {product.stock} units
-//                   </span>
-//                 </div>
-//               ))}
-//             </div>
+
+//           <p style="color: #64748b; font-size: 14px; text-align: center; margin-top: 25px;">
+//             This coupon is exclusively for you and cannot be transferred.
+//           </p>
+
+//           <div style="text-align: center; margin-top: 30px;">
+//             <a href="${process.env.CLIENT_URL}" 
+//                style="background: #10b981; color: white; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
+//               🛍️ Start Shopping Now
+//             </a>
 //           </div>
 //         </div>
-//       ))}
-//     </div>
-//   </div>
-// );
 
-// export default InventoryTab;
+//         <div style="background: #1e293b; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
+//           <p style="margin: 0 0 10px 0;">Thank you for choosing sustainable shopping with ${
+//             settings.storeName
+//           } </p>
+//           <p style="margin: 0;">Need help? Contact us at <a href="mailto:${
+//             settings.supportEmail
+//           }" 
+//              style="color: #10b981; text-decoration: none;">${
+//                settings.supportEmail
+//              }</a></p>
+//         </div>
+//       </div>
+//     </div>
+//   `;
+
+//   // Plain text version
+//   const text = `
+// ${title}
+
+// ${message.replace(/<[^>]*>/g, "").trim()}
+
+// YOUR DISCOUNT CODE: ${coupon.code}
+// DISCOUNT: ${couponValue}
+// VALID UNTIL: ${new Date(coupon.expirationDate).toLocaleDateString()}
+
+// How to Use:
+// 1. Shop your favorite eco-friendly products
+// 2. Proceed to checkout
+// 3. Enter code ${coupon.code} in the coupon field
+// 4. Enjoy your ${coupon.discountPercentage}% discount instantly!
+
+// Shop now: ${process.env.CLIENT_URL}
+
+// This coupon is exclusively for you and cannot be transferred.
+
+// Thank you for choosing sustainable shopping with  ${settings.storeName} 
+//   `.trim();
+
+//   await sendEmail({
+//     to,
+//     subject,
+//     html,
+//     text,
+//   });
+// };
+
+ 

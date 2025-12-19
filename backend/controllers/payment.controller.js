@@ -28,30 +28,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
-// 1. First define all helper functions
-
-async function clearStaleDatabaseReservations() {
-  console.log("🔍 Checking for VERY stale reservations (30+ minutes old)...");
-
-  try {
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-
-    const productsWithReservations = await Product.find({
-      $or: [{ reserved: { $gt: 0 } }, { "variants.reserved": { $gt: 0 } }],
-      updatedAt: { $lt: thirtyMinutesAgo }, // Only very old reservations
-    });
-
-    for (const product of productsWithReservations) {
-      // Only release reservations that are 30+ minutes old
-      // This handles true edge cases without interfering with normal flow
-    }
-  } catch (error) {
-    console.error("❌ Error in cleanup:", error);
-  }
-}
 
 
-// 2. Reservation functions using Redis
 async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
   const session = await mongoose.startSession();
 
@@ -1468,85 +1446,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
   }
 };
 
-// ✅ HELPER FUNCTIONS
-function isPaymentSuccessful(status, paymentType) {
-  if (paymentType === "banktransfer" || paymentType === "bank_transfer") {
-    return ["successful", "success", "completed", "credited"].includes(status);
-  }
-  return status === "successful";
-}
-
-function parseProducts(productsData) {
-  if (!productsData) return [];
-
-  try {
-    const products =
-      typeof productsData === "string"
-        ? JSON.parse(productsData)
-        : productsData;
-
-    return products.map((p) => ({
-      _id: p._id || p.id || null,
-      name: p.name,
-      images: p.images || [],
-      quantity: p.quantity || 1,
-      price: p.price,
-      size: p.size || null,
-      color: p.color || null,
-      category: p.category || null,
-    }));
-  } catch (error) {
-    console.error("Error parsing products:", error);
-    return [];
-  }
-}
-
-async function handlePostOrderActions(userId, order, flutterwaveData) {
-  try {
-    // Handle coupon eligibility
-    const couponEligibility = await checkCouponEligibility(
-      userId,
-      order.totalAmount
-    );
-
-    if (couponEligibility) {
-      const newCoupon = await createNewCoupon(userId, {
-        discountPercentage: couponEligibility.discountPercentage,
-        couponType: couponEligibility.codePrefix,
-        reason: couponEligibility.reason,
-        daysValid: 30,
-      });
-
-      if (newCoupon) {
-        const user = await User.findById(userId);
-        if (user?.email) {
-          await sendCouponEmail({
-            to: user.email,
-            coupon: newCoupon,
-            couponType: couponEligibility.emailType,
-            orderCount: await Order.countDocuments({
-              user: userId,
-              paymentStatus: "paid",
-            }),
-          });
-        }
-      }
-    }
-
-    // Send order confirmation
-    const user = await User.findById(userId);
-    if (user?.email) {
-      await sendDetailedOrderEmail({
-        to: user.email,
-        order,
-        flutterwaveData,
-      });
-    }
-  } catch (error) {
-    console.error("Post-order actions failed:", error);
-  }
-}
-
 
 async function withRetry(fn, retries = 3, delay = 200) {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -1774,7 +1673,7 @@ export const checkoutSuccess = async (req, res) => {
   }
 };
 
-// Update your email function to use paymentMethod instead of paymentData
+
 export const sendDetailedOrderEmail = async ({
   to,
   order,
@@ -1975,7 +1874,6 @@ export const sendDetailedOrderEmail = async ({
   });
 };
 
-// Add this function after sendDetailedOrderEmail
 export const sendCouponEmail = async ({
   to,
   coupon,
