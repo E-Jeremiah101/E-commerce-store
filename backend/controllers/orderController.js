@@ -40,7 +40,6 @@ const logOrderAction = async (
   }
 };
 
-// Helper for user actions (when regular user does something)
 const logUserAction = async (req, action, entityType, entityId, entityName, changes = {}, additionalInfo = "") => {
   try {
     await AuditLogger.log({
@@ -127,6 +126,173 @@ export const getUserOrders = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+const deductStockForRecoveredItem = async (item) => {
+  try {
+    if (!item.product) {
+      return {
+        status: 'NO_PRODUCT_ID',
+        message: `No product ID found for "${item.name}" - cannot deduct stock`,
+        productName: item.name,
+        quantity: item.quantity
+      };
+    }
+
+    const product = await Product.findById(item.product);
+    if (!product) {
+      return {
+        status: 'PRODUCT_NOT_FOUND',
+        message: `Product "${item.name}" not found in database`,
+        productName: item.name,
+        quantity: item.quantity
+      };
+    }
+
+    // For products with variants
+    if (product.variants && product.variants.length > 0) {
+      // If no specific variant selected, try to find any available variant
+      if (!item.selectedSize && !item.selectedColor) {
+        // Find first variant with sufficient stock
+        const availableVariant = product.variants.find(v => v.countInStock >= item.quantity);
+        
+        if (availableVariant) {
+          // Update item with the variant details we found
+          item.selectedSize = availableVariant.size;
+          item.selectedColor = availableVariant.color;
+          availableVariant.countInStock -= item.quantity;
+          await product.save();
+          
+          return {
+            status: 'DEDUCTED',
+            message: `✅ Stock deducted from variant ${availableVariant.size || 'N/A'}/${availableVariant.color || 'N/A'} for ${item.name}: ${item.quantity} units`,
+            productName: item.name,
+            quantity: item.quantity,
+            variantSize: availableVariant.size,
+            variantColor: availableVariant.color,
+            remainingStock: availableVariant.countInStock
+          };
+        } else {
+          // Try to find any variant with at least some stock
+          const totalVariantStock = product.variants.reduce((sum, v) => sum + v.countInStock, 0);
+          return {
+            status: 'OUT_OF_STOCK',
+            message: `❌ No variant has sufficient stock for ${item.name}. Total variant stock: ${totalVariantStock}, Required: ${item.quantity}`,
+            productName: item.name,
+            quantity: item.quantity,
+            availableStock: totalVariantStock
+          };
+        }
+      }
+      
+      // Specific variant requested
+      const variant = product.variants.find(v => 
+        v.size === (item.selectedSize || '') && 
+        v.color === (item.selectedColor || '')
+      );
+      
+      if (!variant) {
+        // Try fuzzy matching
+        const fuzzyVariant = product.variants.find(v => {
+          const sizeMatch = !item.selectedSize || v.size === item.selectedSize || 
+                           v.size === '' || v.size === 'Standard';
+          const colorMatch = !item.selectedColor || v.color === item.selectedColor || 
+                            v.color === '' || v.color === 'Standard';
+          return sizeMatch && colorMatch;
+        });
+        
+        if (fuzzyVariant) {
+          if (fuzzyVariant.countInStock >= item.quantity) {
+            fuzzyVariant.countInStock -= item.quantity;
+            // Update item with the actual variant details
+            item.selectedSize = fuzzyVariant.size;
+            item.selectedColor = fuzzyVariant.color;
+            await product.save();
+            
+            return {
+              status: 'DEDUCTED',
+              message: `✅ Stock deducted from variant ${fuzzyVariant.size || 'N/A'}/${fuzzyVariant.color || 'N/A'} for ${item.name}: ${item.quantity} units`,
+              productName: item.name,
+              quantity: item.quantity,
+              variantSize: fuzzyVariant.size,
+              variantColor: fuzzyVariant.color,
+              remainingStock: fuzzyVariant.countInStock
+            };
+          } else {
+            return {
+              status: 'OUT_OF_STOCK',
+              message: `❌ Insufficient stock for ${item.name} ${fuzzyVariant.size || ''}/${fuzzyVariant.color || ''}. Available: ${fuzzyVariant.countInStock}, Required: ${item.quantity}`,
+              productName: item.name,
+              quantity: item.quantity,
+              availableStock: fuzzyVariant.countInStock
+            };
+          }
+        }
+        
+        return {
+          status: 'VARIANT_NOT_FOUND',
+          message: `❌ Variant not found for ${item.name} (Size: ${item.selectedSize || 'Any'}, Color: ${item.selectedColor || 'Any'})`,
+          productName: item.name,
+          quantity: item.quantity
+        };
+      }
+      
+      // Deduct from specific variant
+      if (variant.countInStock >= item.quantity) {
+        variant.countInStock -= item.quantity;
+        await product.save();
+        
+        return {
+          status: 'DEDUCTED',
+          message: `✅ Stock deducted from variant ${variant.size || 'N/A'}/${variant.color || 'N/A'} for ${item.name}: ${item.quantity} units`,
+          productName: item.name,
+          quantity: item.quantity,
+          variantSize: variant.size,
+          variantColor: variant.color,
+          remainingStock: variant.countInStock
+        };
+      } else {
+        return {
+          status: 'OUT_OF_STOCK',
+          message: `❌ Insufficient stock for ${item.name} ${variant.size || ''}/${variant.color || ''}. Available: ${variant.countInStock}, Required: ${item.quantity}`,
+          productName: item.name,
+          quantity: item.quantity,
+          availableStock: variant.countInStock
+        };
+      }
+    } 
+    // For products without variants
+    else {
+      if (product.countInStock >= item.quantity) {
+        product.countInStock -= item.quantity;
+        await product.save();
+        
+        return {
+          status: 'DEDUCTED',
+          message: `✅ Stock deducted for ${item.name}: ${item.quantity} units`,
+          productName: item.name,
+          quantity: item.quantity,
+          remainingStock: product.countInStock
+        };
+      } else {
+        return {
+          status: 'OUT_OF_STOCK',
+          message: `❌ Insufficient stock for ${item.name}. Available: ${product.countInStock}, Required: ${item.quantity}`,
+          productName: item.name,
+          quantity: item.quantity,
+          availableStock: product.countInStock
+        };
+      }
+    }
+  } catch (error) {
+    console.error(`❌ Error deducting stock for ${item.name}:`, error);
+    return {
+      status: 'ERROR',
+      message: `Error deducting stock for ${item.name}: ${error.message}`,
+      productName: item.name,
+      quantity: item.quantity,
+      error: error.message
+    };
   }
 };
   
@@ -297,7 +463,7 @@ export const supportRecoverOrder = async (req, res) => {
             entityId: null,
             entityName: "Failed Recovery",
             changes: {
-              attemptedWith: { 
+              attemptedWith: {
                 transaction_ref,
                 flutterwave_ref,
                 customer_email,
@@ -402,7 +568,7 @@ export const supportRecoverOrder = async (req, res) => {
             ...AuditLogger.getRequestInfo(req),
             additionalInfo: "Order recovery failed - No payment found",
           });
-          
+
           console.log("🔄 Trying alternative search methods...");
 
           try {
@@ -488,24 +654,24 @@ export const supportRecoverOrder = async (req, res) => {
 
       const user = await User.findById(existingOrder.user);
 
-       await logOrderAction(
-         req,
-         "ORDER_RECOVERY_DUPLICATE",
-         existingOrder._id,
-         {
-           duplicateFound: {
-             orderNumber: existingOrder.orderNumber,
-             status: existingOrder.status,
-             existingTransactionId: existingOrder.flutterwaveTransactionId,
-           },
-           attemptedRecovery: {
-             transaction_ref,
-             flutterwave_ref,
-             customer_email,  
-           }, 
-         },
-         "Duplicate order detected during recovery attempt"
-       );
+      await logOrderAction(
+        req,
+        "ORDER_RECOVERY_DUPLICATE",
+        existingOrder._id,
+        {
+          duplicateFound: {
+            orderNumber: existingOrder.orderNumber,
+            status: existingOrder.status,
+            existingTransactionId: existingOrder.flutterwaveTransactionId,
+          },
+          attemptedRecovery: {
+            transaction_ref,
+            flutterwave_ref,
+            customer_email,
+          },
+        },
+        "Duplicate order detected during recovery attempt"
+      );
 
       return res.status(400).json({
         error: "Order already exists in system",
@@ -524,8 +690,6 @@ export const supportRecoverOrder = async (req, res) => {
     // ✅ EXTRACT PRODUCT INFORMATION
     let recoveredProducts = [];
     let subtotal = payment.amount;
-
-    
 
     console.log("📦 Payment metadata:", payment.meta);
     console.log("📦 Payment customizations:", payment.customer);
@@ -640,15 +804,50 @@ export const supportRecoverOrder = async (req, res) => {
       payment.meta?.phone_number ||
       payment.customer?.phone_number ||
       "To be confirmed";
-      const deliveryFee = parseFloat(payment.meta?.deliveryFee) || 0;
-      const originalTotal = parseFloat(payment.meta?.originalTotal) || 0;
+    const deliveryFee = parseFloat(payment.meta?.deliveryFee) || 0;
+    const originalTotal = parseFloat(payment.meta?.originalTotal) || 0;
 
-  
-      if (deliveryFee > 0 && originalTotal > 0) {
-        subtotal = originalTotal;
-      } else if (deliveryFee > 0) {
-        subtotal = payment.amount - deliveryFee;
-      }
+    if (deliveryFee > 0 && originalTotal > 0) {
+      subtotal = originalTotal;
+    } else if (deliveryFee > 0) {
+      subtotal = payment.amount - deliveryFee;
+    }
+
+    // ✅ DEDUCT STOCK FOR RECOVERED PRODUCTS
+   const stockDeductionResults = [];
+   const outOfStockMessages = [];
+
+   for (const item of recoveredProducts) {
+     const deductionResult = await deductStockForRecoveredItem(item);
+     stockDeductionResults.push(deductionResult);
+
+     if (deductionResult.status !== "DEDUCTED") {
+       outOfStockMessages.push(deductionResult.message);
+     }
+
+     // Update the item with variant details if they were determined during deduction
+     if (deductionResult.variantSize !== undefined) {
+       item.selectedSize = deductionResult.variantSize;
+     }
+     if (deductionResult.variantColor !== undefined) {
+       item.selectedColor = deductionResult.variantColor;
+     }
+   }
+
+   // Debug logging
+   console.log("📊 Stock deduction results:", stockDeductionResults);
+   console.log("⚠️ Out of stock messages:", outOfStockMessages);
+
+   // Count statistics
+  //  const deductedCount = stockDeductionResults.filter(
+  //    (r) => r.status === "DEDUCTED"
+  //  ).length;
+  //  const outOfStockCount = stockDeductionResults.filter(
+  //    (r) => r.status === "OUT_OF_STOCK" || r.status === "VARIANT_NOT_FOUND"
+  //  ).length;
+  //  const errorCount = stockDeductionResults.filter(
+  //    (r) => r.status === "ERROR"
+  //  ).length;
 
     // ✅ Create the recovered order
     const order = new Order({
@@ -686,17 +885,25 @@ export const supportRecoverOrder = async (req, res) => {
             Amount: ₦${payment.currency} ${payment.amount}
             Customer: ${payment.customer?.name || "N/A"}
             Products: ${recoveredProducts.length} items
-            Recovered on: ${new Date().toLocaleString()}`,
+            Recovered on: ${new Date().toLocaleString()}
+            
+            STOCK DEDUCTION STATUS:
+            ${
+              outOfStockMessages.length > 0
+                ? "⚠️ SOME ITEMS OUT OF STOCK - ADMIN REVIEW REQUIRED ⚠️"
+                : "✅ All items in stock"
+            }
+            ${outOfStockMessages.map((msg) => `- ${msg}`).join("\n")}`,
     });
 
     await order.save();
     console.log("✅ Order recovered successfully:", order.orderNumber);
-    
+
     const recoveryNote = `Recovered via ${searchMethod.replace(
       "_",
       " "
     )} - Reference: ${referenceUsed}`;
-    
+
     (async () => {
       try {
         const emailSent = await sendRecoveryOrderEmail(
@@ -766,6 +973,8 @@ export const supportRecoverOrder = async (req, res) => {
         });
       }
     })();
+
+    // ✅ Log stock deduction results
     await logOrderAction(
       req,
       "ORDER_RECOVERY_SUCCESS",
@@ -781,11 +990,16 @@ export const supportRecoverOrder = async (req, res) => {
           customerEmail: customer_email,
           createdUser: !user.isNew ? "Existing" : "New",
         },
+        stockDeduction: stockDeductionResults,
       },
       `Order recovered via ${searchMethod.replace(
         "_",
         " "
-      )} - Reference: ${referenceUsed}`
+      )} - Reference: ${referenceUsed}. ${
+        outOfStockMessages.length > 0
+          ? `⚠️ Some items out of stock: ${outOfStockMessages.join("; ")}`
+          : "✅ All stock deducted successfully"
+      }`
     );
 
     res.json({
@@ -821,8 +1035,28 @@ export const supportRecoverOrder = async (req, res) => {
         phone: phone,
       },
       products: recoveredProducts,
+      stockDeductionSummary: {
+        totalItems: recoveredProducts.length,
+        deducted: stockDeductionResults.filter((r) => r.status === "DEDUCTED")
+          .length,
+        outOfStock: stockDeductionResults.filter(
+          (r) => r.status === "OUT_OF_STOCK"
+        ).length,
+        errors: stockDeductionResults.filter((r) => r.status === "ERROR")
+          .length,
+        adminNote:
+          outOfStockMessages.length > 0
+            ? "⚠️ SOME ITEMS ARE OUT OF STOCK. CONSIDER REFUNDING OR RE-STOCKING."
+            : "✅ All items in stock and deducted",
+        outOfStockItems: outOfStockMessages,
+      },
       nextSteps: [
         "Order automatically recovered with complete details!",
+        ...(outOfStockMessages.length > 0
+          ? [
+              "⚠️ REVIEW REQUIRED: Some items are out of stock. Consider contacting customer or processing refund.",
+            ]
+          : []),
         "Verify the products and delivery address match customer expectation",
         "Update order status when ready to process",
       ],
@@ -1148,6 +1382,9 @@ export const updateOrderStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// Helper function to deduct stock
+
+// In the supportRecoverOrder function, replace the stock deduction section with:
 
 // Add this function to reduce variant stock when order is placed
 const reduceVariantStock = async (orderItems) => {

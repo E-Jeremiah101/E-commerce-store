@@ -15,7 +15,7 @@ import {
 } from "../lib/redis.js";
 import Coupon from "../models/coupon.model.js";
 import Order from "../models/order.model.js";
-import User from "../models/user.model.js";
+import User from "../models/user.model.js"; 
 import Product from "../models/product.model.js";
 import { sendEmail } from "../lib/mailer.js";
 import { flw } from "../lib/flutterwave.js";
