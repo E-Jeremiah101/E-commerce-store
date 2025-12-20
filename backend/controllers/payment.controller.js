@@ -465,9 +465,7 @@ setInterval(async () => {
 
 // Helper function to check if a product has active Redis reservations
 async function checkProductHasActiveReservation(product, activeReservationIds) {
-  // This would require storing product IDs in Redis reservations
-  // For now, we'll assume any reservation in Redis might be for this product
-  // and be conservative (don't release if there are any active reservations)
+
   return activeReservationIds.size > 0;
 }
  
@@ -922,7 +920,7 @@ export const createCheckoutSession = async (req, res) => {
          deliveryAddress.state,
          deliveryAddress.city || "",
          deliveryAddress.lga || ""
-       );
+       ); 
        console.log(
          "🔄 Calculated delivery fee on backend:",
          calculatedDeliveryFee
@@ -1795,15 +1793,14 @@ export const sendDetailedOrderEmail = async ({
             <strong>Original Subtotal:</strong> ${formatter.format(
               subtotal
             )} <br>
-           
                     ${
                       discount > 0
                         ? `
-                    <p>
+                  
                       <strong>Coupon Discount:</strong> - ${formatter.format(
                         discount
                       )}
-                    </p>
+                   
           `
                         : ""
                     }<br>
@@ -1877,7 +1874,7 @@ export const sendDetailedOrderEmail = async ({
   // Send email
   await sendEmail({
     to,
-    subject: ` ${settings?.storeName} — Order Confirmation #${
+    subject: ` ${settings?.storeName} — Order Confirmation ${
       order.orderNumber || "N/A"
     }`,
     html,

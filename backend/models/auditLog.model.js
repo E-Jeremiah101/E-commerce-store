@@ -85,7 +85,7 @@ const auditLogSchema = new mongoose.Schema(
         "VIEW_ORDERS_SEARCH",
         "VIEW_ORDER_DETAILS",
         "VIEW_USER_ORDERS",
-        "VIEW_USER_ORDER", // Add this
+        "VIEW_USER_ORDER",
 
         // Category actions
         "CREATE_CATEGORY",

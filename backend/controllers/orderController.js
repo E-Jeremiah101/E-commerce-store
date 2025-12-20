@@ -297,7 +297,7 @@ export const supportRecoverOrder = async (req, res) => {
             entityId: null,
             entityName: "Failed Recovery",
             changes: {
-              attemptedWith: {
+              attemptedWith: { 
                 transaction_ref,
                 flutterwave_ref,
                 customer_email,
@@ -501,8 +501,8 @@ export const supportRecoverOrder = async (req, res) => {
            attemptedRecovery: {
              transaction_ref,
              flutterwave_ref,
-             customer_email,
-           },
+             customer_email,  
+           }, 
          },
          "Duplicate order detected during recovery attempt"
        );
@@ -524,6 +524,8 @@ export const supportRecoverOrder = async (req, res) => {
     // ✅ EXTRACT PRODUCT INFORMATION
     let recoveredProducts = [];
     let subtotal = payment.amount;
+
+    
 
     console.log("📦 Payment metadata:", payment.meta);
     console.log("📦 Payment customizations:", payment.customer);
@@ -638,6 +640,15 @@ export const supportRecoverOrder = async (req, res) => {
       payment.meta?.phone_number ||
       payment.customer?.phone_number ||
       "To be confirmed";
+      const deliveryFee = parseFloat(payment.meta?.deliveryFee) || 0;
+      const originalTotal = parseFloat(payment.meta?.originalTotal) || 0;
+
+  
+      if (deliveryFee > 0 && originalTotal > 0) {
+        subtotal = originalTotal;
+      } else if (deliveryFee > 0) {
+        subtotal = payment.amount - deliveryFee;
+      }
 
     // ✅ Create the recovered order
     const order = new Order({
@@ -646,6 +657,7 @@ export const supportRecoverOrder = async (req, res) => {
       orderNumber: generateOrderNumber(),
       subtotal: subtotal,
       totalAmount: payment.amount,
+      deliveryFee: deliveryFee,
       deliveryAddress: deliveryAddress,
       phone: phone,
       flutterwaveRef: payment.tx_ref,
@@ -1428,18 +1440,19 @@ const sendRecoveryOrderEmail = async (to, order, recoveryInfo) => {
     .join("");
 
   const totalAmount = order.totalAmount || order.totalPrice || order.total || 0;
-  const subtotal = order.subtotal || order.subTotal || 0;
   const discount = order.discount || 0;
   const deliveryFee = order.deliveryFee || 0;
+  const subtotal =
+    order.subtotal || order.subTotal || totalAmount - deliveryFee;
 
   const html = `
     <div style="font-family: Arial, sans-serif; background-color: #f6f8fa; padding: 20px;">
       <div style="max-width: 700px; margin: auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.06);">
-        <div style="background: #f59e0b; padding: 22px; text-align: center; color: #fff;">
-          <img src="${
-            settings?.logo
-          }" alt="${settings?.storeName}" style="max-height:50px; display:block; margin: 0 auto 8px;" />
-          <h1 style="margin:0; font-size:20px;">Order Recovered Successfully</h1>
+        <div style="background: #10b981; padding: 22px; text-align: center; color: #fff;">
+          <img src="${settings?.logo}" alt="${
+    settings?.storeName
+  }" style="max-height:50px; display:block; margin: 0 auto 8px;" />
+          <h1 style="margin:0; font-size:20px;">Order Confirmation</h1>
           <div style="margin-top:6px; font-size:15px;">${
             order.orderNumber || "N/A"
           }</div>
@@ -1447,18 +1460,9 @@ const sendRecoveryOrderEmail = async (to, order, recoveryInfo) => {
 
         <div style="padding: 22px; color:#333;">
           <p style="margin:0 0 8px;">Hi <strong>${customerName}</strong>,</p>
-          <p style="margin:0 0 16px;">Great news! Our support team has successfully recovered your order. Your payment has been confirmed and the order is now back in our system. Below are your order details.</p>
+          <p style="margin:0 0 16px;">Thank you for your order! We've received your payment and are now processing your purchase. Below are your order details.</p>
 
-          ${
-            recoveryInfo
-              ? `<div style="background-color: #fffbeb; border: 1px solid #f59e0b; border-radius: 5px; padding: 12px; margin: 16px 0;">
-                   <p style="margin:0; color: #92400e; font-size: 14px;">
-                     <strong>Recovery Note:</strong> ${recoveryInfo}
-                   </p>
-                 </div>`
-              : ""
-          }
-
+     
           <h3 style="margin:18px 0 8px;"> Order Summary</h3>
           <table style="width:100%; border-collapse: collapse; margin-top:8px;">
             <thead>
@@ -1475,29 +1479,27 @@ const sendRecoveryOrderEmail = async (to, order, recoveryInfo) => {
               }
             </tbody>
           </table>
-          
-          <div style="margin-top: 20px; padding: 16px; background-color: #f8f9fa; border-radius: 5px;">
-            <p style="margin: 0 0 8px 0; font-size: 16px;">
-              <strong>Original Subtotal:</strong> ${formatter.format(subtotal)}
-            </p>
-            ${
-              discount > 0
-                ? `<p style="margin: 0 0 8px 0; font-size: 16px;">
-                     <strong>Coupon Discount:</strong> - ${formatter.format(discount)}
-                   </p>`
-                : ""
-            }
-            ${
-              deliveryFee > 0
-                ? `<p style="margin: 0 0 8px 0; font-size: 16px;">
-                     <strong>Delivery Fee:</strong> ${formatter.format(deliveryFee)}
-                   </p>`
-                : ""
-            }
-            <p style="margin: 0; font-size: 18px; font-weight: bold; color: #10b981;">
-              <strong>Final Total:</strong> ${formatter.format(totalAmount)}
-            </p>
-          </div>
+         
+          <p style="margin-top: 20px; font-size: 16px;">
+            <strong>Original Subtotal:</strong> ${formatter.format(
+              subtotal
+            )} <br>
+                    ${
+                      discount > 0
+                        ? `
+                  
+                      <strong>Coupon Discount:</strong> - ${formatter.format(
+                        discount
+                      )}
+                   
+          `
+                        : ""
+                    }<br>
+            <strong>Delivery Fee:</strong> ${formatter.format(
+              deliveryFee
+            )}<br>
+            <strong>Final Total:</strong> ${formatter.format(totalAmount)}
+          </p>
 
           <div style="margin: 20px 0;">
             <p style="margin:0 0 6px;">
@@ -1512,7 +1514,7 @@ const sendRecoveryOrderEmail = async (to, order, recoveryInfo) => {
           <h3 style="margin:18px 0 8px;"> Payment Details</h3>
           <div style="background-color: #f8f9fa; padding: 12px; border-radius: 5px;">
             <p style="margin:0 0 6px;">
-              <strong>Payment Status:</strong> <span style="color: #10b981; font-weight: bold;">${
+              <strong>Payment Status:</strong> <span>${
                 order.paymentStatus || "Confirmed"
               }</span><br/>
               <strong>Payment Type:</strong> ${payment_type}<br/>
@@ -1585,7 +1587,7 @@ const sendRecoveryOrderEmail = async (to, order, recoveryInfo) => {
       to,
       subject: `${
         settings?.storeName || "Store"
-      } — Order Recovered #${order.orderNumber || "N/A"}`,
+      } — Order Confirmation ${order.orderNumber || "N/A"}`,
       html,
       text,
     });
