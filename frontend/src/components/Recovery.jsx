@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import axios from "../lib/axios";
 import { motion } from "framer-motion";
-import { useUserStore } from "../stores/useUserStore.js";
 import { CheckCircle, AlertTriangle, XCircle, Info } from "lucide-react";
 
 const Recovery = () => {
@@ -13,7 +12,6 @@ const Recovery = () => {
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const { user } = useUserStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();

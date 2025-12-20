@@ -79,6 +79,7 @@ const auditLogSchema = new mongoose.Schema(
         "ORDER_RECOVERY_ATTEMPT",
         "ORDER_RECOVERY_SUCCESS",
         "ORDER_RECOVERY_FAILED",
+        "ORDER_RECOVERY_EMAIL_SENT",
         "ORDER_RECOVERY_DUPLICATE",
         "CREATE_ORDER",
         "CREATE_ORDER_FAILED",

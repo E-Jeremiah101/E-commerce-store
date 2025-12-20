@@ -63,7 +63,7 @@ const AuditLogsTab = () => {
     { value: "ORDER_RECOVERY_SUCCESS", label: "Order Recovery" },
     { value: "ORDER_RECOVERY_FAILED", label: "Order Recovery Failed" },
     { value: "CREATE_ORDER", label: "Create Order" },
-    { value: "VIEW_ORDER_DETAILS", label: "View Order Details" },
+    { value: "ORDER_RECOVERY_EMAIL_SENT", label: "Order recovery email sent" },
 
     // Auth actions
     { value: "LOGIN", label: "Login" },
@@ -266,6 +266,7 @@ const AuditLogsTab = () => {
         return <AlertCircle className="h-4 w-4 text-yellow-500" />;
       case "ORDER_RECOVERY_SUCCESS":
       case "CREATE_ORDER":
+      case "ORDER_RECOVERY_EMAIL_SENT":
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case "ORDER_RECOVERY_FAILED":
       case "ORDER_RECOVERY_DUPLICATE":
