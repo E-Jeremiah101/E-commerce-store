@@ -27,9 +27,9 @@ export const getAllTransactions = async (req, res) => {
         amount: order.totalAmount - (order.totalRefunded || 0),
         paymentMethod: order.paymentMethod?.method || "flutterwave",
         type: "payment",
-        status: "success",
+        status: "success", 
         date: order.createdAt,
-      }))
+      })) 
       .filter((tx) =>
         search
           ? tx.transactionId.toLowerCase().includes(search.toLowerCase())

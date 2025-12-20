@@ -46,6 +46,8 @@ const AnalyticsTab = () => {
       key: "unitsSold",
       direction: "descending",
     });
+    const [couponTrend, setCouponTrend] = useState([]);
+    const [couponPerformance, setCouponPerformance] = useState([]);
     
 
   useEffect(() => {
@@ -73,6 +75,8 @@ const AnalyticsTab = () => {
           visitorsTrend,
           productSalesData = { products: [], summary: {} },
           usersTrend,
+          couponTrend,
+          couponPerformance,
         } = res.data;
 
         setAnalyticsData(analyticsData);
@@ -113,6 +117,21 @@ const AnalyticsTab = () => {
           ]);
         }
 
+        if (couponTrend && Array.isArray(couponTrend)) {
+          const processedCouponTrend = couponTrend.map((item) => ({
+            date: item._id,
+            name: formatDateLabel(item._id, selectedRange),
+            couponsUsed: item.count || 0,
+            couponDiscount: item.totalDiscount || 0,
+          }));
+          setCouponTrend(processedCouponTrend);
+        }
+
+        // Process coupon performance data
+        if (couponPerformance && Array.isArray(couponPerformance)) {
+          setCouponPerformance(couponPerformance);
+        }
+
         // Process sales data
         // Replace your mapping with this:
         const mappedSales = salesData.map((d) => {
@@ -127,6 +146,9 @@ const AnalyticsTab = () => {
             sales: Number(d.sales) || 0,
             revenue: totalRevenue,
             deliveryFee: Number(d.deliveryFee) || 0,
+            couponsUsed: Number(d.couponsUsed) || 0,
+            couponDiscount: Number(d.couponDiscount) || 0,
+            avgCouponDiscount: Number(d.avgCouponDiscount) || 0,
           };
         });
 
@@ -508,6 +530,124 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
               <span className="text-gray-500 text-xs">from last period</span>
             </div>
           </div>
+
+          <div className="rounded-2xl shadow-sm  h-fi">
+            <AnalyticsCard
+              title="Pending Refunds"
+              value={analyticsData.refundsPending || 0}
+              icon={Hourglass}
+              bgColor="bg-gradient-to-br from-yellow-50 to-amber-50"
+              borderColor="border-yellow-100"
+              iconColor="text-yellow-600"
+              iconBg="bg-yellow-100"
+              subtitle={`${percentage.pending.toFixed(1)}%`}
+            />
+          </div>
+          <div className=" rounded-2xl shadow-sm  h-fi">
+            <AnalyticsCard
+              title="Approved Refunds"
+              value={analyticsData.refundsApproved || 0}
+              icon={CheckCircle}
+              bgColor="bg-gradient-to-br from-green-50 to-emerald-50"
+              borderColor="border-green-100"
+              iconColor="text-green-600"
+              iconBg="bg-green-100"
+              subtitle={`${percentage.approved.toFixed(1)}%`}
+            />
+          </div>
+          <div className="rounded-2xl shadow-sm  h-fi">
+            <AnalyticsCard
+              title="Rejected Refunds"
+              value={analyticsData.refundsRejected || 0}
+              icon={XCircle}
+              bgColor="bg-gradient-to-br from-red-50 to-pink-50"
+              borderColor="border-red-100"
+              iconColor="text-red-600"
+              iconBg="bg-red-100"
+              subtitle={`${percentage.rejected.toFixed(1)}% `}
+            />
+          </div>
+          <div className="rounded-2xl shadow-sm  h-fit">
+            <AnalyticsCard
+              title="Processing Refunds"
+              value={analyticsData.refundsProcessing || 0}
+              icon={XCircle}
+              bgColor="bg-gradient-to-br from-red-50 to-pink-50"
+              borderColor="border-red-100"
+              iconColor="text-red-600"
+              iconBg="bg-red-100"
+              subtitle={`${percentage.processing.toFixed(1)}% `}
+            />
+          </div>
+          <div className="rounded-2xl shadow-sm  h-fit">
+            <AnalyticsCard
+              title="Refund Status"
+              value={`${analyticsData.refundsApproved || 0}/${
+                analyticsData.refundsPending || 0
+              }`}
+              icon={CheckCircle}
+              bgColor="bg-gradient-to-br from-orange-50 to-amber-50"
+              borderColor="border-orange-100"
+              iconColor="text-orange-600"
+              iconBg="bg-orange-100"
+              subtitle={`${analyticsData.refundsRejected || 0} rejected`}
+            />
+          </div>
+
+          {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <AnalyticsCard
+              title="Pending Refunds"
+              value={analyticsData.refundsPending || 0}
+              icon={Hourglass}
+              bgColor="bg-gradient-to-br from-yellow-50 to-amber-50"
+              borderColor="border-yellow-100"
+              iconColor="text-yellow-600"
+              iconBg="bg-yellow-100"
+              subtitle={`${percentage.pending.toFixed(1)}%`}
+            />
+            <AnalyticsCard
+              title="Approved Refunds"
+              value={analyticsData.refundsApproved || 0}
+              icon={CheckCircle}
+              bgColor="bg-gradient-to-br from-green-50 to-emerald-50"
+              borderColor="border-green-100"
+              iconColor="text-green-600"
+              iconBg="bg-green-100"
+              subtitle={`${percentage.approved.toFixed(1)}%`}
+            />
+            <AnalyticsCard
+              title="Rejected Refunds"
+              value={analyticsData.refundsRejected || 0}
+              icon={XCircle}
+              bgColor="bg-gradient-to-br from-red-50 to-pink-50"
+              borderColor="border-red-100"
+              iconColor="text-red-600"
+              iconBg="bg-red-100"
+              subtitle={`${percentage.rejected.toFixed(1)}% `}
+            />
+            <AnalyticsCard
+              title="Processing Refunds"
+              value={analyticsData.refundsProcessing || 0}
+              icon={XCircle}
+              bgColor="bg-gradient-to-br from-red-50 to-pink-50"
+              borderColor="border-red-100"
+              iconColor="text-red-600"
+              iconBg="bg-red-100"
+              subtitle={`${percentage.processing.toFixed(1)}% `}
+            />
+            <AnalyticsCard
+              title="Refund Status"
+              value={`${analyticsData.refundsApproved || 0}/${
+                analyticsData.refundsPending || 0
+              }`}
+              icon={CheckCircle}
+              bgColor="bg-gradient-to-br from-orange-50 to-amber-50"
+              borderColor="border-orange-100"
+              iconColor="text-orange-600"
+              iconBg="bg-orange-100"
+              subtitle={`${analyticsData.refundsRejected || 0} rejected`}
+            />
+          </div> */}
         </div>
         {/* Second Row - Charts and Additional Metrics */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -534,6 +674,8 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
                 </span>
               </div>
             </div>
+
+            {/* Additional Analytics Cards */}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Average Order Value Section */}
@@ -765,156 +907,8 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
             </div>
           </div>
         </div>
-        {/* Revenue Section */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-8">
-          <h3 className="text-lg font-semibold text-gray-800 mb-6">
-            Revenue Analytics
-          </h3>
 
-          {/* Revenue Cards Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-100">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="bg-indigo-100 p-2 rounded-lg">
-                  <DollarSign className="h-5 w-5 text-indigo-600" />
-                </div>
-                <p className="text-gray-600 font-medium">Gross Revenue</p>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                {formatPrice(analyticsData?.grossRevenue, settings?.currency) ||
-                  "0"}
-              </h3>
-              <div className="flex items-center gap-2">
-                {analyticsData.revenueChange >= 0 ? (
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                )}
-                <span
-                  className={`text-sm ${
-                    analyticsData.revenueChange >= 0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {analyticsData.revenueChange >= 0 ? "+" : ""}
-                  {analyticsData.revenueChange?.toFixed(1) || "0.0"}% from last
-                  period
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-6 border border-red-100">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="bg-red-100 p-2 rounded-lg">
-                  <XCircle className="h-5 w-5 text-red-600" />
-                </div>
-                <p className="text-gray-600 font-medium">Refunded Amount</p>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                {formatPrice(
-                  analyticsData?.totalRefunded,
-                  settings?.currency
-                ) || "0"}
-              </h3>
-              <div className="flex items-center gap-2">
-                {analyticsData.refundedChange >= 0 ? (
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                )}
-                <span
-                  className={`text-sm ${
-                    analyticsData.refundedChange >= 0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {analyticsData.refundedChange >= 0 ? "+" : ""}
-                  {analyticsData.refundedChange?.toFixed(1) || "0.0"}% from last
-                  period
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-100">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="bg-emerald-100 p-2 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-emerald-600" />
-                </div>
-                <p className="text-gray-600 font-medium">Net Revenue</p>
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                {formatPrice(analyticsData?.netRevenue, settings?.currency) ||
-                  "0"}
-              </h3>
-              <div className="flex items-center gap-2">
-                {analyticsData.netRevenueChange >= 0 ? (
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                ) : (
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                )}
-                <span
-                  className={`text-sm ${
-                    analyticsData.netRevenueChange >= 0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }`}
-                >
-                  {analyticsData.netRevenueChange >= 0 ? "+" : ""}
-                  {analyticsData.netRevenueChange?.toFixed(1) || "0.0"}% from
-                  last period
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Revenue Chart */}
-          <div className="mt-6">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-gray-700 font-medium">Revenue Trend</h4>
-              <div className="flex gap-2">
-                <button className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg">
-                  Revenue
-                </button>
-              </div>
-            </div>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={salesData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="name" stroke="#6B7280" fontSize={12} />
-                <YAxis
-                  stroke="#6B7280"
-                  fontSize={12}
-                  tickFormatter={(value) =>
-                    `${formatPrice(
-                      (value / 1000).toFixed(0),
-                      settings?.currency
-                    )}K`
-                  }
-                />
-                <Tooltip
-                  content={<CustomTooltip />}
-                  contentStyle={{
-                    backgroundColor: "white",
-                    border: "1px solid #E5E7EB",
-                    borderRadius: "8px",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#4F46E5"
-                  strokeWidth={3}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6, strokeWidth: 0 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        
+        {/* { delivery chart} */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-8">
           <h3 className="text-lg font-semibold text-gray-800 mb-6">
             Logistics & Delivery
@@ -1147,61 +1141,414 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
             </ResponsiveContainer>
           </div>
         </div>
-        {/* Additional Analytics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <AnalyticsCard
-            title="Pending Refunds"
-            value={analyticsData.refundsPending || 0}
-            icon={Hourglass}
-            bgColor="bg-gradient-to-br from-yellow-50 to-amber-50"
-            borderColor="border-yellow-100"
-            iconColor="text-yellow-600"
-            iconBg="bg-yellow-100"
-            subtitle={`${percentage.pending.toFixed(1)}%`}
-          />
-          <AnalyticsCard
-            title="Approved Refunds"
-            value={analyticsData.refundsApproved || 0}
-            icon={CheckCircle}
-            bgColor="bg-gradient-to-br from-green-50 to-emerald-50"
-            borderColor="border-green-100"
-            iconColor="text-green-600"
-            iconBg="bg-green-100"
-            subtitle={`${percentage.approved.toFixed(1)}%`}
-          />
-          <AnalyticsCard
-            title="Rejected Refunds"
-            value={analyticsData.refundsRejected || 0}
-            icon={XCircle}
-            bgColor="bg-gradient-to-br from-red-50 to-pink-50"
-            borderColor="border-red-100"
-            iconColor="text-red-600"
-            iconBg="bg-red-100"
-            subtitle={`${percentage.rejected.toFixed(1)}% `}
-          />
-          <AnalyticsCard
-            title="Processing Refunds"
-            value={analyticsData.refundsProcessing || 0}
-            icon={XCircle}
-            bgColor="bg-gradient-to-br from-red-50 to-pink-50"
-            borderColor="border-red-100"
-            iconColor="text-red-600"
-            iconBg="bg-red-100"
-            subtitle={`${percentage.processing.toFixed(1)}% `}
-          />
-          <AnalyticsCard
-            title="Refund Status"
-            value={`${analyticsData.refundsApproved || 0}/${
-              analyticsData.refundsPending || 0
-            }`}
-            icon={CheckCircle}
-            bgColor="bg-gradient-to-br from-orange-50 to-amber-50"
-            borderColor="border-orange-100"
-            iconColor="text-orange-600"
-            iconBg="bg-orange-100"
-            subtitle={`${analyticsData.refundsRejected || 0} rejected`}
-          />
+
+        {/* Coupon Analytics Section */}
+        {/* Coupon Analytics Section */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-8">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6">
+            Coupon & Discount Analytics
+          </h3>
+
+          {/* Coupon Metrics Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {/* Coupons Used Card */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-green-100 p-2 rounded-lg">
+                  <svg
+                    className="h-5 w-5 text-green-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-600 font-medium">Coupons Used</p>
+                  <p className="text-gray-500 text-xs">
+                    Total discount codes applied
+                  </p>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {analyticsData.couponsUsed || 0}
+              </h3>
+              <div className="flex items-center gap-2">
+                {analyticsData.couponsUsedChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span
+                  className={`text-sm ${
+                    analyticsData.couponsUsedChange >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {analyticsData.couponsUsedChange >= 0 ? "+" : ""}
+                  {analyticsData.couponsUsedChange?.toFixed(1) || "0.0"}% from
+                  last period
+                </span>
+              </div>
+            </div>
+
+            {/* Total Coupon Discount Card */}
+            <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-6 border border-purple-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-purple-100 p-2 rounded-lg">
+                  <svg
+                    className="h-5 w-5 text-purple-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-600 font-medium">Total Discount</p>
+                  <p className="text-gray-500 text-xs">
+                    Amount saved by customers
+                  </p>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {formatPrice(
+                  analyticsData.totalCouponDiscount || 0,
+                  settings?.currency
+                )}
+              </h3>
+              <div className="flex items-center gap-2">
+                {analyticsData.couponDiscountChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span
+                  className={`text-sm ${
+                    analyticsData.couponDiscountChange >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {analyticsData.couponDiscountChange >= 0 ? "+" : ""}
+                  {analyticsData.couponDiscountChange?.toFixed(1) || "0.0"}%
+                  from last period
+                </span>
+              </div>
+            </div>
+
+            {/* Unique Coupon Codes Card */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-blue-100 p-2 rounded-lg">
+                  <svg
+                    className="h-5 w-5 text-blue-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-600 font-medium">Unique Codes</p>
+                  <p className="text-gray-500 text-xs">
+                    Different coupon codes used
+                  </p>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {analyticsData.uniqueCouponsUsed || 0}
+              </h3>
+              <div className="flex items-center gap-2">
+                {analyticsData.uniqueCouponsChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span
+                  className={`text-sm ${
+                    analyticsData.uniqueCouponsChange >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {analyticsData.uniqueCouponsChange >= 0 ? "+" : ""}
+                  {analyticsData.uniqueCouponsChange?.toFixed(1) || "0.0"}% from
+                  last period
+                </span>
+              </div>
+            </div>
+
+            {/* Discount Rate Card */}
+            <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-orange-100 p-2 rounded-lg">
+                  <svg
+                    className="h-5 w-5 text-orange-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-gray-600 font-medium">Discount Rate</p>
+                  <p className="text-gray-500 text-xs">Orders with coupons</p>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {analyticsData.couponDiscountRate?.toFixed(1) || "0.0"}%
+              </h3>
+              <p className="text-gray-500 text-sm">
+                {analyticsData.couponsUsed || 0} of{" "}
+                {analyticsData.allOrders || 0} orders
+              </p>
+            </div>
+          </div>
+
+          {/* Coupon Usage Trend Chart */}
+          <div className="mt-6">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-gray-700 font-medium">Coupon Usage Trend</h4>
+              <div className="flex gap-2">
+                <button className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-lg">
+                  Coupons Used
+                </button>
+                <button className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg">
+                  Discount Amount
+                </button>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={salesData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="name" stroke="#6B7280" fontSize={12} />
+                <YAxis
+                  yAxisId="left"
+                  stroke="#6B7280"
+                  fontSize={12}
+                  label={{
+                    value: "Coupons",
+                    angle: -90,
+                    position: "insideLeft",
+                  }}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  stroke="#6B7280"
+                  fontSize={12}
+                  tickFormatter={(value) =>
+                    `${formatPrice(value, settings?.currency)}`
+                  }
+                  label={{
+                    value: "Discount",
+                    angle: 90,
+                    position: "insideRight",
+                  }}
+                />
+                <Tooltip
+                  content={<CouponTooltip />}
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                  }}
+                />
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="couponsUsed"
+                  stroke="#8B5CF6"
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  name="Coupons Used"
+                />
+                <Line
+                  yAxisId="right"
+                  type="monotone"
+                  dataKey="couponDiscount"
+                  stroke="#F59E0B"
+                  strokeWidth={2}
+                  strokeDasharray="5 5"
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                  name="Total Discount"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Additional Coupon Stats */}
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600">
+                  Avg. Discount per Coupon
+                </p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {analyticsData.couponsUsed > 0
+                    ? formatPrice(
+                        analyticsData.totalCouponDiscount /
+                          analyticsData.couponsUsed,
+                        settings?.currency
+                      )
+                    : formatPrice(0, settings?.currency)}
+                </p>
+                <p className="text-gray-500 text-xs">
+                  Average saving per coupon used
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600">
+                  Discount to Revenue Ratio
+                </p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {analyticsData.grossRevenue > 0
+                    ? `${(
+                        (analyticsData.totalCouponDiscount /
+                          analyticsData.grossRevenue) *
+                        100
+                      ).toFixed(1)}%`
+                    : "0%"}
+                </p>
+                <p className="text-gray-500 text-xs">
+                  Discount as % of gross revenue
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-sm text-gray-600">Avg. Orders per Code</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {analyticsData.uniqueCouponsUsed > 0
+                    ? (
+                        analyticsData.couponsUsed /
+                        analyticsData.uniqueCouponsUsed
+                      ).toFixed(1)
+                    : "0"}
+                </p>
+                <p className="text-gray-500 text-xs">
+                  Average usage per coupon code
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Top Coupon Codes Table (if data exists) */}
+          {couponPerformance && couponPerformance.length > 0 && (
+            <div className="mt-8">
+              <h4 className="text-gray-700 font-medium mb-4">
+                Top Performing Coupon Codes
+              </h4>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Coupon Code
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Times Used
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total Discount
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Avg. Discount
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Revenue Generated
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Avg. Order Value
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {couponPerformance.map((coupon, index) => (
+                      <tr
+                        key={coupon._id || index}
+                        className="hover:bg-gray-50"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="font-medium text-gray-900">
+                            {coupon._id || "N/A"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {coupon.usageCount || 0}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                          {formatPrice(
+                            coupon.totalDiscount || 0,
+                            settings?.currency
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              (coupon.averageDiscount || 0) >= 10000
+                                ? "bg-green-100 text-green-800"
+                                : (coupon.averageDiscount || 0) >= 5000
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {formatPrice(
+                              coupon.averageDiscount || 0,
+                              settings?.currency
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                          {formatPrice(
+                            coupon.totalRevenue || 0,
+                            settings?.currency
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {formatPrice(
+                            coupon.avgOrderValue || 0,
+                            settings?.currency
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
+
         {/* Product Sales Analysis Table */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mt-8">
           <div className="flex justify-between items-center mb-6">
@@ -1565,6 +1912,156 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
             </div>
           )}
         </div>
+
+        {/* Revenue Section */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mt-8">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6">
+            Revenue Analytics
+          </h3>
+
+          {/* Revenue Cards Section */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-indigo-100 p-2 rounded-lg">
+                  <DollarSign className="h-5 w-5 text-indigo-600" />
+                </div>
+                <p className="text-gray-600 font-medium">Gross Revenue</p>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {formatPrice(analyticsData?.grossRevenue, settings?.currency) ||
+                  "0"}
+              </h3>
+              <div className="flex items-center gap-2">
+                {analyticsData.revenueChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span
+                  className={`text-sm ${
+                    analyticsData.revenueChange >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {analyticsData.revenueChange >= 0 ? "+" : ""}
+                  {analyticsData.revenueChange?.toFixed(1) || "0.0"}% from last
+                  period
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-6 border border-red-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-red-100 p-2 rounded-lg">
+                  <XCircle className="h-5 w-5 text-red-600" />
+                </div>
+                <p className="text-gray-600 font-medium">Refunded Amount</p>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {formatPrice(
+                  analyticsData?.totalRefunded,
+                  settings?.currency
+                ) || "0"}
+              </h3>
+              <div className="flex items-center gap-2">
+                {analyticsData.refundedChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span
+                  className={`text-sm ${
+                    analyticsData.refundedChange >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {analyticsData.refundedChange >= 0 ? "+" : ""}
+                  {analyticsData.refundedChange?.toFixed(1) || "0.0"}% from last
+                  period
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-100">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="bg-emerald-100 p-2 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-emerald-600" />
+                </div>
+                <p className="text-gray-600 font-medium">Net Revenue</p>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {formatPrice(analyticsData?.netRevenue, settings?.currency) ||
+                  "0"}
+              </h3>
+              <div className="flex items-center gap-2">
+                {analyticsData.netRevenueChange >= 0 ? (
+                  <TrendingUp className="h-4 w-4 text-green-500" />
+                ) : (
+                  <TrendingDown className="h-4 w-4 text-red-500" />
+                )}
+                <span
+                  className={`text-sm ${
+                    analyticsData.netRevenueChange >= 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }`}
+                >
+                  {analyticsData.netRevenueChange >= 0 ? "+" : ""}
+                  {analyticsData.netRevenueChange?.toFixed(1) || "0.0"}% from
+                  last period
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Revenue Chart */}
+          <div className="mt-6">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="text-gray-700 font-medium">Revenue Trend</h4>
+              <div className="flex gap-2">
+                <button className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg">
+                  Revenue
+                </button>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={salesData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="name" stroke="#6B7280" fontSize={12} />
+                <YAxis
+                  stroke="#6B7280"
+                  fontSize={12}
+                  tickFormatter={(value) =>
+                    `${formatPrice(
+                      (value / 1000).toFixed(0),
+                      settings?.currency
+                    )}K`
+                  }
+                />
+                <Tooltip
+                  content={<CustomTooltip />}
+                  contentStyle={{
+                    backgroundColor: "white",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#4F46E5"
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </motion.div>
     </>
   );
@@ -1616,6 +2113,59 @@ const AnalyticsCard = ({
     )}
   </motion.div>
 );
+
+
+
+// Add this tooltip component near CustomTooltip and DeliveryTooltip
+const CouponTooltip = ({ active, payload, label }) => {
+  const { settings } = useStoreSettings();
+
+  if (active && payload && payload.length) {
+    const data = payload[0]?.payload;
+    return (
+      <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
+        <p className="font-medium text-gray-800 mb-2">{label}</p>
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600 text-sm">Coupons Used:</span>
+            <span className="font-medium text-purple-600">
+              {data?.couponsUsed || 0}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600 text-sm">Total Discount:</span>
+            <span className="font-medium text-amber-600">
+              {formatPrice(data?.couponDiscount || 0, settings?.currency)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600 text-sm">Avg. Discount:</span>
+            <span className="font-medium text-green-600">
+              {data?.couponsUsed > 0
+                ? formatPrice((data?.couponDiscount || 0) / data?.couponsUsed, settings?.currency)
+                : formatPrice(0, settings?.currency)}
+            </span>
+          </div>
+          <div className="pt-2 border-t border-gray-100">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600 text-sm">Total Orders:</span>
+              <span className="font-medium text-blue-600">
+                {data?.sales || 0}
+              </span>
+            </div>
+            <div className="flex justify-between items-center text-xs text-gray-500 mt-1">
+              <span>Coupon Rate:</span>
+              <span>
+                {data?.sales > 0 ? ((data?.couponsUsed / data?.sales) * 100).toFixed(1) : 0}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 // Add this component in your AnalyticsTab component
 const DeliveryTooltip = ({ active, payload, label, settings }) => {

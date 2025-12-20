@@ -14,6 +14,11 @@ export const getAnalytics = async (range = "weekly") => {
   console.log("📅 Current Period Start:", startDate);
   console.log("📅 Current Period End:", endDate);
 
+  const dateFilter = {};
+  if (startDate && endDate) {
+    dateFilter.createdAt = { $gte: startDate, $lte: endDate };
+  }
+
   // Calculate previous period for comparison
   let prevStartDate = null;
   if (range !== "all" && startDate) {
@@ -28,7 +33,6 @@ export const getAnalytics = async (range = "weekly") => {
   // Get current period data
   const analyticsData = await getAnalyticsData(startDate, endDate);
   console.log("📊 Current Period Data:", analyticsData);
-
 
   // Get previous period data for comparison
   let prevAnalyticsData = {
@@ -50,6 +54,10 @@ export const getAnalytics = async (range = "weekly") => {
     refundsRejected: 0,
     averageUnitValue: 0,
     totalUnitsSold: 0,
+    couponsUsed: 0,
+    totalCouponDiscount: 0,
+    uniqueCouponsUsed: 0,
+    couponDiscountRate: 0,
   };
 
   if (prevStartDate) {
@@ -60,55 +68,55 @@ export const getAnalytics = async (range = "weekly") => {
       console.log("⚠️ Could not fetch previous period data:", error.message);
     }
   }
-  
 
- const calculateChange = (current, previous, metricType = 'default') => {
-  console.log(`🔢 Calculate change - Current: ${current}, Previous: ${previous}, Metric: ${metricType}`);
-  
-  // Handle the case where previous is 0 but current is positive
-  if (previous === 0 && current > 0) {
-    // Instead of showing 100% for any increase from 0,
-    // we can show a more meaningful percentage based on overall growth
-    // or use a fixed growth percentage for new stores
-    console.log(`🔢 Previous is 0, current is ${current} - showing custom growth`);
-    return getRealisticGrowthPercentage(current, metricType);
-  }
-  
-  // Handle the case where both are 0
-  if (previous === 0 && current === 0) {
-    return 0;
-  }
-  
-  // Handle the case where previous is 0 but current is also 0
-  if (previous === 0) {
-    return 0;
-  }
-  
-  const change = ((current - previous) / previous) * 100;
-  console.log(`🔢 Calculated change: ${change.toFixed(2)}%`);
-  return change;
-};
+  const calculateChange = (current, previous, metricType = "default") => {
+    console.log(
+      `🔢 Calculate change - Current: ${current}, Previous: ${previous}, Metric: ${metricType}`
+    );
 
+    // Handle the case where previous is 0 but current is positive
+    if (previous === 0 && current > 0) {
+      // Instead of showing 100% for any increase from 0,
+      // we can show a more meaningful percentage based on overall growth
+      // or use a fixed growth percentage for new stores
+      console.log(
+        `🔢 Previous is 0, current is ${current} - showing custom growth`
+      );
+      return getRealisticGrowthPercentage(current, metricType);
+    }
 
-// Helper function for realistic growth percentages
-const getRealisticGrowthPercentage = (currentValue, metricType) => {
-  // For new stores with no previous data, show realistic demo percentages
-  const demoPercentages = {
-    products: 16.9,
-    users: 48.8,
-    orders: 25.4,
-    visitors: 32.2,
-    revenue: 24.3,
-    netRevenue: 18.9,
-    refunded: -8.7,
-    aov: 43.21
+    // Handle the case where both are 0
+    if (previous === 0 && current === 0) {
+      return 0;
+    }
+
+    // Handle the case where previous is 0 but current is also 0
+    if (previous === 0) {
+      return 0;
+    }
+
+    const change = ((current - previous) / previous) * 100;
+    console.log(`🔢 Calculated change: ${change.toFixed(2)}%`);
+    return change;
   };
-  
-  // Return demo percentage for the metric type
-  return demoPercentages[metricType] || 25.0; // Default 25% growth
-};
 
+  // Helper function for realistic growth percentages
+  const getRealisticGrowthPercentage = (currentValue, metricType) => {
+    // For new stores with no previous data, show realistic demo percentages
+    const demoPercentages = {
+      products: 16.9,
+      users: 48.8,
+      orders: 25.4,
+      visitors: 32.2,
+      revenue: 24.3,
+      netRevenue: 18.9,
+      refunded: -8.7,
+      aov: 43.21,
+    };
 
+    // Return demo percentage for the metric type
+    return demoPercentages[metricType] || 25.0; // Default 25% growth
+  };
 
   analyticsData.productsChange = calculateChange(
     analyticsData.products,
@@ -156,6 +164,24 @@ const getRealisticGrowthPercentage = (currentValue, metricType) => {
     analyticsData.totalDeliveryFee || 0,
     prevAnalyticsData.totalDeliveryFee || 0,
     "deliveryFee"
+  );
+
+  analyticsData.couponsUsedChange = calculateChange(
+    analyticsData.couponsUsed,
+    prevAnalyticsData.couponsUsed,
+    "couponsUsed"
+  );
+
+  analyticsData.couponDiscountChange = calculateChange(
+    analyticsData.totalCouponDiscount,
+    prevAnalyticsData.totalCouponDiscount,
+    "couponDiscount"
+  );
+
+  analyticsData.uniqueCouponsChange = calculateChange(
+    analyticsData.uniqueCouponsUsed,
+    prevAnalyticsData.uniqueCouponsUsed,
+    "uniqueCoupons"
   );
 
   // Calculate AOV (Average Order Value) and its change
@@ -260,6 +286,90 @@ const getRealisticGrowthPercentage = (currentValue, metricType) => {
     { $sort: { _id: 1 } },
   ]);
 
+  // In getAnalytics function, update couponTrend:
+  const couponTrend = await Order.aggregate([
+    {
+      $match: {
+        ...dateFilter,
+        $or: [
+          { "coupon.code": { $exists: true, $ne: null } },
+          { couponCode: { $exists: true, $ne: null } },
+        ],
+      },
+    },
+    {
+      $group: {
+        _id: {
+          $dateToString: { format: visitorFormat, date: "$createdAt" },
+        },
+        count: { $sum: 1 },
+        totalDiscount: {
+          $sum: {
+            $cond: [
+              { $gt: ["$discount", 0] },
+              "$discount",
+              { $ifNull: ["$coupon.discount", 0] },
+            ],
+          },
+        },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  
+  const couponPerformance = await Order.aggregate([
+    {
+      $match: {
+        ...dateFilter,
+        $or: [
+          { "coupon.code": { $exists: true, $ne: null } },
+          { couponCode: { $exists: true, $ne: null } },
+        ],
+      },
+    },
+    {
+      $group: {
+        _id: {
+          $cond: [
+            {
+              $and: [
+                { $ne: ["$coupon", null] },
+                { $ne: ["$coupon.code", null] },
+              ],
+            },
+            "$coupon.code",
+            "$couponCode",
+          ],
+        },
+        usageCount: { $sum: 1 },
+        totalDiscount: {
+          $sum: {
+            $cond: [
+              { $gt: ["$discount", 0] },
+              "$discount",
+              { $ifNull: ["$coupon.discount", 0] },
+            ],
+          },
+        },
+        averageDiscount: {
+          $avg: {
+            $cond: [
+              { $gt: ["$discount", 0] },
+              "$discount",
+              { $ifNull: ["$coupon.discount", 0] },
+            ],
+          },
+        },
+        totalOrders: { $sum: 1 },
+        totalRevenue: { $sum: { $ifNull: ["$subTotal", 0] } },
+        avgOrderValue: { $avg: { $ifNull: ["$subTotal", 0] } },
+      },
+    },
+    { $sort: { usageCount: -1 } },
+    { $limit: 10 },
+  ]);
+
   return {
     analyticsData,
     salesData,
@@ -270,10 +380,14 @@ const getRealisticGrowthPercentage = (currentValue, metricType) => {
     ordersTrend,
     refundTrend,
     productSalesData,
+    couponTrend,
+    couponPerformance,
   };
 };
 
 
+// MAIN ANALYTIC STATS - UPDATED WITH DATE FILTERING
+// -----------------------------
 
 // MAIN ANALYTIC STATS - UPDATED WITH DATE FILTERING
 // -----------------------------
@@ -291,8 +405,6 @@ async function getAnalyticsData(startDate, endDate) {
     User.countDocuments(dateFilter),
 
     // Products: Usually shouldn't be filtered by date (products exist regardless of when created)
-    // But if you want products created in this period, use:
-    // Product.countDocuments(dateFilter),
     Product.countDocuments({ archived: { $ne: true } }),
 
     // Orders: Filter by date AND status
@@ -362,7 +474,7 @@ async function getAnalyticsData(startDate, endDate) {
           },
         },
         totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
-        totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } }, // Add this
+        totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } },
       },
     },
   ]);
@@ -413,11 +525,79 @@ async function getAnalyticsData(startDate, endDate) {
     }
   });
 
+  // COUPON ANALYTICS - FIXED
+  const couponAnalytics = await Order.aggregate([
+    {
+      $match: {
+        ...dateFilter,
+        status: { $nin: ["Cancelled"] },
+        $or: [
+          { "coupon.code": { $exists: true, $ne: null } },
+          { couponCode: { $exists: true, $ne: null } }
+        ]
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        couponsUsed: { $sum: 1 },
+        totalCouponDiscount: {
+          $sum: {
+            $cond: [
+              { $gt: ["$discount", 0] },
+              "$discount",
+              { $ifNull: ["$coupon.discount", 0] }
+            ]
+          }
+        },
+        uniqueCouponCodes: {
+          $addToSet: {
+            $cond: [
+              { $and: [
+                { $ne: ["$coupon", null] },
+                { $ne: ["$coupon.code", null] }
+              ]},
+              "$coupon.code",
+              "$couponCode"
+            ]
+          }
+        }
+      }
+    },
+    {
+      $addFields: {
+        uniqueCouponCodes: {
+          $filter: {
+            input: "$uniqueCouponCodes",
+            as: "code",
+            cond: { $ne: ["$$code", null] }
+          }
+        }
+      }
+    },
+    {
+      $project: {
+        _id: 0,
+        couponsUsed: 1,
+        totalCouponDiscount: 1,
+        uniqueCouponsUsed: { $size: "$uniqueCouponCodes" }
+      }
+    }
+  ]);
+
+  const couponData = couponAnalytics[0] || {
+    couponsUsed: 0,
+    totalCouponDiscount: 0,
+    uniqueCouponsUsed: 0
+  };
+
+  console.log("📊 Coupon Data:", couponData);
+
   const grossRevenue = revenue[0]?.grossRevenue || 0;
   const totalRefunded = revenue[0]?.totalRefunded || 0;
   const netRevenue = grossRevenue - totalRefunded;
   const totalAmount = revenue[0]?.totalAmount || 0;
-  const totalDeliveryFee = revenue[0]?.totalDeliveryFee || 0; 
+  const totalDeliveryFee = revenue[0]?.totalDeliveryFee || 0;
 
   const totalUnits = unitValueData[0]?.totalUnits || 0;
   const totalProductRevenue = unitValueData[0]?.totalRevenue || 0;
@@ -441,27 +621,34 @@ async function getAnalyticsData(startDate, endDate) {
     totalRefunded: totalRefunded,
     netRevenue: netRevenue,
     totalDeliveryFee: totalDeliveryFee,
-    totalAmount: totalAmount, // Optional: for reference
+    totalAmount: totalAmount,
     refundsApproved: refundSummary.Approved,
     refundsPending: refundSummary.Pending,
     refundsRejected: refundSummary.Rejected,
     refundsProcessing: refundSummary.Processing,
     averageUnitValue: Math.round(averageUnitValue),
     totalUnitsSold: totalUnits,
+    // COUPON METRICS:
+    couponsUsed: couponData.couponsUsed,
+    totalCouponDiscount: couponData.totalCouponDiscount,
+    uniqueCouponsUsed: couponData.uniqueCouponsUsed,
+    couponDiscountRate: allOrders > 0 ? (couponData.couponsUsed / allOrders) * 100 : 0,
   };
 
-   console.log("📊 getAnalyticsData result:", {
-     averageUnitValue: result.averageUnitValue,
-     totalUnitsSold: result.totalUnitsSold,
-     totalProductRevenue,
-     ...result,
-   });
+  console.log("📊 getAnalyticsData result - Coupons:", {
+    couponsUsed: result.couponsUsed,
+    totalCouponDiscount: result.totalCouponDiscount,
+    uniqueCouponsUsed: result.uniqueCouponsUsed,
+    couponDiscountRate: result.couponDiscountRate,
+  });
+  
   return result;
 }
 
 // -----------------------------
 // SALES DATA (Main Chart)
 // -----------------------------
+
 async function getSalesDataByRange(range, startDate, endDate) {
   const matchStage = {
     $match: Object.assign(
@@ -472,7 +659,6 @@ async function getSalesDataByRange(range, startDate, endDate) {
     ),
   };
 
-  // For daily range we need hourly buckets, for others use date/month/year granularity
   const dateFormat =
     range === "yearly"
       ? "%Y"
@@ -493,10 +679,39 @@ async function getSalesDataByRange(range, startDate, endDate) {
       sales: { $sum: 1 },
       revenue: { $sum: { $ifNull: ["$subTotal", 0] } },
       refunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
-      deliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } }, 
+      deliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } },
       totalAmount: { $sum: { $ifNull: ["$totalAmount", 0] } },
+      couponsUsed: {
+        $sum: {
+          $cond: [
+            {
+              $gt: [
+                {
+                  $cond: [
+                    { $gt: ["$discount", 0] },
+                    "$discount",
+                    { $ifNull: ["$coupon.discount", 0] },
+                  ],
+                },
+                0,
+              ],
+            },
+            1,
+            0,
+          ],
+        },
+      },
+      couponDiscount: {
+        $sum: {
+          $cond: [
+            { $gt: ["$discount", 0] },
+            "$discount",
+            { $ifNull: ["$coupon.discount", 0] },
+          ],
+        },
+      },
     },
-  }; 
+  };
 
   const data = await Order.aggregate([
     matchStage,
@@ -509,9 +724,15 @@ async function getSalesDataByRange(range, startDate, endDate) {
     sales: item.sales,
     revenue: item.revenue,
     refunded: item.refunded,
-    deliveryFee: item.deliveryFee || 0, // Separate
-    totalAmount: item.totalAmount || 0, // Optional
+    deliveryFee: item.deliveryFee || 0,
+    totalAmount: item.totalAmount || 0,
     netRevenue: item.revenue - item.refunded,
+    couponsUsed: item.couponsUsed || 0,
+    couponDiscount: item.couponDiscount || 0,
+    avgCouponDiscount:
+      (item.couponsUsed || 0) > 0
+        ? (item.couponDiscount || 0) / (item.couponsUsed || 1)
+        : 0,
   }));
 }
 
