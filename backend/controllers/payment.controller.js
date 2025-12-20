@@ -461,7 +461,7 @@ setInterval(async () => {
   } catch (error) {
     console.error("❌ Error in reservation cleanup:", error);
   }
-}, 30000);
+}, 300000);
 
 // Helper function to check if a product has active Redis reservations
 async function checkProductHasActiveReservation(product, activeReservationIds) {
@@ -470,80 +470,80 @@ async function checkProductHasActiveReservation(product, activeReservationIds) {
 }
  
 // 4. Add the immediate cleanup function (run this once)
-async function clearAllReservations() {
-  console.log("🧹 Clearing all stale reservations from database...");
+// async function clearAllReservations() {
+//   console.log("🧹 Clearing all stale reservations from database...");
 
-  try {
-    const session = await mongoose.startSession();
+//   try {
+//     const session = await mongoose.startSession();
 
-    await session.withTransaction(async () => {
-      // Find all products with reserved inventory
-      const productsWithReservations = await Product.find({
-        $or: [{ reserved: { $gt: 0 } }, { "variants.reserved": { $gt: 0 } }],
-      }).session(session);
+//     await session.withTransaction(async () => {
+//       // Find all products with reserved inventory
+//       const productsWithReservations = await Product.find({
+//         $or: [{ reserved: { $gt: 0 } }, { "variants.reserved": { $gt: 0 } }],
+//       }).session(session);
 
-      console.log(
-        `📊 Found ${productsWithReservations.length} products with reservations`
-      );
+//       console.log(
+//         `📊 Found ${productsWithReservations.length} products with reservations`
+//       );
 
-      for (const product of productsWithReservations) {
-        let changed = false;
+//       for (const product of productsWithReservations) {
+//         let changed = false;
 
-        // Clear main product reservations
-        if (product.reserved > 0) {
-          console.log(
-            `🔄 Clearing main reservation for ${product.name}: ${product.reserved} units`
-          );
-          product.countInStock += product.reserved;
-          product.reserved = 0;
-          changed = true;
-        }
+//         // Clear main product reservations
+//         if (product.reserved > 0) {
+//           console.log(
+//             `🔄 Clearing main reservation for ${product.name}: ${product.reserved} units`
+//           );
+//           product.countInStock += product.reserved;
+//           product.reserved = 0;
+//           changed = true;
+//         }
 
-        // Clear variant reservations
-        if (product.variants && product.variants.length > 0) {
-          product.variants.forEach((variant, index) => {
-            if (variant.reserved > 0) {
-              console.log(
-                `🔄 Clearing variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units`
-              );
-              product.variants[index].countInStock += variant.reserved;
-              product.variants[index].reserved = 0;
-              changed = true;
-            }
-          });
+//         // Clear variant reservations
+//         if (product.variants && product.variants.length > 0) {
+//           product.variants.forEach((variant, index) => {
+//             if (variant.reserved > 0) {
+//               console.log(
+//                 `🔄 Clearing variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units`
+//               );
+//               product.variants[index].countInStock += variant.reserved;
+//               product.variants[index].reserved = 0;
+//               changed = true;
+//             }
+//           });
 
-          // Update total stock
-          if (changed) {
-            product.countInStock = product.variants.reduce(
-              (total, v) => total + v.countInStock,
-              0
-            );
-          }
-        }
+//           // Update total stock
+//           if (changed) {
+//             product.countInStock = product.variants.reduce(
+//               (total, v) => total + v.countInStock,
+//               0
+//             );
+//           }
+//         }
 
-        if (changed) {
-          await product.save({ session });
-          console.log(`✅ Cleared reservations for ${product.name}`);
-        }
-      }
-    });
+//         if (changed) {
+//           await product.save({ session });
+//           console.log(`✅ Cleared reservations for ${product.name}`);
+//         }
+//       }
+//     });
 
-    await session.endSession();
-    console.log("🎉 All stale reservations cleared successfully");
-  } catch (error) {
-    console.error("❌ Failed to clear reservations:", error);
-  }
-}
+//     await session.endSession();
+//     console.log("🎉 All stale reservations cleared successfully");
+//   } catch (error) {
+//     console.error("❌ Failed to clear reservations:", error);
+//   }
+// }
 
-// 5. Run the immediate cleanup once
-mongoose.connection.on("connected", async () => {
-  console.log("✅ MongoDB connected - starting reservation cleanup...");
-  await clearAllReservations();
-});
+// // 5. Run the immediate cleanup once
+// mongoose.connection.on("connected", async () => {
+//   console.log("✅ MongoDB connected - starting reservation cleanup...");
+//   await clearAllReservations();
+// });
 
-mongoose.connection.on("error", (err) => {
-  console.error("❌ MongoDB connection error:", err);
-});
+// mongoose.connection.on("error", (err) => {
+//   console.error("❌ MongoDB connection error:", err);
+// });
 
 async function checkCouponEligibility(userId, orderAmount) {
   try {
@@ -606,7 +606,7 @@ async function checkCouponEligibility(userId, orderAmount) {
         reason: "every_five_orders",
         emailType: "vip_coupon",
       };
-    } else if (orderAmount > 175000) {
+    } else if (orderAmount > 4) {
       console.log(
         `User ${userId} eligible for BIG SPENDER coupon (${orderAmount})`
       );
@@ -955,7 +955,7 @@ export const createCheckoutSession = async (req, res) => {
             (originalTotal * validCoupon.discountPercentage) / 100
           );
           console.log(
-            `Coupon applied: ${couponCode} - Discount: ₦${discountAmount}`
+            `Coupon applied: ${couponCode} - Discount: ${discountAmount}`
           );
         } else {
           console.log(`Invalid or expired coupon: ${couponCode}`);
@@ -978,7 +978,7 @@ export const createCheckoutSession = async (req, res) => {
     
     const reservationId = `res_${tx_ref}`;
     try {
-      await reserveInventory(products, reservationId, 4); // Reserve for 10 minutes
+      await reserveInventory(products, reservationId, 30); 
       console.log(`✅ Inventory reserved: ${reservationId}`);
     } catch (reservationError) {
       console.error("❌ Inventory reservation failed:", reservationError);
