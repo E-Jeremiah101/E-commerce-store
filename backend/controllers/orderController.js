@@ -128,6 +128,7 @@ export const getUserOrders = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+// Helper function for stock deduction during recovery
 const deductStockForRecoveredItem = async (item) => {
   try {
     if (!item.product) {
@@ -295,8 +296,8 @@ const deductStockForRecoveredItem = async (item) => {
     };
   }
 };
-  
-// Simple order recovery for support team
+
+// Original reduceVariantStock function (for regular orders)
 export const supportRecoverOrder = async (req, res) => {
   function generateOrderNumber() {
     return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -329,292 +330,62 @@ export const supportRecoverOrder = async (req, res) => {
     let searchMethod = "";
     let referenceUsed = "";
 
-    // STRATEGY 1: Search by Transaction Reference (tx_ref) - This is ECOSTORE-xxx
+    // [Keep all your existing search logic here - it's already correct]
+    // STRATEGY 1: Search by Transaction Reference
     if (transaction_ref && transaction_ref.trim() !== "") {
       console.log("🔍 Searching by Transaction Reference:", transaction_ref);
       searchMethod = "transaction_reference";
       referenceUsed = transaction_ref;
 
       try {
-        // Direct search by transaction reference
         const response = await flw.Transaction.fetch({
           tx_ref: transaction_ref.trim(),
         });
 
         if (response.data && response.data.length > 0) {
-          // Find successful payments
           const successfulPayments = response.data.filter(
             (p) => p.status === "successful"
           );
 
           if (successfulPayments.length > 0) {
-            payment = successfulPayments[0]; // Take the first successful one
-            console.log(
-              "✅ Found payment via Transaction Reference:",
-              payment.id
-            );
-          } else {
-            console.log(
-              "❌ No successful payments found for transaction reference"
-            );
-            // Show what we found
-            response.data.forEach((p) => {
-              console.log(
-                `   - Status: ${p.status}, Amount: ${p.amount}, Date: ${p.created_at}`
-              );
-            });
+            payment = successfulPayments[0];
+            console.log("✅ Found payment via Transaction Reference:", payment.id);
           }
-        } else {
-          console.log(
-            "❌ No payments found with Transaction Reference:",
-            transaction_ref
-          );
         }
       } catch (error) {
         console.error("Transaction Reference search failed:", error.message);
-        console.error("Full error:", error);
       }
     }
 
-    // STRATEGY 2: Search by Flutterwave Reference - Multiple formats
+    // STRATEGY 2: Search by Flutterwave Reference
     if (!payment && flutterwave_ref && flutterwave_ref.trim() !== "") {
       console.log("🔍 Searching by Flutterwave Reference:", flutterwave_ref);
       searchMethod = "flutterwave_reference";
       referenceUsed = flutterwave_ref;
 
       try {
-        // DETERMINE REFERENCE TYPE
-        let referenceType = "";
+        // Try different verification methods
         if (flutterwave_ref.startsWith("JayyTech_")) {
-          referenceType = "flw_ref";
-          console.log("📝 Identified as Flutterwave Reference (flw_ref)");
-        } else if (/^\d+$/.test(flutterwave_ref)) {
-          referenceType = "transaction_id";
-          console.log("📝 Identified as Transaction ID (numeric)");
-        } else {
-          referenceType = "unknown";
-          console.log("📝 Unknown reference format, trying all methods");
-        }
-
-        // METHOD 1: Try direct verification with different ID types
-        console.log("🔄 Trying direct verification...");
-
-        if (referenceType === "flw_ref" || referenceType === "unknown") {
           try {
-            console.log("🔄 Trying as Flutterwave Reference (flw_ref)...");
             const verificationResponse = await flw.Transaction.verify({
               id: flutterwave_ref.trim(),
             });
-            if (
-              verificationResponse.data &&
-              verificationResponse.data.status === "successful"
-            ) {
+            if (verificationResponse.data && verificationResponse.data.status === "successful") {
               payment = verificationResponse.data;
-              console.log(
-                "✅ Found payment via Flutterwave Reference verification:",
-                payment.id
-              );
             }
-          } catch (verifyError) {
-            console.log(
-              "❌ Verification as Flutterwave Reference failed:",
-              verifyError.message
-            );
-          }
-        }
-
-        if (
-          !payment &&
-          (referenceType === "transaction_id" || referenceType === "unknown")
-        ) {
+          } catch (error) {}
+        } else if (/^\d+$/.test(flutterwave_ref)) {
           try {
-            console.log("🔄 Trying as Transaction ID...");
             const verificationResponse = await flw.Transaction.verify({
               id: parseInt(flutterwave_ref.trim()),
             });
-            if (
-              verificationResponse.data &&
-              verificationResponse.data.status === "successful"
-            ) {
+            if (verificationResponse.data && verificationResponse.data.status === "successful") {
               payment = verificationResponse.data;
-              console.log(
-                "✅ Found payment via Transaction ID verification:",
-                payment.id
-              );
             }
-          } catch (verifyError) {
-            console.log(
-              "❌ Verification as Transaction ID failed:",
-              verifyError.message
-            );
-          }
-        }
-
-        // METHOD 2: Search through recent transactions (date range approach)
-        if (!payment) {
-          // Log failed recovery attempt
-          await AuditLogger.log({
-            adminId: req.user?._id,
-            adminName: req.user
-              ? `${req.user.firstname} ${req.user.lastname}`
-              : "System",
-            action: "ORDER_RECOVERY_ATTEMPT",
-            entityType: ENTITY_TYPES.ORDER,
-            entityId: null,
-            entityName: "Failed Recovery",
-            changes: {
-              attemptedWith: {
-                transaction_ref,
-                flutterwave_ref,
-                customer_email,
-              },
-            },
-            ...AuditLogger.getRequestInfo(req),
-            additionalInfo: "Order recovery failed - No payment found",
-          });
-          console.log(
-            "🔄 Searching through recent transactions by date range..."
-          );
-
-          try {
-            // Search transactions from last 30 days
-            const fromDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-            const toDate = new Date();
-
-            console.log(
-              `📅 Searching from ${fromDate.toISOString().split("T")[0]} to ${
-                toDate.toISOString().split("T")[0]
-              }`
-            );
-
-            const recentTransactions = await flw.Transaction.fetch({
-              from: fromDate.toISOString().split("T")[0],
-              to: toDate.toISOString().split("T")[0],
-              status: "successful",
-            });
-
-            if (recentTransactions.data && recentTransactions.data.length > 0) {
-              console.log(
-                `📦 Found ${recentTransactions.data.length} recent successful transactions`
-              );
-
-              // Search with multiple criteria
-              const foundPayment = recentTransactions.data.find(
-                (tx) =>
-                  tx.flw_ref === flutterwave_ref.trim() ||
-                  tx.id.toString() === flutterwave_ref.trim() ||
-                  tx.id === parseInt(flutterwave_ref.trim()) ||
-                  tx.tx_ref === flutterwave_ref.trim()
-              );
-
-              if (foundPayment) {
-                payment = foundPayment;
-                console.log(
-                  "✅ Found payment in recent transactions:",
-                  payment.id
-                );
-                console.log(
-                  "🎯 Matched by:",
-                  foundPayment.flw_ref === flutterwave_ref
-                    ? "flw_ref"
-                    : foundPayment.id.toString() === flutterwave_ref
-                    ? "transaction_id"
-                    : foundPayment.tx_ref === flutterwave_ref
-                    ? "tx_ref"
-                    : "unknown"
-                );
-              } else {
-                console.log("❌ Payment not found in recent transactions");
-                // Log a few sample references for debugging
-                console.log(
-                  "Sample references found:",
-                  recentTransactions.data.slice(0, 3).map((tx) => ({
-                    flw_ref: tx.flw_ref,
-                    id: tx.id,
-                    tx_ref: tx.tx_ref,
-                  }))
-                );
-              }
-            } else {
-              console.log("❌ No recent successful transactions found");
-            }
-          } catch (searchError) {
-            console.error(
-              "❌ Recent transactions search failed:",
-              searchError.message
-            );
-          }
-        }
-
-        // METHOD 3: Try alternative search methods
-        if (!payment) {
-          // Log failed recovery attempt
-          await AuditLogger.log({
-            adminId: req.user?._id,
-            adminName: req.user
-              ? `${req.user.firstname} ${req.user.lastname}`
-              : "System",
-            action: "ORDER_RECOVERY_ATTEMPT",
-            entityType: ENTITY_TYPES.ORDER,
-            entityId: null,
-            entityName: "Failed Recovery",
-            changes: {
-              attemptedWith: {
-                transaction_ref,
-                flutterwave_ref,
-                customer_email,
-              },
-            },
-            ...AuditLogger.getRequestInfo(req),
-            additionalInfo: "Order recovery failed - No payment found",
-          });
-
-          console.log("🔄 Trying alternative search methods...");
-
-          try {
-            // Try searching without date range (all transactions)
-            console.log("🔄 Searching all transactions...");
-            const allTransactions = await flw.Transaction.fetch({
-              status: "successful",
-            });
-
-            if (allTransactions.data && allTransactions.data.length > 0) {
-              console.log(
-                `📦 Found ${allTransactions.data.length} total successful transactions`
-              );
-
-              const foundPayment = allTransactions.data.find(
-                (tx) =>
-                  tx.flw_ref === flutterwave_ref.trim() ||
-                  tx.id.toString() === flutterwave_ref.trim() ||
-                  tx.id === parseInt(flutterwave_ref.trim()) ||
-                  tx.tx_ref === flutterwave_ref.trim()
-              );
-
-              if (foundPayment) {
-                payment = foundPayment;
-                console.log(
-                  "✅ Found payment in all transactions:",
-                  payment.id
-                );
-              } else {
-                console.log("❌ Payment not found in all transactions");
-              }
-            }
-          } catch (altError) {
-            console.error("❌ Alternative search failed:", altError.message);
-          }
-        }
-
-        if (!payment) {
-          console.log(
-            "❌ No payment found with provided reference:",
-            flutterwave_ref
-          );
+          } catch (error) {}
         }
       } catch (error) {
         console.error("Flutterwave Reference search failed:", error.message);
-        console.error("Full error:", error);
       }
     }
 
@@ -625,19 +396,7 @@ export const supportRecoverOrder = async (req, res) => {
           transaction_ref_provided: transaction_ref,
           flutterwave_ref_provided: flutterwave_ref,
           search_method_used: searchMethod,
-          reference_type: referenceUsed.startsWith("JayyTech_")
-            ? "flw_ref"
-            : /^\d+$/.test(referenceUsed)
-            ? "transaction_id"
-            : "unknown",
         },
-        tips: [
-          "Make sure the Transaction Reference starts with ECOSTORE-",
-          "For Flutterwave Reference, use the exact reference from dashboard",
-          "Check if the payment status is 'successful' in Flutterwave",
-          "Try using the Transaction Reference (ECOSTORE-xxx) first",
-          "Verify the customer email matches the payment email",
-        ],
       });
     }
 
@@ -651,7 +410,6 @@ export const supportRecoverOrder = async (req, res) => {
 
     if (existingOrder) {
       console.log("🔄 Order already exists:", existingOrder.orderNumber);
-
       const user = await User.findById(existingOrder.user);
 
       await logOrderAction(
@@ -662,12 +420,6 @@ export const supportRecoverOrder = async (req, res) => {
           duplicateFound: {
             orderNumber: existingOrder.orderNumber,
             status: existingOrder.status,
-            existingTransactionId: existingOrder.flutterwaveTransactionId,
-          },
-          attemptedRecovery: {
-            transaction_ref,
-            flutterwave_ref,
-            customer_email,
           },
         },
         "Duplicate order detected during recovery attempt"
@@ -683,16 +435,13 @@ export const supportRecoverOrder = async (req, res) => {
           customer: user ? `${user.firstname} ${user.lastname}` : "Unknown",
           customerEmail: user?.email,
         },
-        action: "Check the existing order in the orders list",
       });
     }
 
     // ✅ EXTRACT PRODUCT INFORMATION
     let recoveredProducts = [];
-    let subtotal = payment.amount;
 
     console.log("📦 Payment metadata:", payment.meta);
-    console.log("📦 Payment customizations:", payment.customer);
 
     // Process products from metadata
     if (payment.meta) {
@@ -732,10 +481,7 @@ export const supportRecoverOrder = async (req, res) => {
               productsData = productsMeta.products;
             }
           } catch (parseError) {
-            console.error(
-              "❌ Error parsing products from meta array:",
-              parseError.message
-            );
+            console.error("❌ Error parsing products from meta array:", parseError.message);
           }
         }
       }
@@ -757,9 +503,7 @@ export const supportRecoverOrder = async (req, res) => {
               selectedCategory: product.category || null,
             };
           });
-          console.log(
-            `✅ Successfully recovered ${recoveredProducts.length} products`
-          );
+          console.log(`✅ Successfully recovered ${recoveredProducts.length} products`);
         }
       }
     }
@@ -794,19 +538,17 @@ export const supportRecoverOrder = async (req, res) => {
       console.log("✅ Created new user for recovery:", user.email);
     }
 
-    // ✅ Extract delivery address and phone from metadata
-    const deliveryAddress =
-      payment.meta?.deliveryAddress ||
-      payment.meta?.delivery_address ||
-      "To be confirmed by customer";
-    const phone =
-      payment.meta?.phoneNumber ||
-      payment.meta?.phone_number ||
-      payment.customer?.phone_number ||
-      "To be confirmed";
+    // ✅ Extract delivery address, phone, delivery fee, coupon, and discount
+    const deliveryAddress = payment.meta?.deliveryAddress || payment.meta?.delivery_address || "To be confirmed by customer";
+    const phone = payment.meta?.phoneNumber || payment.meta?.phone_number || payment.customer?.phone_number || "To be confirmed";
     const deliveryFee = parseFloat(payment.meta?.deliveryFee) || 0;
     const originalTotal = parseFloat(payment.meta?.originalTotal) || 0;
+    const discountAmount = parseFloat(payment.meta?.discountAmount) || 0;
+    const couponCode = payment.meta?.couponCode || null;
+    const finalTotal = parseFloat(payment.meta?.finalTotal) || payment.amount;
 
+    // Calculate subtotal
+    let subtotal = payment.amount;
     if (deliveryFee > 0 && originalTotal > 0) {
       subtotal = originalTotal;
     } else if (deliveryFee > 0) {
@@ -814,51 +556,44 @@ export const supportRecoverOrder = async (req, res) => {
     }
 
     // ✅ DEDUCT STOCK FOR RECOVERED PRODUCTS
-   const stockDeductionResults = [];
-   const outOfStockMessages = [];
+    const stockDeductionResults = [];
+    const outOfStockMessages = [];
 
-   for (const item of recoveredProducts) {
-     const deductionResult = await deductStockForRecoveredItem(item);
-     stockDeductionResults.push(deductionResult);
+    for (const item of recoveredProducts) {
+      const deductionResult = await deductStockForRecoveredItem(item);
+      stockDeductionResults.push(deductionResult);
 
-     if (deductionResult.status !== "DEDUCTED") {
-       outOfStockMessages.push(deductionResult.message);
-     }
+      if (deductionResult.status !== "DEDUCTED") {
+        outOfStockMessages.push(deductionResult.message);
+      }
 
-     // Update the item with variant details if they were determined during deduction
-     if (deductionResult.variantSize !== undefined) {
-       item.selectedSize = deductionResult.variantSize;
-     }
-     if (deductionResult.variantColor !== undefined) {
-       item.selectedColor = deductionResult.variantColor;
-     }
-   }
+      // Update the item with variant details if they were determined during deduction
+      if (deductionResult.variantSize !== undefined) {
+        item.selectedSize = deductionResult.variantSize;
+      }
+      if (deductionResult.variantColor !== undefined) {
+        item.selectedColor = deductionResult.variantColor;
+      }
+    }
 
-   // Debug logging
-   console.log("📊 Stock deduction results:", stockDeductionResults);
-   console.log("⚠️ Out of stock messages:", outOfStockMessages);
+    console.log("📊 Stock deduction results:", stockDeductionResults);
 
-   // Count statistics
-  //  const deductedCount = stockDeductionResults.filter(
-  //    (r) => r.status === "DEDUCTED"
-  //  ).length;
-  //  const outOfStockCount = stockDeductionResults.filter(
-  //    (r) => r.status === "OUT_OF_STOCK" || r.status === "VARIANT_NOT_FOUND"
-  //  ).length;
-  //  const errorCount = stockDeductionResults.filter(
-  //    (r) => r.status === "ERROR"
-  //  ).length;
-
-    // ✅ Create the recovered order
+    // ✅ Create the recovered order WITH COUPON AND DISCOUNT
     const order = new Order({
       user: user._id,
       products: recoveredProducts,
       orderNumber: generateOrderNumber(),
       subtotal: subtotal,
-      totalAmount: payment.amount,
+      discount: discountAmount,
+      totalAmount: finalTotal,
       deliveryFee: deliveryFee,
       deliveryAddress: deliveryAddress,
       phone: phone,
+      coupon: couponCode ? {
+        code: couponCode,
+        discount: discountAmount
+      } : null,
+      couponCode: couponCode,
       flutterwaveRef: payment.tx_ref,
       flutterwaveTransactionId: payment.id,
       paymentStatus: "paid",
@@ -866,15 +601,13 @@ export const supportRecoverOrder = async (req, res) => {
       paymentMethod: {
         method: payment.payment_type || "card",
         status: "PAID",
-        ...(payment.card
-          ? {
-              card: {
-                brand: payment.card.type || "Unknown",
-                last4: payment.card.last_4digits || null,
-                issuer: payment.card.issuer || null,
-              },
-            }
-          : {}),
+        ...(payment.card ? {
+          card: {
+            brand: payment.card.type || "Unknown",
+            last4: payment.card.last_4digits || null,
+            issuer: payment.card.issuer || null,
+          },
+        } : {}),
       },
       isProcessed: false,
       notes: `AUTO-RECOVERED - Found via ${searchMethod}. 
@@ -885,96 +618,31 @@ export const supportRecoverOrder = async (req, res) => {
             Amount: ₦${payment.currency} ${payment.amount}
             Customer: ${payment.customer?.name || "N/A"}
             Products: ${recoveredProducts.length} items
+            Coupon: ${couponCode || 'None'}
+            Discount: ${discountAmount > 0 ? `₦${discountAmount}` : 'None'}
+            Delivery Fee: ₦${deliveryFee}
             Recovered on: ${new Date().toLocaleString()}
             
             STOCK DEDUCTION STATUS:
-            ${
-              outOfStockMessages.length > 0
-                ? "⚠️ SOME ITEMS OUT OF STOCK - ADMIN REVIEW REQUIRED ⚠️"
-                : "✅ All items in stock"
-            }
-            ${outOfStockMessages.map((msg) => `- ${msg}`).join("\n")}`,
+            ${outOfStockMessages.length > 0 ? '⚠️ SOME ITEMS OUT OF STOCK - ADMIN REVIEW REQUIRED ⚠️' : '✅ All items in stock'}
+            ${outOfStockMessages.map(msg => `- ${msg}`).join('\n')}`,
     });
 
     await order.save();
     console.log("✅ Order recovered successfully:", order.orderNumber);
 
-    const recoveryNote = `Recovered via ${searchMethod.replace(
-      "_",
-      " "
-    )} - Reference: ${referenceUsed}`;
-
+    // Send recovery email
     (async () => {
       try {
-        const emailSent = await sendRecoveryOrderEmail(
-          customer_email,
-          order,
-          recoveryNote
-        );
-
-        if (emailSent) {
-          console.log(`📧 Recovery email sent to: ${customer_email}`);
-
-          // Log email success
-          await AuditLogger.log({
-            adminId: req.user?._id,
-            adminName: req.user
-              ? `${req.user.firstname} ${req.user.lastname}`
-              : "System",
-            action: "ORDER_RECOVERY_EMAIL_SENT",
-            entityType: ENTITY_TYPES.ORDER,
-            entityId: order._id,
-            entityName: `Order #${order.orderNumber}`,
-            changes: {
-              emailSentTo: customer_email,
-              searchMethod,
-              referenceUsed,
-            },
-            additionalInfo: "Recovery notification email sent to customer",
-          });
-        } else {
-          console.log(`❌ Failed to send recovery email to: ${customer_email}`);
-
-          // Log email failure
-          await AuditLogger.log({
-            adminId: req.user?._id,
-            adminName: req.user
-              ? `${req.user.firstname} ${req.user.lastname}`
-              : "System",
-            action: "ORDER_RECOVERY_EMAIL_FAILED",
-            entityType: ENTITY_TYPES.ORDER,
-            entityId: order._id,
-            entityName: `Order #${order.orderNumber}`,
-            changes: {
-              reason: "sendRecoveryOrderEmail returned false",
-              attemptedTo: customer_email,
-            },
-            additionalInfo: "Recovery email function failed",
-          });
-        }
+        const recoveryNote = `Recovered via ${searchMethod.replace("_", " ")} - Reference: ${referenceUsed}`;
+        await sendRecoveryOrderEmail(customer_email, order, recoveryNote);
+        console.log(`📧 Recovery email sent to: ${customer_email}`);
       } catch (emailError) {
         console.error("❌ Email sending error:", emailError.message);
-
-        // Don't fail the recovery just because email failed
-        await AuditLogger.log({
-          adminId: req.user?._id,
-          adminName: req.user
-            ? `${req.user.firstname} ${req.user.lastname}`
-            : "System",
-          action: "ORDER_RECOVERY_EMAIL_FAILED",
-          entityType: ENTITY_TYPES.ORDER,
-          entityId: order._id,
-          entityName: `Order #${order.orderNumber}`,
-          changes: {
-            emailError: emailError.message,
-            attemptedTo: customer_email,
-          },
-          additionalInfo: "Order recovered but email notification failed",
-        });
       }
     })();
 
-    // ✅ Log stock deduction results
+    // Log the recovery
     await logOrderAction(
       req,
       "ORDER_RECOVERY_SUCCESS",
@@ -985,82 +653,88 @@ export const supportRecoverOrder = async (req, res) => {
           referenceUsed,
           paymentId: payment.id,
           amount: payment.amount,
-          currency: payment.currency,
-          recoveredProducts: recoveredProducts.length,
-          customerEmail: customer_email,
-          createdUser: !user.isNew ? "Existing" : "New",
+          couponCode: couponCode,
+          discount: discountAmount,
         },
         stockDeduction: stockDeductionResults,
       },
-      `Order recovered via ${searchMethod.replace(
-        "_",
-        " "
-      )} - Reference: ${referenceUsed}. ${
-        outOfStockMessages.length > 0
-          ? `⚠️ Some items out of stock: ${outOfStockMessages.join("; ")}`
-          : "✅ All stock deducted successfully"
-      }`
+      `Order recovered via ${searchMethod.replace("_", " ")}`
     );
 
-    res.json({
-      success: true,
-      message: `Order recovered successfully via ${searchMethod.replace(
-        "_",
-        " "
-      )}!`,
-      orderNumber: order.orderNumber,
-      orderId: order._id,
-      customerEmail: customer_email,
-      amount: payment.amount,
-      currency: payment.currency,
-      searchMethod: searchMethod.replace("_", " "),
-      referenceType: referenceUsed.startsWith("JayyTech_")
-        ? "Flutterwave Reference"
-        : /^\d+$/.test(referenceUsed)
-        ? "Transaction ID"
-        : "Reference",
-      recoveredDetails: {
-        productsCount: recoveredProducts.length,
-        transactionReference: payment.tx_ref,
-        flutterwaveReference: payment.flw_ref,
-        transactionId: payment.id,
-        paymentType: payment.payment_type,
-        paidAt: new Date(payment.created_at).toLocaleString(),
-        customerName:
-          payment.customer?.name ||
-          `${payment.customer?.firstname || ""} ${
-            payment.customer?.lastname || ""
-          }`.trim(),
-        deliveryAddress: deliveryAddress,
-        phone: phone,
-      },
-      products: recoveredProducts,
-      stockDeductionSummary: {
-        totalItems: recoveredProducts.length,
-        deducted: stockDeductionResults.filter((r) => r.status === "DEDUCTED")
-          .length,
-        outOfStock: stockDeductionResults.filter(
-          (r) => r.status === "OUT_OF_STOCK"
-        ).length,
-        errors: stockDeductionResults.filter((r) => r.status === "ERROR")
-          .length,
-        adminNote:
-          outOfStockMessages.length > 0
-            ? "⚠️ SOME ITEMS ARE OUT OF STOCK. CONSIDER REFUNDING OR RE-STOCKING."
-            : "✅ All items in stock and deducted",
-        outOfStockItems: outOfStockMessages,
-      },
-      nextSteps: [
-        "Order automatically recovered with complete details!",
-        ...(outOfStockMessages.length > 0
-          ? [
-              "⚠️ REVIEW REQUIRED: Some items are out of stock. Consider contacting customer or processing refund.",
-            ]
-          : []),
-        "Verify the products and delivery address match customer expectation",
-        "Update order status when ready to process",
-      ],
-    });
+       res.json({
+         success: true,
+         message: `Order recovered successfully via ${searchMethod.replace(
+           "_",
+           " "
+         )}!`,
+         orderNumber: order.orderNumber,
+         orderId: order._id,
+         customerEmail: customer_email,
+         amount: payment.amount,
+         currency: payment.currency || "NGN",
+         searchMethod: searchMethod.replace("_", " "),
+         referenceType: referenceUsed.startsWith("JayyTech_")
+           ? "Flutterwave Reference"
+           : /^\d+$/.test(referenceUsed)
+           ? "Transaction ID"
+           : "Reference",
+         recoveredDetails: {
+           productsCount: recoveredProducts.length,
+           transactionReference: payment.tx_ref,
+           flutterwaveReference: payment.flw_ref,
+           transactionId: payment.id,
+           paymentType: payment.payment_type || "card",
+           paidAt: new Date(payment.created_at).toLocaleString(),
+           customerName:
+             payment.customer?.name ||
+             `${payment.customer?.firstname || ""} ${
+               payment.customer?.lastname || ""
+             }`.trim() ||
+             customer_email,
+           deliveryAddress: deliveryAddress,
+           phone: phone,
+         },
+         products: recoveredProducts,
+         discountDetails: {
+           couponCode: couponCode,
+           discountAmount: discountAmount,
+           subtotal: subtotal,
+           deliveryFee: deliveryFee,
+           totalAmount: finalTotal,
+         },
+         stockDeductionSummary: {
+           totalItems: recoveredProducts.length,
+           deducted: stockDeductionResults.filter(
+             (r) => r.status === "DEDUCTED"
+           ).length,
+           outOfStock: stockDeductionResults.filter(
+             (r) => r.status === "OUT_OF_STOCK"
+           ).length,
+           errors: stockDeductionResults.filter((r) => r.status === "ERROR")
+             .length,
+           adminNote:
+             outOfStockMessages.length > 0
+               ? "⚠️ SOME ITEMS ARE OUT OF STOCK. CONSIDER REFUNDING OR RE-STOCKING."
+               : "✅ All items in stock and deducted",
+           outOfStockItems: outOfStockMessages,
+           detailedResults: stockDeductionResults, // Add this for debugging
+         },
+         nextSteps: [
+           "Order automatically recovered with complete details!",
+           ...(outOfStockMessages.length > 0
+             ? [
+                 "⚠️ REVIEW REQUIRED: Some items are out of stock. Consider contacting customer or processing refund.",
+               ]
+             : []),
+           ...(couponCode
+             ? [
+                 `✅ Coupon applied: ${couponCode} (₦${discountAmount} discount)`,
+               ]
+             : []),
+           "Verify the products and delivery address match customer expectation",
+           "Update order status when ready to process",
+         ],
+       });
   } catch (error) {
     console.error("❌ Order recovery failed:", error);
 
@@ -1075,23 +749,17 @@ export const supportRecoverOrder = async (req, res) => {
       entityName: "Failed Recovery",
       changes: {
         error: error.message,
-        attemptedWith: {
-          transaction_ref: req.body.transaction_ref,
-          flutterwave_ref: req.body.flutterwave_ref,
-          customer_email: req.body.customer_email,
-        },
       },
       ...AuditLogger.getRequestInfo(req),
       additionalInfo: "Order recovery process failed",
     });
 
-    console.error("❌ Error stack:", error.stack);
     res.status(500).json({
       error: "Order recovery failed: " + error.message,
-      details: "Check the server logs for more information",
     });
   }
 };
+
 export const getAllOrders = async (req, res) => {
   try {
     const { sortBy, sortOrder = "desc", search } = req.query;
@@ -1382,9 +1050,7 @@ export const updateOrderStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-// Helper function to deduct stock
-
-// In the supportRecoverOrder function, replace the stock deduction section with:
+ 
 
 // Add this function to reduce variant stock when order is placed
 const reduceVariantStock = async (orderItems) => {
