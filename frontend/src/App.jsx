@@ -21,7 +21,6 @@ import ResetPasswordPage from "./pages/ResetPasswordPage.jsx";
 import ForgotPasswordPage from "./pages/ForgetPasswordPage.jsx";
 import SearchResultsPage from "./pages/SearchResultsPage.jsx";
 import ViewProductPage from "./pages/ViewProductPage.jsx";
-import Welcome from "./pages/WelcomePage.jsx";
 import useTrackVisitors from "./stores/useTrackVisitors.js";
 import ViewOrderPage from "./pages/ViewOrderPage.jsx";
 import SavedProductsPage from "./pages/SavedProductsPage.jsx";
@@ -97,10 +96,6 @@ function App() {
         <Route
           path="/login"
           element={!user ? <LoginPage /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/welcome"
-          element={!user ? <Welcome /> : <Navigate to="/" />}
         />
         <Route
           path="/secret-dashboard"

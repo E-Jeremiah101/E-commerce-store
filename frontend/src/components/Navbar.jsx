@@ -77,7 +77,9 @@ const { settings } = useStoreSettings();
                 className="h-10 w-auto"
               />
             )} */}
-            <span className="font-bold text-[1.5rem]">{settings?.storeName}</span>
+            <span className="font-bold text-[1.5rem]">
+              {settings?.storeName}
+            </span>
           </Link>
 
           {/* Right: Actions */}
@@ -115,7 +117,7 @@ const { settings } = useStoreSettings();
             ) : (
               <>
                 <Link
-                  to={"/welcome"}
+                  to={"/login"}
                   className="text-gray-800 hover:text-gray-300"
                 >
                   <UserPlus size={22} />
@@ -146,8 +148,6 @@ const { settings } = useStoreSettings();
               className="md:hidden   bg-gradient-to-br from-white via-gray-100 to-gray-300 px-4 py-3 space-y-9 text-black  text-lg overflow-y-auto h-screen absolute right-15 top-0 left-0 no-scroll "
               ref={sidebarRef}
             >
-           
-
               {user && (
                 <div className="flex items-center justify-between py-3  ">
                   <div className="flex  items-center gap-4 tracking-wider">
@@ -355,7 +355,9 @@ const { settings } = useStoreSettings();
                 alt={settings?.storeName}
                 className="h-10 w-auto"
               /> */}
-              <span className=" font-bold text-[1.5rem]">{settings?.storeName}</span>
+              <span className=" font-bold text-[1.5rem]">
+                {settings?.storeName}
+              </span>
             </Link>
 
             <nav className=" hidden md:flex items-center gap-6  tracking-widest">
@@ -422,7 +424,7 @@ const { settings } = useStoreSettings();
                   </button>
                 ) : (
                   <>
-                    <Link to={"/welcome"} className="text-black ">
+                    <Link to={"/login"} className="text-black ">
                       <UserPlus size={22} />
                     </Link>
                   </>
