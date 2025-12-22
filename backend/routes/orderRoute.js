@@ -3,8 +3,10 @@ import {
   getUserOrders,
   getOrderById,
   createOrder,
+  debugUserOrders,
 } from "../controllers/orderController.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
+
 
 
 const router = express.Router();
@@ -12,7 +14,8 @@ router.get("/my-orders", protectRoute, getUserOrders);
 router.post("/", protectRoute, createOrder);
 router.get("/vieworders/:id", protectRoute, getOrderById);
 router.get("/:id", protectRoute, getOrderById);
-
+router.get("/debug-orders", debugUserOrders);
+ 
 
 
 

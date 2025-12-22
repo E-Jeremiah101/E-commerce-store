@@ -469,146 +469,217 @@ async function checkProductHasActiveReservation(product, activeReservationIds) {
   return activeReservationIds.size > 0;
 }
  
-// 4. Add the immediate cleanup function (run this once)
-// async function clearAllReservations() {
-//   console.log("🧹 Clearing all stale reservations from database...");
-
+// async function checkCouponEligibility(userId, orderAmount) {
 //   try {
-//     const session = await mongoose.startSession();
+//     const orderCount = await Order.countDocuments({
+//       user: userId,
+//       paymentStatus: "paid",
+   
 
-//     await session.withTransaction(async () => {
-//       // Find all products with reserved inventory
-//       const productsWithReservations = await Product.find({
-//         $or: [{ reserved: { $gt: 0 } }, { "variants.reserved": { $gt: 0 } }],
-//       }).session(session);
-
-//       console.log(
-//         `📊 Found ${productsWithReservations.length} products with reservations`
-//       );
-
-//       for (const product of productsWithReservations) {
-//         let changed = false;
-
-//         // Clear main product reservations
-//         if (product.reserved > 0) {
-//           console.log(
-//             `🔄 Clearing main reservation for ${product.name}: ${product.reserved} units`
-//           );
-//           product.countInStock += product.reserved;
-//           product.reserved = 0;
-//           changed = true;
-//         }
-
-//         // Clear variant reservations
-//         if (product.variants && product.variants.length > 0) {
-//           product.variants.forEach((variant, index) => {
-//             if (variant.reserved > 0) {
-//               console.log(
-//                 `🔄 Clearing variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units`
-//               );
-//               product.variants[index].countInStock += variant.reserved;
-//               product.variants[index].reserved = 0;
-//               changed = true;
-//             }
-//           });
-
-//           // Update total stock
-//           if (changed) {
-//             product.countInStock = product.variants.reduce(
-//               (total, v) => total + v.countInStock,
-//               0
-//             );
-//           }
-//         }
-
-//         if (changed) {
-//           await product.save({ session });
-//           console.log(`✅ Cleared reservations for ${product.name}`);
-//         }
-//       }
+//           // IMPORTANT: Exclude orders created in the last 5 minutes to avoid counting current order
+//       // createdAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) }
 //     });
 
-//     await session.endSession();
-//     console.log("🎉 All stale reservations cleared successfully");
+//     console.log(
+//       `Checking coupon eligibility for user ${userId}: ${orderCount} orders, ${orderAmount}`
+//     );
+
+//     const activeCoupon = await Coupon.findOne({
+//       userId: userId,
+//       isActive: true,
+//       expirationDate: { $gt: new Date() },
+//     });
+
+//     if (activeCoupon) {
+//       console.log(
+//         `[COUPON DEBUG] User ${userId} already has active coupon: ${activeCoupon.code} (expires: ${activeCoupon.expirationDate})`
+//       );
+//       return null;
+//     }
+
+//     const hasReceivedFirstOrderCoupon = await Coupon.exists({
+//       userId: userId,
+//       couponReason: "first_order",
+//     });
+
+//     if (orderCount === 0 && !hasReceivedFirstOrderCoupon) {
+//       console.log(`User ${userId} eligible for FIRST ORDER coupon`);
+//       return {
+//         discountPercentage: 10,
+//         codePrefix: "WELCOME",
+//         reason: "first_order",
+//         emailType: "welcome_coupon",
+//       };
+//     } else if (orderCount === 2) {
+//       console.log(`User ${userId} eligible for THIRD ORDER coupon`);
+//       return {
+//         discountPercentage: 15,
+//         codePrefix: "LOYAL",
+//         reason: "third_order_milestone",
+//         emailType: "loyalty_coupon",
+//       };
+//     } else if (orderCount > 0 && (orderCount + 1) % 5 === 0) {
+//       console.log(
+//         `[COUPON DEBUG] User ${userId} eligible for VIP coupon (making ${
+//           orderCount + 1
+//         }th order)`
+//       );
+//       return {
+//         discountPercentage: 20,
+//         codePrefix: "VIP",
+//         reason: "every_five_orders",
+//         emailType: "vip_coupon",
+//       };
+//     } else if (orderAmount > 4) {
+//       console.log(
+//         `User ${userId} eligible for BIG SPENDER coupon (${orderAmount})`
+//       );
+//       return {
+//         discountPercentage: 15,
+//         codePrefix: "BIGSPEND",
+//         reason: "high_value_order",
+//         emailType: "bigspender_coupon",
+//       };
+//     }
+
+//     console.log(
+//       `User ${userId} not eligible for coupon (${orderCount} orders, ${orderAmount})`
+//     );
+//     return null;
 //   } catch (error) {
-//     console.error("❌ Failed to clear reservations:", error);
+//     console.error("Error checking coupon eligibility:", error);
+//     return null;
 //   }
 // }
 
-// // 5. Run the immediate cleanup once
-// mongoose.connection.on("connected", async () => {
-//   console.log("✅ MongoDB connected - starting reservation cleanup...");
-//   await clearAllReservations();
-// });
 
-// mongoose.connection.on("error", (err) => {
-//   console.error("❌ MongoDB connection error:", err);
-// });
+//new
+// async function checkCouponEligibility(userId, orderAmount) {
+//   try {
+//     console.log(
+//       `🔍 Checking coupon eligibility for user ${userId}, order amount: ${orderAmount}`
+//     );
+
+//     // Check if user already has an active coupon
+//     const activeCoupon = await Coupon.findOne({
+//       userId: userId,
+//       isActive: true,
+//       expirationDate: { $gt: new Date() },
+//     });
+
+//     if (activeCoupon) {
+//       console.log(
+//         `❌ User ${userId} already has active coupon: ${activeCoupon.code}`
+//       );
+//       return null;
+//     }
+
+//     // Count completed orders for this user (exclude current order)
+//     const orderCount = await Order.countDocuments({
+//       user: userId,
+//       paymentStatus: "paid",
+//     });
+
+//     console.log(`📊 User ${userId} has ${orderCount} previous orders`);
+
+//     // Check for first order coupon eligibility
+//     const hasReceivedFirstOrderCoupon = await Coupon.exists({
+//       userId: userId,
+//       couponReason: "first_order",
+//     });
+
+//     // FIRST ORDER COUPON: User has never ordered before AND never received first order coupon
+//     if (orderCount === 0 && !hasReceivedFirstOrderCoupon) {
+//       console.log(
+//         `✅ User ${userId} eligible for FIRST ORDER coupon (first time customer)`
+//       );
+//       return {
+//         discountPercentage: 10,
+//         codePrefix: "WELCOME",
+//         reason: "first_order",
+//         emailType: "welcome_coupon", 
+//       };
+//     }
+
+//     // HIGH VALUE ORDER COUPON: Check if order amount qualifies
+//     // Note: Assuming orderAmount is in thousands (like 5 for N5000)
+//     const highValueThreshold = 4; // N4000 or more
+
+//     if (orderAmount > highValueThreshold) {
+//       console.log(
+//         `✅ User ${userId} eligible for HIGH VALUE ORDER coupon (order > ${highValueThreshold})`
+//       );
+//           return {
+//             discountPercentage: 15,
+//             codePrefix: "BIGSPEND",
+//             reason: "high_value_order",
+//             emailType: "bigspender_coupon", // Make sure this matches
+//           }; 
+//     } 
+ 
+//     console.log(`❌ User ${userId} not eligible for any coupon`);
+//     return null;
+//   } catch (error) {
+//     console.error("❌ Error checking coupon eligibility:", error);
+//     return null;
+//   }
+// }
 
 async function checkCouponEligibility(userId, orderAmount) {
   try {
-    const orderCount = await Order.countDocuments({
-      user: userId,
-      paymentStatus: "paid",
-   
-
-          // IMPORTANT: Exclude orders created in the last 5 minutes to avoid counting current order
-      // createdAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) }
-    });
-
     console.log(
-      `Checking coupon eligibility for user ${userId}: ${orderCount} orders, ${orderAmount}`
+      `🔍 Checking coupon eligibility for user ${userId}, order amount: ${orderAmount}`
     );
 
-    const activeCoupon = await Coupon.findOne({
+    // Check if user has any unused, active, non-expired coupons
+    const existingActiveCoupons = await Coupon.find({
       userId: userId,
       isActive: true,
       expirationDate: { $gt: new Date() },
+      usedAt: null,
     });
 
-    if (activeCoupon) {
+    if (existingActiveCoupons.length > 0) {
       console.log(
-        `[COUPON DEBUG] User ${userId} already has active coupon: ${activeCoupon.code} (expires: ${activeCoupon.expirationDate})`
+        `❌ User ${userId} already has active coupons:`,
+        existingActiveCoupons.map((c) => c.code).join(", ")
       );
       return null;
     }
 
+    // Count completed orders for this user
+    const orderCount = await Order.countDocuments({
+      user: userId,
+      flutterwaveTransactionId: { $exists: true, $ne: null }
+    });
+
+    console.log(`📊 User ${userId} has ${orderCount} previous paid orders`);
+
+    // Check if user has ever received a first order coupon
     const hasReceivedFirstOrderCoupon = await Coupon.exists({
       userId: userId,
       couponReason: "first_order",
     });
 
+    // FIRST ORDER COUPON: User has never ordered before AND never received first order coupon
     if (orderCount === 0 && !hasReceivedFirstOrderCoupon) {
-      console.log(`User ${userId} eligible for FIRST ORDER coupon`);
+      console.log(
+        `✅ User ${userId} eligible for FIRST ORDER coupon (first time customer)`
+      );
       return {
         discountPercentage: 10,
         codePrefix: "WELCOME",
         reason: "first_order",
         emailType: "welcome_coupon",
       };
-    } else if (orderCount === 2) {
-      console.log(`User ${userId} eligible for THIRD ORDER coupon`);
-      return {
-        discountPercentage: 15,
-        codePrefix: "LOYAL",
-        reason: "third_order_milestone",
-        emailType: "loyalty_coupon",
-      };
-    } else if (orderCount > 0 && (orderCount + 1) % 5 === 0) {
+    }
+
+    
+    const highValueThreshold = 4; 
+
+    if (orderAmount > highValueThreshold) {
       console.log(
-        `[COUPON DEBUG] User ${userId} eligible for VIP coupon (making ${
-          orderCount + 1
-        }th order)`
-      );
-      return {
-        discountPercentage: 20,
-        codePrefix: "VIP",
-        reason: "every_five_orders",
-        emailType: "vip_coupon",
-      };
-    } else if (orderAmount > 4) {
-      console.log(
-        `User ${userId} eligible for BIG SPENDER coupon (${orderAmount})`
+        `✅ User ${userId} eligible for HIGH VALUE ORDER coupon (order > ${highValueThreshold})`
       );
       return {
         discountPercentage: 15,
@@ -618,61 +689,199 @@ async function checkCouponEligibility(userId, orderAmount) {
       };
     }
 
-    console.log(
-      `User ${userId} not eligible for coupon (${orderCount} orders, ${orderAmount})`
-    );
+    console.log(`❌ User ${userId} not eligible for any coupon`);
     return null;
   } catch (error) {
-    console.error("Error checking coupon eligibility:", error);
+    console.error("❌ Error checking coupon eligibility:", error);
     return null;
   }
 }
+
+// async function createNewCoupon(userId, options = {}) {
+//   const {
+//     discountPercentage = 10,
+//     daysValid = 30,
+//     couponType = "GIFT",
+//     reason = "general",
+//   } = options;
+
+//   try {
+//     console.log(`Starting coupon creation for user ${userId}...`);
+
+//     const newCode =
+//       couponType + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+//     console.log(`Generated coupon code: ${newCode}`);
+
+//     const coupon = await Coupon.findOneAndUpdate(
+//       { userId: userId },
+//       {
+//         code: newCode,
+//         discountPercentage,
+//         expirationDate: new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000),
+//         isActive: true,
+//         couponReason: reason,
+//         deactivatedAt: null,
+//         deactivationReason: null,
+//         usedAt: null,
+//         usedInOrder: null,
+//       },
+//       {
+//         upsert: true,
+//         new: true,
+//         runValidators: true,
+//         setDefaultsOnInsert: true,
+//       }
+//     );
+
+//     console.log(
+//       `Successfully ${coupon.isNew ? "CREATED" : "UPDATED"} coupon: ${
+//         coupon.code
+//       } for user ${userId}`
+//     );
+//     return coupon;
+//   } catch (error) {
+//     console.error("Failed to create/update coupon:", error);
+//     return null;
+//   }
+// }
+
+
+//new
+// async function createNewCoupon(userId, options = {}) {
+//   const {
+//     discountPercentage = 10,
+//     daysValid = 30,
+//     reason = "first_order",
+//   } = options;
+
+//   try {
+//     console.log(`🎫 Creating coupon for user ${userId}, reason: ${reason}`);
+
+//     // Generate coupon code based on reason
+//     let codePrefix = "GIFT";
+//     if (reason === "first_order") {
+//       codePrefix = "WELCOME";
+//     } else if (reason === "high_value_order") {
+//       codePrefix = "BIGSPEND";
+//     }
+
+//     // Generate unique coupon code
+//     const randomSuffix = Math.random()
+//       .toString(36)
+//       .substring(2, 8)
+//       .toUpperCase();
+//     const newCode = `${codePrefix}${randomSuffix}`;
+
+//     console.log(`📝 Generated coupon code: ${newCode} for ${reason}`);
+
+//     // Create the coupon
+//     const coupon = new Coupon({
+//       code: newCode,
+//       discountPercentage,
+//       expirationDate: new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000),
+//       userId: userId,
+//       couponReason: reason,
+//       isActive: true,
+//     });
+
+//     await coupon.save();
+
+//     console.log(
+//       `✅ Successfully created coupon: ${coupon.code} for user ${userId}`
+//     );
+//     return coupon;
+//   } catch (error) {
+//     console.error("❌ Failed to create coupon:", error);
+
+//     // Handle duplicate code error
+//     if (error.code === 11000) {
+//       console.log(`🔄 Duplicate coupon code, retrying...`);
+//       return createNewCoupon(userId, options); // Retry with new code
+//     }
+
+//     return null;
+//   }
+// }
 
 async function createNewCoupon(userId, options = {}) {
   const {
     discountPercentage = 10,
     daysValid = 30,
-    couponType = "GIFT",
-    reason = "general",
+    reason = "first_order",
   } = options;
 
   try {
-    console.log(`Starting coupon creation for user ${userId}...`);
+    console.log(`🎫 Creating coupon for user ${userId}, reason: ${reason}`);
 
-    const newCode =
-      couponType + Math.random().toString(36).substring(2, 8).toUpperCase();
-
-    console.log(`Generated coupon code: ${newCode}`);
-
-    const coupon = await Coupon.findOneAndUpdate(
-      { userId: userId },
+    // First, deactivate any existing active coupon for this user
+    await Coupon.updateMany(
       {
-        code: newCode,
-        discountPercentage,
-        expirationDate: new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000),
+        userId: userId,
         isActive: true,
-        couponReason: reason,
-        deactivatedAt: null,
-        deactivationReason: null,
-        usedAt: null,
-        usedInOrder: null,
+        usedAt: null, // Only deactivate unused coupons
       },
       {
-        upsert: true,
-        new: true,
-        runValidators: true,
-        setDefaultsOnInsert: true,
+        isActive: false,
+        deactivatedAt: new Date(),
+        deactivationReason: `Replaced by new ${reason} coupon`,
       }
     );
 
+    // Generate coupon code based on reason
+    let codePrefix = "GIFT";
+    if (reason === "first_order") {
+      codePrefix = "WELCOME";
+    } else if (reason === "high_value_order") {
+      codePrefix = "BIGSPEND";
+    }
+
+    // Generate unique coupon code
+    let newCode;
+    let isUnique = false;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    // Keep trying until we get a unique code
+    while (!isUnique && attempts < maxAttempts) {
+      attempts++;
+      const randomSuffix = Math.random()
+        .toString(36)
+        .substring(2, 8)
+        .toUpperCase();
+      newCode = `${codePrefix}${randomSuffix}`;
+
+      // Check if code already exists
+      const existingCoupon = await Coupon.findOne({ code: newCode });
+      if (!existingCoupon) {
+        isUnique = true;
+      } else if (attempts >= maxAttempts) {
+        throw new Error(
+          "Failed to generate unique coupon code after multiple attempts"
+        );
+      }
+    }
+
+    console.log(`📝 Generated coupon code: ${newCode} for ${reason}`);
+
+    // Create the coupon
+    const coupon = new Coupon({
+      code: newCode,
+      discountPercentage,
+      expirationDate: new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000),
+      userId: userId,
+      couponReason: reason,
+      isActive: true,
+    });
+
+    await coupon.save();
+
     console.log(
-      `Successfully ${coupon.isNew ? "CREATED" : "UPDATED"} coupon: ${
-        coupon.code
-      } for user ${userId}`
+      `✅ Successfully created coupon: ${coupon.code} for user ${userId}`
     );
     return coupon;
   } catch (error) {
-    console.error("Failed to create/update coupon:", error);
+    console.error("❌ Failed to create coupon:", error);
     return null;
   }
 }
@@ -775,13 +984,36 @@ async function processOrderCreation(transactionData) {
     await User.findByIdAndUpdate(userId, { cartItems: [] });
 
     // 5. HANDLE COUPON APPLICATION (if coupon was used in this order)
-    if (couponCode?.trim()) {
-      await Coupon.findOneAndUpdate(
-        { code: couponCode.trim().toUpperCase(), userId, isActive: true },
-        { isActive: false, usedAt: new Date(), usedInOrder: tx_ref }
-      );
-      console.log(` Coupon applied: ${couponCode}`);
-    }
+   if (couponCode?.trim()) {
+     const couponCodeUpper = couponCode.trim().toUpperCase();
+
+     try {
+       const usedCoupon = await Coupon.findOneAndUpdate(
+         {
+           code: couponCodeUpper,
+           userId: userId,
+           isActive: true,
+           usedAt: null, // Ensure it hasn't been used
+         },
+         {
+           isActive: false,
+           usedAt: new Date(),
+           usedInOrder: order.orderNumber,
+         },
+         { new: true }
+       );
+
+       if (usedCoupon) {
+         console.log(
+           `✅ Coupon ${couponCode} marked as used for order ${order.orderNumber}`
+         );
+       } else {
+         console.log(`⚠️ Coupon ${couponCode} not found or already used`);
+       }
+     } catch (error) {
+       console.error("❌ Error updating coupon usage:", error);
+     }
+   }
 
     return { order, isNew: true };
   } catch (error) {
@@ -943,11 +1175,15 @@ export const createCheckoutSession = async (req, res) => {
 
     if (couponCode && couponCode.trim() !== "") {
       try {
+        const couponCodeUpper = couponCode.trim().toUpperCase();
+
+        // Check if coupon exists and is valid
         validCoupon = await Coupon.findOne({
-          code: couponCode.trim().toUpperCase(),
-          userId,
+          code: couponCodeUpper,
+          userId: userId,
           isActive: true,
           expirationDate: { $gt: new Date() },
+          usedAt: null, // Not used yet
         });
 
         if (validCoupon) {
@@ -955,10 +1191,10 @@ export const createCheckoutSession = async (req, res) => {
             (originalTotal * validCoupon.discountPercentage) / 100
           );
           console.log(
-            `Coupon applied: ${couponCode} - Discount: ${discountAmount}`
+            `✅ Valid coupon applied: ${couponCode} - ${validCoupon.discountPercentage}% off = ${discountAmount}`
           );
         } else {
-          console.log(`Invalid or expired coupon: ${couponCode}`);
+          console.log(`❌ Invalid or expired coupon: ${couponCode}`);
         }
       } catch (error) {
         console.error("Error validating coupon:", error);
@@ -1381,10 +1617,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
                       to: user.email,
                       coupon: newCoupon,
                       couponType: couponEligibility.emailType,
-                      orderCount: await Order.countDocuments({
-                        user: userId,
-                        paymentStatus: "paid",
-                      }),
+                     
                     });
                     console.log(`Coupon email sent for: ${newCoupon.code}`);
                   }
@@ -1885,8 +2118,7 @@ export const sendDetailedOrderEmail = async ({
 export const sendCouponEmail = async ({
   to,
   coupon,
-  couponType = "welcome_coupon",
-  orderCount = 1,
+  couponType = "welcome_coupon", // Only two values now: "welcome_coupon" or "bigspender_coupon"
 }) => {
   if (!to || !coupon) return;
   const settings = await storeSettings.findOne();
@@ -1896,67 +2128,40 @@ export const sendCouponEmail = async ({
   let message = "";
   let couponValue = `${coupon.discountPercentage}% OFF`;
 
-  // Different email content based on coupon type
-  switch (couponType) {
-    case "welcome_coupon":
-      subject = ` Welcome to ${settings.storeName}! Here's Your ${couponValue} Gift`;
-      title = `Welcome to the  ${settings.storeName} Family!`;
-      message = `
-        <p>Thank you for joining us! To welcome you to our eco-friendly community, 
-        we're giving you a special discount on your next purchase.</p>
-        <p>We're thrilled to have you as part of our mission to make the world greener, one purchase at a time.</p>
-      `;
-      break;
-
-    case "loyalty_coupon":
-      subject = `🌟 Loyalty Reward! ${couponValue} for Being an Amazing Customer`;
-      title = "You're Amazing! Here's a Thank You Gift";
-      message = `
-        <p>Wow! You've already placed ${orderCount} orders with us. We're truly grateful 
-        for your loyalty and trust in ${settings.storeName}.</p>
-        <p>As a token of our appreciation, please enjoy this special discount on your next eco-friendly purchase.</p>
-      `;
-      break;
-
-    case "vip_coupon":
-      subject = `🏆 VIP Treatment! ${couponValue} Exclusive Reward`;
-      title = `You're Now an ${settings.storeName} VIP!`;
-      message = `
-        <p>Congratulations! With ${orderCount} orders, you've officially reached VIP status 
-        in our eco-friendly community.</p>
-        <p>Thank you for being such a dedicated supporter of sustainable living. 
-        Enjoy this exclusive VIP reward!</p>
-      `;
-      break;
-
-    case "bigspender_coupon":
-      subject = `💎 Premium Reward! ${couponValue} for Your Generous Order`;
-      title = "Thank You for Your Generous Purchase!";
-      message = `
-        <p>We noticed your recent substantial investment in eco-friendly products, 
-        and we're deeply grateful for your support!</p>
-        <p>Your commitment to sustainable shopping helps us continue our mission. 
-        Please accept this special reward for your next purchase.</p>
-      `;
-      break;
-
-    default:
-      subject = `🎁 Special ${couponValue} Gift from ${settings.storeName}`;
-      title = "Here's a Special Gift For You!";
-      message = `
-        <p>Thank you for being a valued ${settings.storeName} customer! We appreciate your support 
-        in making sustainable choices.</p>
-        <p>Enjoy this discount on your next purchase of eco-friendly products.</p>
-      `;
+  // Only handle two coupon types now
+  if (couponType === "welcome_coupon") {
+    subject = `🎉 Welcome to ${settings.storeName}! Here's Your ${couponValue} Welcome Gift`;
+    title = `Welcome to ${settings.storeName}!`;
+    message = `
+      <p>Welcome to our eco-friendly community! As a thank you for your first order, 
+      we're giving you a special welcome discount for your next purchase.</p>
+      <p>We hope you enjoyed your first experience with us and look forward to serving you again!</p>
+    `;
+  } else if (couponType === "bigspender_coupon") {
+    subject = `💎 Thank You! ${couponValue} Reward for Your Generous Order`;
+    title = "Thank You for Your Generous Purchase!";
+    message = `
+      <p>We truly appreciate your generous order! Your support helps us continue 
+      our mission of providing eco-friendly products.</p>
+      <p>As a token of our appreciation, please enjoy this special discount on your next purchase.</p>
+    `;
+  } else {
+    // Fallback (shouldn't happen with our new system)
+    subject = `🎁 Special ${couponValue} Gift from ${settings.storeName}`;
+    title = "Here's a Special Gift For You!";
+    message = `
+      <p>Thank you for being a valued ${settings.storeName} customer!</p>
+      <p>Enjoy this discount on your next purchase of eco-friendly products.</p>
+    `;
   }
 
   const html = `
     <div style="font-family: Arial, sans-serif; background-color: #f0f9f4; padding: 20px;">
       <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
         <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; color: #fff;">
-          <img src="${
-            settings?.logo
-          }" alt="EcoStore Logo" style="max-height: 50px; display:block; margin: 0 auto 15px;" />
+          <img src="${settings?.logo}" alt="${
+    settings.storeName
+  } Logo" style="max-height: 50px; display:block; margin: 0 auto 15px;" />
           <h1 style="margin:0; font-size: 28px; font-weight: bold;">${title}</h1>
           <div style="margin-top: 10px; font-size: 18px; opacity: 0.9;">Your Exclusive Discount Awaits!</div>
         </div>
@@ -2009,7 +2214,7 @@ export const sendCouponEmail = async ({
         <div style="background: #1e293b; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
           <p style="margin: 0 0 10px 0;">Thank you for choosing sustainable shopping with ${
             settings.storeName
-          } </p>
+          }</p>
           <p style="margin: 0;">Need help? Contact us at <a href="mailto:${
             settings.supportEmail
           }" 
@@ -2041,7 +2246,7 @@ Shop now: ${process.env.CLIENT_URL}
 
 This coupon is exclusively for you and cannot be transferred.
 
-Thank you for choosing sustainable shopping with  ${settings.storeName} 
+Thank you for choosing sustainable shopping with ${settings.storeName}
   `.trim();
 
   await sendEmail({

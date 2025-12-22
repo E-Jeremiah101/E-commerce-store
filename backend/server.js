@@ -66,74 +66,74 @@ app.use("/api/products", productRoutes);
 //cartRoutes
 app.use("/api/cart", cartRoutes);
 // Add to app.js (after your check route)
-app.get('/api/fix-refund-id/:orderNumber', async (req, res) => {
-  try {
-    const order = await Order.findOne({ 
-      orderNumber: req.params.orderNumber 
-    });
+// app.get('/api/fix-refund-id/:orderNumber', async (req, res) => {
+//   try {
+//     const order = await Order.findOne({ 
+//       orderNumber: req.params.orderNumber 
+//     });
     
-    if (!order) return res.json({ error: "Order not found" });
+//     if (!order) return res.json({ error: "Order not found" });
     
-    // Find the Processing refund
-    const refund = order.refunds.find(r => r.status === "Processing");
+//     // Find the Processing refund
+//     const refund = order.refunds.find(r => r.status === "Processing");
     
-    if (!refund) return res.json({ error: "No Processing refund found" });
+//     if (!refund) return res.json({ error: "No Processing refund found" });
     
-    // Add the missing Flutterwave ID (from your logs: 4389336)
-    refund.flutterwaveRefundId = "4389336";
-    refund.flw_ref = "JayyTech_DGMOWQ1765919081746514920";
-    refund.flutterwaveResponse = {
-      id: 4389336,
-      amount_refunded: 100,
-      status: "completed",
-      flw_ref: "JayyTech_DGMOWQ1765919081746514920",
-      created_at: "2025-12-16T21:13:16.000Z"
-    };
+//     // Add the missing Flutterwave ID (from your logs: 4389336)
+//     refund.flutterwaveRefundId = "4389336";
+//     refund.flw_ref = "JayyTech_DGMOWQ1765919081746514920";
+//     refund.flutterwaveResponse = {
+//       id: 4389336,
+//       amount_refunded: 100,
+//       status: "completed",
+//       flw_ref: "JayyTech_DGMOWQ1765919081746514920",
+//       created_at: "2025-12-16T21:13:16.000Z"
+//     };
     
-    await order.save();
+//     await order.save();
     
-    res.json({
-      success: true,
-      message: "Fixed! Added Flutterwave ID to refund",
-      refundId: refund._id,
-      flutterwaveRefundId: refund.flutterwaveRefundId,
-      newStatus: "Ready for webhook"
-    });
+//     res.json({
+//       success: true,
+//       message: "Fixed! Added Flutterwave ID to refund",
+//       refundId: refund._id,
+//       flutterwaveRefundId: refund.flutterwaveRefundId,
+//       newStatus: "Ready for webhook"
+//     });
     
-  } catch (error) {
-    res.json({ error: error.message });
-  }
-});
-// Add this route anywhere in app.js (before app.listen)
-app.get('/api/check-refund/:orderNumber', async (req, res) => {
-  try {
-    const order = await Order.findOne({ 
-      orderNumber: req.params.orderNumber 
-    });
+//   } catch (error) {
+//     res.json({ error: error.message });
+//   }
+// });
+// // Add this route anywhere in app.js (before app.listen)
+// app.get('/api/check-refund/:orderNumber', async (req, res) => {
+//   try {
+//     const order = await Order.findOne({ 
+//       orderNumber: req.params.orderNumber 
+//     });
     
-    if (!order) {
-      return res.json({ error: "Order not found" });
-    }
+//     if (!order) {
+//       return res.json({ error: "Order not found" });
+//     }
     
-    // Find the Processing refund
-    const refund = order.refunds.find(r => r.status === "Processing");
+//     // Find the Processing refund
+//     const refund = order.refunds.find(r => r.status === "Processing");
     
-    res.json({
-      orderFound: true,
-      orderNumber: order.orderNumber,
-      refundExists: !!refund,
-      refundId: refund?._id,
-      refundStatus: refund?.status,
-      flutterwaveRefundId: refund?.flutterwaveRefundId || "❌ MISSING",
-      hasFlwRef: !!refund?.flw_ref,
-      createdAt: refund?.createdAt,
-      processedAt: refund?.processedAt
-    });
+//     res.json({
+//       orderFound: true,
+//       orderNumber: order.orderNumber,
+//       refundExists: !!refund,
+//       refundId: refund?._id,
+//       refundStatus: refund?.status,
+//       flutterwaveRefundId: refund?.flutterwaveRefundId || "❌ MISSING",
+//       hasFlwRef: !!refund?.flw_ref,
+//       createdAt: refund?.createdAt,
+//       processedAt: refund?.processedAt
+//     });
     
-  } catch (error) {
-    res.json({ error: error.message });
-  }
-});
+//   } catch (error) {
+//     res.json({ error: error.message });
+//   }
+// });
 
 //couponRoutes
 app.use("/api/coupons", couponRoutes);

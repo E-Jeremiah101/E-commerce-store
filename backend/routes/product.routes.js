@@ -31,11 +31,11 @@ import { adminRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.use((req, res, next) => {
-  console.log(`🔍 [ROUTE DEBUG] ${req.method} ${req.originalUrl}`);
-  console.log(`🔍 [ROUTE DEBUG] Params:`, req.params);
-  next();
-});
+// router.use((req, res, next) => {
+//   console.log(`🔍 [ROUTE DEBUG] ${req.method} ${req.originalUrl}`);
+//   console.log(`🔍 [ROUTE DEBUG] Params:`, req.params);
+//   next();
+// });
 
 router.patch("/:id/price/slash", protectRoute, adminRoute, slashProductPrice);
 router.patch("/:id/price/reset", protectRoute, adminRoute, resetProductPrice);
@@ -80,6 +80,6 @@ router.put(
 router.delete("/cache/featured", protectRoute, adminRoute, clearFeaturedCache);
 
 // Price management routes (admin only)
-
+ 
 
 export default router; 

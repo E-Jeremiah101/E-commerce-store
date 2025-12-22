@@ -3,7 +3,6 @@ import Product from "../models/product.model.js";
 import User from "../models/user.model.js";
 import Visitor from "../models/visitors.model.js";
 
-
 // MAIN FUNCTION
 export const getAnalytics = async (range = "weekly") => {
   const endDate = new Date();
@@ -317,7 +316,6 @@ export const getAnalytics = async (range = "weekly") => {
     { $sort: { _id: 1 } },
   ]);
 
-  
   const couponPerformance = await Order.aggregate([
     {
       $match: {
@@ -385,7 +383,6 @@ export const getAnalytics = async (range = "weekly") => {
   };
 };
 
-
 // MAIN ANALYTIC STATS - UPDATED WITH DATE FILTERING
 // -----------------------------
 
@@ -409,7 +406,7 @@ async function getAnalyticsData(startDate, endDate) {
 
     // Orders: Filter by date AND status
     Order.countDocuments({
-      ...dateFilter
+      ...dateFilter,
     }),
 
     // Visitors: Filter by date
@@ -458,7 +455,7 @@ async function getAnalyticsData(startDate, endDate) {
         status: { $nin: ["Cancelled"] },
       },
     },
-    
+
     {
       $group: {
         _id: null,
@@ -533,9 +530,9 @@ async function getAnalyticsData(startDate, endDate) {
         status: { $nin: ["Cancelled"] },
         $or: [
           { "coupon.code": { $exists: true, $ne: null } },
-          { couponCode: { $exists: true, $ne: null } }
-        ]
-      }
+          { couponCode: { $exists: true, $ne: null } },
+        ],
+      },
     },
     {
       $group: {
@@ -546,23 +543,25 @@ async function getAnalyticsData(startDate, endDate) {
             $cond: [
               { $gt: ["$discount", 0] },
               "$discount",
-              { $ifNull: ["$coupon.discount", 0] }
-            ]
-          }
+              { $ifNull: ["$coupon.discount", 0] },
+            ],
+          },
         },
         uniqueCouponCodes: {
           $addToSet: {
             $cond: [
-              { $and: [
-                { $ne: ["$coupon", null] },
-                { $ne: ["$coupon.code", null] }
-              ]},
+              {
+                $and: [
+                  { $ne: ["$coupon", null] },
+                  { $ne: ["$coupon.code", null] },
+                ],
+              },
               "$coupon.code",
-              "$couponCode"
-            ]
-          }
-        }
-      }
+              "$couponCode",
+            ],
+          },
+        },
+      },
     },
     {
       $addFields: {
@@ -570,25 +569,25 @@ async function getAnalyticsData(startDate, endDate) {
           $filter: {
             input: "$uniqueCouponCodes",
             as: "code",
-            cond: { $ne: ["$$code", null] }
-          }
-        }
-      }
+            cond: { $ne: ["$$code", null] },
+          },
+        },
+      },
     },
     {
       $project: {
         _id: 0,
         couponsUsed: 1,
         totalCouponDiscount: 1,
-        uniqueCouponsUsed: { $size: "$uniqueCouponCodes" }
-      }
-    }
+        uniqueCouponsUsed: { $size: "$uniqueCouponCodes" },
+      },
+    },
   ]);
 
   const couponData = couponAnalytics[0] || {
     couponsUsed: 0,
     totalCouponDiscount: 0,
-    uniqueCouponsUsed: 0
+    uniqueCouponsUsed: 0,
   };
 
   console.log("📊 Coupon Data:", couponData);
@@ -632,7 +631,8 @@ async function getAnalyticsData(startDate, endDate) {
     couponsUsed: couponData.couponsUsed,
     totalCouponDiscount: couponData.totalCouponDiscount,
     uniqueCouponsUsed: couponData.uniqueCouponsUsed,
-    couponDiscountRate: allOrders > 0 ? (couponData.couponsUsed / allOrders) * 100 : 0,
+    couponDiscountRate:
+      allOrders > 0 ? (couponData.couponsUsed / allOrders) * 100 : 0,
   };
 
   console.log("📊 getAnalyticsData result - Coupons:", {
@@ -641,7 +641,7 @@ async function getAnalyticsData(startDate, endDate) {
     uniqueCouponsUsed: result.uniqueCouponsUsed,
     couponDiscountRate: result.couponDiscountRate,
   });
-  
+
   return result;
 }
 
@@ -814,18 +814,17 @@ function getStartDate(range, endDate) {
   return start;
 }
 
-
 async function getTopSellingProducts(limit = 7, startDate, endDate) {
   try {
     console.log("🔍 Getting top selling products...");
-    
+
     const matchStage = {
       status: { $nin: ["Cancelled"] },
-      ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {})
+      ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {}),
     };
 
     console.log("📊 Match stage:", matchStage);
-    
+
     const topProducts = await Order.aggregate([
       { $match: matchStage },
       { $unwind: "$products" },
@@ -835,13 +834,13 @@ async function getTopSellingProducts(limit = 7, startDate, endDate) {
           productId: { $first: "$products.product" },
           name: { $first: "$products.name" },
           totalSold: { $sum: "$products.quantity" },
-          totalRevenue: { 
-            $sum: { 
-              $multiply: ["$products.price", "$products.quantity"] 
-            } 
+          totalRevenue: {
+            $sum: {
+              $multiply: ["$products.price", "$products.quantity"],
+            },
           },
-          orderCount: { $sum: 1 }
-        }
+          orderCount: { $sum: 1 },
+        },
       },
       { $match: { totalSold: { $gt: 0 } } }, // Only products that were sold
       { $sort: { totalSold: -1 } },
@@ -851,10 +850,12 @@ async function getTopSellingProducts(limit = 7, startDate, endDate) {
           from: "products",
           localField: "_id",
           foreignField: "_id",
-          as: "productDetails"
-        }
+          as: "productDetails",
+        },
       },
-      { $unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true } },
+      {
+        $unwind: { path: "$productDetails", preserveNullAndEmptyArrays: true },
+      },
       {
         $project: {
           _id: 1,
@@ -864,42 +865,40 @@ async function getTopSellingProducts(limit = 7, startDate, endDate) {
           totalRevenue: 1,
           orderCount: 1,
           image: {
-      $let: {
-        vars: {
-          imagesArray: "$productDetails.images"
+            $let: {
+              vars: {
+                imagesArray: "$productDetails.images",
+              },
+              in: {
+                $cond: {
+                  if: { $gt: [{ $size: "$$imagesArray" }, 0] },
+                  then: { $arrayElemAt: ["$$imagesArray", 0] },
+                  else: null,
+                },
+              },
+            },
+          },
         },
-        in: {
-          $cond: {
-            if: { $gt: [{ $size: "$$imagesArray" }, 0] },
-            then: { $arrayElemAt: ["$$imagesArray", 0] },
-            else: null
-          }
-        }
-      }
-    }
-  
-        }
-      }
+      },
     ]);
 
     console.log("✅ Found top products:", topProducts.length);
     console.log("📦 Top products data:", JSON.stringify(topProducts, null, 2));
-    
+
     return topProducts;
   } catch (error) {
     console.error("❌ Error getting top selling products:", error);
     console.error("Error stack:", error.stack);
     return []; // Return empty array on error
   }
-};
-
+}
 
 async function getProductSalesData(startDate, endDate) {
   try {
     const matchStage = {
       $match: {
-        ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {})
-      }
+        ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {}),
+      },
     };
 
     const productSales = await Order.aggregate([
@@ -975,41 +974,50 @@ async function getProductSalesData(startDate, endDate) {
           },
         },
       },
-    ]);  
+    ]);
 
     // Calculate totals for AUV calculation
-    const totals = productSales.reduce((acc, product) => {
-      acc.totalUnits += product.unitsSold;
-      acc.totalRevenue += product.totalRevenue;
-      return acc;
-    }, { totalUnits: 0, totalRevenue: 0 });
+    const totals = productSales.reduce(
+      (acc, product) => {
+        acc.totalUnits += product.unitsSold;
+        acc.totalRevenue += product.totalRevenue;
+        return acc;
+      },
+      { totalUnits: 0, totalRevenue: 0 }
+    );
 
-    const overallAUV = totals.totalUnits > 0 
-      ? totals.totalRevenue / totals.totalUnits 
-      : 0;
+    const overallAUV =
+      totals.totalUnits > 0 ? totals.totalRevenue / totals.totalUnits : 0;
 
-      const totalOrders = await Order.countDocuments({
-        ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {}),
-      });
+    const totalOrders = await Order.countDocuments({
+      ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {}),
+    });
 
     return {
-      products: productSales.map(product => ({
+      products: productSales.map((product) => ({
         ...product,
         formattedRevenue: `${Math.round(product.totalRevenue)}`,
         formattedAUV: `${Math.round(product.averageUnitValue)}`,
-        revenuePerUnit: Math.round(product.totalRevenue / product.unitsSold)
+        revenuePerUnit: Math.round(product.totalRevenue / product.unitsSold),
       })),
       summary: {
         totalProducts: productSales.length,
         totalUnits: totals.totalUnits,
         totalRevenue: totals.totalRevenue,
         overallAUV: Math.round(overallAUV),
-        totalOrders: totalOrders
-      }
+        totalOrders: totalOrders,
+      },
     };
   } catch (error) {
     console.error("Error getting product sales data:", error);
-    return { products: [], summary: { totalProducts: 0, totalUnits: 0, totalRevenue: 0, overallAUV: 0 } };
+    return {
+      products: [],
+      summary: {
+        totalProducts: 0,
+        totalUnits: 0,
+        totalRevenue: 0,
+        overallAUV: 0,
+      },
+    };
   }
 }
-

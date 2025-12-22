@@ -25,35 +25,28 @@ const couponSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true,
+      // unique: true,
     },
-     couponReason: {
+    couponReason: {
       type: String,
-      enum: ["first_order", "third_order_milestone", "every_five_orders", "high_value_order", "general"],
-      default: "general"
+      enum: ["first_order", "high_value_order"],
+      required: true,
     },
     usedAt: {
       type: Date,
-      default: null
+      default: null,
     },
     usedInOrder: {
       type: String,
-      default: null
+      default: null,
     },
-    deactivatedAt: {
-      type: Date,
-      default: null
-    },
-    deactivationReason: {
-      type: String,
-      default: null
-    } 
   },
   {
     timestamps: true,
   }
 );
-
+// couponSchema.index({ userId: 1, isActive: 1 });
+// couponSchema.index({ code: 1 });
 const Coupon = mongoose.model("Coupon", couponSchema);
 
 export default Coupon;

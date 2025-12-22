@@ -40,15 +40,14 @@ const AnalyticsTab = () => {
   const [selectedRange, setSelectedRange] = useState("weekly");
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useUserStore();
-    const [productSales, setProductSales] = useState([]);
-    const [productSummary, setProductSummary] = useState({});
-    const [productSortConfig, setProductSortConfig] = useState({
-      key: "unitsSold",
-      direction: "descending",
-    });
-    const [couponTrend, setCouponTrend] = useState([]);
-    const [couponPerformance, setCouponPerformance] = useState([]);
-    
+  const [productSales, setProductSales] = useState([]);
+  const [productSummary, setProductSummary] = useState({});
+  const [productSortConfig, setProductSortConfig] = useState({
+    key: "unitsSold",
+    direction: "descending",
+  });
+  const [couponTrend, setCouponTrend] = useState([]);
+  const [couponPerformance, setCouponPerformance] = useState([]);
 
   useEffect(() => {
     const fetchAnalyticsData = async () => {
@@ -267,9 +266,9 @@ const AnalyticsTab = () => {
     }
     return 0;
   });
-const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
-  return sum + (product.orderCount || 0);
-}, 0);
+  const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
+    return sum + (product.orderCount || 0);
+  }, 0);
   const pending = analyticsData.refundsPending || 0;
   const approved = analyticsData.refundsApproved || 0;
   const rejected = analyticsData.refundsRejected || 0;
@@ -284,10 +283,9 @@ const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
           rejected: (rejected / totalRefunds) * 100,
           processing: (processing / totalRefunds) * 100,
         }
-      : { pending: 0, approved: 0, rejected: 0, processing: 0};
+      : { pending: 0, approved: 0, rejected: 0, processing: 0 };
 
-      const { settings } = useStoreSettings();
-      
+  const { settings } = useStoreSettings();
 
   if (isLoading)
     return (
@@ -2114,8 +2112,6 @@ const AnalyticsCard = ({
   </motion.div>
 );
 
-
-
 // Add this tooltip component near CustomTooltip and DeliveryTooltip
 const CouponTooltip = ({ active, payload, label }) => {
   const { settings } = useStoreSettings();
@@ -2142,7 +2138,10 @@ const CouponTooltip = ({ active, payload, label }) => {
             <span className="text-gray-600 text-sm">Avg. Discount:</span>
             <span className="font-medium text-green-600">
               {data?.couponsUsed > 0
-                ? formatPrice((data?.couponDiscount || 0) / data?.couponsUsed, settings?.currency)
+                ? formatPrice(
+                    (data?.couponDiscount || 0) / data?.couponsUsed,
+                    settings?.currency
+                  )
                 : formatPrice(0, settings?.currency)}
             </span>
           </div>
@@ -2156,7 +2155,10 @@ const CouponTooltip = ({ active, payload, label }) => {
             <div className="flex justify-between items-center text-xs text-gray-500 mt-1">
               <span>Coupon Rate:</span>
               <span>
-                {data?.sales > 0 ? ((data?.couponsUsed / data?.sales) * 100).toFixed(1) : 0}%
+                {data?.sales > 0
+                  ? ((data?.couponsUsed / data?.sales) * 100).toFixed(1)
+                  : 0}
+                %
               </span>
             </div>
           </div>

@@ -53,7 +53,6 @@ export const checkVariantAvailability = async (req, res) => {
       });
 
       availableStock = variant ? variant.countInStock : 0;
-      console.log("📊 Variant stock found:", availableStock);
     } else {
       // If no variants exist, product has 0 stock
       return res.json({
@@ -479,12 +478,6 @@ export const getFeaturedProducts = async (req, res) => {
     if (featuredProducts) {
       console.log("✅ Loading featured products from cache");
       const parsed = JSON.parse(featuredProducts);
-      console.log(`🔍 Sample cached product:`, {
-        name: parsed[0]?.name,
-        price: parsed[0]?.price,
-        previousPrice: parsed[0]?.previousPrice,
-        isPriceSlashed: parsed[0]?.isPriceSlashed,
-      });
       return res.json(parsed);
     }
 
@@ -725,13 +718,6 @@ export const getRecommendedProducts = async (req, res) => {
         },
       },
     ]);
-    console.log(`✅ Found ${products.length} recommended products`);
-    console.log(`🔍 Sample product slash data:`, {
-      name: products[0]?.name,
-      price: products[0]?.price,
-      previousPrice: products[0]?.previousPrice,
-      isPriceSlashed: products[0]?.isPriceSlashed,
-    });
 
       const productsWithDiscount = products.map((product) => {
         const discountPercentage =

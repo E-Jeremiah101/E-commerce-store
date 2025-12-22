@@ -1,2149 +1,2229 @@
-
-// import path from "path";
-// import dotenv from "dotenv";
-// import { fileURLToPath } from "url";
-// import axios from "axios";
-// import mongoose from "mongoose";
+// import React, { useEffect, useState } from "react";
+// import { motion } from "framer-motion";
+// import axios from "../lib/axios";
+// import { useUserStore } from "../stores/useUserStore";
+// import { formatPrice } from "../utils/currency.js";
+// import { useStoreSettings } from "./StoreSettingsContext.jsx";
 // import {
-//   acquireWebhookLock,
-//   releaseWebhookLock,
-//   storeReservation,
-//   getReservation,
-//   deleteReservation,
-//   storeReleasedReservation,
-//   getReleasedReservation,
-// } from "../lib/redis.js";
-// import Coupon from "../models/coupon.model.js";
-// import Order from "../models/order.model.js";
-// import User from "../models/user.model.js";
-// import Product from "../models/product.model.js";
-// import { sendEmail } from "../lib/mailer.js";
-// import { flw } from "../lib/flutterwave.js";
-// import redis from "../lib/redis.js";
-// import { calculateDeliveryFee } from "../service/deliveryConfig.js";
-// import storeSettings from "../models/storeSettings.model.js"
+//   Users,
+//   ShoppingCart,
+//   Package,
+//   XCircle,
+//   CheckCircle,
+//   DollarSign,
+//   Hourglass,
+//   Truck,
+//   TrendingUp,
+//   TrendingDown,
+//   Scissors,
+// } from "lucide-react";
+// import {
+//   ResponsiveContainer,
+//   LineChart,
+//   Line,
+//   CartesianGrid,
+//   Tooltip,
+//   XAxis,
+//   YAxis,
+//   Area,
+//   AreaChart,
+// } from "recharts";
 
- 
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
-// dotenv.config({ path: path.join(__dirname, "../../.env") });
-
-// // 1. First define all helper functions
-
-// async function clearStaleDatabaseReservations() {
-//   console.log("🔍 Checking for VERY stale reservations (30+ minutes old)...");
-
-//   try {
-//     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-
-//     const productsWithReservations = await Product.find({
-//       $or: [{ reserved: { $gt: 0 } }, { "variants.reserved": { $gt: 0 } }],
-//       updatedAt: { $lt: thirtyMinutesAgo }, // Only very old reservations
+// const AnalyticsTab = () => {
+//   const [analyticsData, setAnalyticsData] = useState({});
+//   const [salesData, setSalesData] = useState([]);
+//   const [statusCharts, setStatusCharts] = useState({});
+//   const [visitorsCharts, setVisitorsCharts] = useState({});
+//   const [usersCharts, setUsersCharts] = useState([]);
+//   const [ordersCharts, setOrdersCharts] = useState([]);
+//   const [topProducts, setTopProducts] = useState([]);
+//   const [selectedRange, setSelectedRange] = useState("weekly");
+//   const [isLoading, setIsLoading] = useState(true);
+//   const { user } = useUserStore();
+//     const [productSales, setProductSales] = useState([]);
+//     const [productSummary, setProductSummary] = useState({});
+//     const [productSortConfig, setProductSortConfig] = useState({
+//       key: "unitsSold",
+//       direction: "descending",
 //     });
-
-//     for (const product of productsWithReservations) {
-//       // Only release reservations that are 30+ minutes old
-//       // This handles true edge cases without interfering with normal flow
-//     }
-//   } catch (error) {
-//     console.error("❌ Error in cleanup:", error);
-//   }
-// }
-
-
-// // 2. Reservation functions using Redis
-// async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
-//   const session = await mongoose.startSession();
-
-//   try {
-//     await session.withTransaction(async () => {
-//       for (const item of products) {
-//         if (!item._id) continue;
-
-//         console.log(`🔄 Reserving ${item.quantity} of ${item.name}`);
-
-//         const product = await Product.findById(item._id).session(session);
-//         if (!product) throw new Error(`Product ${item.name} not found`);
-
-//         // FIXED: Use flexible matching for variants (same as frontend)
-//         if (item.size || item.color) {
-//           const variantIndex = product.variants.findIndex((v) => {
-//             const sizeMatches = item.size
-//               ? v.size === item.size
-//               : !v.size || v.size === "" || v.size === "Standard";
-//             const colorMatches = item.color
-//               ? v.color === item.color
-//               : !v.color || v.color === "" || v.color === "Standard";
-//             return sizeMatches && colorMatches;
-//           });
-
-//           if (variantIndex === -1) {
-//             throw new Error(
-//               `Variant ${item.size || "Any"}/${
-//                 item.color || "Any"
-//               } not found for ${item.name}`
-//             );
-//           }
-
-//           const variant = product.variants[variantIndex];
-//           console.log(
-//             `📦 BEFORE - ${item.name} ${item.size || ""}/${
-//               item.color || ""
-//             }: Stock=${variant.countInStock}, Reserved=${variant.reserved || 0}`
-//           );
-
-//           // Check stock
-//           if (variant.countInStock < item.quantity) {
-//             throw new Error(
-//               `Only ${variant.countInStock} available, but ${item.quantity} requested`
-//             );
-//           }
-
-//           // ACTUALLY DEDUCT INVENTORY HERE
-//           variant.countInStock -= item.quantity;
-//           variant.reserved = (variant.reserved || 0) + item.quantity;
-
-//           console.log(
-//             `📦 AFTER - ${item.name} ${item.size || ""}/${
-//               item.color || ""
-//             }: Stock=${variant.countInStock}, Reserved=${variant.reserved}`
-//           );
-
-//           // Update total product stock
-//           product.countInStock = product.variants.reduce(
-//             (total, v) => total + v.countInStock,
-//             0
-//           );
-//         }
-//         // Handle simple products (no variants)
-//         else {
-//           console.log(
-//             `📦 BEFORE - ${item.name}: Stock=${
-//               product.countInStock
-//             }, Reserved=${product.reserved || 0}`
-//           );
-
-//           if (product.countInStock < item.quantity) {
-//             throw new Error(
-//               `Only ${product.countInStock} available, but ${item.quantity} requested`
-//             );
-//           }
-
-//           // ACTUALLY DEDUCT INVENTORY HERE
-//           product.countInStock -= item.quantity;
-//           product.reserved = (product.reserved || 0) + item.quantity;
-
-//           console.log(
-//             `📦 AFTER - ${item.name}: Stock=${product.countInStock}, Reserved=${product.reserved}`
-//           );
-//         }
-
-//         await product.save({ session });
-//         console.log(
-//           `✅ Successfully reserved ${item.quantity} of ${item.name}`
-//         );
-//       }
-//     });
-
-//     // Store reservation in Redis
-//     await storeReservation(reservationId, {
-//       products,
-//       createdAt: new Date(),
-//       expiresAt: new Date(Date.now() + timeoutMinutes * 60 * 1000),
-//       timeoutMinutes: timeoutMinutes,
-//     });
-
-//     console.log(`🎉 ALL inventory reserved successfully: ${reservationId}`);
-//     return true;
-//   } catch (error) {
-//     console.error("❌ Reservation failed:", error);
-
-//     // Release any partial reservations
-//     try {
-//       await releaseInventory(reservationId);
-//     } catch (releaseError) {
-//       console.error("Failed to release inventory after failure:", releaseError);
-//     }
-
-//     throw error;
-//   } finally {
-//     await session.endSession();
-//   }
-// }
-
-// async function releaseInventory(reservationId) {
-//   // Check if we've already processed this release
-//   const alreadyReleased = await getReleasedReservation(reservationId);
-//   if (alreadyReleased) {
-//     console.log(`🔄 Release already processed for: ${reservationId}`);
-//     return;
-//   }
-
-//   const reservation = await getReservation(reservationId);
-//   if (!reservation) {
-//     console.log(`No reservation found: ${reservationId}`);
-//     return;
-//   }
-
-//   console.log(`🔄 Releasing reservation: ${reservationId}`);
-
-//   const session = await mongoose.startSession();
-//   try {
-//     await session.withTransaction(async () => {
-//       for (const item of reservation.products) {
-//         if (!item._id) continue;
-
-//         const product = await Product.findById(item._id).session(session);
-//         if (!product) {
-//           console.log(`Product not found for ID: ${item._id}`);
-//           continue;
-//         }
-
-//         // FIXED: Use flexible matching for variants
-//         if (item.size || item.color) {
-//           const variantIndex = product.variants.findIndex((v) => {
-//             const sizeMatches = item.size
-//               ? v.size === item.size
-//               : !v.size || v.size === "" || v.size === "Standard";
-//             const colorMatches = item.color
-//               ? v.color === item.color
-//               : !v.color || v.color === "" || v.color === "Standard";
-//             return sizeMatches && colorMatches;
-//           });
-
-//           if (variantIndex !== -1) {
-//             const variant = product.variants[variantIndex];
-
-//             // ✅ FIXED: Add safety check - only release if we have enough reserved
-//             const reservedToRelease = Math.min(
-//               item.quantity,
-//               variant.reserved || 0
-//             );
-
-//             if (reservedToRelease > 0) {
-//               variant.countInStock += reservedToRelease;
-//               variant.reserved = Math.max(
-//                 0,
-//                 (variant.reserved || 0) - reservedToRelease
-//               );
-
-//               console.log(
-//                 `✅ Released ${reservedToRelease} of ${item.name} variant - Stock now: ${variant.countInStock}, Reserved: ${variant.reserved}`
-//               );
-//             } else {
-//               console.log(
-//                 `⚠️ No reserved stock to release for ${item.name} ${
-//                   item.size || ""
-//                 }/${item.color || ""}`
-//               );
-//             }
-
-//             // Update total product stock
-//             product.countInStock = product.variants.reduce(
-//               (total, v) => total + v.countInStock,
-//               0
-//             );
-//           }
-//         } else {
-//           // Simple product - add safety check
-//           const reservedToRelease = Math.min(
-//             item.quantity,
-//             product.reserved || 0
-//           );
-
-//           if (reservedToRelease > 0) {
-//             product.countInStock += reservedToRelease;
-//             product.reserved = Math.max(
-//               0,
-//               (product.reserved || 0) - reservedToRelease
-//             );
-//             console.log(
-//               `✅ Released ${reservedToRelease} of ${item.name} - Stock now: ${product.countInStock}, Reserved: ${product.reserved}`
-//             );
-//           } else {
-//             console.log(`⚠️ No reserved stock to release for ${item.name}`);
-//           }
-//         }
-
-//         await product.save({ session });
-//       }
-//     });
-
-//     // ✅ Mark this reservation as released to prevent duplicate processing
-//     await storeReleasedReservation(reservationId, {
-//       releasedAt: new Date(),
-//       originalReservation: reservation,
-//     });
-
-//     // Remove the original reservation
-//     await deleteReservation(reservationId);
-
-//     console.log(`🎉 Successfully released reservation: ${reservationId}`);
-//   } catch (error) {
-//     console.error("❌ Release failed:", error);
-//   } finally {
-//     await session.endSession();
-//   }
-// }
-
-// async function confirmInventory(reservationId) {
-//   const reservation = await getReservation(reservationId);
-//   if (!reservation) {
-//     console.log(`No reservation found to confirm: ${reservationId}`);
-//     return;
-//   }
-
-//   console.log(`🔄 Confirming reservation: ${reservationId}`);
-
-//   const session = await mongoose.startSession();
-//   try {
-//     await session.withTransaction(async () => {
-//       for (const item of reservation.products) {
-//         if (!item._id) continue;
-
-//         const product = await Product.findById(item._id).session(session);
-//         if (!product) continue;
-
-//         // FIXED: Use flexible matching for variants
-//         if (item.size || item.color) {
-//           const variantIndex = product.variants.findIndex((v) => {
-//             const sizeMatches = item.size
-//               ? v.size === item.size
-//               : !v.size || v.size === "" || v.size === "Standard";
-//             const colorMatches = item.color
-//               ? v.color === item.color
-//               : !v.color || v.color === "" || v.color === "Standard";
-//             return sizeMatches && colorMatches;
-//           });
-
-//           if (variantIndex !== -1) {
-//             const variant = product.variants[variantIndex];
-
-//             console.log(
-//               `📊 BEFORE CONFIRMATION - ${item.name} ${item.size || ""}/${
-//                 item.color || ""
-//               }: Stock=${variant.countInStock}, Reserved=${
-//                 variant.reserved || 0
-//               }`
-//             );
-
-//             // Remove reservation flag - stock is already at the reduced level from reservation
-//             variant.reserved = Math.max(
-//               0,
-//               (variant.reserved || 0) - item.quantity
-//             );
-
-//             console.log(
-//               `✅ CONFIRMED ${item.name} ${item.size || ""}/${
-//                 item.color || ""
-//               } - Final: Stock=${variant.countInStock}, Reserved=${
-//                 variant.reserved
-//               }`
-//             );
-
-//             console.log(
-//               `📊 INVENTORY REDUCTION: ${item.name} ${item.size || ""}/${
-//                 item.color || ""
-//               } - Stock permanently reduced by ${item.quantity} units`
-//             );
-//           } else {
-//             console.log(
-//               `❌ Variant not found for confirmation: ${item.name} ${
-//                 item.size || ""
-//               }/${item.color || ""}`
-//             );
-//           }
-//         } else {
-//           // Simple product - remove reservation flag only (stock already reduced)
-//           console.log(
-//             `📊 BEFORE CONFIRMATION - ${item.name}: Stock=${
-//               product.countInStock
-//             }, Reserved=${product.reserved || 0}`
-//           );
-
-//           product.reserved = Math.max(
-//             0,
-//             (product.reserved || 0) - item.quantity
-//           );
-
-//           console.log(
-//             `✅ CONFIRMED ${item.name} - Final: Stock=${product.countInStock}, Reserved=${product.reserved}`
-//           );
-
-//           console.log(
-//             `📊 INVENTORY REDUCTION: ${item.name} - Stock permanently reduced by ${item.quantity} units`
-//           );
-//         }
-
-//         await product.save({ session });
-//       }
-//     });
-
-//     await deleteReservation(reservationId);
-//     console.log(`🎉 Successfully CONFIRMED reservation: ${reservationId}`);
-//   } catch (error) {
-//     console.error("❌ Confirmation failed:", error);
-//     throw error;
-//   } finally {
-//     await session.endSession();
-//   }
-// }
-// setInterval(async () => {
-//   console.log("🕒 Running Redis reservation cleanup...");
-
-//   try {
-//     // Get all Redis reservation keys
-//     const keys = await redis.keys("reservation:*");
-//     console.log(`📊 Found ${keys.length} Redis reservations`);
-
-//     let releasedCount = 0;
-//     let expiredButStuckCount = 0;
-
-//     // Get all active reservation IDs from Redis
-//     const activeReservationIds = new Set();
-//     for (const key of keys) {
-//       const reservationId = key.replace("reservation:", "");
-//       activeReservationIds.add(reservationId);
-
-//       const reservationData = await getReservation(reservationId);
-//       if (reservationData) {
-//         const now = new Date();
-//         const expiresAt = new Date(reservationData.expiresAt);
-
-//         // If reservation has expired, release it
-//         if (now > expiresAt) {
-//           console.log(`⏰ Releasing expired reservation: ${reservationId}`);
-//           try {
-//             await releaseInventory(reservationId);
-//             releasedCount++;
-//           } catch (error) {
-//             console.error(`❌ Failed to release ${reservationId}:`, error);
-//           }
-//         } else {
-//           const ttl = Math.floor((expiresAt - now) / 1000);
-//           console.log(`⏰ ${reservationId}: ${ttl} seconds remaining`);
-//         }
-//       }
-//     }
-
-//     // ONLY check for stuck reservations that are NOT in Redis
-//     const stuckProducts = await Product.find({
-//       $or: [{ reserved: { $gt: 0 } }, { "variants.reserved": { $gt: 0 } }],
-//     });
-
-//     for (const product of stuckProducts) {
-//       let needsFix = false;
-
-//       // Check if this product has any active Redis reservations
-//       const hasActiveReservation = await checkProductHasActiveReservation(
-//         product,
-//         activeReservationIds
-//       );
-
-//       if (!hasActiveReservation) {
-//         // Only fix reservations that don't have active Redis entries
-//         if (product.reserved > 0) {
-//           console.log(
-//             `🔄 Found STUCK main reservation for ${product.name}: ${product.reserved} units (no active Redis reservation)`
-//           );
-//           product.countInStock += product.reserved;
-//           product.reserved = 0;
-//           needsFix = true;
-//         }
-
-//         // Check variants
-//         if (product.variants && product.variants.length > 0) {
-//           product.variants.forEach((variant, index) => {
-//             if (variant.reserved > 0) {
-//               console.log(
-//                 `🔄 Found STUCK variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units (no active Redis reservation)`
-//               );
-//               product.variants[index].countInStock += variant.reserved;
-//               product.variants[index].reserved = 0;
-//               needsFix = true;
-//             }
-//           });
-//         }
-//       }
-
-//       if (needsFix) {
-//         await product.save();
-//         expiredButStuckCount++;
-//         console.log(`✅ Fixed STUCK reservations for ${product.name}`);
-//       }
-//     }
-
-//     if (releasedCount > 0 || expiredButStuckCount > 0) {
-//       console.log(
-//         `✅ Released ${releasedCount} expired reservations and fixed ${expiredButStuckCount} stuck reservations`
-//       );
-//     } else {
-//       console.log("✅ No expired or stuck reservations found");
-//     }
-//   } catch (error) {
-//     console.error("❌ Error in reservation cleanup:", error);
-//   }
-// }, 30000);
-
-// // Helper function to check if a product has active Redis reservations
-// async function checkProductHasActiveReservation(product, activeReservationIds) {
-//   // This would require storing product IDs in Redis reservations
-//   // For now, we'll assume any reservation in Redis might be for this product
-//   // and be conservative (don't release if there are any active reservations)
-//   return activeReservationIds.size > 0;
-// }
- 
-// // 4. Add the immediate cleanup function (run this once)
-// async function clearAllReservations() {
-//   console.log("🧹 Clearing all stale reservations from database...");
-
-//   try {
-//     const session = await mongoose.startSession();
-
-//     await session.withTransaction(async () => {
-//       // Find all products with reserved inventory
-//       const productsWithReservations = await Product.find({
-//         $or: [{ reserved: { $gt: 0 } }, { "variants.reserved": { $gt: 0 } }],
-//       }).session(session);
-
-//       console.log(
-//         `📊 Found ${productsWithReservations.length} products with reservations`
-//       );
-
-//       for (const product of productsWithReservations) {
-//         let changed = false;
-
-//         // Clear main product reservations
-//         if (product.reserved > 0) {
-//           console.log(
-//             `🔄 Clearing main reservation for ${product.name}: ${product.reserved} units`
-//           );
-//           product.countInStock += product.reserved;
-//           product.reserved = 0;
-//           changed = true;
-//         }
-
-//         // Clear variant reservations
-//         if (product.variants && product.variants.length > 0) {
-//           product.variants.forEach((variant, index) => {
-//             if (variant.reserved > 0) {
-//               console.log(
-//                 `🔄 Clearing variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units`
-//               );
-//               product.variants[index].countInStock += variant.reserved;
-//               product.variants[index].reserved = 0;
-//               changed = true;
-//             }
-//           });
-
-//           // Update total stock
-//           if (changed) {
-//             product.countInStock = product.variants.reduce(
-//               (total, v) => total + v.countInStock,
-//               0
-//             );
-//           }
-//         }
-
-//         if (changed) {
-//           await product.save({ session });
-//           console.log(`✅ Cleared reservations for ${product.name}`);
-//         }
-//       }
-//     });
-
-//     await session.endSession();
-//     console.log("🎉 All stale reservations cleared successfully");
-//   } catch (error) {
-//     console.error("❌ Failed to clear reservations:", error);
-//   }
-// }
-
-// // 5. Run the immediate cleanup once
-// mongoose.connection.on("connected", async () => {
-//   console.log("✅ MongoDB connected - starting reservation cleanup...");
-//   await clearAllReservations();
-// });
-
-// mongoose.connection.on("error", (err) => {
-//   console.error("❌ MongoDB connection error:", err);
-// });
-
-// async function checkCouponEligibility(userId, orderAmount) {
-//   try {
-//     const orderCount = await Order.countDocuments({
-//       user: userId,
-//       paymentStatus: "paid",
-//     });
-
-//     console.log(
-//       `Checking coupon eligibility for user ${userId}: ${orderCount} orders, ${orderAmount}`
-//     );
-
-//     const activeCoupon = await Coupon.findOne({
-//       userId: userId,
-//       isActive: true,
-//       expirationDate: { $gt: new Date() },
-//     });
-
-//     if (activeCoupon) {
-//       console.log(
-//         `User ${userId} already has active coupon: ${activeCoupon.code}`
-//       );
-//       return null;
-//     }
-
-//     if (orderCount === 1) {
-//       console.log(`User ${userId} eligible for FIRST ORDER coupon`);
-//       return {
-//         discountPercentage: 10,
-//         codePrefix: "WELCOME",
-//         reason: "first_order",
-//         emailType: "welcome_coupon",
-//       };
-//     } else if (orderCount === 3) {
-//       console.log(`User ${userId} eligible for THIRD ORDER coupon`);
-//       return {
-//         discountPercentage: 15,
-//         codePrefix: "LOYAL",
-//         reason: "third_order_milestone",
-//         emailType: "loyalty_coupon",
-//       };
-//     } else if (orderCount >= 5 && orderCount % 5 === 0) {
-//       console.log(
-//         `User ${userId} eligible for VIP coupon (${orderCount} orders)`
-//       );
-//       return {
-//         discountPercentage: 20,
-//         codePrefix: "VIP",
-//         reason: "every_five_orders",
-//         emailType: "vip_coupon",
-//       };
-//     } else if (orderAmount > 175000) {
-//       console.log(
-//         `User ${userId} eligible for BIG SPENDER coupon (${orderAmount})`
-//       );
-//       return {
-//         discountPercentage: 15,
-//         codePrefix: "BIGSPEND",
-//         reason: "high_value_order",
-//         emailType: "bigspender_coupon",
-//       };
-//     }
-
-//     console.log(
-//       `User ${userId} not eligible for coupon (${orderCount} orders, ${orderAmount})`
-//     );
-//     return null;
-//   } catch (error) {
-//     console.error("Error checking coupon eligibility:", error);
-//     return null;
-//   }
-// }
-
-// async function createNewCoupon(userId, options = {}) {
-//   const {
-//     discountPercentage = 10,
-//     daysValid = 30,
-//     couponType = "GIFT",
-//     reason = "general",
-//   } = options;
-
-//   try {
-//     console.log(`Starting coupon creation for user ${userId}...`);
-
-//     const newCode =
-//       couponType + Math.random().toString(36).substring(2, 8).toUpperCase();
-
-//     console.log(`Generated coupon code: ${newCode}`);
-
-//     const coupon = await Coupon.findOneAndUpdate(
-//       { userId: userId },
-//       {
-//         code: newCode,
-//         discountPercentage,
-//         expirationDate: new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000),
-//         isActive: true,
-//         couponReason: reason,
-//         deactivatedAt: null,
-//         deactivationReason: null,
-//         usedAt: null,
-//         usedInOrder: null,
-//       },
-//       {
-//         upsert: true,
-//         new: true,
-//         runValidators: true,
-//         setDefaultsOnInsert: true,
-//       }
-//     );
-
-//     console.log(
-//       `Successfully ${coupon.isNew ? "CREATED" : "UPDATED"} coupon: ${
-//         coupon.code
-//       } for user ${userId}`
-//     );
-//     return coupon;
-//   } catch (error) {
-//     console.error("Failed to create/update coupon:", error);
-//     return null;
-//   }
-// }
-
-// function generateOrderNumber() {
-//   return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
-// }
-
-// function createPaymentMethodData(flutterwaveData) {
-//   const paymentType = flutterwaveData.payment_type || "card";
-
-//   return {
-//     method: paymentType,
-//     status: "PAID",
-//     card: {
-//       brand: flutterwaveData.card?.brand || "Unknown",
-//       last4: flutterwaveData.card?.last_4digits || null,
-//       exp_month: flutterwaveData.card?.exp_month || null,
-//       exp_year: flutterwaveData.card?.exp_year || null,
-//       type: flutterwaveData.card?.type || null,
-//       issuer: flutterwaveData.card?.issuer || null,
-//     },
-//   };
-// }
-
-// async function processOrderCreation(transactionData) {
-//   const {
-//     transaction_id,
-//     tx_ref,
-//     data,
-//     meta,
-//     userId,
-//     parsedProducts,
-//     couponCode,
-//     reservationId,
-//   } = transactionData;
-
-//   console.log(` STARTING order processing for: ${tx_ref}`);
-
-//   // 1. IMMEDIATE DUPLICATE CHECK
-//   const existingOrder = await Order.findOne({
-//     $or: [
-//       { flutterwaveTransactionId: transaction_id },
-//       { flutterwaveRef: tx_ref },
-//     ],
-//   });
-
-//   if (existingOrder) {
-//     console.log(` ORDER ALREADY EXISTS: ${existingOrder.orderNumber}`);
-//     return { order: existingOrder, isNew: false };
-//   }
-
-//   // 2. CREATE ORDER (inventory already reserved)
-//   try {
-//     console.log(` CREATING NEW ORDER for user: ${userId}`);
-
-//     const user = await User.findById(userId);
-//     if (!user) throw new Error("User not found");
-
-//     const products = parsedProducts.map((p) => ({
-//       product: p._id,
-//       name: p.name || "Unknown Product",
-//       image: (p.images && p.images[0]) || "/placeholder.png",
-//       quantity: p.quantity || 1,
-//       price: p.price || 0,
-//       selectedSize: p.size || "",
-//       selectedColor: p.color || "",
-//       selectedCategory: p.category || "",
-//     }));
-
-//     const order = new Order({
-//       user: user._id,
-//       products,
-//       subtotal: Number(meta.originalTotal) || Number(data.amount) || 0,
-//       discount: Number(meta.discountAmount) || 0,
-//       deliveryFee: Number(meta.deliveryFee) || 0, 
-//       deliveryZone: meta.deliveryZone || "Same City",
-//       totalAmount: Number(meta.finalTotal) || Number(data.amount) || 0,
-//       orderNumber: generateOrderNumber(),
-//       couponCode: couponCode || null,
-//       deliveryAddress: meta.deliveryAddress || "No address provided",
-//       phone: meta.phoneNumber || "No phone provided",
-//       flutterwaveRef: tx_ref,
-//       flutterwaveTransactionId: transaction_id,
-//       paymentStatus: "paid",
-//       status: "Pending",
-//       paymentMethod: createPaymentMethodData(data),
-//       isProcessed: false,
-//     });
-
-//     await order.save();
-//     console.log(` SUCCESS: Created order ${order.orderNumber}`);
-
-//     // 3. CONFIRM INVENTORY (convert reservation to permanent)
-//     if (reservationId) {
-//       await confirmInventory(reservationId);
-//     }
-
-//     // 4. CLEAR CART
-//     await User.findByIdAndUpdate(userId, { cartItems: [] });
-
-//     // 5. HANDLE COUPON APPLICATION (if coupon was used in this order)
-//     if (couponCode?.trim()) {
-//       await Coupon.findOneAndUpdate(
-//         { code: couponCode.trim().toUpperCase(), userId, isActive: true },
-//         { isActive: false, usedAt: new Date(), usedInOrder: tx_ref }
-//       );
-//       console.log(` Coupon applied: ${couponCode}`);
-//     }
-
-//     return { order, isNew: true };
-//   } catch (error) {
-//     // Handle duplicate order error
-//     if (error.code === 11000) {
-//       console.log(`🔄 Duplicate key error - finding existing order...`);
-//       const existingOrder = await Order.findOne({
-//         $or: [
-//           { flutterwaveTransactionId: transaction_id },
-//           { flutterwaveRef: tx_ref },
-//         ],
-//       });
-
-//       if (existingOrder) {
-//         console.log(` Found existing order: ${existingOrder.orderNumber}`);
-//         return { order: existingOrder, isNew: false };
-//       }
-//     }
-
-//     console.error(`❌ ORDER CREATION FAILED:`, error);
-//     throw error;
-//   }
-// }
-
-// export const createCheckoutSession = async (req, res) => {
-//   try {
-//     const { products, couponCode, deliveryAddress, deliveryFee, deliveryZone } =
-//       req.body;
-//     const userId = req.user._id;
-
-
-//     if (!Array.isArray(products) || products.length === 0) {
-//       return res.status(400).json({ error: "Invalid or empty products array" });
-//     }
-
-//     const user = await User.findById(userId);
-//     if (!user) return res.status(404).json({ error: "User not found" });
-
-//     const defaultPhone =
-//       user.phones?.find((p) => p.isDefault) || user.phones?.[0];
-//     const defaultAddress =
-//       user.addresses?.find((a) => a.isDefault) || user.addresses?.[0];
-
-//     const addressString = defaultAddress
-//       ? (defaultAddress.address && defaultAddress.address.trim()) ||
-//         `${defaultAddress.landmark ? defaultAddress.landmark + ", " : ""}${
-//           defaultAddress.lga ? defaultAddress.lga + ", " : ""
-//         }${defaultAddress.city ? defaultAddress.city + ", " : ""}${
-//           defaultAddress.state || ""
-//         }`.trim()
-//       : "";
-
-//     if (!defaultPhone?.number?.trim() || !addressString) {
-//       return res.status(400).json({
-//         error: "You must add a phone number and address before checkout.",
-//       });
-//     }
-
-//     // === CHECK AVAILABILITY BEFORE RESERVATION ===
-//     console.log("🔍 Checking availability before reservation...");
-//     try {
-//       for (const item of products) {
-//         if (!item._id) continue;
-
-//         const product = await Product.findById(item._id);
-//         if (!product) {
-//           throw new Error(`Product ${item.name} not found`);
-//         }
-
-//         // Handle variants
-//         if (item.size || item.color) {
-//           const variantIndex = product.variants.findIndex((v) => {
-//             const sizeMatches = item.size
-//               ? v.size === item.size
-//               : !v.size || v.size === "" || v.size === "Standard";
-//             const colorMatches = item.color
-//               ? v.color === item.color
-//               : !v.color || v.color === "" || v.color === "Standard";
-//             return sizeMatches && colorMatches;
-//           });
-
-//           if (variantIndex === -1) {
-//             throw new Error(
-//               `Variant ${item.size || "Any"}/${
-//                 item.color || "Any"
-//               } not found for ${item.name}`
-//             );
-//           }
-
-//           const variant = product.variants[variantIndex];
-//           console.log(
-//             ` Availability check - ${item.name} ${item.size || ""}/${
-//               item.color || ""
-//             }: Stock=${variant.countInStock}, Requested=${item.quantity}`
-//           );
-
-//           if (variant.countInStock < item.quantity) {
-//             throw new Error(
-//               ` ${item.name} ${item.size || ""}/${
-//                 item.color || ""
-//               }, is out of stock, please update you cart`
-//             );
-//           }
-//         }
-//         // Handle simple products
-//         else {
-//           console.log(
-//             `📊 Availability check - ${item.name}: Stock=${product.countInStock}, Requested=${item.quantity}`
-//           );
-
-//           if (product.countInStock < item.quantity) {
-//             throw new Error(
-//               `Only ${product.countInStock} available for ${item.name}, but ${item.quantity} requested`
-//             );
-//           }
-//         }
-//       }
-//       console.log("✅ All items available for reservation");
-//     } catch (availabilityError) {
-//       console.error("❌ Availability check failed:", availabilityError.message);
-//       return res.status(400).json({
-//         error: availabilityError.message,
-//       });
-//     }
-//    let calculatedDeliveryFee = 0;
-//    let finalDeliveryFee = 0;
-
-//    if (deliveryAddress && deliveryAddress.state) {
-//      // Use frontend-provided fee if available, otherwise calculate
-//      if (deliveryFee !== undefined && deliveryFee !== null) {
-//        calculatedDeliveryFee = Number(deliveryFee);
-//        console.log("✅ Using frontend delivery fee:", calculatedDeliveryFee);
-//      } else {
-//        // Fallback: calculate on backend
-//        calculatedDeliveryFee = calculateDeliveryFee(
-//          deliveryAddress.state,
-//          deliveryAddress.city || "",
-//          deliveryAddress.lga || ""
-//        );
-//        console.log(
-//          "🔄 Calculated delivery fee on backend:",
-//          calculatedDeliveryFee
-//        );
-//      }
-//    }
-
-
+//     const [couponTrend, setCouponTrend] = useState([]);
+//     const [couponPerformance, setCouponPerformance] = useState([]);
     
-  
-//     // Calculate totals
-//     const originalTotal = products.reduce((acc, p) => {
-//       const qty = p.quantity || 1;
-//       const price = Number(p.price) || 0;
-//       return acc + price * qty;
-//     }, 0);
 
-//     let discountAmount = 0;
-//     let validCoupon = null;
-
-//     if (couponCode && couponCode.trim() !== "") {
+//   useEffect(() => {
+//     const fetchAnalyticsData = async () => {
 //       try {
-//         validCoupon = await Coupon.findOne({
-//           code: couponCode.trim().toUpperCase(),
-//           userId,
-//           isActive: true,
-//           expirationDate: { $gt: new Date() },
+//         setIsLoading(true);
+//         const res = await axios.get(`/analytics?range=${selectedRange}`);
+//         const {
+//           analyticsData,
+//           salesData,
+//           statusCharts,
+//           topProducts = [], // Default to empty array
+//           ordersTrend,
+//           visitorsTrend,
+//           productSalesData = { products: [], summary: {} },
+//           usersTrend,
+//           couponTrend,
+//           couponPerformance,
+//         } = res.data;
+
+//         setAnalyticsData(analyticsData);
+//         setProductSales(productSalesData.products || []);
+//         setProductSummary(productSalesData.summary || {});
+
+//         setAnalyticsData(analyticsData);
+//         const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
+//           return sum + (product.orderCount || 0);
+//         }, 0);
+
+//         // Handle top products with better error handling
+//         if (
+//           topProducts &&
+//           Array.isArray(topProducts) &&
+//           topProducts.length > 0
+//         ) {
+//           const processedProducts = topProducts.map((product, index) => ({
+//             id:
+//               product._id ||
+//               product.productId ||
+//               product.id ||
+//               `product-${index}`,
+//             name: product.name || product.productName || `Product ${index + 1}`,
+//             sales: product.totalSold || product.sales || product.quantity || 0,
+//             revenue: product.totalRevenue || 0,
+//             image: product.image || product.images?.[0] || null,
+//           }));
+//           setTopProducts(processedProducts);
+//         } else {
+//           console.log("⚠️ No top products from API, using fallback data");
+//           // Fallback dummy data
+//           setTopProducts([
+//             { name: "Selecter Vento", id: "2444300", sales: 128 },
+//             { name: "Blue backpack", id: "241518", sales: 401 },
+//             { name: "Water Bottle", id: "249876", sales: 287 },
+//           ]);
+//         }
+
+//         if (couponTrend && Array.isArray(couponTrend)) {
+//           const processedCouponTrend = couponTrend.map((item) => ({
+//             date: item._id,
+//             name: formatDateLabel(item._id, selectedRange),
+//             couponsUsed: item.count || 0,
+//             couponDiscount: item.totalDiscount || 0,
+//           }));
+//           setCouponTrend(processedCouponTrend);
+//         }
+
+//         // Process coupon performance data
+//         if (couponPerformance && Array.isArray(couponPerformance)) {
+//           setCouponPerformance(couponPerformance);
+//         }
+
+//         // Process sales data
+//         // Replace your mapping with this:
+//         const mappedSales = salesData.map((d) => {
+//           // Try to get totalAmount if available, otherwise calculate
+//           const totalRevenue =
+//             Number(d.totalAmount) ||
+//             Number(d.revenue || 0) + Number(d.deliveryFee || 0);
+
+//           return {
+//             rawDate: d.date,
+//             name: formatDateLabel(d.date, selectedRange),
+//             sales: Number(d.sales) || 0,
+//             revenue: totalRevenue,
+//             deliveryFee: Number(d.deliveryFee) || 0,
+//             couponsUsed: Number(d.couponsUsed) || 0,
+//             couponDiscount: Number(d.couponDiscount) || 0,
+//             avgCouponDiscount: Number(d.avgCouponDiscount) || 0,
+//           };
 //         });
 
-//         if (validCoupon) {
-//           discountAmount = Math.round(
-//             (originalTotal * validCoupon.discountPercentage) / 100
-//           );
-//           console.log(
-//             `Coupon applied: ${couponCode} - Discount: ₦${discountAmount}`
-//           );
-//         } else {
-//           console.log(`Invalid or expired coupon: ${couponCode}`);
-//         }
-//       } catch (error) {
-//         console.error("Error validating coupon:", error);
+//         setSalesData(mappedSales);
+
+//         const labels = mappedSales.map((s) => s.name);
+//         setAnalyticsData((prev) => ({
+//           ...prev,
+//           visitorsTrend,
+//           ordersTrend,
+//           usersTrend,
+//         }));
+
+//         // Process status charts
+//         const normalizedStatus = Object.fromEntries(
+//           Object.entries(statusCharts || {}).map(([key, data]) => {
+//             const mapByName = new Map(
+//               (data || []).map((d) => [
+//                 formatDateLabel(d.date, selectedRange),
+//                 d.count,
+//               ])
+//             );
+//             const filled = labels.map((name) => ({
+//               name,
+//               count: Number(mapByName.get(name) || 0),
+//             }));
+//             return [key, filled];
+//           })
+//         );
+//         setStatusCharts(normalizedStatus);
+
+//         // Process visitors data
+//         const visitorsMap = new Map(
+//           (visitorsTrend || []).map((d) => [d._id || d.date || d, d.count])
+//         );
+//         const usersMap = new Map(
+//           (usersTrend || []).map((d) => [d._id || d.date || d, d.count])
+//         );
+//         const ordersMap = new Map(
+//           (ordersTrend || []).map((d) => [d._id || d.date || d, d.count])
+//         );
+
+//         const filledVisitors = labels.length
+//           ? labels.map((name, idx) => {
+//               const raw = mappedSales[idx]?.rawDate;
+//               const val = visitorsMap.get(raw) ?? visitorsMap.get(name) ?? 0;
+//               return { name, count: Number(val) };
+//             })
+//           : (visitorsTrend || []).map((d) => ({
+//               name: formatDateLabel(d._id || d.date || d, selectedRange),
+//               count: d.count || 0,
+//             }));
+
+//         const filledOrders = labels.length
+//           ? labels.map((name, idx) => {
+//               const raw = mappedSales[idx]?.rawDate;
+//               const val = ordersMap.get(raw) ?? ordersMap.get(name) ?? 0;
+//               return { name, count: Number(val) };
+//             })
+//           : (ordersTrend || []).map((d) => ({
+//               name: formatDateLabel(d._id || d.date || d, selectedRange),
+//               count: d.count || 0,
+//             }));
+
+//         setVisitorsCharts(filledVisitors);
+
+//         // Process users data
+//         const filledUsers = labels.length
+//           ? labels.map((name, idx) => {
+//               const raw = mappedSales[idx]?.rawDate;
+//               const val = usersMap.get(raw) ?? usersMap.get(name) ?? 0;
+//               return { name, count: Number(val) };
+//             })
+//           : (usersTrend || []).map((d) => ({
+//               name: formatDateLabel(d._id || d.date || d, selectedRange),
+//               count: d.count || 0,
+//             }));
+
+//         setUsersCharts(filledUsers);
+//         setOrdersCharts(filledOrders);
+//       } catch (err) {
+//         console.error("❌ Error fetching analytics:", err);
+//         // Set fallback data on error
+//         setTopProducts([
+//           { name: "Selecter Vento", id: "2444300", sales: 128 },
+//           { name: "Blue backpack", id: "241518", sales: 401 },
+//           { name: "Water Bottle", id: "249876", sales: 287 },
+//         ]);
+//       } finally {
+//         setIsLoading(false);
 //       }
-//     }
-//     finalDeliveryFee = calculatedDeliveryFee;
-
-//     console.log(
-//       "Final delivery fee after free delivery check:",
-//       finalDeliveryFee
-//     );
-//     console.log("🛒 Original total:", originalTotal);
-
-//     const finalTotal = Math.max(0, originalTotal - discountAmount + finalDeliveryFee);
-//     const tx_ref = `ECOSTORE-${Date.now()}`;
-
-    
-//     const reservationId = `res_${tx_ref}`;
-//     try {
-//       await reserveInventory(products, reservationId, 4); // Reserve for 10 minutes
-//       console.log(`✅ Inventory reserved: ${reservationId}`);
-//     } catch (reservationError) {
-//       console.error("❌ Inventory reservation failed:", reservationError);
-//       return res.status(400).json({
-//         error:
-//           "Some items in your cart are no longer available. Please refresh your cart and try again.",
-//       });
-//     }
-
-//     const payload = {
-//       tx_ref,
-//       amount: finalTotal,
-//       currency: "NGN",
-//       redirect_url: `${process.env.CLIENT_URL}/purchase-success`,
-//       customer: {
-//         email: user.email,
-//         phonenumber: defaultPhone.number,
-//         firstname: user.firstname || "",
-//         lastname: user.lastname || "",
-//         name:
-//           (user.firstname || "") + (user.lastname ? ` ${user.lastname}` : ""),
-//       },
-//       payment_options: "card, banktransfer",
-//       meta: {
-//         userId: userId.toString(),
-//         products: JSON.stringify(
-//           products.map((p) => ({
-//             _id: p._id || p.id || null,
-//             name: p.name,
-//             images: p.images || [],
-//             quantity: p.quantity || 1,
-//             price: p.price,
-//             size: p.size || null,
-//             color: p.color || null,
-//             category: p.category || null,
-//           }))
-//         ),
-//         couponCode: couponCode || "",
-//         originalTotal,
-//         discountAmount,
-//         deliveryFee: finalDeliveryFee,
-//         deliveryZone: deliveryZone || "", 
-//         finalTotal,
-//         deliveryAddress: addressString || "",
-//         phoneNumber: defaultPhone.number || "",
-//         reservationId: reservationId, // Include reservation ID
-//       },
-//       customizations: {
-//         title: "EcoStore Purchase",
-//         description: "Payment for items in your cart",
-//         logo: process.env.STORE_LOGO || "https://yourstore.com/logo.png",
-//       },
 //     };
 
-//     const response = await axios.post(
-//       "https://api.flutterwave.com/v3/payments",
-//       payload,
-//       {
-//         headers: {
-//           Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
-//           "Content-Type": "application/json",
-//         },
-//         timeout: 20000,
-//       }
-//     );
+//     fetchAnalyticsData();
+//   }, [selectedRange]);
 
-//     const link =
-//       response?.data?.data?.link || response?.data?.data?.authorization_url;
-
-//     if (!link) {
-//       // Release inventory if payment initialization fails
-//       await releaseInventory(reservationId);
-//       console.error("No payment link returned by Flutterwave:", response.data);
-//       return res.status(500).json({ message: "Failed to initialize payment" });
+//   // Add product sorting function
+//   const requestProductSort = (key) => {
+//     let direction = "ascending";
+//     if (
+//       productSortConfig.key === key &&
+//       productSortConfig.direction === "ascending"
+//     ) {
+//       direction = "descending";
 //     }
+//     setProductSortConfig({ key, direction });
+//   };
 
-//     console.log("Flutterwave payment initialized:", tx_ref, "link:", link);
-//     return res.status(200).json({ link, tx_ref });
-//   } catch (err) {
-//     console.error("Error initializing Flutterwave payment:", err);
-//     return res.status(500).json({
-//       message: "Payment initialization failed",
-//       error: err?.message || String(err),
-//     });
-//   }
-// };
-
-// export const handleFlutterwaveWebhook = async (req, res) => {
-//   console.log("🔔 WEBHOOK CALLED - LIVE MODE");
-//   console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
-//   console.log("🔐 Headers:", req.headers);
-
-//   const signature = req.headers["verif-hash"];
-//   console.log("Signature received:", signature ? "YES" : "NO");
-
-//   let transaction_id; // DECLARE IT HERE
-//   let lockAcquired = false;
-
-//   try {
-//     const signature = req.headers["verif-hash"];
-//     console.log("Signature received:", signature);
-
-//     if (!signature) {
-//       console.warn("Missing verif-hash header");
-//       return res.status(401).send("Missing signature");
+//   const sortedProducts = [...productSales].sort((a, b) => {
+//     if (a[productSortConfig.key] < b[productSortConfig.key]) {
+//       return productSortConfig.direction === "ascending" ? -1 : 1;
 //     }
-
-//     if (signature !== process.env.FLW_WEBHOOK_HASH) {
-//       console.warn("Invalid webhook signature - possible forgery attempt");
-//       return res.status(401).send("Invalid signature");
+//     if (a[productSortConfig.key] > b[productSortConfig.key]) {
+//       return productSortConfig.direction === "ascending" ? 1 : -1;
 //     }
-
-//     console.log("Webhook signature validated successfully");
-
-//     const event = req.body;
-//     if (!event) {
-//       console.warn("Empty webhook event body");
-//       return res.status(400).send("No event body");
-//     }
-
-//     console.log(`Webhook received: ${event.event} for ${event.data?.tx_ref}`);
-
-//     const paymentCompletionEvents = [
-//       "charge.completed",
-//       "transfer.completed",
-//       "bank_transfer.completed",
-//     ];
-
-//     if (!paymentCompletionEvents.includes(event.event)) {
-//       console.log(
-//         `Ignoring non-payment-completion webhook event: ${event.event}`
-//       );
-//       return res.status(200).send("Ignored event type");
-//     }
-
-//     // MOVE THIS OUTSIDE OF NESTED TRY
-//     transaction_id = event.data?.id; // ASSIGN VALUE HERE
-//     const tx_ref = event.data?.tx_ref;
-//     const status = event.data?.status;
-//     const paymentType = event.data?.payment_type;
-
-//     // For bank transfers, be more flexible with status values
-//     if (paymentType === "banktransfer" || paymentType === "bank_transfer") {
-//       const isBankTransferSuccessful =
-//         status === "successful" ||
-//         status === "success" ||
-//         status === "completed" ||
-//         status === "credited";
-//       if (!isBankTransferSuccessful) {
-//         console.log(
-//           `Bank transfer not successful: ${status} for ${event.data?.tx_ref}`
-//         );
-
-//         // Release inventory
-//         const reservationId = event.data?.meta?.reservationId;
-//         if (reservationId) {
-//           await releaseInventory(reservationId);
-//         }
-
-//         return res.status(200).send("Bank transfer not completed");
-//       }
-//     } else {
-//       // For other payment types, use strict checking
-//       if (status !== "successful") {
-//         console.log(
-//           `Payment not successful: ${status} for ${event.data?.tx_ref}`
-//         );
-
-//         const reservationId = event.data?.meta?.reservationId;
-//         if (reservationId) {
-//           await releaseInventory(reservationId);
-//         }
-
-//         return res.status(200).send("Payment not successful");
-//       }
-//     }
-
-//     if (!transaction_id) {
-//       console.error("No transaction_id in webhook data");
-//       return res.status(400).send("Missing transaction_id");
-//     }
-
-//     console.log(
-//       ` ENTERING ORDER PROCESSING - Source: ${
-//         req.path
-//       }, TX: ${transaction_id}, Time: ${new Date().toISOString()}`
-//     );
-
-//     console.log(`Processing transaction: ${transaction_id}, status: ${status}`);
-
-//     // === REDIS-BASED DISTRIBUTED LOCKING ===
-//     console.log(`🔒 Attempting to acquire Redis lock for: ${transaction_id}`);
-//     lockAcquired = await acquireWebhookLock(transaction_id, 45000);
-
-//     if (!lockAcquired) {
-//       console.log(`⏳ Webhook already being processed: ${transaction_id}`);
-//       return res.status(200).send("Webhook already being processed");
-//     }
-//     console.log(`✅ Acquired Redis lock for: ${transaction_id}`);
-
-//     // === ENHANCED DUPLICATE PROTECTION ===
-//     const existingOrder = await Order.findOne({
-//       $or: [
-//         { flutterwaveTransactionId: transaction_id },
-//         { flutterwaveRef: tx_ref },
-//       ],
-//     });
-
-//     if (existingOrder) {
-//       console.log(
-//         `🔄 DUPLICATE: Order ${existingOrder.orderNumber} already exists`
-//       );
-
-//       // Release any reserved inventory
-//       const reservationId = event.data?.meta?.reservationId;
-//       if (reservationId) {
-//         await releaseInventory(reservationId);
-//       }
-
-//       return res.status(200).send("Order already processed");
-//     }
-
-//     if (status !== "successful") {
-//       console.log(`Payment not successful: ${status} for ${tx_ref}`);
-
-//       // Release inventory if payment failed
-//       const reservationId = event.data?.meta?.reservationId;
-//       if (reservationId) {
-//         await releaseInventory(reservationId);
-//       }
-
-//       return res.status(200).send("Payment not successful");
-//     }
-
-//     console.log(`Processing webhook for successful payment: ${tx_ref}`);
-
-//     let data;
-
-//     console.log(
-//       `Verifying real transaction with Flutterwave: ${transaction_id}`
-//     );
-//     const verifyResp = await flw.Transaction.verify({ id: transaction_id });
-
-//     if (!verifyResp?.data || verifyResp.data.status !== "successful") {
-//       console.error(`Webhook verification failed for: ${transaction_id}`);
-
-//       // Release inventory if verification fails
-//       const reservationId = event.data?.meta?.reservationId;
-//       if (reservationId) {
-//         await releaseInventory(reservationId);
-//       }
-
-//       return res.status(400).send("Payment verification failed");
-//     }
-
-//     data = verifyResp.data;
-//     console.log("Real transaction verified successfully");
-
-//     const meta_data = data.meta || event.meta_data || {};
-
-//     const deliveryFee = Number(meta_data.deliveryFee) || 0;
-//     const deliveryZone = meta_data.deliveryZone || "";
-
-//     let parsedProducts = [];
-//     if (meta_data.products) {
-//       try {
-//         if (typeof meta_data.products === "string") {
-//           parsedProducts = JSON.parse(meta_data.products);
-//         } else {
-//           parsedProducts = meta_data.products;
-//         }
-//         parsedProducts = parsedProducts.map((p) => ({
-//           _id: p._id || p.id || null,
-//           name: p.name,
-//           images: p.images || [],
-//           quantity: p.quantity || 1,
-//           price: p.price,
-//           size: p.size || null,
-//           color: p.color || null,
-//           category: p.category || null,
-//         }));
-//       } catch (error) {
-//         console.error("Error parsing products:", error);
-//         parsedProducts = [];
-//       }
-//     }
-
-//     let userId = meta_data.userId;
-//     const couponCode = meta_data.couponCode || "";
-//     const reservationId = meta_data.reservationId;
-//     const originalTotal =
-//       Number(meta_data.originalTotal) || Number(data.amount) || 0;
-//     const discountAmount = Number(meta_data.discountAmount) || 0;
-//     const finalTotal = Number(meta_data.finalTotal) || Number(data.amount) || 0;
-//     const deliveryAddress = meta_data.deliveryAddress || "";
-//     const phoneNumber = data.customer?.phone_number || "";
-
-//     console.log("UserId from meta_data:", userId);
-//     console.log("Reservation ID:", reservationId);
-//     console.log("Parsed products count:", parsedProducts.length);
-
-//     if (!userId) {
-//       console.error("Missing userId in webhook data");
-
-//       // Release inventory if no user ID
-//       if (reservationId) {
-//         await releaseInventory(reservationId);
-//       }
-
-//       return res.status(400).send("Missing userId");
-//     }
-
-//     // 2. FINAL DUPLICATE CHECK (in case order was created between first check and now)
-//     const finalDuplicateCheck = await Order.findOne({
-//       $or: [
-//         { flutterwaveTransactionId: transaction_id },
-//         { flutterwaveRef: tx_ref },
-//       ],
-//     });
-
-//     if (finalDuplicateCheck) {
-//       console.log(
-//         `🔄 LATE DUPLICATE: Order ${finalDuplicateCheck.orderNumber} created during processing`
-//       );
-
-//       // Release inventory
-//       if (reservationId) {
-//         await releaseInventory(reservationId);
-//       }
-
-//       return res.status(200).send("Order already processed");
-//     }
-
-//     console.log("Starting database transaction...");
-//     const session = await mongoose.startSession();
-
-//     try {
-//       await session.withTransaction(async () => {
-//         const transactionData = {
-//           transaction_id,
-//           tx_ref,
-//           data,
-//           meta: {
-//             userId: userId,
-//             products: meta_data.products,
-//             couponCode: couponCode,
-//             originalTotal: originalTotal,
-//             discountAmount: discountAmount,
-//             deliveryFee: deliveryFee, 
-//             deliveryZone: deliveryZone,
-//             finalTotal: finalTotal,
-//             deliveryAddress: deliveryAddress || "No address provided",
-//             phoneNumber:
-//               data.customer?.phone_number || phoneNumber || "No phone number",
-//           },
-//           userId,
-//           parsedProducts,
-//           couponCode,
-//           reservationId,
-//         };
-
-//         console.log("Processing order creation...");
-//         const { order, isNew } = await processOrderCreation(transactionData);
-
-//         console.log(
-//           `${isNew ? "Created new" : "Updated existing"} order: ${
-//             order.orderNumber
-//           } for user: ${userId}`
-//         );
-
-//         // ONLY send email and check coupons for NEW orders
-
-//         if (isNew) {
-//           try {
-//             console.log(`STARTING COUPON PROCESS FOR USER: ${userId}`);
-//             const couponEligibility = await checkCouponEligibility(
-//               userId,
-//               order.totalAmount
-//             );
-
-//             if (couponEligibility) {
-//               console.log(
-//                 `User eligible for ${couponEligibility.reason} coupon`
-//               );
-//               const newCoupon = await createNewCoupon(userId, {
-//                 discountPercentage: couponEligibility.discountPercentage,
-//                 couponType: couponEligibility.codePrefix,
-//                 reason: couponEligibility.reason,
-//                 daysValid: 30,
-//               });
-
-//               if (newCoupon && newCoupon.isActive) {
-//                 console.log(
-//                   `Successfully created ACTIVE coupon: ${newCoupon.code}`
-//                 );
-//                 try {
-//                   const user = await User.findById(userId);
-//                   if (user && user.email) {
-//                     await sendCouponEmail({
-//                       to: user.email,
-//                       coupon: newCoupon,
-//                       couponType: couponEligibility.emailType,
-//                       orderCount: await Order.countDocuments({
-//                         user: userId,
-//                         paymentStatus: "paid",
-//                       }),
-//                     });
-//                     console.log(`Coupon email sent for: ${newCoupon.code}`);
-//                   }
-//                 } catch (emailErr) {
-//                   console.error("Coupon email send failed:", emailErr);
-//                 }
-//               }
-//             }
-//           } catch (error) {
-//             console.error("Coupon creation failed:", error);
-//           }
-
-//           // SEND ORDER CONFIRMATION EMAIL ONLY FOR NEW ORDERS
-//           try {
-//             const user = await User.findById(userId);
-//             if (user && user.email) {
-//               await sendDetailedOrderEmail({
-//                 to: user.email,
-//                 order,
-//                 flutterwaveData: data,
-//               });
-//               console.log(
-//                 `✅ Confirmation email sent for NEW order: ${order.orderNumber}`
-//               );
-//             }
-//           } catch (emailErr) {
-//             console.error("Email send failed (webhook):", emailErr);
-//           }
-//         } else {
-//           console.log(
-//             `📧 Skipping email and coupons for existing order: ${order.orderNumber}`
-//           );
-//         }
-//       });
-
-//       console.log("Database transaction committed successfully");
-//     } catch (transactionError) {
-//       console.error("Transaction failed:", transactionError);
-
-//       // Release inventory if transaction fails
-//       if (reservationId) {
-//         await releaseInventory(reservationId);
-//       }
-
-//       throw transactionError;
-//     } finally {
-//       await session.endSession();
-//     }
-
-//     console.log(`Webhook processing completed successfully`);
-//     return res.status(200).send("Order processed successfully");
-//   } catch (err) {
-//     console.error(`Webhook processing error:`, err);
-
-//     // Release inventory on error
-//     const reservationId = req.body?.data?.meta?.reservationId;
-//     if (reservationId) {
-//       await releaseInventory(reservationId);
-//     }
-
-//     return res.status(500).send("Webhook processing failed");
-//   } finally {
-//     // Always release lock if we acquired it
-//     if (lockAcquired && transaction_id) {
-//       await releaseWebhookLock(transaction_id);
-//       console.log(`🔓 Webhook lock released for: ${transaction_id}`);
-//     }
-//   }
-// };
-
-// // ✅ HELPER FUNCTIONS
-// function isPaymentSuccessful(status, paymentType) {
-//   if (paymentType === "banktransfer" || paymentType === "bank_transfer") {
-//     return ["successful", "success", "completed", "credited"].includes(status);
-//   }
-//   return status === "successful";
-// }
-
-// function parseProducts(productsData) {
-//   if (!productsData) return [];
-
-//   try {
-//     const products =
-//       typeof productsData === "string"
-//         ? JSON.parse(productsData)
-//         : productsData;
-
-//     return products.map((p) => ({
-//       _id: p._id || p.id || null,
-//       name: p.name,
-//       images: p.images || [],
-//       quantity: p.quantity || 1,
-//       price: p.price,
-//       size: p.size || null,
-//       color: p.color || null,
-//       category: p.category || null,
-//     }));
-//   } catch (error) {
-//     console.error("Error parsing products:", error);
-//     return [];
-//   }
-// }
-
-// async function handlePostOrderActions(userId, order, flutterwaveData) {
-//   try {
-//     // Handle coupon eligibility
-//     const couponEligibility = await checkCouponEligibility(
-//       userId,
-//       order.totalAmount
-//     );
-
-//     if (couponEligibility) {
-//       const newCoupon = await createNewCoupon(userId, {
-//         discountPercentage: couponEligibility.discountPercentage,
-//         couponType: couponEligibility.codePrefix,
-//         reason: couponEligibility.reason,
-//         daysValid: 30,
-//       });
-
-//       if (newCoupon) {
-//         const user = await User.findById(userId);
-//         if (user?.email) {
-//           await sendCouponEmail({
-//             to: user.email,
-//             coupon: newCoupon,
-//             couponType: couponEligibility.emailType,
-//             orderCount: await Order.countDocuments({
-//               user: userId,
-//               paymentStatus: "paid",
-//             }),
-//           });
-//         }
-//       }
-//     }
-
-//     // Send order confirmation
-//     const user = await User.findById(userId);
-//     if (user?.email) {
-//       await sendDetailedOrderEmail({
-//         to: user.email,
-//         order,
-//         flutterwaveData,
-//       });
-//     }
-//   } catch (error) {
-//     console.error("Post-order actions failed:", error);
-//   }
-// }
-
-
-// async function withRetry(fn, retries = 3, delay = 200) {
-//   for (let attempt = 1; attempt <= retries; attempt++) {
-//     try {
-//       return await fn();
-//     } catch (err) {
-//       const transient =
-//         err?.codeName === "WriteConflict" ||
-//         (err?.errorLabels &&
-//           err.errorLabels.includes("TransientTransactionError"));
-
-//       if (transient && attempt < retries) {
-//         console.warn(`Transient error, retrying ${attempt}/${retries}...`);
-//         await new Promise((r) => setTimeout(r, delay * attempt));
-//         continue;
-//       }
-//       throw err;
-//     }
-//   }
-// }
-
-// export const checkoutSuccess = async (req, res) => {
-//   let lockAcquired = false;
-//   const { tx_ref, transaction_id } = req.body;
-
-//   console.log(
-//     ` ENTERING ORDER PROCESSING - Source: ${
-//       req.path
-//     }, TX: ${transaction_id}, Time: ${new Date().toISOString()}`
-//   );
-
-//   // ADD VALIDATION
-//   if (!transaction_id) {
-//     return res.status(400).json({
-//       error: "transaction_id is required",
-//       received: req.body,
-//     });
-//   }
-
-//   console.log(`🔄 checkoutSuccess called for transaction: ${transaction_id}`);
-
-//   try {
-//     // Duplicate protection
-//     const existingPaidOrder = await Order.findOne({
-//       $or: [
-//         { flutterwaveTransactionId: transaction_id },
-//         { flutterwaveRef: tx_ref },
-//       ],
-//       paymentStatus: "paid",
-//     });
-
-//     if (existingPaidOrder) {
-//       console.log(
-//         `🔄 CheckoutSuccess: Order already processed: ${existingPaidOrder.orderNumber}`
-//       );
-//       return res.status(200).json({
-//         success: true,
-//         message: "Order already processed",
-//         orderId: existingPaidOrder._id,
-//         orderNumber: existingPaidOrder.orderNumber,
-//       });
-//     }
-
-//     // Acquire lock
-//     lockAcquired = await acquireWebhookLock(transaction_id, 30000);
-//     if (!lockAcquired) {
-//       console.log(
-//         `checkoutSuccess: Lock already acquired for ${transaction_id}`
-//       );
-
-//       // Wait 1 second and check if order exists now
-//       await new Promise((resolve) => setTimeout(resolve, 1000));
-
-//       const orderNow = await Order.findOne({
-//         $or: [
-//           { flutterwaveTransactionId: transaction_id },
-//           { flutterwaveRef: tx_ref },
-//         ],
-//         paymentStatus: "paid",
-//       });
-
-//       if (orderNow) {
-//         return res.status(200).json({
-//           success: true,
-//           orderId: orderNow._id,
-//           orderNumber: orderNow.orderNumber,
-//         });
-//       }
-
-//       return res.status(200).json({
-//         success: false,
-//         message: "Please wait a moment and refresh the page",
-//       });
-//     }
-
-//     const verifyResp = await flw.Transaction.verify({ id: transaction_id });
-//     const data = verifyResp?.data;
-
-//     if (!data || data.status !== "successful") {
-//       return res.status(400).json({ error: "Payment verification failed" });
-//     }
-
-//     const meta = data.meta || {};
-//     const userId = meta.userId;
-//     const parsedProducts = meta.products ? JSON.parse(meta.products) : [];
-//     const couponCode = meta.couponCode || "";
-//     const reservationId = meta.reservationId;
-
-//     if (!userId) {
-//       return res
-//         .status(400)
-//         .json({ error: "Missing userId in payment metadata" });
-//     }
-
-//     let finalOrder;
-//     let isNewOrder = false;
-
-//     await withRetry(async () => {
-//       const session = await mongoose.startSession();
-
-//       try {
-//         await session.withTransaction(async () => {
-//           const transactionData = {
-//             transaction_id,
-//             tx_ref,
-//             data,
-//             meta,
-//             userId,
-//             parsedProducts,
-//             couponCode,
-//             reservationId,
-//           };
-
-//           const { order, isNew } = await processOrderCreation(transactionData);
-//           finalOrder = order;
-//           isNewOrder = isNew; // Store whether this is a new order
-
-//           // ONLY process coupons and send emails for NEW orders
-//           if (isNew) {
-//             // Handle coupon eligibility
-//             const couponEligibility = await checkCouponEligibility(
-//               userId,
-//               finalOrder.totalAmount
-//             );
-//             if (couponEligibility) {
-//               const newCoupon = await createNewCoupon(userId, {
-//                 discountPercentage: couponEligibility.discountPercentage,
-//                 couponType: couponEligibility.codePrefix,
-//                 reason: couponEligibility.reason,
-//                 daysValid: 30,
-//               });
-
-//               if (newCoupon) {
-//                 console.log(
-//                   `Created ${couponEligibility.reason} coupon: ${newCoupon.code}`
-//                 );
-//                 try {
-//                   const user = await User.findById(userId);
-//                   if (user && user.email) {
-//                     await sendCouponEmail({
-//                       to: user.email,
-//                       coupon: newCoupon,
-//                       couponType: couponEligibility.emailType,
-//                       orderCount: await Order.countDocuments({
-//                         user: userId,
-//                         paymentStatus: "paid",
-//                       }),
-//                     });
-//                   }
-//                 } catch (emailErr) {
-//                   console.error("Coupon email send failed:", emailErr);
-//                 }
-//               }
-//             }
-
-//             // Send confirmation email ONLY for new orders
-//             try {
-//               const user = await User.findById(userId);
-//               await sendDetailedOrderEmail({
-//                 to: user.email,
-//                 order,
-//                 flutterwaveData: data,
-//               });
-//               console.log(
-//                 `✅ Confirmation email sent for NEW order: ${order.orderNumber}`
-//               );
-//             } catch (emailErr) {
-//               console.error("Email send failed (checkoutSuccess):", emailErr);
-//             }
-//           } else {
-//             console.log(
-//               `📧 Skipping email for existing order: ${order.orderNumber}`
-//             );
-//           }
-//         });
-//       } finally {
-//         await session.endSession();
-//       }
-//     });
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Payment verified and order finalized",
-//       orderId: finalOrder._id,
-//       orderNumber: finalOrder.orderNumber,
-//       isNew: isNewOrder,
-//     });
-//   } catch (error) {
-//     console.error("checkoutSuccess failed:", error);
-
-//     // Release inventory on failure
-//     const reservationId = req.body.meta?.reservationId;
-//     if (reservationId) {
-//       await releaseInventory(reservationId);
-//     }
-
-//     return res.status(500).json({
-//       error: error.message || "Checkout failed",
-//     });
-//   } finally {
-//     // RELEASE LOCK
-//     if (lockAcquired) {
-//       await releaseWebhookLock(transaction_id);
-//     }
-//   }
-// };
-
-// // Update your email function to use paymentMethod instead of paymentData
-// export const sendDetailedOrderEmail = async ({
-//   to,
-//   order,
-// }) => {
-//   if (!to || !order) return;
-
-//   let customerName = "";
-//   try {
-//     const userDoc = await User.findById(order.user).select(
-//       "firstname lastname"
-//     );
-//     if (userDoc) {
-//       customerName =
-//         userDoc.firstname || userDoc.lastname || order.user?.name || "Customer";
-//     }
-//   } catch (err) {
-//     console.error("Error fetching user name for email:", err);
-//   }
-
-//   // Use paymentMethod from order instead of paymentData
-//   const paymentMethod = order.paymentMethod || {};
-//   const tx_ref = order.flutterwaveRef || "N/A";
-//   const transaction_id = order.flutterwaveTransactionId || "N/A";
-//   const payment_type = paymentMethod.method || "N/A";
-//   const settings = await storeSettings.findOne();
-//   const formatter = new Intl.NumberFormat(undefined, {
-//     style: "currency",
-//     currency: settings.currency,
+//     return 0;
 //   });
+// const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
+//   return sum + (product.orderCount || 0);
+// }, 0);
+//   const pending = analyticsData.refundsPending || 0;
+//   const approved = analyticsData.refundsApproved || 0;
+//   const rejected = analyticsData.refundsRejected || 0;
+//   const processing = analyticsData.refundsProcessing || 0;
+//   const totalRefunds = pending + approved + rejected;
 
-//   // Prepare items array
-//   const items = order.products || order.items || [];
+//   const percentage =
+//     totalRefunds > 0
+//       ? {
+//           pending: (pending / totalRefunds) * 100,
+//           approved: (approved / totalRefunds) * 100,
+//           rejected: (rejected / totalRefunds) * 100,
+//           processing: (processing / totalRefunds) * 100,
+//         }
+//       : { pending: 0, approved: 0, rejected: 0, processing: 0};
 
-//   const productRows = items
-//     .map((item) => {
-//       let details = "";
-//       if (item.selectedSize) details += `Size: ${item.selectedSize} `;
-//       if (item.selectedColor) details += `| Color: ${item.selectedColor}`;
+//       const { settings } = useStoreSettings();
+      
 
-//       return `
-//         <tr>
-//           <td style="padding: 8px 12px; border:1px solid #eee;">
-//           <p display:block; margin-top: 1; margin-bottom:1>${
-//             item.name || item.productName || "Item"
-//           }</p>
-//             <img src="${item.image}" alt="${
-//         item.name
-//       }" width="60" height="60" style="border-radius: 6px; object-fit: cover;" />
-           
-//             ${
-//               details
-//                 ? `<br/><small style="color:#666;">${details || ""}</small>`
-//                 : ""
-//             }
-//           </td>
-//           <td style="padding: 8px 12px; text-align:center; border:1px solid #eee;">${
-//             item.quantity || 1
-//           }</td>
-//           <td style="padding: 8px 12px; text-align:right; border:1px solid #eee;">${formatter.format(
-//            item.price || item.unitPrice || 0
+//   if (isLoading)
+//     return (
+//       <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-br from-gray-50 to-white">
+//         <div className="flex space-x-3 mb-6">
+//           <div className="h-5 w-5 bg-gray-700 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+//           <div className="h-5 w-5 bg-gray-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+//           <div className="h-5 w-5 bg-gray-500 rounded-full animate-bounce"></div>
+//         </div>
+//         <p className="text-gray-700 font-medium text-lg animate-pulse">
+//           Please wait, Loading data
+//         </p>
+//         <p className="text-gray-500 text-sm mt-2">
+//           Preparing your analytics dashboard...
+//         </p>
+//       </div>
+//     );
+
+//   return (
+//     <>
+//       <motion.div
+//         className="max-w-7xl mx-auto px-4 text-gray-700"
+//         initial={{ opacity: 0, y: 20 }}
+//         animate={{ opacity: 1, y: 0 }}
+//         transition={{ duration: 0.8 }}
+//       >
+//         {/* Header with range selector */}
+//         <div className="bg-white rounded-xl p-6 mb-6 shadow-sm border border-gray-200">
+//           <p className="text-gray-600 text-center mb-4 capitalize">
+//             <strong>{selectedRange}</strong> Analytics overview
+//           </p>
+
+//           <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+//             <div className="text-center sm:text-left">
+//               <h2 className="text-xl font-semibold text-gray-800">
+//                 Dashboard Overview
+//               </h2>
+//               <p className="text-gray-500 text-sm">
+//                 Monitor your store's performance
+//               </p>
+//             </div>
+
+//             <div className="flex items-center gap-3">
+//               <label className="text-gray-600 text-sm font-medium">
+//                 View range:
+//               </label>
+//               <select
+//                 value={selectedRange}
+//                 onChange={(e) => setSelectedRange(e.target.value)}
+//                 className="bg-white border border-gray-300 text-gray-700 rounded-lg px-4 py-2 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+//               >
+//                 <option value="daily">Daily</option>
+//                 <option value="weekly">Weekly</option>
+//                 <option value="monthly">Monthly</option>
+//                 <option value="yearly">Yearly</option>
+//                 <option value="all">All</option>
+//               </select>
+//             </div>
+//           </div>
+//         </div>
+//         {/* Main Stats Grid */}
+//         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+//           {/* Total Products Card */}
+//           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 shadow-sm border border-blue-100">
+//             <div className="flex justify-between items-start mb-4">
+//               <div>
+//                 <p className="text-gray-600 text-sm font-medium">
+//                   Total Products
+//                 </p>
+//                 <h3 className="text-2xl font-bold text-gray-900 mt-1">
+//                   {analyticsData.products || 0}
+//                 </h3>
+//               </div>
+//               <div className="bg-blue-100 p-2 rounded-lg">
+//                 <Package className="h-6 w-6 text-blue-600" />
+//               </div>
+//             </div>
+//             <div className="flex items-center gap-2">
+//               {analyticsData.productsChange >= 0 ? (
+//                 <TrendingUp className="h-4 w-4 text-green-500" />
+//               ) : (
+//                 <TrendingDown className="h-4 w-4 text-red-500" />
+//               )}
+//               <span
+//                 className={`font-medium ${
+//                   analyticsData.productsChange >= 0
+//                     ? "text-green-600"
+//                     : "text-red-600"
+//                 }`}
+//               >
+//                 {analyticsData.productsChange >= 0 ? "+" : ""}
+//                 {analyticsData.productsChange?.toFixed(1) || "0.0"}%
+//               </span>
+//             </div>
+//           </div>
+//           {/* Total Users Card */}
+//           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 shadow-sm border border-green-100">
+//             <div className="flex justify-between items-start mb-4">
+//               <div>
+//                 <p className="text-gray-600 text-sm font-medium">New Users</p>
+//                 <h3 className="text-2xl font-bold text-gray-900 mt-1">
+//                   {analyticsData.users || 0}
+//                 </h3>
+//               </div>
+//               <div className="bg-green-100 p-2 rounded-lg">
+//                 <Users className="h-6 w-6 text-green-600" />
+//               </div>
+//             </div>
+//             <div className="flex items-center gap-2">
+//               {analyticsData.usersChange >= 0 ? (
+//                 <TrendingUp className="h-4 w-4 text-green-500" />
+//               ) : (
+//                 <TrendingDown className="h-4 w-4 text-red-500" />
+//               )}
+//               <span
+//                 className={`font-medium ${
+//                   analyticsData.usersChange >= 0
+//                     ? "text-green-600"
+//                     : "text-red-600"
+//                 }`}
+//               >
+//                 {analyticsData.usersChange >= 0 ? "+" : ""}
+//                 {analyticsData.usersChange?.toFixed(1) || "0.0"}%
+//               </span>
+//             </div>
+//           </div>
+//           {/* Total Orders Card */}
+//           <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-6 shadow-sm border border-purple-100">
+//             <div className="flex justify-between items-start mb-4">
+//               <div>
+//                 <p className="text-gray-600 text-sm font-medium">New Orders</p>
+//                 <h3 className="text-2xl font-bold text-gray-900 mt-1">
+//                   {analyticsData.allOrders || 0}
+//                 </h3>
+//               </div>
+//               <div className="bg-purple-100 p-2 rounded-lg">
+//                 <ShoppingCart className="h-6 w-6 text-purple-600" />
+//               </div>
+//             </div>
+//             <div className="flex items-center gap-2">
+//               {analyticsData.ordersChange >= 0 ? (
+//                 <TrendingUp className="h-4 w-4 text-green-500" />
+//               ) : (
+//                 <TrendingDown className="h-4 w-4 text-red-500" />
+//               )}
+//               <span
+//                 className={`font-medium ${
+//                   analyticsData.ordersChange >= 0
+//                     ? "text-green-600"
+//                     : "text-red-600"
+//                 }`}
+//               >
+//                 {analyticsData.ordersChange >= 0 ? "+" : ""}
+//                 {analyticsData.ordersChange?.toFixed(1) || "0.0"}%
+//               </span>
+//             </div>
+//           </div>
+//           {/* Total Visitors Card */}
+//           <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl p-6 shadow-sm border border-orange-100">
+//             <div className="flex justify-between items-start mb-4">
+//               <div>
+//                 <p className="text-gray-600 text-sm font-medium">
+//                   New Visitors
+//                 </p>
+//                 <h3 className="text-2xl font-bold text-gray-900 mt-1">
+//                   {analyticsData.visitors || 0}
+//                 </h3>
+//               </div>
+//               <div className="bg-orange-100 p-2 rounded-lg">
+//                 <Users className="h-6 w-6 text-orange-600" />
+//               </div>
+//             </div>
+//             <div className="flex items-center gap-2">
+//               {analyticsData.visitorsChange >= 0 ? (
+//                 <TrendingUp className="h-4 w-4 text-green-500" />
+//               ) : (
+//                 <TrendingDown className="h-4 w-4 text-red-500" />
+//               )}
+//               <span
+//                 className={`font-medium ${
+//                   analyticsData.visitorsChange >= 0
+//                     ? "text-green-600"
+//                     : "text-red-600"
+//                 }`}
+//               >
+//                 {analyticsData.visitorsChange >= 0 ? "+" : ""}
+//                 {analyticsData.visitorsChange?.toFixed(1) || "0.0"}%
+//               </span>
+//             </div>
+//           </div>
+
+//           {/* NEW: Average Unit Value Card */}
+//           <div className="bg-gradient-to-br from-cyan-50 to-teal-50 rounded-2xl p-6 shadow-sm border border-cyan-100">
+//             <div className="flex justify-between items-start mb-4">
+//               <div>
+//                 <p className="text-gray-600 text-sm font-medium">
+//                   Avg. Item Value
+//                 </p>
+//                 <h3 className="text-2xl font-bold text-gray-900 mt-1">
+//                   {analyticsData.auv
+//                     ? `${formatPrice(analyticsData.auv, settings?.currency)}`
+//                     : `${formatPrice(0, settings?.currency)}`}
+//                 </h3>
+//                 <p className="text-gray-500 text-xs mt-1">
+//                   {analyticsData.totalUnitsSold || 0} units sold
+//                 </p>
+//               </div>
+//               <div className="bg-cyan-100 p-2 rounded-lg">
+//                 <svg
+//                   className="h-6 w-6 text-cyan-600"
+//                   fill="none"
+//                   viewBox="0 0 24 24"
+//                   stroke="currentColor"
+//                 >
+//                   <path
+//                     strokeLinecap="round"
+//                     strokeLinejoin="round"
+//                     strokeWidth={2}
+//                     d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+//                   />
+//                 </svg>
+//               </div>
+//             </div>
+//             <div className="flex items-center gap-2">
+//               {analyticsData.auvChange >= 0 ? (
+//                 <TrendingUp className="h-4 w-4 text-green-500" />
+//               ) : (
+//                 <TrendingDown className="h-4 w-4 text-red-500" />
+//               )}
+//               <span
+//                 className={`font-medium ${
+//                   analyticsData.auvChange >= 0
+//                     ? "text-green-600"
+//                     : "text-red-600"
+//                 }`}
+//               >
+//                 {analyticsData.auvChange >= 0 ? "+" : ""}
+//                 {analyticsData.auvChange?.toFixed(1) || "0.0"}%
+//               </span>
+//               <span className="text-gray-500 text-xs">from last period</span>
+//             </div>
+//           </div>
+
+//           <div className="rounded-2xl shadow-sm  h-fi">
+//             <AnalyticsCard
+//               title="Pending Refunds"
+//               value={analyticsData.refundsPending || 0}
+//               icon={Hourglass}
+//               bgColor="bg-gradient-to-br from-yellow-50 to-amber-50"
+//               borderColor="border-yellow-100"
+//               iconColor="text-yellow-600"
+//               iconBg="bg-yellow-100"
+//               subtitle={`${percentage.pending.toFixed(1)}%`}
+//             />
+//           </div>
+//           <div className=" rounded-2xl shadow-sm  h-fi">
+//             <AnalyticsCard
+//               title="Approved Refunds"
+//               value={analyticsData.refundsApproved || 0}
+//               icon={CheckCircle}
+//               bgColor="bg-gradient-to-br from-green-50 to-emerald-50"
+//               borderColor="border-green-100"
+//               iconColor="text-green-600"
+//               iconBg="bg-green-100"
+//               subtitle={`${percentage.approved.toFixed(1)}%`}
+//             />
+//           </div>
+//           <div className="rounded-2xl shadow-sm  h-fi">
+//             <AnalyticsCard
+//               title="Rejected Refunds"
+//               value={analyticsData.refundsRejected || 0}
+//               icon={XCircle}
+//               bgColor="bg-gradient-to-br from-red-50 to-pink-50"
+//               borderColor="border-red-100"
+//               iconColor="text-red-600"
+//               iconBg="bg-red-100"
+//               subtitle={`${percentage.rejected.toFixed(1)}% `}
+//             />
+//           </div>
+//           <div className="rounded-2xl shadow-sm  h-fit">
+//             <AnalyticsCard
+//               title="Processing Refunds"
+//               value={analyticsData.refundsProcessing || 0}
+//               icon={XCircle}
+//               bgColor="bg-gradient-to-br from-red-50 to-pink-50"
+//               borderColor="border-red-100"
+//               iconColor="text-red-600"
+//               iconBg="bg-red-100"
+//               subtitle={`${percentage.processing.toFixed(1)}% `}
+//             />
+//           </div>
+//           <div className="rounded-2xl shadow-sm  h-fit">
+//             <AnalyticsCard
+//               title="Refund Status"
+//               value={`${analyticsData.refundsApproved || 0}/${
+//                 analyticsData.refundsPending || 0
+//               }`}
+//               icon={CheckCircle}
+//               bgColor="bg-gradient-to-br from-orange-50 to-amber-50"
+//               borderColor="border-orange-100"
+//               iconColor="text-orange-600"
+//               iconBg="bg-orange-100"
+//               subtitle={`${analyticsData.refundsRejected || 0} rejected`}
+//             />
+//           </div>
+
+        
+//         </div>
+//         {/* Second Row - Charts and Additional Metrics */}
+//         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+//           {/* Purchase Rate Card */}
+//           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 lg:col-span-2">
+//             <div className="flex justify-between items-center mb-6">
+//               <div>
+//                 <h3 className="text-lg font-semibold text-gray-800">
+//                   Report Purchase Rate
+//                 </h3>
+//                 <p className="text-gray-500 text-sm">
+//                   Current period performance
+//                 </p>
+//               </div>
+//               <div className="bg-indigo-50 px-3 py-1 rounded-full">
+//                 <span className="text-indigo-700 font-medium">
+//                   {salesData.length > 0
+//                     ? `${(
+//                         (analyticsData.allOrders /
+//                           (analyticsData.visitors || 1)) *
+//                           100 || 0
+//                       ).toFixed(2)}%`
+//                     : "0%"}
+//                 </span>
+//               </div>
+//             </div>
+
+//             {/* Additional Analytics Cards */}
+
+//             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+//               {/* Average Order Value Section */}
+//               <div className="bg-gray-50 rounded-xl p-4">
+//                 <p className="text-gray-600 text-sm mb-2">
+//                   Average Order Value
+//                 </p>
+//                 <h4 className="text-2xl font-bold text-gray-900">
+//                   {analyticsData.aov
+//                     ? `${formatPrice(analyticsData.aov, settings?.currency)}`
+//                     : `${formatPrice(0, settings?.currency)}`}
+//                 </h4>
+//                 <div className="flex items-center gap-1 mt-2">
+//                   {analyticsData.aovChange > 0 ? (
+//                     <>
+//                       <TrendingUp className="h-4 w-4 text-green-500" />
+//                       <span className="text-green-600 text-sm">
+//                         +{analyticsData.aovChange?.toFixed(2) || "0.00"}%
+//                       </span>
+//                     </>
+//                   ) : analyticsData.aovChange < 0 ? (
+//                     <>
+//                       <TrendingDown className="h-4 w-4 text-red-500" />
+//                       <span className="text-red-600 text-sm">
+//                         {analyticsData.aovChange?.toFixed(2) || "0.00"}%
+//                       </span>
+//                     </>
+//                   ) : (
+//                     <span className="text-gray-500 text-sm">No trend data</span>
+//                   )}
+//                 </div>
+//               </div>
+
+//               {/* Most Selling Products Section */}
+//               <div className="bg-gray-50 rounded-xl p-4">
+//                 <p className="text-gray-800 text-sm mb-2">
+//                   Most Selling Products
+//                 </p>
+//                 <div className="space-y-3 mt-3">
+//                   {topProducts.length > 0 ? (
+//                     topProducts.map((product) => (
+//                       <div
+//                         key={product.id}
+//                         className="flex items-center justify-between p-3 hover:bg-gray-100 rounded-lg transition-colors"
+//                       >
+//                         <div className="flex items-center gap-3 flex-1">
+//                           {/* Product Image */}
+//                           <div className="relative">
+//                             {product.image ? (
+//                               <>
+//                                 <img
+//                                   src={product.image}
+//                                   alt={product.name}
+//                                   className="w-12 h-12 object-cover rounded-lg border border-gray-200"
+//                                   onError={(e) => {
+//                                     console.error(
+//                                       "❌ Image failed to load:",
+//                                       product.image
+//                                     );
+//                                     e.target.style.display = "none";
+//                                     e.target.parentElement.innerHTML = `
+//                         <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+//                           <Package className="h-6 w-6 text-blue-600" />
+//                         </div>
+//                       `;
+//                                   }}
+//                                   onLoad={(e) => {
+//                                     console.log(
+//                                       "✅ Image loaded successfully:",
+//                                       product.image
+//                                     );
+//                                   }}
+//                                 />
+//                                 <div className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+//                                   {product.sales}
+//                                 </div>
+//                               </>
+//                             ) : (
+//                               <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+//                                 <Package className="h-6 w-6 text-gray-400" />
+//                               </div>
+//                             )}
+//                           </div>
+
+//                           {/* Product Info */}
+//                           <div className="flex-1 min-w-0">
+//                             <p className="font-medium text-gray-800 truncate">
+//                               {product.name}
+//                             </p>
+//                             <p className="text-gray-500 text-xs">
+//                               ID: {product.id?.slice(-10) || "N/A"}
+//                             </p>
+//                           </div>
+//                         </div>
+
+//                         {/* Sales Count */}
+//                         <div className="bg-blue-50 px-3 py-1 rounded-full">
+//                           <span className="text-blue-700 font-medium">
+//                             {product.sales} Sales
+//                           </span>
+//                         </div>
+//                       </div>
+//                     ))
+//                   ) : (
+//                     <div className="text-center py-4 text-gray-500">
+//                       No sales data available
+//                     </div>
+//                   )}
+//                 </div>
+//               </div>
+//             </div>
+
+//             {/* Mini Chart */}
+//             <div className="mt-6">
+//               <ResponsiveContainer width="100%" height={100}>
+//                 <AreaChart data={salesData.slice(-7)}>
+//                   <defs>
+//                     <linearGradient
+//                       id="colorRevenue"
+//                       x1="0"
+//                       y1="0"
+//                       x2="0"
+//                       y2="1"
+//                     >
+//                       <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.3} />
+//                       <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
+//                     </linearGradient>
+//                   </defs>
+//                   <Area
+//                     type="monotone"
+//                     dataKey="revenue"
+//                     stroke="#4F46E5"
+//                     strokeWidth={2}
+//                     fill="url(#colorRevenue)"
+//                   />
+//                   <Tooltip content={<MiniChartTooltip />} />
+//                 </AreaChart>
+//               </ResponsiveContainer>
+//             </div>
+//           </div>
+
+//           {/* Order Status Summary */}
+//           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+//             <h3 className="text-lg font-semibold text-gray-800 mb-6">
+//               Order Status
+//             </h3>
+//             <div className="space-y-4">
+//               {[
+//                 {
+//                   title: "Pending Orders",
+//                   value: analyticsData.pendingOrders || 0,
+//                   color: "bg-yellow-100 text-yellow-800",
+//                   icon: Hourglass,
+//                 },
+//                 {
+//                   title: "Processing",
+//                   value: analyticsData.processingOrders || 0,
+//                   color: "bg-blue-100 text-blue-800",
+//                   icon: Hourglass,
+//                 },
+//                 {
+//                   title: "Shipped",
+//                   value: analyticsData.shippedOrders || 0,
+//                   color: "bg-cyan-100 text-cyan-800",
+//                   icon: Truck,
+//                 },
+//                 {
+//                   title: "Delivered",
+//                   value: analyticsData.deliveredOrders || 0,
+//                   color: "bg-green-100 text-green-800",
+//                   icon: CheckCircle,
+//                 },
+//                 {
+//                   title: "Cancelled",
+//                   value: analyticsData.canceledOrders || 0,
+//                   color: "bg-red-100 text-red-800",
+//                   icon: XCircle,
+//                 },
+//                 {
+//                   title: "Refunded",
+//                   value: analyticsData.refundedOrders, // Or get this from backend: analyticsData.refundedOrders
+//                   color: "bg-purple-100 text-purple-800",
+//                   icon: DollarSign, // Or use a refund icon
+//                 },
+//                 {
+//                   title: "Partial Refund",
+//                   value: analyticsData.partiallyRefundedOrders, //
+//                   color: "bg-purple-100 text-purple-800",
+//                   icon: Scissors, // Or use a refund icon
+//                 },
+//               ].map((item) => (
+//                 <div
+//                   key={item.title}
+//                   className="flex items-center justify-between p-3 rounded-lg bg-gray-50"
+//                 >
+//                   <div className="flex items-center gap-3">
+//                     <div
+//                       className={`p-2 rounded-lg ${item.color.split(" ")[0]}`}
+//                     >
+//                       <item.icon className="h-4 w-4" />
+//                     </div>
+//                     <div>
+//                       <p className="text-sm font-medium text-gray-700">
+//                         {item.title}
+//                       </p>
+//                     </div>
+//                   </div>
+//                   <div className="flex items-center gap-2">
+//                     <span className="text-lg font-bold text-gray-900">
+//                       {item.value}
+//                     </span>
+//                     <div
+//                       className={`px-2 py-1 rounded-full text-xs ${item.color}`}
+//                     >
+//                       <span>
+//                         {analyticsData.totalOrdersAllStatuses > 0
+//                           ? (
+//                               (item.value /
+//                                 analyticsData.totalOrdersAllStatuses) *
+//                               100
+//                             ).toFixed(1)
+//                           : "0.0"}
+//                         %
+//                       </span>
+//                     </div>
+//                   </div>
+//                 </div>
+//               ))}
+//             </div>
+//           </div>
+//         </div>
+
+//         {/* { delivery chart} */}
+//         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-8">
+//           <h3 className="text-lg font-semibold text-gray-800 mb-6">
+//             Logistics & Delivery
+//           </h3>
+
+//           {/* Delivery Metrics */}
+//           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+//             {/* Total Delivery Fees Card */}
+//             <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-100">
+//               <div className="flex items-center gap-3 mb-3">
+//                 <div className="bg-amber-100 p-2 rounded-lg">
+//                   <svg
+//                     className="h-5 w-5 text-amber-600"
+//                     fill="none"
+//                     viewBox="0 0 24 24"
+//                     stroke="currentColor"
+//                   >
+//                     <path
+//                       strokeLinecap="round"
+//                       strokeLinejoin="round"
+//                       strokeWidth={2}
+//                       d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+//                     />
+//                   </svg>
+//                 </div>
+//                 <div>
+//                   <p className="text-gray-600 font-medium">Delivery Fees</p>
+//                   <p className="text-gray-500 text-xs">To logistics partner</p>
+//                 </div>
+//               </div>
+//               <h3 className="text-2xl font-bold text-gray-900 mb-2">
+//                 {formatPrice(
+//                   analyticsData?.totalDeliveryFee,
+//                   settings?.currency
+//                 ) || "0"}
+//               </h3>
+//               <div className="flex items-center gap-2">
+//                 {analyticsData.deliveryFeeChange >= 0 ? (
+//                   <TrendingUp className="h-4 w-4 text-green-500" />
+//                 ) : (
+//                   <TrendingDown className="h-4 w-4 text-red-500" />
+//                 )}
+//                 <span
+//                   className={`text-sm ${
+//                     analyticsData.deliveryFeeChange >= 0
+//                       ? "text-green-600"
+//                       : "text-red-600"
+//                   }`}
+//                 >
+//                   {analyticsData.deliveryFeeChange >= 0 ? "+" : ""}
+//                   {analyticsData.deliveryFeeChange?.toFixed(1) || "0.0"}% from
+//                   last period
+//                 </span>
+//               </div>
+//             </div>
+
+//             {/* Average Delivery Fee per Order Card */}
+//             <div className="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-xl p-6 border border-teal-100">
+//               <div className="flex items-center gap-3 mb-3">
+//                 <div className="bg-teal-100 p-2 rounded-lg">
+//                   <svg
+//                     className="h-5 w-5 text-teal-600"
+//                     fill="none"
+//                     viewBox="0 0 24 24"
+//                     stroke="currentColor"
+//                   >
+//                     <path
+//                       strokeLinecap="round"
+//                       strokeLinejoin="round"
+//                       strokeWidth={2}
+//                       d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+//                     />
+//                   </svg>
+//                 </div>
+//                 <div>
+//                   <p className="text-gray-600 font-medium">Avg. Delivery Fee</p>
+//                   <p className="text-gray-500 text-xs">Per order</p>
+//                 </div>
+//               </div>
+//               <h3 className="text-2xl font-bold text-gray-900 mb-2">
+//                 {analyticsData.allOrders > 0
+//                   ? formatPrice(
+//                       analyticsData.totalDeliveryFee / analyticsData.allOrders,
+//                       settings?.currency
+//                     )
+//                   : formatPrice(0, settings?.currency)}
+//               </h3>
+//               <p className="text-gray-500 text-sm">
+//                 Based on {analyticsData.allOrders || 0} orders
+//               </p>
+//             </div>
+
+//             {/* Delivery Rate Card */}
+//             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+//               <div className="flex items-center gap-3 mb-3">
+//                 <div className="bg-blue-100 p-2 rounded-lg">
+//                   <svg
+//                     className="h-5 w-5 text-blue-600"
+//                     fill="none"
+//                     viewBox="0 0 24 24"
+//                     stroke="currentColor"
+//                   >
+//                     <path
+//                       strokeLinecap="round"
+//                       strokeLinejoin="round"
+//                       strokeWidth={2}
+//                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+//                     />
+//                   </svg>
+//                 </div>
+//                 <div>
+//                   <p className="text-gray-600 font-medium">Delivery Rate</p>
+//                   <p className="text-gray-500 text-xs">Orders with delivery</p>
+//                 </div>
+//               </div>
+//               <h3 className="text-2xl font-bold text-gray-900 mb-2">
+//                 {analyticsData.allOrders > 0
+//                   ? `${(
+//                       (analyticsData.deliveredOrders /
+//                         analyticsData.allOrders) *
+//                       100
+//                     ).toFixed(1)}%`
+//                   : "0%"}
+//               </h3>
+//               <p className="text-gray-500 text-sm">
+//                 {analyticsData.deliveredOrders || 0} of{" "}
+//                 {analyticsData.allOrders || 0} delivered
+//               </p>
+//             </div>
+
+//             {/* Logistics Efficiency Card */}
+//             <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-6 border border-purple-100">
+//               <div className="flex items-center gap-3 mb-3">
+//                 <div className="bg-purple-100 p-2 rounded-lg">
+//                   <svg
+//                     className="h-5 w-5 text-purple-600"
+//                     fill="none"
+//                     viewBox="0 0 24 24"
+//                     stroke="currentColor"
+//                   >
+//                     <path
+//                       strokeLinecap="round"
+//                       strokeLinejoin="round"
+//                       strokeWidth={2}
+//                       d="M13 10V3L4 14h7v7l9-11h-7z"
+//                     />
+//                   </svg>
+//                 </div>
+//                 <div>
+//                   <p className="text-gray-600 font-medium">
+//                     Fee to Revenue Ratio
+//                   </p>
+//                   <p className="text-gray-500 text-xs">
+//                     Delivery vs product revenue
+//                   </p>
+//                 </div>
+//               </div>
+//               <h3 className="text-2xl font-bold text-gray-900 mb-2">
+//                 {analyticsData.grossRevenue > 0
+//                   ? `${(
+//                       (analyticsData.totalDeliveryFee /
+//                         analyticsData.grossRevenue) *
+//                       100
+//                     ).toFixed(1)}%`
+//                   : "0%"}
+//               </h3>
+//               <p className="text-gray-500 text-sm">
+//                 {formatPrice(
+//                   analyticsData.totalDeliveryFee,
+//                   settings?.currency
+//                 )}{" "}
+//                 / {formatPrice(analyticsData.grossRevenue, settings?.currency)}
+//               </p>
+//             </div>
+//           </div>
+
+//           {/* Delivery Fee Trend Chart */}
+//           <div className="mt-6">
+//             <div className="flex justify-between items-center mb-4">
+//               <h4 className="text-gray-700 font-medium">Delivery Fee Trend</h4>
+//               <div className="flex gap-2">
+//                 <button className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg">
+//                   Delivery Fees
+//                 </button>
+//               </div>
+//             </div>
+//             <ResponsiveContainer width="100%" height={200}>
+//               <AreaChart data={salesData}>
+//                 <defs>
+//                   <linearGradient
+//                     id="colorDeliveryFee"
+//                     x1="0"
+//                     y1="0"
+//                     x2="0"
+//                     y2="1"
+//                   >
+//                     <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.3} />
+//                     <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
+//                   </linearGradient>
+//                 </defs>
+//                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+//                 <XAxis dataKey="name" stroke="#6B7280" fontSize={12} />
+//                 <YAxis
+//                   stroke="#6B7280"
+//                   fontSize={12}
+//                   tickFormatter={(value) =>
+//                     `${formatPrice(
+//                       (value / 1000).toFixed(0),
+//                       settings?.currency
+//                     )}K`
+//                   }
+//                 />
+//                 <Tooltip
+//                   content={<DeliveryTooltip />}
+//                   contentStyle={{
+//                     backgroundColor: "white",
+//                     border: "1px solid #E5E7EB",
+//                     borderRadius: "8px",
+//                     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+//                   }}
+//                 />
+//                 <Area
+//                   type="monotone"
+//                   dataKey="deliveryFee"
+//                   stroke="#F59E0B"
+//                   strokeWidth={2}
+//                   fill="url(#colorDeliveryFee)"
+//                 />
+//               </AreaChart>
+//             </ResponsiveContainer>
+//           </div>
+//         </div>
+
+//         {/* Coupon Analytics Section */}
+//         {/* Coupon Analytics Section */}
+//         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mb-8">
+//           <h3 className="text-lg font-semibold text-gray-800 mb-6">
+//             Coupon & Discount Analytics
+//           </h3>
+
+//           {/* Coupon Metrics Cards */}
+//           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+//             {/* Coupons Used Card */}
+//             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-100">
+//               <div className="flex items-center gap-3 mb-3">
+//                 <div className="bg-green-100 p-2 rounded-lg">
+//                   <svg
+//                     className="h-5 w-5 text-green-600"
+//                     fill="none"
+//                     viewBox="0 0 24 24"
+//                     stroke="currentColor"
+//                   >
+//                     <path
+//                       strokeLinecap="round"
+//                       strokeLinejoin="round"
+//                       strokeWidth={2}
+//                       d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+//                     />
+//                   </svg>
+//                 </div>
+//                 <div>
+//                   <p className="text-gray-600 font-medium">Coupons Used</p>
+//                   <p className="text-gray-500 text-xs">
+//                     Total discount codes applied
+//                   </p>
+//                 </div>
+//               </div>
+//               <h3 className="text-2xl font-bold text-gray-900 mb-2">
+//                 {analyticsData.couponsUsed || 0}
+//               </h3>
+//               <div className="flex items-center gap-2">
+//                 {analyticsData.couponsUsedChange >= 0 ? (
+//                   <TrendingUp className="h-4 w-4 text-green-500" />
+//                 ) : (
+//                   <TrendingDown className="h-4 w-4 text-red-500" />
+//                 )}
+//                 <span
+//                   className={`text-sm ${
+//                     analyticsData.couponsUsedChange >= 0
+//                       ? "text-green-600"
+//                       : "text-red-600"
+//                   }`}
+//                 >
+//                   {analyticsData.couponsUsedChange >= 0 ? "+" : ""}
+//                   {analyticsData.couponsUsedChange?.toFixed(1) || "0.0"}% from
+//                   last period
+//                 </span>
+//               </div>
+//             </div>
+
+//             {/* Total Coupon Discount Card */}
+//             <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-6 border border-purple-100">
+//               <div className="flex items-center gap-3 mb-3">
+//                 <div className="bg-purple-100 p-2 rounded-lg">
+//                   <svg
+//                     className="h-5 w-5 text-purple-600"
+//                     fill="none"
+//                     viewBox="0 0 24 24"
+//                     stroke="currentColor"
+//                   >
+//                     <path
+//                       strokeLinecap="round"
+//                       strokeLinejoin="round"
+//                       strokeWidth={2}
+//                       d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+//                     />
+//                   </svg>
+//                 </div>
+//                 <div>
+//                   <p className="text-gray-600 font-medium">Total Discount</p>
+//                   <p className="text-gray-500 text-xs">
+//                     Amount saved by customers
+//                   </p>
+//                 </div>
+//               </div>
+//               <h3 className="text-2xl font-bold text-gray-900 mb-2">
+//                 {formatPrice(
+//                   analyticsData.totalCouponDiscount || 0,
+//                   settings?.currency
+//                 )}
+//               </h3>
+//               <div className="flex items-center gap-2">
+//                 {analyticsData.couponDiscountChange >= 0 ? (
+//                   <TrendingUp className="h-4 w-4 text-green-500" />
+//                 ) : (
+//                   <TrendingDown className="h-4 w-4 text-red-500" />
+//                 )}
+//                 <span
+//                   className={`text-sm ${
+//                     analyticsData.couponDiscountChange >= 0
+//                       ? "text-green-600"
+//                       : "text-red-600"
+//                   }`}
+//                 >
+//                   {analyticsData.couponDiscountChange >= 0 ? "+" : ""}
+//                   {analyticsData.couponDiscountChange?.toFixed(1) || "0.0"}%
+//                   from last period
+//                 </span>
+//               </div>
+//             </div>
+
+//             {/* Unique Coupon Codes Card */}
+//             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+//               <div className="flex items-center gap-3 mb-3">
+//                 <div className="bg-blue-100 p-2 rounded-lg">
+//                   <svg
+//                     className="h-5 w-5 text-blue-600"
+//                     fill="none"
+//                     viewBox="0 0 24 24"
+//                     stroke="currentColor"
+//                   >
+//                     <path
+//                       strokeLinecap="round"
+//                       strokeLinejoin="round"
+//                       strokeWidth={2}
+//                       d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+//                     />
+//                   </svg>
+//                 </div>
+//                 <div>
+//                   <p className="text-gray-600 font-medium">Unique Codes</p>
+//                   <p className="text-gray-500 text-xs">
+//                     Different coupon codes used
+//                   </p>
+//                 </div>
+//               </div>
+//               <h3 className="text-2xl font-bold text-gray-900 mb-2">
+//                 {analyticsData.uniqueCouponsUsed || 0}
+//               </h3>
+//               <div className="flex items-center gap-2">
+//                 {analyticsData.uniqueCouponsChange >= 0 ? (
+//                   <TrendingUp className="h-4 w-4 text-green-500" />
+//                 ) : (
+//                   <TrendingDown className="h-4 w-4 text-red-500" />
+//                 )}
+//                 <span
+//                   className={`text-sm ${
+//                     analyticsData.uniqueCouponsChange >= 0
+//                       ? "text-green-600"
+//                       : "text-red-600"
+//                   }`}
+//                 >
+//                   {analyticsData.uniqueCouponsChange >= 0 ? "+" : ""}
+//                   {analyticsData.uniqueCouponsChange?.toFixed(1) || "0.0"}% from
+//                   last period
+//                 </span>
+//               </div>
+//             </div>
+
+//             {/* Discount Rate Card */}
+//             <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-100">
+//               <div className="flex items-center gap-3 mb-3">
+//                 <div className="bg-orange-100 p-2 rounded-lg">
+//                   <svg
+//                     className="h-5 w-5 text-orange-600"
+//                     fill="none"
+//                     viewBox="0 0 24 24"
+//                     stroke="currentColor"
+//                   >
+//                     <path
+//                       strokeLinecap="round"
+//                       strokeLinejoin="round"
+//                       strokeWidth={2}
+//                       d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+//                     />
+//                   </svg>
+//                 </div>
+//                 <div>
+//                   <p className="text-gray-600 font-medium">Discount Rate</p>
+//                   <p className="text-gray-500 text-xs">Orders with coupons</p>
+//                 </div>
+//               </div>
+//               <h3 className="text-2xl font-bold text-gray-900 mb-2">
+//                 {analyticsData.couponDiscountRate?.toFixed(1) || "0.0"}%
+//               </h3>
+//               <p className="text-gray-500 text-sm">
+//                 {analyticsData.couponsUsed || 0} of{" "}
+//                 {analyticsData.allOrders || 0} orders
+//               </p>
+//             </div>
+//           </div>
+
+//           {/* Coupon Usage Trend Chart */}
+//           <div className="mt-6">
+//             <div className="flex justify-between items-center mb-4">
+//               <h4 className="text-gray-700 font-medium">Coupon Usage Trend</h4>
+//               <div className="flex gap-2">
+//                 <button className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-lg">
+//                   Coupons Used
+//                 </button>
+//                 <button className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg">
+//                   Discount Amount
+//                 </button>
+//               </div>
+//             </div>
+//             <ResponsiveContainer width="100%" height={200}>
+//               <LineChart data={salesData}>
+//                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+//                 <XAxis dataKey="name" stroke="#6B7280" fontSize={12} />
+//                 <YAxis
+//                   yAxisId="left"
+//                   stroke="#6B7280"
+//                   fontSize={12}
+//                   label={{
+//                     value: "Coupons",
+//                     angle: -90,
+//                     position: "insideLeft",
+//                   }}
+//                 />
+//                 <YAxis
+//                   yAxisId="right"
+//                   orientation="right"
+//                   stroke="#6B7280"
+//                   fontSize={12}
+//                   tickFormatter={(value) =>
+//                     `${formatPrice(value, settings?.currency)}`
+//                   }
+//                   label={{
+//                     value: "Discount",
+//                     angle: 90,
+//                     position: "insideRight",
+//                   }}
+//                 />
+//                 <Tooltip
+//                   content={<CouponTooltip />}
+//                   contentStyle={{
+//                     backgroundColor: "white",
+//                     border: "1px solid #E5E7EB",
+//                     borderRadius: "8px",
+//                     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+//                   }}
+//                 />
+//                 <Line
+//                   yAxisId="left"
+//                   type="monotone"
+//                   dataKey="couponsUsed"
+//                   stroke="#8B5CF6"
+//                   strokeWidth={2}
+//                   dot={{ r: 4 }}
+//                   activeDot={{ r: 6, strokeWidth: 0 }}
+//                   name="Coupons Used"
+//                 />
+//                 <Line
+//                   yAxisId="right"
+//                   type="monotone"
+//                   dataKey="couponDiscount"
+//                   stroke="#F59E0B"
+//                   strokeWidth={2}
+//                   strokeDasharray="5 5"
+//                   dot={{ r: 4 }}
+//                   activeDot={{ r: 6, strokeWidth: 0 }}
+//                   name="Total Discount"
+//                 />
+//               </LineChart>
+//             </ResponsiveContainer>
+//           </div>
+
+//           {/* Additional Coupon Stats */}
+//           <div className="mt-8 pt-6 border-t border-gray-200">
+//             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+//               <div className="bg-gray-50 rounded-lg p-4">
+//                 <p className="text-sm text-gray-600">
+//                   Avg. Discount per Coupon
+//                 </p>
+//                 <p className="text-lg font-semibold text-gray-900">
+//                   {analyticsData.couponsUsed > 0
+//                     ? formatPrice(
+//                         analyticsData.totalCouponDiscount /
+//                           analyticsData.couponsUsed,
+//                         settings?.currency
+//                       )
+//                     : formatPrice(0, settings?.currency)}
+//                 </p>
+//                 <p className="text-gray-500 text-xs">
+//                   Average saving per coupon used
+//                 </p>
+//               </div>
+//               <div className="bg-gray-50 rounded-lg p-4">
+//                 <p className="text-sm text-gray-600">
+//                   Discount to Revenue Ratio
+//                 </p>
+//                 <p className="text-lg font-semibold text-gray-900">
+//                   {analyticsData.grossRevenue > 0
+//                     ? `${(
+//                         (analyticsData.totalCouponDiscount /
+//                           analyticsData.grossRevenue) *
+//                         100
+//                       ).toFixed(1)}%`
+//                     : "0%"}
+//                 </p>
+//                 <p className="text-gray-500 text-xs">
+//                   Discount as % of gross revenue
+//                 </p>
+//               </div>
+//               <div className="bg-gray-50 rounded-lg p-4">
+//                 <p className="text-sm text-gray-600">Avg. Orders per Code</p>
+//                 <p className="text-lg font-semibold text-gray-900">
+//                   {analyticsData.uniqueCouponsUsed > 0
+//                     ? (
+//                         analyticsData.couponsUsed /
+//                         analyticsData.uniqueCouponsUsed
+//                       ).toFixed(1)
+//                     : "0"}
+//                 </p>
+//                 <p className="text-gray-500 text-xs">
+//                   Average usage per coupon code
+//                 </p>
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* Top Coupon Codes Table (if data exists) */}
+//           {couponPerformance && couponPerformance.length > 0 && (
+//             <div className="mt-8">
+//               <h4 className="text-gray-700 font-medium mb-4">
+//                 Top Performing Coupon Codes
+//               </h4>
+//               <div className="overflow-x-auto">
+//                 <table className="min-w-full divide-y divide-gray-200">
+//                   <thead className="bg-gray-50">
+//                     <tr>
+//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                         Coupon Code
+//                       </th>
+//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                         Times Used
+//                       </th>
+//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                         Total Discount
+//                       </th>
+//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                         Avg. Discount
+//                       </th>
+//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                         Revenue Generated
+//                       </th>
+//                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+//                         Avg. Order Value
+//                       </th>
+//                     </tr>
+//                   </thead>
+//                   <tbody className="bg-white divide-y divide-gray-200">
+//                     {couponPerformance.map((coupon, index) => (
+//                       <tr
+//                         key={coupon._id || index}
+//                         className="hover:bg-gray-50"
+//                       >
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           <span className="font-medium text-gray-900">
+//                             {coupon._id || "N/A"}
+//                           </span>
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+//                             {coupon.usageCount || 0}
+//                           </span>
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+//                           {formatPrice(
+//                             coupon.totalDiscount || 0,
+//                             settings?.currency
+//                           )}
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           <div
+//                             className={`px-3 py-1 rounded-full text-xs font-medium ${
+//                               (coupon.averageDiscount || 0) >= 10000
+//                                 ? "bg-green-100 text-green-800"
+//                                 : (coupon.averageDiscount || 0) >= 5000
+//                                 ? "bg-yellow-100 text-yellow-800"
+//                                 : "bg-gray-100 text-gray-800"
+//                             }`}
+//                           >
+//                             {formatPrice(
+//                               coupon.averageDiscount || 0,
+//                               settings?.currency
+//                             )}
+//                           </div>
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+//                           {formatPrice(
+//                             coupon.totalRevenue || 0,
+//                             settings?.currency
+//                           )}
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+//                           {formatPrice(
+//                             coupon.avgOrderValue || 0,
+//                             settings?.currency
+//                           )}
+//                         </td>
+//                       </tr>
+//                     ))}
+//                   </tbody>
+//                 </table>
+//               </div>
+//             </div>
 //           )}
-            
-//           </td>
-//         </tr>`;
-//     })
-//     .join("");
-
-//   const totalAmount = order.totalAmount || order.totalPrice || order.total || 0;
-//   const subtotal = order.subtotal || order.subTotal || 0;
-//   const discount = order.discount || 0
-  
-
-  
-//   const html = `
-//     <div style="font-family: Arial, sans-serif; background-color: #f6f8fa; padding: 20px;">
-//       <div style="max-width: 700px; margin: auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.06);">
-//         <div style="background: #10b981; padding: 22px; text-align: center; color: #fff;">
-//           <img src="${settings?.logo}" alt="${
-//     settings?.storeName
-//   }" style="max-height:50px; display:block; margin: 0 auto 8px;" />
-//           <h1 style="margin:0; font-size:20px;">Order Confirmation</h1>
-//           <div style="margin-top:6px; font-size:15px;">${
-//             order.orderNumber || "N/A"
-//           }</div>
 //         </div>
 
-//         <div style="padding: 22px; color:#333;">
-//           <p style="margin:0 0 8px;">Hi <strong>${customerName}</strong>,</p>
-//           <p style="margin:0 0 16px;">Thank you for your order! We've received your payment and are now processing your purchase. Below are your order details.</p>
+//         {/* Product Sales Analysis Table */}
+//         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mt-8">
+//           <div className="flex justify-between items-center mb-6">
+//             <div>
+//               <h3 className="text-lg font-semibold text-gray-800">
+//                 Product Sales Analysis
+//               </h3>
+//               <p className="text-gray-500 text-sm">
+//                 Breakdown of items sold in the selected{" "}
+//                 <span className="uppercase font-bold">{selectedRange}</span>{" "}
+//                 period
+//               </p>
+//             </div>
+//             <div className="flex items-center gap-4"></div>
+//           </div>
 
-//           <h3 style="margin:18px 0 8px;"> Order Summary</h3>
-//           <table style="width:100%; border-collapse: collapse; margin-top:8px;">
-//             <thead>
-//               <tr style="background:#f7faf7;">
-//                 <th style="padding:10px; text-align:left; border:1px solid #eee;">Product</th>
-//                 <th style="padding:10px; text-align:center; border:1px solid #eee;">Qty</th>
-//                 <th style="padding:10px; text-align:right; border:1px solid #eee;">Price</th>
-//               </tr>
-//             </thead>
-//             <tbody>
-//               ${
-//                 productRows ||
-//                 `<tr><td colspan="3" style="padding:12px;text-align:center;color:#777;">No items listed</td></tr>`
-//               }
-//             </tbody>
-//           </table>
-//           <p style="margin-top: 20px; font-size: 16px;">
-//             <strong>Original Subtotal:</strong> ${formatter.format(
-//               subtotal
-//             )} <br>
-           
-//                     ${
-//                       discount > 0
-//                         ? `
-//                     <p>
-//                       <strong>Coupon Discount:</strong> - ${formatter.format(
-//                         discount
+//           {/* Summary Cards */}
+//           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+//             <div className="bg-blue-50 rounded-lg p-4">
+//               <p className="text-sm text-gray-600">Products Sold</p>
+//               <p className="text-xl font-bold text-gray-900">
+//                 {productSales.length || 0}
+//               </p>
+//             </div>
+//             <div className="bg-green-50 rounded-lg p-4">
+//               <p className="text-sm text-gray-600">Total Revenue</p>
+//               <p className="text-xl font-bold text-gray-900">
+//                 {formatPrice(
+//                   productSummary?.totalRevenue,
+//                   settings?.currency
+//                 ) || "0"}
+//               </p>
+//             </div>
+//             <div className="bg-purple-50 rounded-lg p-4">
+//               <p className="text-sm text-gray-600">Avg. Units per Product</p>
+//               <p className="text-xl font-bold text-gray-900">
+//                 {productSales.length > 0
+//                   ? Math.round(productSummary.totalUnits / productSales.length)
+//                   : 0}
+//               </p>
+//             </div>
+//             <div className="bg-orange-50 rounded-lg p-4">
+//               <p className="text-sm text-gray-600">Avg. Revenue per Product</p>
+//               <p className="text-xl font-bold text-gray-900">
+//                 {productSales.length > 0
+//                   ? formatPrice(
+//                       Math.round(
+//                         productSummary.totalRevenue / productSales.length
+//                       ),
+//                       settings?.currency
+//                     )
+//                   : "0"}
+//               </p>
+//             </div>
+//           </div>
+
+//           {/* Products Table */}
+//           <div className="overflow-x-auto">
+//             <table className="min-w-full divide-y divide-gray-200">
+//               <thead className="bg-gray-50">
+//                 <tr>
+//                   <th
+//                     scope="col"
+//                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+//                   >
+//                     Product
+//                   </th>
+//                   <th
+//                     scope="col"
+//                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+//                     onClick={() => requestProductSort("unitsSold")}
+//                   >
+//                     <div className="flex items-center gap-1">
+//                       Units Sold
+//                       {productSortConfig.key === "unitsSold" && (
+//                         <span>
+//                           {productSortConfig.direction === "ascending"
+//                             ? "↑"
+//                             : "↓"}
+//                         </span>
 //                       )}
-//                     </p>
-//           `
-//                         : ""
-//                     }<br>
-//             <strong>Delivery Fee:</strong> ${formatter.format(
-//               order.deliveryFee
-//             )}<br>
-//             <strong>Final Total:</strong> ${formatter.format(totalAmount)}
-//           </p>
+//                     </div>
+//                   </th>
+//                   <th
+//                     scope="col"
+//                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+//                     onClick={() => requestProductSort("orderCount")}
+//                   >
+//                     <div className="flex items-center gap-1">
+//                       Product Orders
+//                       {productSortConfig.key === "orderCount" && (
+//                         <span>
+//                           {productSortConfig.direction === "ascending"
+//                             ? "↑"
+//                             : "↓"}
+//                         </span>
+//                       )}
+//                     </div>
+//                   </th>
+//                   <th
+//                     scope="col"
+//                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+//                     onClick={() => requestProductSort("totalRevenue")}
+//                   >
+//                     <div className="flex items-center gap-1">
+//                       Total Revenue
+//                       {productSortConfig.key === "totalRevenue" && (
+//                         <span>
+//                           {productSortConfig.direction === "ascending"
+//                             ? "↑"
+//                             : "↓"}
+//                         </span>
+//                       )}
+//                     </div>
+//                   </th>
+//                   <th
+//                     scope="col"
+//                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+//                     onClick={() => requestProductSort("averageUnitValue")}
+//                   >
+//                     <div className="flex items-center gap-1">
+//                       Avg. Unit Value
+//                       {productSortConfig.key === "averageUnitValue" && (
+//                         <span>
+//                           {productSortConfig.direction === "ascending"
+//                             ? "↑"
+//                             : "↓"}
+//                         </span>
+//                       )}
+//                     </div>
+//                   </th>
+//                   <th
+//                     scope="col"
+//                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+//                     onClick={() => requestProductSort("revenuePerUnit")}
+//                   ></th>
+//                 </tr>
+//               </thead>
+//               <tbody className="bg-white divide-y divide-gray-200">
+//                 {sortedProducts.length > 0 &&
+//                   sortedProducts.map((product, index) => (
+//                     <>
+//                       <tr
+//                         key={product.productId || index}
+//                         className={`hover:bg-gray-50 ${
+//                           index % 2 === 0 ? "bg-gray-50" : "bg-white"
+//                         }`}
+//                       >
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           <div className="flex items-center">
+//                             <div className="h-10 w-10 flex-shrink-0">
+//                               {product.image ? (
+//                                 <img
+//                                   src={product.image}
+//                                   alt={product.name}
+//                                   className="h-10 w-10 rounded-lg object-cover border border-gray-200"
+//                                   onError={(e) => {
+//                                     e.target.style.display = "none";
+//                                     e.target.parentElement.innerHTML = `
+//                             <div class="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
+//                               <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+//                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+//                               </svg>
+//                             </div>
+//                           `;
+//                                   }}
+//                                 />
+//                               ) : (
+//                                 <div className="h-10 w-10 rounded-lg bg-gray-100 flex items-center justify-center">
+//                                   <svg
+//                                     className="h-5 w-5 text-gray-400"
+//                                     fill="none"
+//                                     viewBox="0 0 24 24"
+//                                     stroke="currentColor"
+//                                   >
+//                                     <path
+//                                       strokeLinecap="round"
+//                                       strokeLinejoin="round"
+//                                       strokeWidth={2}
+//                                       d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"
+//                                     />
+//                                   </svg>
+//                                 </div>
+//                               )}
+//                             </div>
+//                             <div className="ml-4">
+//                               <div className="text-sm font-medium text-gray-900">
+//                                 {product.name || `Product ${index + 1}`}
+//                               </div>
+//                               <div className="text-xs text-gray-500">
+//                                 {product.category || "Uncategorized"}
+//                               </div>
+//                             </div>
+//                           </div>
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           <div className="flex items-center">
+//                             <div className="w-24 bg-gray-200 rounded-full h-2">
+//                               <div
+//                                 className="bg-blue-600 h-2 rounded-full"
+//                                 style={{
+//                                   width: `${Math.min(
+//                                     100,
+//                                     (product.unitsSold /
+//                                       Math.max(
+//                                         ...sortedProducts.map(
+//                                           (p) => p.unitsSold
+//                                         )
+//                                       )) *
+//                                       100
+//                                   )}%`,
+//                                 }}
+//                               ></div>
+//                             </div>
+//                             <span className="ml-2 text-sm font-semibold text-gray-900">
+//                               {product.unitsSold}
+//                             </span>
+//                           </div>
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+//                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+//                             {product.orderCount}
+//                           </span>
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+//                           {formatPrice(
+//                             product.formattedRevenue,
+//                             settings?.currency
+//                           ) ||
+//                             `${
+//                               formatPrice(
+//                                 product.totalRevenue,
+//                                 settings?.currency
+//                               ) || "0"
+//                             }`}
+//                         </td>
+//                         <td className="px-6 py-4 whitespace-nowrap">
+//                           <div
+//                             className={`px-3 py-1 rounded-full text-xs font-medium ${
+//                               product.averageUnitValue >= 10000
+//                                 ? "bg-green-100 text-green-800"
+//                                 : product.averageUnitValue >= 5000
+//                                 ? "bg-yellow-100 text-yellow-800"
+//                                 : "bg-gray-100 text-gray-800"
+//                             }`}
+//                           >
+//                             {formatPrice(
+//                               product.formattedAUV,
+//                               settings?.currency
+//                             ) ||
+//                               `${
+//                                 formatPrice(
+//                                   product?.averageUnitValue,
+//                                   settings?.currency
+//                                 ) || "0"
+//                               }`}
+//                           </div>
+//                         </td>
+//                       </tr>
+//                     </>
+//                   ))}
 
-//           <p style="margin:0;">
-//             <strong>Address:</strong> ${
-//               order.deliveryAddress || "No address provided"
-//             }<br/>
-//             <strong>Phone:</strong> ${order.phone || "No phone provided"}<br/>
-//             <strong>Email:</strong> ${to}
-//           </p>
+//                 <tr className="bg-gray-50 font-semibold">
+//                   <td className="px-6 py-4 whitespace-nowrap">
+//                     <span className="text-sm font-bold text-gray-900">
+//                       TOTAL
+//                     </span>
+//                   </td>
+//                   <td className="px-6 py-4 whitespace-nowrap">
+//                     <span className="text-sm font-bold text-gray-900">
+//                       {productSummary.totalUnits?.toLocaleString() || "0"}
+//                     </span>
+//                   </td>
+//                   <td className="px-6 py-4 whitespace-nowrap">
+//                     {/* FIXED: Show total orders, not total units */}
+//                     <span className="text-sm font-bold text-gray-900">
+//                       {/* {productSummary.totalOrders?.toLocaleString() || "0"} */}
+//                       {totalOrderAppearances}
+//                     </span>
+//                   </td>
+//                   <td className="px-6 py-4 whitespace-nowrap">
+//                     <span className="text-sm font-bold text-gray-900">
+//                       {formatPrice(
+//                         productSummary?.totalRevenue,
+//                         settings?.currency
+//                       ) || "0"}
+//                     </span>
+//                   </td>
+//                   <td className="px-6 py-4 whitespace-nowrap">
+//                     <span className="text-sm font-bold text-gray-900">
+//                       {formatPrice(
+//                         productSummary?.overallAUV,
+//                         settings?.currency
+//                       ) || "0"}
+//                     </span>
+//                   </td>
+//                 </tr>
+//               </tbody>
+//             </table>
+//           </div>
 
-//           <h3 style="margin:18px 0 8px;"> Payment Details</h3>
-//           <p style="margin:0 0 6px;">
-//             <strong>Payment Status:</strong> ${
-//               order.paymentStatus || "Confirmed"
-//             }<br/>
-//             <strong>Payment Type:</strong> ${payment_type}<br/>
-//             <strong>Transaction Ref:</strong> ${tx_ref}<br/>
-//             <strong>Transaction ID:</strong> ${transaction_id}
-//           </p>
-
-
-//           <p style="margin-top:20px; color:#555;">We'll send another email once your order ships.</p>
-
-          
+//           {/* Footer Summary */}
+//           {sortedProducts.length > 0 && (
+//             <div className="mt-6 pt-6 border-t border-gray-200">
+//               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+//                 <div className="text-center">
+//                   <p className="text-sm text-gray-600">Top Selling Product</p>
+//                   <p className="text-lg font-semibold text-gray-900">
+//                     {sortedProducts.length > 0 ? sortedProducts[0].name : "N/A"}
+//                   </p>
+//                   <p className="text-sm text-gray-500">
+//                     {sortedProducts.length > 0
+//                       ? `${sortedProducts[0].unitsSold} units sold`
+//                       : ""}
+//                   </p>
+//                 </div>
+//                 <div className="text-center">
+//                   <p className="text-sm text-gray-600">Highest Value Product</p>
+//                   <p className="text-lg font-semibold text-gray-900">
+//                     {sortedProducts.length > 0
+//                       ? sortedProducts.reduce(
+//                           (max, product) =>
+//                             product.averageUnitValue > max.averageUnitValue
+//                               ? product
+//                               : max,
+//                           sortedProducts[0]
+//                         ).name
+//                       : "N/A"}
+//                   </p>
+//                   <p className="text-sm text-gray-500">
+//                     {sortedProducts.length > 0
+//                       ? `${formatPrice(
+//                           Math.max(
+//                             ...sortedProducts.map((p) => p.averageUnitValue)
+//                           ),
+//                           settings?.currency
+//                         )} per unit`
+//                       : ""}
+//                   </p>
+//                 </div>
+//                 <div className="text-center">
+//                   <p className="text-sm text-gray-600">Most Ordered Product</p>
+//                   <p className="text-lg font-semibold text-gray-900">
+//                     {sortedProducts.length > 0
+//                       ? sortedProducts.reduce(
+//                           (max, product) =>
+//                             product.orderCount > max.orderCount ? product : max,
+//                           sortedProducts[0]
+//                         ).name
+//                       : "N/A"}
+//                   </p>
+//                   <p className="text-sm text-gray-500">
+//                     {sortedProducts.length > 0
+//                       ? `${Math.max(
+//                           ...sortedProducts.map((p) => p.orderCount)
+//                         )} orders`
+//                       : ""}
+//                   </p>
+//                 </div>
+//               </div>
+//             </div>
+//           )}
 //         </div>
 
-//         <div style="background: #1e293b; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
-//           <p style="margin: 0 0 10px 0;"><p style="margin-top:18px;">Thanks for choosing <strong> ${
-//             settings?.storeName
-//           }</strong> </p>
-//           <p style="margin: 0;">Need help? Contact us at <a href="mailto:${
-//             settings?.supportEmail
-//           }" 
-//              style="color: #10b981; text-decoration: none;">${
-//                settings?.supportEmail
-//              }</a></p>
+//         {/* Revenue Section */}
+//         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 mt-8">
+//           <h3 className="text-lg font-semibold text-gray-800 mb-6">
+//             Revenue Analytics
+//           </h3>
+
+//           {/* Revenue Cards Section */}
+//           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+//             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-100">
+//               <div className="flex items-center gap-3 mb-3">
+//                 <div className="bg-indigo-100 p-2 rounded-lg">
+//                   <DollarSign className="h-5 w-5 text-indigo-600" />
+//                 </div>
+//                 <p className="text-gray-600 font-medium">Gross Revenue</p>
+//               </div>
+//               <h3 className="text-2xl font-bold text-gray-900 mb-2">
+//                 {formatPrice(analyticsData?.grossRevenue, settings?.currency) ||
+//                   "0"}
+//               </h3>
+//               <div className="flex items-center gap-2">
+//                 {analyticsData.revenueChange >= 0 ? (
+//                   <TrendingUp className="h-4 w-4 text-green-500" />
+//                 ) : (
+//                   <TrendingDown className="h-4 w-4 text-red-500" />
+//                 )}
+//                 <span
+//                   className={`text-sm ${
+//                     analyticsData.revenueChange >= 0
+//                       ? "text-green-600"
+//                       : "text-red-600"
+//                   }`}
+//                 >
+//                   {analyticsData.revenueChange >= 0 ? "+" : ""}
+//                   {analyticsData.revenueChange?.toFixed(1) || "0.0"}% from last
+//                   period
+//                 </span>
+//               </div>
+//             </div>
+
+//             <div className="bg-gradient-to-br from-red-50 to-pink-50 rounded-xl p-6 border border-red-100">
+//               <div className="flex items-center gap-3 mb-3">
+//                 <div className="bg-red-100 p-2 rounded-lg">
+//                   <XCircle className="h-5 w-5 text-red-600" />
+//                 </div>
+//                 <p className="text-gray-600 font-medium">Refunded Amount</p>
+//               </div>
+//               <h3 className="text-2xl font-bold text-gray-900 mb-2">
+//                 {formatPrice(
+//                   analyticsData?.totalRefunded,
+//                   settings?.currency
+//                 ) || "0"}
+//               </h3>
+//               <div className="flex items-center gap-2">
+//                 {analyticsData.refundedChange >= 0 ? (
+//                   <TrendingUp className="h-4 w-4 text-green-500" />
+//                 ) : (
+//                   <TrendingDown className="h-4 w-4 text-red-500" />
+//                 )}
+//                 <span
+//                   className={`text-sm ${
+//                     analyticsData.refundedChange >= 0
+//                       ? "text-green-600"
+//                       : "text-red-600"
+//                   }`}
+//                 >
+//                   {analyticsData.refundedChange >= 0 ? "+" : ""}
+//                   {analyticsData.refundedChange?.toFixed(1) || "0.0"}% from last
+//                   period
+//                 </span>
+//               </div>
+//             </div>
+
+//             <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl p-6 border border-emerald-100">
+//               <div className="flex items-center gap-3 mb-3">
+//                 <div className="bg-emerald-100 p-2 rounded-lg">
+//                   <CheckCircle className="h-5 w-5 text-emerald-600" />
+//                 </div>
+//                 <p className="text-gray-600 font-medium">Net Revenue</p>
+//               </div>
+//               <h3 className="text-2xl font-bold text-gray-900 mb-2">
+//                 {formatPrice(analyticsData?.netRevenue, settings?.currency) ||
+//                   "0"}
+//               </h3>
+//               <div className="flex items-center gap-2">
+//                 {analyticsData.netRevenueChange >= 0 ? (
+//                   <TrendingUp className="h-4 w-4 text-green-500" />
+//                 ) : (
+//                   <TrendingDown className="h-4 w-4 text-red-500" />
+//                 )}
+//                 <span
+//                   className={`text-sm ${
+//                     analyticsData.netRevenueChange >= 0
+//                       ? "text-green-600"
+//                       : "text-red-600"
+//                   }`}
+//                 >
+//                   {analyticsData.netRevenueChange >= 0 ? "+" : ""}
+//                   {analyticsData.netRevenueChange?.toFixed(1) || "0.0"}% from
+//                   last period
+//                 </span>
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* Revenue Chart */}
+//           <div className="mt-6">
+//             <div className="flex justify-between items-center mb-4">
+//               <h4 className="text-gray-700 font-medium">Revenue Trend</h4>
+//               <div className="flex gap-2">
+//                 <button className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-lg">
+//                   Revenue
+//                 </button>
+//               </div>
+//             </div>
+//             <ResponsiveContainer width="100%" height={250}>
+//               <LineChart data={salesData}>
+//                 <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+//                 <XAxis dataKey="name" stroke="#6B7280" fontSize={12} />
+//                 <YAxis
+//                   stroke="#6B7280"
+//                   fontSize={12}
+//                   tickFormatter={(value) =>
+//                     `${formatPrice(
+//                       (value / 1000).toFixed(0),
+//                       settings?.currency
+//                     )}K`
+//                   }
+//                 />
+//                 <Tooltip
+//                   content={<CustomTooltip />}
+//                   contentStyle={{
+//                     backgroundColor: "white",
+//                     border: "1px solid #E5E7EB",
+//                     borderRadius: "8px",
+//                     boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+//                   }}
+//                 />
+//                 <Line
+//                   type="monotone"
+//                   dataKey="revenue"
+//                   stroke="#4F46E5"
+//                   strokeWidth={3}
+//                   dot={{ r: 4 }}
+//                   activeDot={{ r: 6, strokeWidth: 0 }}
+//                 />
+//               </LineChart>
+//             </ResponsiveContainer>
+//           </div>
 //         </div>
-//       </div>
-//     </div>
-//   `;
-
-//   // Plain text fallback
-//   const text = [
-//     `EcoStore — Order Confirmation`,
-//     ` ${order.orderNumber || "N/A"}`,
-//     `Customer: ${customerName}`,
-//     `Total: ${formatter.format(totalAmount)}`,
-//     `Delivery Address: ${order.deliveryAddress || "No address provided"}`,
-//     `Phone: ${order.phone || "No phone provided"}`,
-//     `Payment Status: ${order.paymentStatus || "Confirmed"}`,
-//     `Payment Type: ${payment_type}`,
-//     `Transaction Ref: ${tx_ref}`,
-//     `Transaction ID: ${transaction_id}`,
-//     ``,
-//     `Items:`,
-//     ...items.map(
-//       (it) =>
-//         ` - ${it.quantity || 1} x ${it.name || "Item"} — ${formatter.format(it.price)}`
-//     ),
-//     ``,
-//     `Thanks for shopping with  ${settings?.storeName}!`,
-//   ].join("\n");
-
-//   // Send email
-//   await sendEmail({
-//     to,
-//     subject: ` ${settings?.storeName} — Order Confirmation #${
-//       order.orderNumber || "N/A"
-//     }`,
-//     html,
-//     text,
-//   });
+//       </motion.div>
+//     </>
+//   );
 // };
 
-// // Add this function after sendDetailedOrderEmail
-// export const sendCouponEmail = async ({
-//   to,
-//   coupon,
-//   couponType = "welcome_coupon",
-//   orderCount = 1,
-// }) => {
-//   if (!to || !coupon) return;
-//   const settings = await storeSettings.findOne();
+// // Updated AnalyticsCard component with screenshot-inspired design
+// const AnalyticsCard = ({
+//   title,
+//   value,
+//   icon: Icon,
+//   chartData,
+//   bgColor = "bg-gradient-to-br from-gray-50 to-white",
+//   borderColor = "border-gray-200",
+//   iconColor = "text-gray-600",
+//   iconBg = "bg-gray-100",
+//   subtitle,
+//   dataKey = "count",
+// }) => (
+//   <motion.div
+//     className={`rounded-2xl p-6 shadow-sm border ${borderColor} ${bgColor}`}
+//     initial={{ opacity: 0, y: 10 }}
+//     animate={{ opacity: 1, y: 0 }}
+//     transition={{ duration: 0.3 }}
+//   >
+//     <div className="flex justify-between items-start mb-4">
+//       <div>
+//         <p className="text-gray-600 text-sm font-medium">{title}</p>
+//         <h3 className="text-2xl font-bold text-gray-900 mt-1">{value}</h3>
+//         {subtitle && <p className="text-green-500 text-xs mt-1">{subtitle}</p>}
+//       </div>
+//       <div className={`p-3 rounded-xl ${iconBg}`}>
+//         <Icon className={`h-6 w-6 ${iconColor}`} />
+//       </div>
+//     </div>
 
-//   let subject = "";
-//   let title = "";
-//   let message = "";
-//   let couponValue = `${coupon.discountPercentage}% OFF`;
+//     {chartData && chartData.length > 0 && (
+//       <ResponsiveContainer width="100%" height={60}>
+//         <LineChart data={chartData.slice(-8)}>
+//           <Line
+//             type="monotone"
+//             dataKey={dataKey}
+//             stroke={iconColor.replace("text-", "#")}
+//             strokeWidth={2}
+//             dot={false}
+//           />
+//           <Tooltip content={<MiniChartTooltip />} />
+//         </LineChart>
+//       </ResponsiveContainer>
+//     )}
+//   </motion.div>
+// );
 
-//   // Different email content based on coupon type
-//   switch (couponType) {
-//     case "welcome_coupon":
-//       subject = ` Welcome to ${settings.storeName}! Here's Your ${couponValue} Gift`;
-//       title = `Welcome to the  ${settings.storeName} Family!`;
-//       message = `
-//         <p>Thank you for joining us! To welcome you to our eco-friendly community, 
-//         we're giving you a special discount on your next purchase.</p>
-//         <p>We're thrilled to have you as part of our mission to make the world greener, one purchase at a time.</p>
-//       `;
-//       break;
 
-//     case "loyalty_coupon":
-//       subject = `🌟 Loyalty Reward! ${couponValue} for Being an Amazing Customer`;
-//       title = "You're Amazing! Here's a Thank You Gift";
-//       message = `
-//         <p>Wow! You've already placed ${orderCount} orders with us. We're truly grateful 
-//         for your loyalty and trust in ${settings.storeName}.</p>
-//         <p>As a token of our appreciation, please enjoy this special discount on your next eco-friendly purchase.</p>
-//       `;
-//       break;
 
-//     case "vip_coupon":
-//       subject = `🏆 VIP Treatment! ${couponValue} Exclusive Reward`;
-//       title = `You're Now an ${settings.storeName} VIP!`;
-//       message = `
-//         <p>Congratulations! With ${orderCount} orders, you've officially reached VIP status 
-//         in our eco-friendly community.</p>
-//         <p>Thank you for being such a dedicated supporter of sustainable living. 
-//         Enjoy this exclusive VIP reward!</p>
-//       `;
-//       break;
+// // Add this tooltip component near CustomTooltip and DeliveryTooltip
+// const CouponTooltip = ({ active, payload, label }) => {
+//   const { settings } = useStoreSettings();
 
-//     case "bigspender_coupon":
-//       subject = `💎 Premium Reward! ${couponValue} for Your Generous Order`;
-//       title = "Thank You for Your Generous Purchase!";
-//       message = `
-//         <p>We noticed your recent substantial investment in eco-friendly products, 
-//         and we're deeply grateful for your support!</p>
-//         <p>Your commitment to sustainable shopping helps us continue our mission. 
-//         Please accept this special reward for your next purchase.</p>
-//       `;
-//       break;
+//   if (active && payload && payload.length) {
+//     const data = payload[0]?.payload;
+//     return (
+//       <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
+//         <p className="font-medium text-gray-800 mb-2">{label}</p>
+//         <div className="space-y-2">
+//           <div className="flex justify-between items-center">
+//             <span className="text-gray-600 text-sm">Coupons Used:</span>
+//             <span className="font-medium text-purple-600">
+//               {data?.couponsUsed || 0}
+//             </span>
+//           </div>
+//           <div className="flex justify-between items-center">
+//             <span className="text-gray-600 text-sm">Total Discount:</span>
+//             <span className="font-medium text-amber-600">
+//               {formatPrice(data?.couponDiscount || 0, settings?.currency)}
+//             </span>
+//           </div>
+//           <div className="flex justify-between items-center">
+//             <span className="text-gray-600 text-sm">Avg. Discount:</span>
+//             <span className="font-medium text-green-600">
+//               {data?.couponsUsed > 0
+//                 ? formatPrice((data?.couponDiscount || 0) / data?.couponsUsed, settings?.currency)
+//                 : formatPrice(0, settings?.currency)}
+//             </span>
+//           </div>
+//           <div className="pt-2 border-t border-gray-100">
+//             <div className="flex justify-between items-center">
+//               <span className="text-gray-600 text-sm">Total Orders:</span>
+//               <span className="font-medium text-blue-600">
+//                 {data?.sales || 0}
+//               </span>
+//             </div>
+//             <div className="flex justify-between items-center text-xs text-gray-500 mt-1">
+//               <span>Coupon Rate:</span>
+//               <span>
+//                 {data?.sales > 0 ? ((data?.couponsUsed / data?.sales) * 100).toFixed(1) : 0}%
+//               </span>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   }
+//   return null;
+// };
 
-//     default:
-//       subject = `🎁 Special ${couponValue} Gift from ${settings.storeName}`;
-//       title = "Here's a Special Gift For You!";
-//       message = `
-//         <p>Thank you for being a valued ${settings.storeName} customer! We appreciate your support 
-//         in making sustainable choices.</p>
-//         <p>Enjoy this discount on your next purchase of eco-friendly products.</p>
-//       `;
+// // Add this component in your AnalyticsTab component
+// const DeliveryTooltip = ({ active, payload, label, settings }) => {
+//   if (active && payload && payload.length) {
+//     const data = payload[0]?.payload;
+//     return (
+//       <div className="bg-white p-4 rounded-lg shadow-lg border border-gray-200">
+//         <p className="font-medium text-gray-800 mb-2">{label}</p>
+//         <div className="space-y-2">
+//           <div className="flex justify-between items-center">
+//             <span className="text-gray-600 text-sm">Delivery Fees:</span>
+//             <span className="font-medium text-amber-600">
+//               {formatPrice(data?.deliveryFee || 0, settings?.currency)}
+//             </span>
+//           </div>
+//           <div className="flex justify-between items-center">
+//             <span className="text-gray-600 text-sm">Orders:</span>
+//             <span className="font-medium text-blue-600">
+//               {data?.sales || 0}
+//             </span>
+//           </div>
+//           <div className="flex justify-between items-center">
+//             <span className="text-gray-600 text-sm">Avg. Fee per Order:</span>
+//             <span className="font-medium text-green-600">
+//               {data?.sales > 0
+//                 ? formatPrice(
+//                     (data?.deliveryFee || 0) / data?.sales,
+//                     settings?.currency
+//                   )
+//                 : formatPrice(0, settings?.currency)}
+//             </span>
+//           </div>
+//           <div className="pt-2 border-t border-gray-100">
+//             <div className="flex justify-between items-center">
+//               <span className="text-gray-600 text-sm">Product Revenue:</span>
+//               <span className="font-medium text-purple-600">
+//                 {formatPrice(data?.revenue || 0, settings?.currency)}
+//               </span>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+//     );
+//   }
+//   return null;
+// };
+
+// // Tooltip components
+// const MiniChartTooltip = ({ active, payload }) =>
+//   active && payload && payload.length ? (
+//     <div className="bg-white text-gray-800 text-xs px-2 py-1 rounded-md border border-gray-300 shadow-sm">
+//       {payload[0].value}
+//     </div>
+//   ) : null;
+
+// const CustomTooltip = ({ active, payload, label }) => {
+//   const { settings } = useStoreSettings(); // ✅ hook at top
+
+//   if (!active || !payload || !payload.length) return null;
+
+//   return (
+//     <div className="bg-white border border-gray-300 rounded-lg p-3 text-gray-800 shadow-lg">
+//       <p className="font-semibold text-gray-900 mb-1">{label}</p>
+
+//       {payload.map((item) => (
+//         <p key={item.dataKey} className="text-sm">
+//           <span style={{ color: item.color }}>● </span>
+//           {item.name}:{" "}
+//           <span className="font-semibold">
+//             {formatPrice(item.value, settings?.currency)}
+//           </span>
+//         </p>
+//       ))}
+//     </div>
+//   );
+// };
+
+// /* -----------------------------
+//    Date Label Formatter
+// ----------------------------- */
+// export const formatDateLabel = (item, range) => {
+//   const value =
+//     typeof item === "string" ? item : item?.date || item?.weekStart || item;
+
+//   if (range === "daily") {
+//     if (typeof value === "string" && value.includes("T")) {
+//       const date = new Date(value + ":00:00");
+//       return date.toLocaleTimeString("en-US", {
+//         hour: "numeric",
+//         hour12: true,
+//       });
+//     }
+//     const d = new Date(value);
+//     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 //   }
 
-//   const html = `
-//     <div style="font-family: Arial, sans-serif; background-color: #f0f9f4; padding: 20px;">
-//       <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
-//         <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; text-align: center; color: #fff;">
-//           <img src="${
-//             settings?.logo
-//           }" alt="EcoStore Logo" style="max-height: 50px; display:block; margin: 0 auto 15px;" />
-//           <h1 style="margin:0; font-size: 28px; font-weight: bold;">${title}</h1>
-//           <div style="margin-top: 10px; font-size: 18px; opacity: 0.9;">Your Exclusive Discount Awaits!</div>
-//         </div>
+//   if (range === "weekly") {
+//     const d = new Date(value);
+//     return d.toLocaleDateString("en-US", { weekday: "short" });
+//   }
 
-//         <div style="padding: 30px; color:#333;">
-//           ${message}
+//   if (range === "monthly") {
+//     if (typeof value === "string" && /^\d{4}-\d{2}$/.test(value)) {
+//       return new Date(value + "-01").toLocaleDateString("en-US", {
+//         month: "short",
+//         year: "numeric",
+//       });
+//     }
+//     const d = new Date(value);
+//     return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+//   }
 
-//           <!-- Coupon Code Box -->
-//           <div style="background: linear-gradient(135deg, #fffbeb, #fed7aa); border: 2px dashed #d97706; border-radius: 12px; padding: 25px; text-align: center; margin: 25px 0;">
-//             <div style="font-size: 14px; color: #92400e; margin-bottom: 8px;">YOUR DISCOUNT CODE</div>
-//             <div style="font-size: 32px; font-weight: bold; color: #ea580c; letter-spacing: 3px; margin: 10px 0;">
-//               ${coupon.code}
-//             </div>
-//             <div style="font-size: 20px; color: #dc2626; font-weight: bold; margin: 8px 0;">
-//               ${couponValue}
-//             </div>
-//             <div style="font-size: 14px; color: #92400e;">
-//               Valid until: ${new Date(
-//                 coupon.expirationDate
-//               ).toLocaleDateString()}
-//             </div>
-//           </div>
+//   if (range === "yearly") {
+//     if (typeof value === "string" && /^\d{4}$/.test(value)) return value;
+//     const d = new Date(value);
+//     return d.getFullYear();
+//   }
 
-//           <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-//             <h3 style="margin:0 0 12px 0; color: #1e293b;">✨ How to Use Your Coupon:</h3>
-//             <ol style="margin: 0; padding-left: 20px; color: #475569;">
-//               <li>Shop your favorite eco-friendly products</li>
-//               <li>Proceed to checkout</li>
-//               <li>Enter code <strong style="color: #ea580c;">${
-//                 coupon.code
-//               }</strong> in the coupon field</li>
-//               <li>Enjoy your ${
-//                 coupon.discountPercentage
-//               }% discount instantly!</li>
-//             </ol>
-//           </div>
-
-//           <p style="color: #64748b; font-size: 14px; text-align: center; margin-top: 25px;">
-//             This coupon is exclusively for you and cannot be transferred.
-//           </p>
-
-//           <div style="text-align: center; margin-top: 30px;">
-//             <a href="${process.env.CLIENT_URL}" 
-//                style="background: #10b981; color: white; padding: 14px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
-//               🛍️ Start Shopping Now
-//             </a>
-//           </div>
-//         </div>
-
-//         <div style="background: #1e293b; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
-//           <p style="margin: 0 0 10px 0;">Thank you for choosing sustainable shopping with ${
-//             settings.storeName
-//           } </p>
-//           <p style="margin: 0;">Need help? Contact us at <a href="mailto:${
-//             settings.supportEmail
-//           }" 
-//              style="color: #10b981; text-decoration: none;">${
-//                settings.supportEmail
-//              }</a></p>
-//         </div>
-//       </div>
-//     </div>
-//   `;
-
-//   // Plain text version
-//   const text = `
-// ${title}
-
-// ${message.replace(/<[^>]*>/g, "").trim()}
-
-// YOUR DISCOUNT CODE: ${coupon.code}
-// DISCOUNT: ${couponValue}
-// VALID UNTIL: ${new Date(coupon.expirationDate).toLocaleDateString()}
-
-// How to Use:
-// 1. Shop your favorite eco-friendly products
-// 2. Proceed to checkout
-// 3. Enter code ${coupon.code} in the coupon field
-// 4. Enjoy your ${coupon.discountPercentage}% discount instantly!
-
-// Shop now: ${process.env.CLIENT_URL}
-
-// This coupon is exclusively for you and cannot be transferred.
-
-// Thank you for choosing sustainable shopping with  ${settings.storeName} 
-//   `.trim();
-
-//   await sendEmail({
-//     to,
-//     subject,
-//     html,
-//     text,
+//   const d = new Date(value);
+//   return d.toLocaleDateString("en-US", {
+//     month: "short",
+//     day: "numeric",
+//     year: "numeric",
 //   });
 // };
 
- 
+// export default AnalyticsTab;

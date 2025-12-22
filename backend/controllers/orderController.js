@@ -1500,3 +1500,58 @@ const sendRecoveryOrderEmail = async (to, order, recoveryInfo) => {
     return false;
   }
 };
+
+// Add this temporary route to debug
+export const debugUserOrders = async (req, res) => {
+  try {
+    const userId = "690dd720ab63c6361683a660"; // Your user ID from logs
+    console.log(`🔍 Debugging orders for user: ${userId}`);
+    
+    // Check orders
+    const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
+    console.log(`📊 Total orders found: ${orders.length}`);
+    
+    orders.forEach((order, index) => {
+      console.log(`${index + 1}. ${order.orderNumber}:`);
+      console.log(`   - Status: ${order.status}`);
+      console.log(`   - Payment Status: ${order.paymentStatus}`);
+      console.log(`   - Total: ${order.totalAmount}`);
+      console.log(`   - Created: ${order.createdAt}`);
+      console.log(`   - Is Processed: ${order.isProcessed}`);
+    });
+    
+    // Check coupons
+    const coupons = await Coupon.find({ userId: userId }).sort({ createdAt: -1 });
+    console.log(`🎫 Total coupons found: ${coupons.length}`);
+    
+    coupons.forEach((coupon, index) => {
+      console.log(`${index + 1}. ${coupon.code}:`);
+      console.log(`   - Reason: ${coupon.couponReason}`);
+      console.log(`   - Active: ${coupon.isActive}`);
+      console.log(`   - Used: ${coupon.usedAt ? 'Yes' : 'No'}`);
+      console.log(`   - Expires: ${coupon.expirationDate}`);
+    });
+    
+    return res.status(200).json({
+      orders: orders.length,
+      coupons: coupons.length,
+      details: {
+        orders: orders.map(o => ({
+          orderNumber: o.orderNumber,
+          paymentStatus: o.paymentStatus,
+          totalAmount: o.totalAmount,
+          createdAt: o.createdAt
+        })),
+        coupons: coupons.map(c => ({
+          code: c.code,
+          reason: c.couponReason,
+          isActive: c.isActive,
+          usedAt: c.usedAt
+        }))
+      }
+    });
+  } catch (error) {
+    console.error("Debug error:", error);
+    return res.status(500).json({ error: error.message });
+  }
+};

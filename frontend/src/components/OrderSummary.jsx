@@ -561,7 +561,7 @@ const OrderSummary = () => {
             </dt>
           </dl>
 
-          {savings > 0 && (
+          {coupon && isCouponApplied && (
             <dl className="flex items-center justify-between gap-4">
               <dt className="text-base font-normal text-gray-600">Savings</dt>
               <dt className="text-base font-medium text-black">
@@ -583,9 +583,7 @@ const OrderSummary = () => {
 
           {/* Delivery Fee */}
           <dl className="flex items-center justify-between gap-4">
-            <dt className="text-base font-normal text-gray-600">
-              Shipping
-            </dt>
+            <dt className="text-base font-normal text-gray-600">Shipping</dt>
             <dd
               className="text-base font-medium  text-black
               "
