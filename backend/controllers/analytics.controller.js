@@ -19,15 +19,10 @@ export const getAnalytics = async (range = "weekly") => {
   }
 
   // Calculate previous period for comparison
-  let prevStartDate = null;
-  if (range !== "all" && startDate) {
-    const prevEndDate = new Date(startDate);
-    prevEndDate.setMilliseconds(prevEndDate.getMilliseconds() - 1); // Just before current period starts
-    prevStartDate = getStartDate(range, prevEndDate);
-  }
 
-  console.log("📅 Previous Period Start:", prevStartDate);
-  console.log("📅 Previous Period End:", startDate);
+
+
+ 
 
   // Get current period data
   const analyticsData = await getAnalyticsData(startDate, endDate);
@@ -41,6 +36,7 @@ export const getAnalytics = async (range = "weekly") => {
     visitors: 0,
     grossRevenue: 0,
     totalRefunded: 0,
+    totalAmount: 0,
     totalDeliveryFee: 0,
     netRevenue: 0,
     pendingOrders: 0,
@@ -59,14 +55,17 @@ export const getAnalytics = async (range = "weekly") => {
     couponDiscountRate: 0,
   };
 
-  if (prevStartDate) {
-    try {
-      prevAnalyticsData = await getAnalyticsData(prevStartDate, startDate);
-      console.log("📊 Previous Period Data:", prevAnalyticsData);
-    } catch (error) {
-      console.log("⚠️ Could not fetch previous period data:", error.message);
-    }
-  }
+if (startDate) {
+  const durationMs = endDate.getTime() - startDate.getTime() + 1;
+
+  const prevEndDate = new Date(startDate.getTime() - 1);
+  const prevStartDate = new Date(prevEndDate.getTime() - durationMs + 1);
+
+  console.log("📅 Previous Period Start:", prevStartDate);
+  console.log("📅 Previous Period End:", prevEndDate);
+
+  prevAnalyticsData = await getAnalyticsData(prevStartDate, prevEndDate);
+}
 
   const calculateChange = (current, previous, metricType = "default") => {
     console.log(
@@ -447,34 +446,66 @@ async function getAnalyticsData(startDate, endDate) {
     status: "Partially Refunded",
   });
 
-  // Revenue calculation with date filtering
-  const revenue = await Order.aggregate([
-    {
-      $match: {
-        ...dateFilter,
-        status: { $nin: ["Cancelled"] },
-      },
+  
+const revenue = await Order.aggregate([
+  {
+    $match: {
+      ...dateFilter,
+      status: { $nin: ["Cancelled"] },
     },
+  },
+  {
+    $group: {
+      _id: null,
 
-    {
-      $group: {
-        _id: null,
-        grossRevenue: {
-          $sum: {
-            $cond: [
-              { $gt: ["$subTotal", 0] },
-              "$subTotal",
-              {
-                $subtract: ["$totalAmount", { $ifNull: ["$deliveryFee", 0] }],
-              },
-            ],
-          },
+      grossRevenue: {
+        $sum: {
+          $cond: [
+            // ✅ subTotal already excludes delivery
+            { $gt: ["$subTotal", 0] },
+            {
+              $subtract: [
+                "$subTotal",
+                {
+                  $cond: [
+                    { $gt: ["$discount", 0] },
+                    "$discount",
+                    { $ifNull: ["$coupon.discount", 0] },
+                  ],
+                },
+              ],
+            },
+
+            // ✅ totalAmount includes delivery → remove it
+            {
+              $subtract: [
+                { $ifNull: ["$totalAmount", 0] },
+                {
+                  $add: [
+                    { $ifNull: ["$deliveryFee", 0] },
+                    {
+                      $cond: [
+                        { $gt: ["$discount", 0] },
+                        "$discount",
+                        { $ifNull: ["$coupon.discount", 0] },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
         },
-        totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
-        totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } },
       },
+
+      totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } },
+      totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
     },
-  ]);
+  },
+]);
+
+
+  // ...existing code...
 
   const unitValueData = await Order.aggregate([
     {
