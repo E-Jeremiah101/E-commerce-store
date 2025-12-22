@@ -6,18 +6,17 @@ import {
   Lock,
   Home,
   User,
-  UserCircle,
   Package,
   Menu,
   X,
   Heart,
   Search,
+  ChevronDown,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useUserStore } from "../stores/useUserStore.js";
 import { useCartStore } from "../stores/useCartStore.js";
 import SearchBar from "./SearchBar.jsx";
-import { ChevronUp, ChevronDown } from "lucide-react";
 import UserBadge from "./UserBadge.jsx";
 import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
@@ -25,422 +24,554 @@ const Navbar = () => {
   const { user, logout } = useUserStore();
   const isAdmin = user?.role === "admin";
   const { cart } = useCartStore();
+  const navigate = useNavigate();
+  const { settings } = useStoreSettings();
 
-  const [isOpen, setIsOpen] = useState(false);
-  const [isOpenn, setIsOpenn] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCollectionsOpen, setIsCollectionsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [desktopCollectionsOpen, setDesktopCollectionsOpen] = useState(false);
 
-  const sidebarRef = useRef(null);
-const { settings } = useStoreSettings();
-    useEffect(() => {
-      const handleClickOutside = (event) => {
-        if (sidebarRef.current && !sidebarRef.current.contains(event.target)) {
-          setIsOpen(false);
-        }
-      };
+  const mobileMenuRef = useRef(null);
+  const desktopCollectionsRef = useRef(null);
+  const mobileCollectionsRef = useRef(null);
 
-      if (isOpen) {
-        document.addEventListener("mousedown", handleClickOutside);
-      } else {
-        document.removeEventListener("mousedown", handleClickOutside);
+  const categories = [
+    { name: "Fragrance", path: "/category/Fragrance" },
+    { name: "T-Shirts", path: "/category/t-shirts" },
+    { name: "Suits & Blazers", path: "/category/suits&blazers" },
+    { name: "Jackets & Outerwear", path: "/category/Jackets&Outerwear" },
+    { name: "Underwear & Socks", path: "/category/underwear&socks" },
+    { name: "Footwear", path: "/category/footwears" },
+    { name: "Sets & Co-ords", path: "/category/sets&cords" },
+    { name: "Accessories", path: "/category/Accessories" },
+    { name: "Bottoms", path: "/category/bottoms" },
+  ];
+
+  // Handle scroll effect
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Close mobile menu when clicking outside
+      if (
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target)
+      ) {
+        setIsMobileMenuOpen(false);
       }
 
-      return () =>
-        document.removeEventListener("mousedown", handleClickOutside);
-    }, [isOpen]);
+      // Close desktop collections when clicking outside
+      if (
+        desktopCollectionsRef.current &&
+        !desktopCollectionsRef.current.contains(event.target)
+      ) {
+        setDesktopCollectionsOpen(false);
+      }
 
-  // Toggle Search
+      // Close mobile collections when clicking outside
+      if (
+        mobileCollectionsRef.current &&
+        !mobileCollectionsRef.current.contains(event.target) &&
+        event.target.closest("[data-collections-button]") === null
+      ) {
+        setIsCollectionsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Handle search toggle for both mobile and desktop
   const handleSearchToggle = () => {
     setIsSearchOpen((prev) => !prev);
-    setIsOpen(false); // close menu if search opens
+    if (isMobileMenuOpen) setIsMobileMenuOpen(false);
   };
 
-  // Toggle Menu
-  const handleMenuToggle = () => {
-    setIsOpen((prev) => !prev);
-    setIsSearchOpen(false); // close search if menu opens
+  // Handle mobile menu toggle
+  const handleMobileMenuToggle = () => {
+    setIsMobileMenuOpen((prev) => !prev);
+    if (isSearchOpen) setIsSearchOpen(false);
   };
 
+  // Handle logout
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+    setIsMobileMenuOpen(false);
+  };
+
+  // Close all dropdowns when clicking on a link
+  const handleLinkClick = () => {
+    setIsMobileMenuOpen(false);
+    setIsCollectionsOpen(false);
+    setDesktopCollectionsOpen(false);
+  };
 
   return (
-    <header className="w-full  bg-gradient-to-br from-white via-gray-50 to-gray-200 bg-opacity-90 backdrop-blur-md shadow-lg  fixed lg:static text-black top-0 left-0 z-40 transition-all duration-300 ">
-      {/* Mobile View */}
-
-      <div className="sm:hidden  ">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between ">
-          {/* Left: Logo */}
-          <Link to={"/"} className="flex sm:hidden items-center gap-2">
-            {/* {settings?.logo && (
-              <img
-                src={settings?.logo}
-                alt={settings?.storeName}
-                className="h-10 w-auto"
-              />
-            )} */}
-            <span className="font-bold text-[1.5rem]">
-              {settings?.storeName}
-            </span>
-          </Link>
-
-          {/* Right: Actions */}
-          <div className="flex items-center gap-4 ">
-            {/* Search toggle */}
-            <button
-              onClick={handleSearchToggle}
-              className="text-gray-800 hover:text-gray-400"
-            >
-              {isSearchOpen ? <X size={24} /> : <Search size={24} />}
-            </button>
-
-            {/* Cart */}
-
+    <>
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          isScrolled
+            ? "bg-white/95 backdrop-blur-lg shadow-lg py-2"
+            : "bg-white py-3 border-b border-gray-100"
+        }`}
+      >
+        <div className="container mx-auto px-4">
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center justify-between">
+            {/* Logo */}
             <Link
-              to={"/cart"}
-              className="relative text-gray-800 hover:text-gray-400"
+              to="/"
+              className="flex items-center gap-3 group"
+              onClick={handleLinkClick}
             >
-              <ShoppingCart size={23} />
-              {cart.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-black text-white rounded-full px-2 text-xs">
-                  {cart.length}
-                </span>
-              )}
-            </Link>
-
-            {/* Auth buttons */}
-            {user ? (
-              <button
-                onClick={logout}
-                className="text-white hover:text-gray-300 hidden sm:block"
-              >
-                <LogOut size={22} />
-              </button>
-            ) : (
-              <>
-                <Link
-                  to={"/login"}
-                  className="text-gray-800 hover:text-gray-300"
-                >
-                  <UserPlus size={22} />
-                </Link>
-              </>
-            )}
-
-            {/* Mobile Menu Button */}
-
-            <button
-              onClick={handleMenuToggle}
-              className="md:hidden text-gray-800 hover:text-gray-400"
-            >
-              {isOpen ? <X size={28} className="hidden" /> : <Menu size={28} />}
-            </button>
-          </div>
-        </div>
-        {/* SearchBar */}
-        {isSearchOpen && (
-          <div className="px-4 py-6  bg-gradient-to-br from-white via-gray-100 to-gray-300">
-            <SearchBar />
-          </div>
-        )}
-        {/* Mobile Dropdown */}
-        {isOpen && (
-          <>
-            <div
-              className="md:hidden   bg-gradient-to-br from-white via-gray-100 to-gray-300 px-4 py-3 space-y-9 text-black  text-lg overflow-y-auto h-screen absolute right-15 top-0 left-0 no-scroll "
-              ref={sidebarRef}
-            >
-              {user && (
-                <div className="flex items-center justify-between py-3  ">
-                  <div className="flex  items-center gap-4 tracking-wider">
-                    <UserBadge
-                      name={user?.name || user.firstname + " " + user.lastname}
-                      size="lg"
-                    />
-                  </div>
-                </div>
-              )}
-              {!user && (
-                <div className="flex items-center justify-between tracking-wider pb-2 ">
-                  <div className="flex items-center gap-4">
-                    <UserBadge name="Welcome" size="lg" />
-                  </div>
-                </div>
-              )}
-
-              <Link
-                to={"/"}
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-5 tracking-widest"
-              >
-                <Home size={19} /> Home
-              </Link>
-
-              {user && (
-                <Link
-                  to={"/personal-info"}
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-5 tracking-widest"
-                >
-                  <User size={19} /> Profile
-                </Link>
-              )}
-              {user && (
-                <Link
-                  to={"/order-history"}
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-5 tracking-widest"
-                >
-                  <Package size={19} /> My orders
-                </Link>
-              )}
-
-              <Link
-                to={"/saved"}
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-5 tracking-widest"
-              >
-                <Heart size={19} /> Wishlist
-              </Link>
-
-              <Link
-                to={"/cart"}
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-5 tracking-widest"
-              >
-                <ShoppingCart size={19} /> Cart ({cart.length})
-              </Link>
-
-              {isAdmin && (
-                <Link
-                  to={"/secret-dashboard"}
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-5 tracking-widest"
-                >
-                  <UserCircle size={19} />
-                  Admin Dashboard
-                </Link>
-              )}
-
-              <div className=" border-gray-700 py-3 lg:pr-80  px-4 sm:px-6 ">
-                <button
-                  onClick={() => setIsOpenn(!isOpenn)}
-                  className="flex items-center w-full text-left focus:outline-none"
-                >
-                  <strong className="text-lg font-bold text-black hover:text-gray-800 transition-colors whitespace-nowrap tracking-widest cursor-pointer">
-                    COLLECTIONS
-                  </strong>
-
-                  <span className="text-black font-extrabold  ml-2 transition-transform duration-300 h-7 w-7 flex items-center justify-center  cursor-pointer">
-                    {isOpenn ? (
-                      <ChevronDown size={22} />
-                    ) : (
-                      <ChevronUp size={22} />
-                    )}
+              {settings?.logo ? (
+                <img
+                  src={settings.logo}
+                  alt={settings.storeName}
+                  className="h-10 w-auto transition-transform group-hover:scale-105"
+                />
+              ) : (
+                <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">
+                    {settings?.storeName?.charAt(0) || "S"}
                   </span>
-                </button>
-
-                <div
-                  className={`overflow-hidden transition-all duration-300 ${
-                    isOpenn ? " mt-2" : "max-h-0"
-                  }`}
-                >
-                  <ul className="text-black list-disc list-inside space-y-4 font-serif">
-                    <li>
-                      <Link to={"/category/Fragrance"}>
-                        <span className="hover:text-gray-700">FRAGRANCE</span>
-                      </Link>
-                    </li>
-                    <li>
-                      <Link to={"/category/t-shirts"}>
-                        <span className="hover:text-gray-700">T-SHIRT</span>
-                      </Link>
-                    </li>
-
-                    <li>
-                      <Link to={"/category/suits&blazers"}>
-                        <span className="hover:text-gray-700">
-                          SUITS & BLAZERS
-                        </span>
-                      </Link>
-                    </li>
-
-                    <li>
-                      <Link to={"/category/Jackets&Outerwear"}>
-                        <span className="hover:text-gray-700">
-                          JACKETS & OUTERWEARS
-                        </span>
-                      </Link>
-                    </li>
-
-                    <li>
-                      <Link to={"/category/underwear&socks"}>
-                        <span className="hover:text-gray-700">
-                          UNDERWEAR & SOCKS
-                        </span>
-                      </Link>
-                    </li>
-
-                    <li>
-                      <Link to={"/category/footwears"}>
-                        <span className="hover:text-gray-700">FOOTWEARS</span>
-                      </Link>
-                    </li>
-
-                    <li>
-                      <Link to={"/category/sets&cords"}>
-                        <span className="hover:text-gray-700">
-                          SETS & CO-ORDS
-                        </span>
-                      </Link>
-                    </li>
-
-                    <li>
-                      <Link to={"/category/Accessories"}>
-                        <span className="hover:text-gray-700">ACCESSORIES</span>
-                      </Link>
-                    </li>
-
-                    <li>
-                      <Link to={"/category/bottoms"}>
-                        <span className="hover:text-gray-700">BOTTOMS</span>
-                      </Link>
-                    </li>
-                  </ul>
                 </div>
-              </div>
-
-              {!user && (
-                <>
-                  <Link
-                    to={"/signup"}
-                    onClick={() => setIsOpen(false)}
-                    className="block bg-gray-500 px-4 py-2 rounded-md text-center"
-                  >
-                    Sign Up
-                  </Link>
-                  <Link
-                    to={"/login"}
-                    onClick={() => setIsOpen(false)}
-                    className="block bg-gray-500 px-4 py-2 rounded-md text-center"
-                  >
-                    Login
-                  </Link>
-                </>
               )}
-              {user && (
-                <button
-                  onClick={() => {
-                    logout();
-                    setIsOpen(false);
-                  }}
-                  className="w-full bg-gray-500 px-4 py-2 rounded-md flex items-center justify-center mb-19 text-white"
-                >
-                  <LogOut size={18} /> <span className="ml-2">Log Out</span>
-                </button>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Desktop/Large screen view */}
-      {/* //// /// /// //// //// /// // /// // */}
-      <div className=" hidden container mx-auto px-4 py-3 sm:block items-center justify-between ">
-        {/* Desktop Nav */}
-        <div className="hidden sm:block items-center ">
-          <div className="flex justify-between items-center">
-            {/* Left: Logo */}
-            <Link to={"/"} className="flex items-center gap-2">
-              {/* <img
-                src={settings?.logo}
-                alt={settings?.storeName}
-                className="h-10 w-auto"
-              /> */}
-              <span className=" font-bold text-[1.5rem]">
-                {settings?.storeName}
+              <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                {settings?.storeName || "Store"}
               </span>
             </Link>
 
-            <nav className=" hidden md:flex items-center gap-6  tracking-widest">
-              <Link to={"/"} className="hover:text-gray-300">
+            {/* Navigation Links */}
+            <nav className="flex items-center gap-1">
+              <Link
+                to="/"
+                className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors font-medium"
+                onClick={handleLinkClick}
+              >
                 Home
               </Link>
+
+              {/* Desktop Collections Dropdown */}
+              <div className="relative" ref={desktopCollectionsRef}>
+                <button
+                  onClick={() =>
+                    setDesktopCollectionsOpen(!desktopCollectionsOpen)
+                  }
+                  className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors font-medium flex items-center gap-1"
+                >
+                  Collections
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform duration-200 ${
+                      desktopCollectionsOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {desktopCollectionsOpen && (
+                  <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
+                    {categories.map((category) => (
+                      <Link
+                        key={category.path}
+                        to={category.path}
+                        className="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors font-medium"
+                        onClick={() => {
+                          setDesktopCollectionsOpen(false);
+                          handleLinkClick();
+                        }}
+                      >
+                        {category.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               {user && (
-                <Link to={"/personal-info"} className="hover:text-gray-300">
-                  Profile
-                </Link>
+                <>
+                  <Link
+                    to="/personal-info"
+                    className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors font-medium"
+                    onClick={handleLinkClick}
+                  >
+                    Profile
+                  </Link>
+                  <Link
+                    to="/order-history"
+                    className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors font-medium"
+                    onClick={handleLinkClick}
+                  >
+                    Orders
+                  </Link>
+                </>
               )}
-              {user && (
-                <Link to={"/order-history"} className="hover:text-gray-300">
-                  Orders
-                </Link>
-              )}
+
               <Link
-                to={"/saved"}
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-5 tracking-widest"
+                to="/saved"
+                className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors font-medium"
+                onClick={handleLinkClick}
               >
                 Wishlist
               </Link>
-              {isAdmin && (
-                <Link
-                  to={"/secret-dashboard"}
-                  className="flex items-center gap-1 hover:text-gray-300"
-                >
-                  <Lock size={16} /> Dashboard
-                </Link>
-              )}
             </nav>
 
-            <div>
-              <div className="flex items-center gap-4">
-                {/* Search toggle */}
+            {/* Right Actions */}
+            <div className="flex items-center gap-3">
+              {/* Search - FIXED: Now works on desktop */}
+              <button
+                onClick={handleSearchToggle}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors relative"
+                aria-label="Search"
+              >
+                <Search size={20} />
+                {isSearchOpen && (
+                  <div className="absolute -bottom-1 left-1/2 w-2 h-2 bg-blue-500 rounded-full -translate-x-1/2"></div>
+                )}
+              </button>
+
+              {/* Cart */}
+              <Link
+                to="/cart"
+                className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Shopping Cart"
+                onClick={handleLinkClick}
+              >
+                <ShoppingCart size={20} />
+                {cart.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                    {cart.length}
+                  </span>
+                )}
+              </Link>
+
+              {/* User Actions */}
+              {user ? (
+                <div className="relative group">
+                  <UserBadge
+                    name={user.name || `${user.firstname} ${user.lastname}`}
+                    size="md"
+                    className="cursor-pointer"
+                  />
+                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                    {isAdmin && (
+                      <Link
+                        to="/secret-dashboard"
+                        className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                        onClick={handleLinkClick}
+                      >
+                        <Lock size={16} />
+                        Admin Dashboard
+                      </Link>
+                    )}
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 w-full px-4 py-2 text-red-600 hover:bg-red-50 transition-colors text-left"
+                    >
+                      <LogOut size={16} />
+                      Log Out
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/login"
+                    className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors font-medium"
+                    onClick={handleLinkClick}
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="px-4 py-2 bg-gradient-to-r from-gray-900 to-gray-700 text-white rounded-lg hover:shadow-lg transition-all font-medium"
+                    onClick={handleLinkClick}
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Navigation */}
+          <div className="lg:hidden">
+            <div className="flex items-center justify-between">
+              {/* Mobile Menu Button */}
+              <button
+                onClick={handleMobileMenuToggle}
+                className="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="Menu"
+              >
+                {isMobileMenuOpen ? (
+                  <X size={24} className="animate-in fade-in" />
+                ) : (
+                  <Menu size={24} />
+                )}
+              </button>
+
+              {/* Logo */}
+              <Link
+                to="/"
+                className="flex items-center gap-2"
+                onClick={handleLinkClick}
+              >
+                {settings?.logo ? (
+                  <img
+                    src={settings.logo}
+                    alt={settings.storeName}
+                    className="h-8 w-auto"
+                  />
+                ) : (
+                  <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
+                    <span className="text-white font-bold">
+                      {settings?.storeName?.charAt(0) || "S"}
+                    </span>
+                  </div>
+                )}
+                <span className="font-bold text-gray-900">
+                  {settings?.storeName || "Store"}
+                </span>
+              </Link>
+
+              {/* Mobile Right Actions */}
+              <div className="flex items-center gap-2">
                 <button
                   onClick={handleSearchToggle}
-                  className="text-black hover:text-gray-400"
+                  className="p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors relative"
+                  aria-label="Search"
                 >
-                  {isSearchOpen ? <X size={24} /> : <Search size={24} />}
+                  {isSearchOpen ? (
+                    <X size={20} className="animate-in fade-in" />
+                  ) : (
+                    <Search size={20} />
+                  )}
+                  {isSearchOpen && (
+                    <div className="absolute -bottom-1 left-1/2 w-2 h-2 bg-blue-500 rounded-full -translate-x-1/2"></div>
+                  )}
                 </button>
 
-                {/* Cart */}
-
                 <Link
-                  to={"/cart"}
-                  className="relative text-black hover:text-gray-300"
+                  to="/cart"
+                  className="relative p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Shopping Cart"
+                  onClick={handleLinkClick}
                 >
-                  <ShoppingCart size={22} />
+                  <ShoppingCart size={20} />
                   {cart.length > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-black text-white rounded-full px-2 text-xs">
+                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                       {cart.length}
                     </span>
                   )}
                 </Link>
+              </div>
+            </div>
 
+            {/* Mobile Search Bar */}
+            {isSearchOpen && (
+              <div className="mt-3 animate-in slide-in-from-top duration-200">
+                <SearchBar onSearch={() => setIsSearchOpen(false)} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Desktop Search Bar - FIXED: Now opens properly */}
+        {isSearchOpen && (
+          <div className="hidden lg:block animate-in slide-in-from-top duration-200">
+            <div className="container mx-auto px-4 py-4 bg-white border-t border-gray-100 shadow-sm">
+              <SearchBar onSearch={() => setIsSearchOpen(false)} />
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Mobile Sidebar Menu */}
+      {isMobileMenuOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden animate-in fade-in"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+
+          {/* Sidebar */}
+          <div
+            ref={mobileMenuRef}
+            className="fixed inset-y-0 left-0 w-80 bg-white z-50 shadow-2xl animate-in slide-in-from-left duration-300 lg:hidden overflow-y-auto"
+          >
+            <div className="h-full flex flex-col">
+              {/* Header */}
+              <div className="p-6 border-b border-gray-100">
                 {user ? (
-                  <button
-                    onClick={logout}
-                    className="text-black hover:text-gray-300 hidden sm:block"
-                  >
-                    <LogOut size={22} />
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <UserBadge
+                      name={user.name || `${user.firstname} ${user.lastname}`}
+                      size="lg"
+                    />
+                  </div>
                 ) : (
+                  <div className="flex items-center gap-3">
+                    <UserBadge name="Welcome" size="lg" />
+                    <div>
+                      <p className="font-semibold text-gray-900">Welcome</p>
+                      <p className="text-sm text-gray-500">
+                        Sign in to your account
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Menu Items */}
+              <div className="flex-1 py-4">
+                <nav className="space-y-1">
+                  <Link
+                    to="/"
+                    className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                    onClick={handleLinkClick}
+                  >
+                    <Home size={20} />
+                    <span className="font-medium">Home</span>
+                  </Link>
+
+                  {/* Mobile Collections Accordion - FIXED: Now closes properly */}
+                  <div className="px-6" ref={mobileCollectionsRef}>
+                    <button
+                      data-collections-button
+                      onClick={() => setIsCollectionsOpen(!isCollectionsOpen)}
+                      className="flex items-center justify-between w-full py-3 text-gray-700 hover:text-gray-900 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Package size={20} />
+                        <span className="font-medium">Collections</span>
+                      </div>
+                      <ChevronDown
+                        size={16}
+                        className={`transition-transform duration-200 ${
+                          isCollectionsOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+
+                    <div
+                      className={`overflow-hidden transition-all duration-300 ${
+                        isCollectionsOpen ? "max-h-96" : "max-h-0"
+                      }`}
+                    >
+                      <div className="pl-9 py-2 space-y-1">
+                        {categories.map((category) => (
+                          <Link
+                            key={category.path}
+                            to={category.path}
+                            className="block py-2 px-4 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+                            onClick={() => {
+                              setIsCollectionsOpen(false);
+                              handleLinkClick();
+                            }}
+                          >
+                            {category.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {user && (
+                    <>
+                      <Link
+                        to="/personal-info"
+                        className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                        onClick={handleLinkClick}
+                      >
+                        <User size={20} />
+                        <span className="font-medium">Profile</span>
+                      </Link>
+                      <Link
+                        to="/order-history"
+                        className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                        onClick={handleLinkClick}
+                      >
+                        <Package size={20} />
+                        <span className="font-medium">My Orders</span>
+                      </Link>
+                    </>
+                  )}
+
+                  <Link
+                    to="/saved"
+                    className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                    onClick={handleLinkClick}
+                  >
+                    <Heart size={20} />
+                    <span className="font-medium">Wishlist</span>
+                  </Link>
+
+                  {isAdmin && (
+                    <Link
+                      to="/secret-dashboard"
+                      className="flex items-center gap-3 px-6 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                      onClick={handleLinkClick}
+                    >
+                      <Lock size={20} />
+                      <span className="font-medium">Admin Dashboard</span>
+                    </Link>
+                  )}
+                </nav>
+              </div>
+
+              {/* Footer/Auth Actions */}
+              <div className="p-6 border-t border-gray-100 space-y-3">
+                {!user ? (
                   <>
-                    <Link to={"/login"} className="text-black ">
-                      <UserPlus size={22} />
+                    <Link
+                      to="/login"
+                      className="block w-full text-center py-3 bg-gradient-to-r from-gray-900 to-gray-700 text-white rounded-lg font-medium hover:shadow-lg transition-all"
+                      onClick={handleLinkClick}
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      to="/signup"
+                      className="block w-full text-center py-3 border-2 border-gray-900 text-gray-900 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                      onClick={handleLinkClick}
+                    >
+                      Create Account
                     </Link>
                   </>
+                ) : (
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center justify-center gap-2 w-full py-3 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors font-medium"
+                  >
+                    <LogOut size={18} />
+                    Log Out
+                  </button>
                 )}
               </div>
             </div>
           </div>
-        </div>
-        {/* SearchBar */}
-      </div>
-      {isSearchOpen && (
-        <div className="px-4 py-6 bg-black hidden sm:block">
-          <SearchBar />
-        </div>
+        </>
       )}
-    </header>
+
+      {/* Spacer to prevent content from being hidden under fixed navbar */}
+      <div
+        className={`h-${isSearchOpen ? "32" : "16"} lg:h-${
+          isSearchOpen ? "28" : "20"
+        }`}
+      />
+    </>
   );
 };
 
