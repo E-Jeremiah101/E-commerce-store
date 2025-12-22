@@ -32,6 +32,14 @@ const couponSchema = new mongoose.Schema(
       enum: ["first_order", "high_value_order"],
       required: true,
     },
+    isReserved: { type: Boolean, default: false },
+    reservedForOrder: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Order",
+      default: null,
+    },
+    reservationId: { type: String, default: null },
+    reservationExpiresAt: { type: Date, default: null },
     usedAt: {
       type: Date,
       default: null,

@@ -148,7 +148,7 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
     await session.endSession();
   }
 }
-
+ 
 async function releaseInventory(reservationId) {
   // Check if we've already processed this release
   const alreadyReleased = await getReleasedReservation(reservationId);
@@ -157,11 +157,15 @@ async function releaseInventory(reservationId) {
     return;
   }
 
+  //add this, might chang later
+  await releaseCoupon(reservationId);
+
   const reservation = await getReservation(reservationId);
   if (!reservation) {
     console.log(`No reservation found: ${reservationId}`);
     return;
   }
+
 
   console.log(`🔄 Releasing reservation: ${reservationId}`);
 
@@ -366,6 +370,25 @@ async function confirmInventory(reservationId) {
     await session.endSession();
   }
 }
+
+// Helper function to release both inventory and coupon together
+async function releaseCheckoutResources(reservationId) {
+  if (!reservationId) return;
+  
+  try {
+    console.log(`🔄 Releasing checkout resources for: ${reservationId}`);
+    
+    // Release coupon first
+    await releaseCoupon(reservationId);
+    
+    // Then release inventory (which already calls releaseCoupon, but that's okay - it will handle duplicates)
+    await releaseInventory(reservationId);
+    
+    console.log(`✅ Successfully released all resources for: ${reservationId}`);
+  } catch (error) {
+    console.error("❌ Error releasing checkout resources:", error);
+  }
+}
 setInterval(async () => {
   console.log("🕒 Running Redis reservation cleanup...");
 
@@ -458,172 +481,148 @@ setInterval(async () => {
     } else {
       console.log("✅ No expired or stuck reservations found");
     }
+
+
+    //add this, might change later
+    const expiredCoupons = await Coupon.updateMany(
+      {
+        isReserved: true,
+        reservationExpiresAt: { $lt: new Date() },
+        usedAt: null,
+      },
+      {
+        isReserved: false,
+        reservationId: null,
+        reservationExpiresAt: null,
+      }
+    );
+
+    if (expiredCoupons.modifiedCount > 0) {
+      console.log(
+        `✅ Released ${expiredCoupons.modifiedCount} expired coupon reservations`
+      );
+    }
   } catch (error) {
     console.error("❌ Error in reservation cleanup:", error);
   }
 }, 300000);
+async function reserveCoupon(
+  userId,
+  couponCode,
+  reservationId,
+  timeoutMinutes = 4
+) {
+  if (!couponCode || !couponCode.trim()) return null;
 
+  const couponCodeUpper = couponCode.trim().toUpperCase();
+  const session = await mongoose.startSession();
+
+  try {
+    await session.withTransaction(async () => {
+      const coupon = await Coupon.findOne({
+        code: couponCodeUpper,
+        userId: userId,
+        isActive: true,
+        expirationDate: { $gt: new Date() },
+        usedAt: null,
+        isReserved: false, // Not already reserved
+      }).session(session);
+
+      if (!coupon) {
+        throw new Error(`Coupon ${couponCode} not available`);
+      }
+
+      // Reserve the coupon
+      coupon.isReserved = true;
+      coupon.reservationId = reservationId;
+      coupon.reservationExpiresAt = new Date(
+        Date.now() + timeoutMinutes * 60 * 1000
+      );
+
+      await coupon.save({ session });
+      console.log(
+        `✅ Coupon ${couponCode} reserved for reservation ${reservationId}`
+      );
+    });
+
+    return true;
+  } catch (error) {
+    console.error("❌ Coupon reservation failed:", error);
+    throw error;
+  } finally {
+    await session.endSession();
+  }
+}
+
+async function releaseCoupon(reservationId) {
+  try {
+    const coupon = await Coupon.findOneAndUpdate(
+      {
+        reservationId: reservationId,
+        isReserved: true,
+        usedAt: null,
+      },
+      {
+        isReserved: false,
+        reservationId: null,
+        reservationExpiresAt: null,
+      },
+      { new: true }
+    );
+
+    if (coupon) {
+      console.log(
+        `✅ Coupon ${coupon.code} released from reservation ${reservationId}`
+      );
+    }
+  } catch (error) {
+    console.error("❌ Error releasing coupon:", error);
+  }
+}
+
+async function confirmCouponUsage(userId, couponCode, orderNumber) {
+  if (!couponCode || !couponCode.trim()) return null;
+
+  const couponCodeUpper = couponCode.trim().toUpperCase();
+
+  try {
+    const usedCoupon = await Coupon.findOneAndUpdate(
+      {
+        code: couponCodeUpper,
+        userId: userId,
+        isActive: true,
+        isReserved: true,
+        usedAt: null,
+      },
+      {
+        isActive: false,
+        isReserved: false,
+        usedAt: new Date(),
+        usedInOrder: orderNumber,
+        reservationId: null,
+        reservationExpiresAt: null,
+      },
+      { new: true }
+    );
+
+    if (usedCoupon) {
+      console.log(
+        `✅ Coupon ${couponCode} confirmed as used for order ${orderNumber}`
+      );
+      return usedCoupon;
+    }
+    return null;
+  } catch (error) {
+    console.error("❌ Error confirming coupon usage:", error);
+    return null;
+  }
+}
 // Helper function to check if a product has active Redis reservations
 async function checkProductHasActiveReservation(product, activeReservationIds) {
 
   return activeReservationIds.size > 0;
 }
  
-// async function checkCouponEligibility(userId, orderAmount) {
-//   try {
-//     const orderCount = await Order.countDocuments({
-//       user: userId,
-//       paymentStatus: "paid",
-   
-
-//           // IMPORTANT: Exclude orders created in the last 5 minutes to avoid counting current order
-//       // createdAt: { $lt: new Date(Date.now() - 5 * 60 * 1000) }
-//     });
-
-//     console.log(
-//       `Checking coupon eligibility for user ${userId}: ${orderCount} orders, ${orderAmount}`
-//     );
-
-//     const activeCoupon = await Coupon.findOne({
-//       userId: userId,
-//       isActive: true,
-//       expirationDate: { $gt: new Date() },
-//     });
-
-//     if (activeCoupon) {
-//       console.log(
-//         `[COUPON DEBUG] User ${userId} already has active coupon: ${activeCoupon.code} (expires: ${activeCoupon.expirationDate})`
-//       );
-//       return null;
-//     }
-
-//     const hasReceivedFirstOrderCoupon = await Coupon.exists({
-//       userId: userId,
-//       couponReason: "first_order",
-//     });
-
-//     if (orderCount === 0 && !hasReceivedFirstOrderCoupon) {
-//       console.log(`User ${userId} eligible for FIRST ORDER coupon`);
-//       return {
-//         discountPercentage: 10,
-//         codePrefix: "WELCOME",
-//         reason: "first_order",
-//         emailType: "welcome_coupon",
-//       };
-//     } else if (orderCount === 2) {
-//       console.log(`User ${userId} eligible for THIRD ORDER coupon`);
-//       return {
-//         discountPercentage: 15,
-//         codePrefix: "LOYAL",
-//         reason: "third_order_milestone",
-//         emailType: "loyalty_coupon",
-//       };
-//     } else if (orderCount > 0 && (orderCount + 1) % 5 === 0) {
-//       console.log(
-//         `[COUPON DEBUG] User ${userId} eligible for VIP coupon (making ${
-//           orderCount + 1
-//         }th order)`
-//       );
-//       return {
-//         discountPercentage: 20,
-//         codePrefix: "VIP",
-//         reason: "every_five_orders",
-//         emailType: "vip_coupon",
-//       };
-//     } else if (orderAmount > 4) {
-//       console.log(
-//         `User ${userId} eligible for BIG SPENDER coupon (${orderAmount})`
-//       );
-//       return {
-//         discountPercentage: 15,
-//         codePrefix: "BIGSPEND",
-//         reason: "high_value_order",
-//         emailType: "bigspender_coupon",
-//       };
-//     }
-
-//     console.log(
-//       `User ${userId} not eligible for coupon (${orderCount} orders, ${orderAmount})`
-//     );
-//     return null;
-//   } catch (error) {
-//     console.error("Error checking coupon eligibility:", error);
-//     return null;
-//   }
-// }
-
-
-//new
-// async function checkCouponEligibility(userId, orderAmount) {
-//   try {
-//     console.log(
-//       `🔍 Checking coupon eligibility for user ${userId}, order amount: ${orderAmount}`
-//     );
-
-//     // Check if user already has an active coupon
-//     const activeCoupon = await Coupon.findOne({
-//       userId: userId,
-//       isActive: true,
-//       expirationDate: { $gt: new Date() },
-//     });
-
-//     if (activeCoupon) {
-//       console.log(
-//         `❌ User ${userId} already has active coupon: ${activeCoupon.code}`
-//       );
-//       return null;
-//     }
-
-//     // Count completed orders for this user (exclude current order)
-//     const orderCount = await Order.countDocuments({
-//       user: userId,
-//       paymentStatus: "paid",
-//     });
-
-//     console.log(`📊 User ${userId} has ${orderCount} previous orders`);
-
-//     // Check for first order coupon eligibility
-//     const hasReceivedFirstOrderCoupon = await Coupon.exists({
-//       userId: userId,
-//       couponReason: "first_order",
-//     });
-
-//     // FIRST ORDER COUPON: User has never ordered before AND never received first order coupon
-//     if (orderCount === 0 && !hasReceivedFirstOrderCoupon) {
-//       console.log(
-//         `✅ User ${userId} eligible for FIRST ORDER coupon (first time customer)`
-//       );
-//       return {
-//         discountPercentage: 10,
-//         codePrefix: "WELCOME",
-//         reason: "first_order",
-//         emailType: "welcome_coupon", 
-//       };
-//     }
-
-//     // HIGH VALUE ORDER COUPON: Check if order amount qualifies
-//     // Note: Assuming orderAmount is in thousands (like 5 for N5000)
-//     const highValueThreshold = 4; // N4000 or more
-
-//     if (orderAmount > highValueThreshold) {
-//       console.log(
-//         `✅ User ${userId} eligible for HIGH VALUE ORDER coupon (order > ${highValueThreshold})`
-//       );
-//           return {
-//             discountPercentage: 15,
-//             codePrefix: "BIGSPEND",
-//             reason: "high_value_order",
-//             emailType: "bigspender_coupon", // Make sure this matches
-//           }; 
-//     } 
- 
-//     console.log(`❌ User ${userId} not eligible for any coupon`);
-//     return null;
-//   } catch (error) {
-//     console.error("❌ Error checking coupon eligibility:", error);
-//     return null;
-//   }
-// }
 
 async function checkCouponEligibility(userId, orderAmount) {
   try {
@@ -697,112 +696,6 @@ async function checkCouponEligibility(userId, orderAmount) {
   }
 }
 
-// async function createNewCoupon(userId, options = {}) {
-//   const {
-//     discountPercentage = 10,
-//     daysValid = 30,
-//     couponType = "GIFT",
-//     reason = "general",
-//   } = options;
-
-//   try {
-//     console.log(`Starting coupon creation for user ${userId}...`);
-
-//     const newCode =
-//       couponType + Math.random().toString(36).substring(2, 8).toUpperCase();
-
-//     console.log(`Generated coupon code: ${newCode}`);
-
-//     const coupon = await Coupon.findOneAndUpdate(
-//       { userId: userId },
-//       {
-//         code: newCode,
-//         discountPercentage,
-//         expirationDate: new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000),
-//         isActive: true,
-//         couponReason: reason,
-//         deactivatedAt: null,
-//         deactivationReason: null,
-//         usedAt: null,
-//         usedInOrder: null,
-//       },
-//       {
-//         upsert: true,
-//         new: true,
-//         runValidators: true,
-//         setDefaultsOnInsert: true,
-//       }
-//     );
-
-//     console.log(
-//       `Successfully ${coupon.isNew ? "CREATED" : "UPDATED"} coupon: ${
-//         coupon.code
-//       } for user ${userId}`
-//     );
-//     return coupon;
-//   } catch (error) {
-//     console.error("Failed to create/update coupon:", error);
-//     return null;
-//   }
-// }
-
-
-//new
-// async function createNewCoupon(userId, options = {}) {
-//   const {
-//     discountPercentage = 10,
-//     daysValid = 30,
-//     reason = "first_order",
-//   } = options;
-
-//   try {
-//     console.log(`🎫 Creating coupon for user ${userId}, reason: ${reason}`);
-
-//     // Generate coupon code based on reason
-//     let codePrefix = "GIFT";
-//     if (reason === "first_order") {
-//       codePrefix = "WELCOME";
-//     } else if (reason === "high_value_order") {
-//       codePrefix = "BIGSPEND";
-//     }
-
-//     // Generate unique coupon code
-//     const randomSuffix = Math.random()
-//       .toString(36)
-//       .substring(2, 8)
-//       .toUpperCase();
-//     const newCode = `${codePrefix}${randomSuffix}`;
-
-//     console.log(`📝 Generated coupon code: ${newCode} for ${reason}`);
-
-//     // Create the coupon
-//     const coupon = new Coupon({
-//       code: newCode,
-//       discountPercentage,
-//       expirationDate: new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000),
-//       userId: userId,
-//       couponReason: reason,
-//       isActive: true,
-//     });
-
-//     await coupon.save();
-
-//     console.log(
-//       `✅ Successfully created coupon: ${coupon.code} for user ${userId}`
-//     );
-//     return coupon;
-//   } catch (error) {
-//     console.error("❌ Failed to create coupon:", error);
-
-//     // Handle duplicate code error
-//     if (error.code === 11000) {
-//       console.log(`🔄 Duplicate coupon code, retrying...`);
-//       return createNewCoupon(userId, options); // Retry with new code
-//     }
-
-//     return null;
-//   }
-// }
 
 async function createNewCoupon(userId, options = {}) {
   const {
@@ -957,11 +850,17 @@ async function processOrderCreation(transactionData) {
       products,
       subtotal: Number(meta.originalTotal) || Number(data.amount) || 0,
       discount: Number(meta.discountAmount) || 0,
-      deliveryFee: Number(meta.deliveryFee) || 0, 
+      deliveryFee: Number(meta.deliveryFee) || 0,
       deliveryZone: meta.deliveryZone || "Same City",
       totalAmount: Number(meta.finalTotal) || Number(data.amount) || 0,
       orderNumber: generateOrderNumber(),
       couponCode: couponCode || null,
+      coupon: couponCode
+        ? {
+            code: couponCode,
+            discount: Number(meta.discountAmount) || 0,
+          }
+        : undefined,
       deliveryAddress: meta.deliveryAddress || "No address provided",
       phone: meta.phoneNumber || "No phone provided",
       flutterwaveRef: tx_ref,
@@ -980,40 +879,14 @@ async function processOrderCreation(transactionData) {
       await confirmInventory(reservationId);
     }
 
+    //Chane this, might change later
+    if (couponCode?.trim()) {
+      await confirmCouponUsage(userId, couponCode, order.orderNumber);
+    }
     // 4. CLEAR CART
     await User.findByIdAndUpdate(userId, { cartItems: [] });
 
-    // 5. HANDLE COUPON APPLICATION (if coupon was used in this order)
-   if (couponCode?.trim()) {
-     const couponCodeUpper = couponCode.trim().toUpperCase();
-
-     try {
-       const usedCoupon = await Coupon.findOneAndUpdate(
-         {
-           code: couponCodeUpper,
-           userId: userId,
-           isActive: true,
-           usedAt: null, // Ensure it hasn't been used
-         },
-         {
-           isActive: false,
-           usedAt: new Date(),
-           usedInOrder: order.orderNumber,
-         },
-         { new: true }
-       );
-
-       if (usedCoupon) {
-         console.log(
-           `✅ Coupon ${couponCode} marked as used for order ${order.orderNumber}`
-         );
-       } else {
-         console.log(`⚠️ Coupon ${couponCode} not found or already used`);
-       }
-     } catch (error) {
-       console.error("❌ Error updating coupon usage:", error);
-     }
-   }
+   
 
     return { order, isNew: true };
   } catch (error) {
@@ -1177,13 +1050,14 @@ export const createCheckoutSession = async (req, res) => {
       try {
         const couponCodeUpper = couponCode.trim().toUpperCase();
 
-        // Check if coupon exists and is valid
+
         validCoupon = await Coupon.findOne({
           code: couponCodeUpper,
           userId: userId,
           isActive: true,
           expirationDate: { $gt: new Date() },
-          usedAt: null, // Not used yet
+          usedAt: null,
+          isReserved: false, // Not already reserved
         });
 
         if (validCoupon) {
@@ -1214,19 +1088,46 @@ export const createCheckoutSession = async (req, res) => {
     
     const reservationId = `res_${tx_ref}`;
     try {
-      await reserveInventory(products, reservationId, 30); 
+      await reserveInventory(products, reservationId, 3); 
       console.log(`✅ Inventory reserved: ${reservationId}`);
+
+      //add this can change later
+      if (validCoupon) {
+        await reserveCoupon(userId, couponCode, reservationId, 3);
+      }
     } catch (reservationError) {
       console.error("❌ Inventory reservation failed:", reservationError);
+
+      //add this, can change later
+      try {
+        await releaseInventory(reservationId);
+        await releaseCoupon(reservationId);
+      } catch (releaseError) {
+        console.error("Failed to release after failure:", releaseError);
+      }
+
       return res.status(400).json({
         error:
           "Some items in your cart are no longer available. Please refresh your cart and try again.",
       });
     }
 
+    console.log("💰 FINAL CALCULATION:");
+    console.log(`   Original Total: ${originalTotal} NGN`);
+    console.log(`   Discount Amount: ${discountAmount} NGN`);
+    console.log(`   Delivery Fee: ${finalDeliveryFee} NGN`);
+    console.log(`   Final Total (Naira): ${finalTotal} NGN`);
+    console.log(`   Amount to Flutterwave (kobo): ${finalTotal * 100} kobo`);
+    console.log(`   Coupon Code: ${couponCode || "None"}`);
+    console.log(`   Valid Coupon: ${validCoupon ? "Yes" : "No"}`);
+    if (validCoupon) {
+      console.log(`   Coupon Details: ${validCoupon.discountPercentage}% off`);
+    }
+ 
+
     const payload = {
       tx_ref,
-      amount: finalTotal,
+      amount: finalTotal ,
       currency: "NGN",
       redirect_url: `${process.env.CLIENT_URL}/purchase-success`,
       customer: {
@@ -1285,8 +1186,8 @@ export const createCheckoutSession = async (req, res) => {
       response?.data?.data?.link || response?.data?.data?.authorization_url;
 
     if (!link) {
-      // Release inventory if payment initialization fails
-      await releaseInventory(reservationId);
+      // Release BOTH inventory AND coupon if payment initialization fails
+      await releaseCheckoutResources(reservationId);
       console.error("No payment link returned by Flutterwave:", response.data);
       return res.status(500).json({ message: "Failed to initialize payment" });
     }
@@ -1312,6 +1213,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
   let transaction_id; // DECLARE IT HERE
   let lockAcquired = false;
+  let reservationId;
 
   try {
     const signature = req.headers["verif-hash"];
@@ -1355,6 +1257,9 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     const tx_ref = event.data?.tx_ref;
     const status = event.data?.status;
     const paymentType = event.data?.payment_type;
+    reservationId = event.data?.meta?.reservationId;
+
+    console.log(`🔄 Processing webhook for reservation: ${reservationId}`);
 
     // For bank transfers, be more flexible with status values
     if (paymentType === "banktransfer" || paymentType === "bank_transfer") {
@@ -1371,7 +1276,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
         // Release inventory
         const reservationId = event.data?.meta?.reservationId;
         if (reservationId) {
-          await releaseInventory(reservationId);
+          await releaseCheckoutResources(reservationId);
         }
 
         return res.status(200).send("Bank transfer not completed");
@@ -1385,7 +1290,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
         const reservationId = event.data?.meta?.reservationId;
         if (reservationId) {
-          await releaseInventory(reservationId);
+          await releaseCheckoutResources(reservationId);
         }
 
         return res.status(200).send("Payment not successful");
@@ -1429,9 +1334,9 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       );
 
       // Release any reserved inventory
-      const reservationId = event.data?.meta?.reservationId;
+      
       if (reservationId) {
-        await releaseInventory(reservationId);
+        await releaseCheckoutResources(reservationId);
       }
 
       return res.status(200).send("Order already processed");
@@ -1462,9 +1367,8 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       console.error(`Webhook verification failed for: ${transaction_id}`);
 
       // Release inventory if verification fails
-      const reservationId = event.data?.meta?.reservationId;
       if (reservationId) {
-        await releaseInventory(reservationId);
+        await releaseCheckoutResources(reservationId);
       }
 
       return res.status(400).send("Payment verification failed");
@@ -1504,7 +1408,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     let userId = meta_data.userId;
     const couponCode = meta_data.couponCode || "";
-    const reservationId = meta_data.reservationId;
+    reservationId = meta_data.reservationId || reservationId;
     const originalTotal =
       Number(meta_data.originalTotal) || Number(data.amount) || 0;
     const discountAmount = Number(meta_data.discountAmount) || 0;
@@ -1521,7 +1425,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
       // Release inventory if no user ID
       if (reservationId) {
-        await releaseInventory(reservationId);
+        await releaseCheckoutResources(reservationId);
       }
 
       return res.status(400).send("Missing userId");
@@ -1542,7 +1446,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
       // Release inventory
       if (reservationId) {
-        await releaseInventory(reservationId);
+        await releaseCheckoutResources(reservationId);
       }
 
       return res.status(200).send("Order already processed");
@@ -1659,7 +1563,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
       // Release inventory if transaction fails
       if (reservationId) {
-        await releaseInventory(reservationId);
+        await releaseCheckoutResources(reservationId);
       }
 
       throw transactionError;
@@ -1673,9 +1577,8 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     console.error(`Webhook processing error:`, err);
 
     // Release inventory on error
-    const reservationId = req.body?.data?.meta?.reservationId;
     if (reservationId) {
-      await releaseInventory(reservationId);
+      await releasereleaseCheckoutResourcesInventory(reservationId);
     }
 
     return res.status(500).send("Webhook processing failed");
@@ -1901,7 +1804,7 @@ export const checkoutSuccess = async (req, res) => {
     // Release inventory on failure
     const reservationId = req.body.meta?.reservationId;
     if (reservationId) {
-      await releaseInventory(reservationId);
+      await releaseCheckoutResources(reservationId);
     }
 
     return res.status(500).json({

@@ -447,7 +447,66 @@ async function getAnalyticsData(startDate, endDate) {
   });
 
   
-const revenue = await Order.aggregate([
+// const revenue = await Order.aggregate([
+//   {
+//     $match: {
+//       ...dateFilter,
+//       status: { $nin: ["Cancelled"] },
+//     },
+//   },
+//   {
+//     $group: {
+//       _id: null,
+
+//       grossRevenue: {
+//         $sum: {
+//           $cond: [
+//             // ✅ subTotal already excludes delivery
+//             { $gt: ["$subTotal", 0] },
+//             {
+//               $subtract: [
+//                 "$subTotal",
+//                 {
+//                   $cond: [
+//                     { $gt: ["$discount", 0] },
+//                     "$discount",
+//                     { $ifNull: ["$coupon.discount", 0] },
+//                   ],
+//                 },
+//               ],
+//             },
+
+//             // ✅ totalAmount includes delivery → remove it
+//             {
+//               $subtract: [
+//                 { $ifNull: ["$totalAmount", 0] },
+//                 {
+//                   $add: [
+//                     { $ifNull: ["$deliveryFee", 0] },
+//                     {
+//                       $cond: [
+//                         { $gt: ["$discount", 0] },
+//                         "$discount",
+//                         { $ifNull: ["$coupon.discount", 0] },
+//                       ],
+//                     },
+//                   ],
+//                 },
+//               ],
+//             },
+//           ],
+//         },
+//       },
+
+//       totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } },
+//       totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
+//     },
+//   },
+// ]);
+
+
+ 
+  const revenue = await Order.aggregate([
   {
     $match: {
       ...dateFilter,
@@ -457,56 +516,30 @@ const revenue = await Order.aggregate([
   {
     $group: {
       _id: null,
-
+      // If subtotal exists, use it (it should already exclude discount)
+      // If not, calculate from totalAmount
       grossRevenue: {
         $sum: {
           $cond: [
-            // ✅ subTotal already excludes delivery
             { $gt: ["$subTotal", 0] },
-            {
-              $subtract: [
-                "$subTotal",
-                {
-                  $cond: [
-                    { $gt: ["$discount", 0] },
-                    "$discount",
-                    { $ifNull: ["$coupon.discount", 0] },
-                  ],
-                },
-              ],
-            },
-
-            // ✅ totalAmount includes delivery → remove it
+            "$subTotal", // subtotal should already exclude discount
             {
               $subtract: [
                 { $ifNull: ["$totalAmount", 0] },
-                {
-                  $add: [
-                    { $ifNull: ["$deliveryFee", 0] },
-                    {
-                      $cond: [
-                        { $gt: ["$discount", 0] },
-                        "$discount",
-                        { $ifNull: ["$coupon.discount", 0] },
-                      ],
-                    },
-                  ],
-                },
+                { $ifNull: ["$deliveryFee", 0] },
               ],
             },
           ],
         },
       },
-
       totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } },
       totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
+      // Calculate total discount for verification
+      totalDiscountFromDiscountField: { $sum: "$discount" },
+      totalDiscountFromCouponField: { $sum: "$coupon.discount" },
     },
   },
 ]);
-
-
-  // ...existing code...
-
   const unitValueData = await Order.aggregate([
     {
       $match: {
