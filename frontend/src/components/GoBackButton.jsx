@@ -68,7 +68,6 @@ export default function GoBackButton() {
         size={25}
         className={`mr-2 ${isNavigating ? "animate-pulse" : ""}`}
       />
-      <span className="text-sm font-medium hidden sm:inline">Back</span>
     </button>
   );
 }

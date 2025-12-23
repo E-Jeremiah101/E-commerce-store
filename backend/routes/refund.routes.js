@@ -4,8 +4,11 @@ import {
   requestRefund,
   getAllRefundRequests,
   approveRefund,
-  rejectRefund,
+  rejectRefund, 
   retryWebhook,
+  checkRefundStatus,
+  pollRefundStatus,
+  fixStuckRefunds,
 } from "../controllers/refund.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
@@ -30,7 +33,18 @@ router.put(
   rejectRefund
 );
 router.post("/webhook/retry", adminRoute, retryWebhook);
-
-
+router.get(
+  "/:orderId/:refundId/status",
+  protectRoute,
+  adminRoute,
+  checkRefundStatus
+);
+router.get(
+  "/:orderId/:refundId/poll",
+  protectRoute,
+  adminRoute,
+  pollRefundStatus
+);
+router.post("/fix-stuck", protectRoute, adminRoute, fixStuckRefunds);
 
 export default router;

@@ -24,6 +24,7 @@ const AdminRefundsTab = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+
   // Fetch all refund requests
   useEffect(() => {
     const fetchRefunds = async () => {
@@ -98,7 +99,6 @@ const AdminRefundsTab = () => {
     }
   };
 
-  // Approve refund
   const handleApprove = async (orderId, refundId) => {
     try {
       setLoadingStates((prev) => ({ ...prev, [refundId]: "approving" }));
@@ -107,21 +107,53 @@ const AdminRefundsTab = () => {
         `/refunds/${orderId}/${refundId}/approve`
       );
 
-      // Show success toast with processing message
+      // Show success toast
       toast.success(response.data.message || "Refund initiated successfully");
 
-      // Update UI to show Processing state
+      // Update UI immediately
       setRefunds((prev) =>
         prev.map((r) =>
           r.refundId === refundId
             ? {
                 ...r,
-                status: "Processing", // Show as Processing, not Approved
+                status: response.data.currentStatus, // Use the status from response
                 processedAt: new Date().toISOString(),
+                flutterwaveRefundId: response.data.flutterwaveRefundId,
               }
             : r
         )
       );
+
+      // If status is still Processing, start polling
+      if (response.data.currentStatus === "Processing") {
+        // Poll for status updates
+        const pollInterval = setInterval(async () => {
+          try {
+            const pollResponse = await axios.get(
+              `/refunds/${orderId}/${refundId}/poll`
+            );
+
+            if (pollResponse.data.updated) {
+              // Status was updated, refresh the list
+              fetchRefundsSilently();
+              clearInterval(pollInterval);
+
+              // Show success message if now Approved
+              if (pollResponse.data.currentStatus === "Approved") {
+                toast.success("Refund completed successfully!");
+              }
+            }
+          } catch (pollError) {
+            console.error("Polling failed:", pollError);
+            clearInterval(pollInterval);
+          }
+        }, 10000); // Poll every 10 seconds
+
+        // Stop polling after 5 minutes
+        setTimeout(() => {
+          clearInterval(pollInterval);
+        }, 300000);
+      }
     } catch (err) {
       console.error("Initiate refund failed:", err);
       toast.error(err.response?.data?.message || "Failed to initiate refund");
@@ -166,6 +198,30 @@ const AdminRefundsTab = () => {
     } catch (err) {
       console.error("Reject refund failed:", err);
       toast.error(err.response?.data?.message || "Failed to reject refund");
+    } finally {
+      setLoadingStates((prev) => ({ ...prev, [refundId]: null }));
+    }
+  };
+
+  // Add to AdminRefundsTab component
+  const handleSyncRefund = async (orderId, refundId) => {
+    try {
+      setLoadingStates((prev) => ({ ...prev, [refundId]: "syncing" }));
+
+      const response = await axios.get(`/refunds/${orderId}/${refundId}/poll`);
+
+      if (response.data.updated) {
+        toast.success("Status updated!");
+        // Refresh the list
+        const res = await axios.get("/refunds");
+        setRefunds(res.data || []);
+        setFilteredRefunds(res.data || []);
+      } else {
+        toast.info(`Status is still ${response.data.currentStatus}`);
+      }
+    } catch (err) {
+      console.error("Sync failed:", err);
+      toast.error("Failed to sync status");
     } finally {
       setLoadingStates((prev) => ({ ...prev, [refundId]: null }));
     }
@@ -409,6 +465,26 @@ const AdminRefundsTab = () => {
                             <span className="inline-block w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
                             Refund is being processed...
                           </div>
+                        </div>
+                      )}
+
+                      {r.status === "Processing" && (
+                        <div className="flex gap-2">
+                          <div className="text-blue-600 text-sm bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-block w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
+                              Processing...
+                            </div>
+                          </div>
+                          <button
+                            onClick={() =>
+                              handleSyncRefund(r.orderId, r.refundId)
+                            }
+                            className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium"
+                            title="Check refund status"
+                          >
+                            Check Status
+                          </button>
                         </div>
                       )}
                     </td>
