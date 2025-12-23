@@ -424,12 +424,6 @@ const Navbar = () => {
                 ) : (
                   <div className="flex items-center gap-3">
                     <UserBadge name="Welcome" size="lg" />
-                    <div>
-                      <p className="font-semibold text-gray-900">Welcome</p>
-                      <p className="text-sm text-gray-500">
-                        Sign in to your account
-                      </p>
-                    </div>
                   </div>
                 )}
               </div>

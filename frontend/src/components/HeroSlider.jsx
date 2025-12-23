@@ -42,7 +42,7 @@ const HeroSlider = () => {
               src={slide.url}
               alt={slide.title}
               loading="eager"
-              className="w-full h-[23rem] sm:h-[32rem]    
+              className="w-full h-[33rem] sm:h-[32rem]    
              lg:h-[36rem]  object-cover"
             />
             {/* Absolute text */}
