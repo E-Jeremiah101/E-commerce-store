@@ -14,16 +14,36 @@ const CartPage = () => {
   return (
     <>
       <motion.div
-        className=" fixed top-0 left-0 right-0 flex z-40 items-center justify-center bg-gradient-to-br from-white via-gray-50 to-gray-200 py-5"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className="absolute left-4 text-black">
-          <GoBackButton />
-        </div>
-        <h2 className="text-2xl font-semibold text-center">Cart</h2>
-      </motion.div>
+              className="fixed top-0 left-0 right-0 z-40 bg-white backdrop-blur-md"
+              style={{ borderBottom: "none", boxShadow: "none" }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            >
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center justify-between h-16 sm:h-20">
+                  {/* Back Button - Left aligned */}
+                  <div className="flex items-center">
+                    <motion.div
+                      whileHover={{ x: -2 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="p-2 -ml-2 rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <GoBackButton />
+                    </motion.div>
+                  </div>
+      
+                  {/* Page Title - Centered with subtle styling */}
+                  <div className="absolute left-1/2 transform -translate-x-1/2">
+                    <div className="flex flex-col items-center">
+                      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">
+                       Cart
+                      </h2>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
       <div className="py-8 md:py-16 mt-7">
         <div className="mx-auto max-w-screen-xl px-4 2xl:px-0">
           <div className=" md:gap-6 lg:flex lg:items-start xl:gap-8">

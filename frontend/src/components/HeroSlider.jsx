@@ -37,13 +37,15 @@ const HeroSlider = () => {
         style={{ transform: `translateX(-${current * 100}%)` }}
       >
         {slides.map((slide, index) => (
-          <div key={index} className="w-full h-full flex-shrink-0 relative ">
+          <div
+            key={index}
+            className="w-full h-full flex-shrink-0 relative overflow-hidden"
+          >
             <img
               src={slide.url}
               alt={slide.title}
               loading="eager"
-              className="w-full h-[33rem] sm:h-[32rem]    
-             lg:h-[36rem]  object-cover"
+              className="w-full h-[40rem] sm:h-[35rem] lg:h-[44rem] object-cover object-center lg:object-center"
             />
             {/* Absolute text */}
             <div className="lg:hidden text-center text-black px-3 py-6  h-[10rem] ">

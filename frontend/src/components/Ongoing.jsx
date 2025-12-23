@@ -41,17 +41,6 @@ const Ongoing = () => {
 
   return (
     <>
-      <motion.div
-        className=" fixed top-0 left-0 right-0 flex z-40 items-center justify-center bg-gradient-to-br from-white via-gray-100 to-gray-300 py-5"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <div className="absolute left-4 text-black">
-          <GoBackButton />
-        </div>
-        <h2 className="text-2xl font-semibold  text-center">My Orders</h2>
-      </motion.div>
 
       <motion.div
         className=" max-w-4xl mx-auto mt-7 no-scroll"
@@ -151,11 +140,6 @@ const Ongoing = () => {
                             <span className="bg-gray-200 px-2 py-1 rounded text-xs ">
                               Qty: {item.quantity}
                             </span>
-                            {item.quantity > 1 && (
-                              <span className="text-gray-700 text-xs">
-                                {formatPrice(item.price, settings?.currency)}
-                              </span>
-                            )}
                           </div>
                         </div>
                       </li>

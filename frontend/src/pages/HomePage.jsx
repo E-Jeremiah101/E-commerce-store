@@ -69,7 +69,7 @@ const HomePage = () => {
     >
       {/* HERO SLIDER */}
       <motion.div
-        className="relative md:pt-16 pt-2  md:py-0"
+        className="relative  pt-2  md:py-0"
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.2 }}

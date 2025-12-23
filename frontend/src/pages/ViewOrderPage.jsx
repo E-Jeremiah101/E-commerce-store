@@ -51,7 +51,7 @@ const ViewOrderPage = () => {
        transition={{ duration: 0.8 }}
      >
        <motion.div
-         className="flex items-center   py-5 fixed top-0 left-0 right-0 z-40 shadow-sm px-6 bg-gradient-to-br from-white via-gray-100 to-gray-300"
+         className="flex items-center   py-5 fixed top-0 left-0 right-0 z-40 shadow-sm px-6 bg-white"
          initial={{ opacity: 0, y: -20 }}
          animate={{ opacity: 1, y: 0 }}
          transition={{ duration: 0.5 }}
@@ -78,6 +78,7 @@ const ViewOrderPage = () => {
            {order.status}
          </span>
        </motion.div>
+       
        {/* Order Info */}
        <div className=" grid grid-cols-2 text-black gap-5 mt-12 py-6 px-2  ">
          <div>
@@ -164,11 +165,6 @@ const ViewOrderPage = () => {
                      <span className="bg-gray-100 h-fit px-2 py-1 rounded text-xs ">
                        Qty: {item.quantity}
                      </span>
-                     {item.quantity > 1 && (
-                       <span className="text-gray-700 text-xs">
-                         {formatPrice(item.price, settings?.currency)} each
-                       </span>
-                     )}
                      {(() => {
                        // Find refunds that belong to this specific product
                        const productRefunds =
