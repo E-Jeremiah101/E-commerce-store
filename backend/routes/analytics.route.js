@@ -1,9 +1,12 @@
 import express from "express";
 import { getAnalytics } from "../controllers/analytics.controller.js";
+import { requirePermission } from "../middleware/permission.middleware.js";
+import { protectRoute } from "../middleware/auth.middleware.js";
+import { adminRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/", async (req, res) => {
+router.get("/",  async (req, res) => {
   try {
     const range = req.query.range || "weekly";
     const result = await getAnalytics(range); 
@@ -15,3 +18,4 @@ router.get("/", async (req, res) => {
 });
 
 export default router;
+// requirePermission("product:read"),

@@ -27,6 +27,7 @@ import {
 import { slashProductPrice, resetProductPrice,updateProductPrice,getPriceHistory } from "../controllers/price.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
+import { requirePermission } from "../middleware/permission.middleware.js";
 
 
 const router = express.Router();
@@ -60,9 +61,21 @@ router.get("/:productId/check-availability", checkVariantAvailability);
 router.post("/check-cart-availability", checkCartAvailability);
 
 // Admin protected routes
-router.get("/", protectRoute, adminRoute, getAllProducts);
-router.post("/", protectRoute, adminRoute, createProduct);
-router.patch("/:id", protectRoute, adminRoute, toggleFeaturedProduct);
+router.get(
+  "/",
+  protectRoute,
+  adminRoute,
+  requirePermission("product:read"),
+  getAllProducts
+);
+router.post("/", protectRoute, adminRoute, requirePermission("product:write"), createProduct);
+router.patch(
+  "/:id",
+  protectRoute,
+  adminRoute,
+  requirePermission("product:write"),
+  toggleFeaturedProduct
+);
 router.delete("/:id", protectRoute, adminRoute, deleteProduct);
 // In your product routes
 router.get('/archived', protectRoute, adminRoute, getArchivedProducts);

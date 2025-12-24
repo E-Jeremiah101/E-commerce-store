@@ -12,18 +12,26 @@ import {
 } from "../controllers/refund.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
-
+import { requirePermission } from "../middleware/permission.middleware.js";
+requirePermission
 const router = express.Router();
 
 // User — request refund
 router.post("/:orderId/request", protectRoute, requestRefund);
 
 // Admin — view + approve + reject
-router.get("/", protectRoute, adminRoute, getAllRefundRequests);
+router.get(
+  "/",
+  protectRoute,
+  adminRoute,
+  requirePermission("refund:read"),
+  getAllRefundRequests
+);
 router.put(
   "/:orderId/:refundId/approve",
   protectRoute,
   adminRoute,
+  requirePermission("refund:write"),
   approveRefund
 );
 router.put(

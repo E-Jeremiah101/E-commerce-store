@@ -57,25 +57,59 @@ const clearCache = async () => {
   }
 };
 
+
+const TAB_PERMISSIONS = {
+  create: "product:write",
+  products: "product:read",
+  inventory: "product:write",
+
+  AdminOrder: "order:read",
+  OrderRecovery: "recovery:read",
+  AdminRefunds: "refund:read",
+
+  analytics: "audit:read",
+  audit: "audit:read",
+
+  Transactions: "audit:read",
+
+  AllUsers: "user:read",
+
+  Settings: "settings:write",
+};
+
 const AdminPage = () => {
 
   const { settings } = useStoreSettings();
   if (!settings) return null;
+    const { user } = useUserStore();
+
+  const permissions = user?.permissions || [];
+
+  const hasPermission = (perm) => permissions.includes(perm);
+  console.log("USER:", user);
+  console.log("PERMISSIONS:", permissions);
+
   // Load active tab from localStorage on initial render
-  const [activeTab, setActiveTab] = useState(() => {
-    try {
-      const savedTab = localStorage.getItem(STORAGE_KEY);
-      // Validate that the saved tab exists in our tabs array
-      const isValidTab = tabs.some((tab) => tab.id === savedTab);
-      return isValidTab ? savedTab : "products"; // default to "products"
-    } catch (error) {
-      console.error("Error reading from localStorage:", error);
-      return "products"; // fallback default
-    }
-  });
+ const [activeTab, setActiveTab] = useState(() => {
+   try {
+     const savedTab = localStorage.getItem(STORAGE_KEY);
+     const allowedTabIds = tabs
+       .filter((tab) => hasPermission(TAB_PERMISSIONS[tab.id]))
+       .map((tab) => tab.id);
+
+     if (savedTab && allowedTabIds.includes(savedTab)) {
+       return savedTab;
+     }
+
+     return allowedTabIds[0] || null;
+   } catch {
+     return null;
+   }
+ });
+
 
   const { fetchAllProducts } = useProductStore();
-  const { user } = useUserStore();
+
 
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
@@ -86,13 +120,21 @@ const AdminPage = () => {
     }
   }, [activeTab]);
 
-  useEffect(() => {
-    fetchAllProducts();
-  }, [fetchAllProducts]);
+ useEffect(() => {
+   if (hasPermission("product:read")) {
+     fetchAllProducts();
+   }
+ }, [fetchAllProducts, permissions]);
 
   const handleTabChange = (tabId) => {
     setActiveTab(tabId);
   };
+
+  const visibleTabs = tabs.filter((tab) => {
+    const permission = TAB_PERMISSIONS[tab.id];
+    return permission && hasPermission(permission);
+  });
+
 
   return (
     <div className="bg-gradient-to-br from-white via-gray-100 to-gray-300 flex-2 md:flex md:h-[100vh] md:w-full p md:mx-auto md:overflow-hidden -10 min-h-screen">
@@ -105,7 +147,7 @@ const AdminPage = () => {
           </p>
         </div>
         <ul className="space-y-2 px-2">
-          {tabs.map((tab) => (
+          {visibleTabs.map((tab) => (
             <li
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
@@ -123,7 +165,6 @@ const AdminPage = () => {
 
         {/* Clear Cache Button in Sidebar */}
         <div className="mt-auto px-3 py-4">
-
           <button
             onClick={clearCache}
             className="w-full flex items-center justify-center px-3 py-2 bg-blue-600 hover:bg-blue-400 text-white text-sm font-medium rounded-lg transition-colors"
@@ -138,7 +179,6 @@ const AdminPage = () => {
         <div className="flex justify-between items-center px-2 mb-3">
           <h2 className="text-white text-lg font-semibold">Admin Dashboard</h2>
 
-
           <button
             onClick={clearCache}
             className="px-3 py-1 bg-blue-500 text-white text-xs rounded"
@@ -147,7 +187,7 @@ const AdminPage = () => {
           </button>
         </div>
         <div className="flex overflow-x-auto no-scroll space-x-1">
-          {tabs.map((tab) => (
+          {visibleTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id)}
@@ -168,17 +208,42 @@ const AdminPage = () => {
 
       {/* Content area */}
       <div className="flex-1 overflow-y-auto no-scroll">
-        {activeTab === "create" && <CreateProductForm />}
-        {activeTab === "products" && <ProductsList />}
-        {activeTab === "inventory" && <InventoryTab />}
-        {activeTab === "analytics" && <AnalyticsTab />}
-        {activeTab === "AdminOrder" && <AdminOrdersPage />}
-        {activeTab === "AdminRefunds" && <AdminRefundsTab />}
-        {activeTab === "AllUsers" && <AllUsers />}
-        {activeTab === "OrderRecovery" && <Recovery />}
-        {activeTab === "Transactions" && <Transactions />}
-        {activeTab === "audit" && <AuditLogsTab />}
-        {activeTab === "Settings" && <StoreSettings />}
+        {activeTab === "create" && hasPermission("product:write") && (
+          <CreateProductForm />
+        )}
+        {activeTab === "products" && hasPermission("product:read") && (
+          <ProductsList />
+        )}
+        {activeTab === "inventory" && hasPermission("product:write") && (
+          <InventoryTab />
+        )}
+
+        {activeTab === "analytics" && hasPermission("audit:read") && (
+          <AnalyticsTab />
+        )}
+
+        {activeTab === "AdminOrder" && hasPermission("order:read") && (
+          <AdminOrdersPage />
+        )}
+        {activeTab === "AdminRefunds" && hasPermission("refund:read") && (
+          <AdminRefundsTab />
+        )}
+        {activeTab === "OrderRecovery" && hasPermission("recovery:read") && (
+          <Recovery />
+        )}
+
+        {activeTab === "Transactions" && hasPermission("audit:read") && (
+          <Transactions />
+        )}
+        {activeTab === "audit" && hasPermission("audit:read") && (
+          <AuditLogsTab />
+        )}
+
+        {activeTab === "AllUsers" && hasPermission("user:read") && <AllUsers />}
+
+        {activeTab === "Settings" && hasPermission("settings:write") && (
+          <StoreSettings />
+        )}
       </div>
     </div>
   );

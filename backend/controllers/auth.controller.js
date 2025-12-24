@@ -6,7 +6,9 @@ import {sendEmail} from "../lib/mailer.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
 import dotenv from "dotenv";
-import storeSettings from "../models/storeSettings.model.js"
+import storeSettings from "../models/storeSettings.model.js";
+import { ADMIN_ROLE_PERMISSIONS } from "../constants/adminRoles.js";
+import { PERMISSIONS } from "../constants/permissions.js";
 dotenv.config();
 
 const generateTokens = (userId) => {
@@ -267,6 +269,75 @@ export const signup = async (req, res) => {
   }
 };
 
+// export const login = async (req, res) => {
+//   try {
+//     const { email, password } = req.body;
+//     const user = await User.findOne({ email });
+
+//     if (user && (await user.comparePassword(password))) {
+//       const { accessToken, refreshToken } = generateTokens(user._id);
+
+//       await storeRefreshToken(user._id, refreshToken);
+//       setCookies(res, accessToken, refreshToken);
+
+//       if (user.role === "admin"){
+//       await logAuthAction(
+//         req,
+//         "LOGIN",
+//         user._id,
+//         {
+//           loginDetails: {
+//             method: "email/password",
+//             timestamp: new Date().toISOString()
+//           }
+//         },
+//         user.role === "admin" ? "Admin login successful" : "User login successful"
+//       );
+//     }
+
+//     const permissions =
+//       user.role === "admin"
+//         ? user.adminType === "super_admin"
+//           ? Object.values(PERMISSIONS)
+//           : ADMIN_ROLE_PERMISSIONS[user.adminType] || []
+//         : [];
+
+//     res.json({
+//       _id: user._id,
+//       firstname: user.firstname,
+//       lastname: user.lastname,
+//       email: user.email,
+//       role: user.role,
+//       adminType: user.adminType,
+//       permissions,
+//     });
+//     } else {
+//       await logFailedLogin(
+//         req,
+//         email,
+//         user ? "Invalid password" : "User not found"
+//       );
+
+//       res.status(400).json({ message: "Invalid email or password" });
+//     }
+//   } catch (error) {
+//     console.log("Error in login controller", error.message);
+
+//     await logAuthAction(
+//       req,
+//       "LOGIN_ERROR",
+//       null,
+//       {
+//         attemptedEmail: req.body.email,
+//         error: error.message,
+//       },
+//       "Login process failed"
+//     );
+
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -278,26 +349,45 @@ export const login = async (req, res) => {
       await storeRefreshToken(user._id, refreshToken);
       setCookies(res, accessToken, refreshToken);
 
-      if (user.role === "admin"){
-      await logAuthAction(
-        req,
-        "LOGIN",
-        user._id,
-        {
-          loginDetails: {
-            method: "email/password",
-            timestamp: new Date().toISOString()
-          }
-        },
-        user.role === "admin" ? "Admin login successful" : "User login successful"
-      );
-    }
+      if (user.role === "admin") {
+        await logAuthAction(
+          req,
+          "LOGIN",
+          user._id,
+          {
+            loginDetails: {
+              method: "email/password",
+              timestamp: new Date().toISOString(),
+            },
+          },
+          user.role === "admin"
+            ? "Admin login successful"
+            : "User login successful"
+        );
+      }
+
+      // Convert to plain object
+      const userObj = user.toObject ? user.toObject() : { ...user._doc };
+
+      // Calculate permissions
+      if (userObj.role === "admin" && userObj.adminType) {
+        if (userObj.adminType === "super_admin") {
+          userObj.permissions = Object.values(PERMISSIONS);
+        } else {
+          userObj.permissions = ADMIN_ROLE_PERMISSIONS[userObj.adminType] || [];
+        }
+      } else {
+        userObj.permissions = [];
+      }
+
       res.json({
-        _id: user._id,
-        firstname: user.firstname,
-        lastname: user.lastname,
-        email: user.email,
-        role: user.role,
+        _id: userObj._id,
+        firstname: userObj.firstname,
+        lastname: userObj.lastname,
+        email: userObj.email,
+        role: userObj.role,
+        adminType: userObj.adminType,
+        permissions: userObj.permissions,
       });
     } else {
       await logFailedLogin(
@@ -325,7 +415,6 @@ export const login = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 export const logout = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;

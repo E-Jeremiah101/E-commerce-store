@@ -30,3 +30,4 @@ export const StoreSettingsProvider = ({ children }) => {
 };
 
 export const useStoreSettings = () => useContext(StoreSettingsContext);
+ 

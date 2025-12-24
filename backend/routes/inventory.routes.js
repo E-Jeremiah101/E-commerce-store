@@ -11,13 +11,20 @@ import {
 } from "../controllers/inventory.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
+import { requirePermission } from "../middleware/permission.middleware.js";
+
 
 const router = express.Router();
 
 // All routes are protected and admin only
-router.use(protectRoute, adminRoute);
+router.use(
+  protectRoute,
+  adminRoute,
+  adminRoute,
+  requirePermission("product:read")
+);
 
-//  Stock Dashboard 
+//  Stock Dashboard  
 router.get("/dashboard", getInventoryDashboard);
 
 //  Stock Levels

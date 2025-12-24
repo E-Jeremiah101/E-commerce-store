@@ -108,6 +108,16 @@ const userSchema = new mongoose.Schema(
       enum: ["customer", "admin"],
       default: "customer",
     },
+    adminType: {
+  type: String,
+  enum: [
+    "product_manager",
+    "order_manager",
+    "customer_support",
+    "supervisor",
+    "super_admin",
+  ],
+},
   },
   {
     timestamps: true,
