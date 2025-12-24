@@ -45,22 +45,23 @@ const OtherFeatures = () => {
 
   return (
     <ScrollReveal direction="up" delay={0.5} duration={1}>
-      <div className="text-black flex justify-center items-center my-14 lg:mt-25 look">
-                <div className="text-center">
-                  <h1 className="text-3xl tracking-widest mb-4 text-black drop-shadow-lg">
-                    CLASSIC WEARS
-                  </h1>
-                  <p className="text-1xl lg:text-sm tracking-widest">
-                    Stay Relaxed, Stay Stylish: Redefine Comfort with the Perfect
-                    style Fit!
-                  </p>
-                </div>
-              </div>
-      <div className="box-head my-20 look">
-        <div className="box">
-          {displayItems.map((item, index) => (
-            <span key={item._id} style={{ "--i": index + 1 }}>
-              
+      <div className="my-30">
+        <div className="text-black flex justify-center items-center my-14 lg:mt-25 look">
+          <div className="text-center mb-12">
+            <h1 className="text-3xl md:text-4xl font-medium tracking-normal mb-5 text-gray-900">
+              CLASSIC WEARS
+            </h1>
+            <div className="h-px w-16 bg-gray-300 mx-auto mb-6"></div>
+            <p className="text-sm md:text-base text-gray-500 tracking-widest uppercase max-w-sm mx-auto">
+              Stay Relaxed, Stay Stylish: Redefine Comfort with the Perfect
+              Style Fit!
+            </p>
+          </div>
+        </div>
+        <div className="box-head my-20 look">
+          <div className="box">
+            {displayItems.map((item, index) => (
+              <span key={item._id} style={{ "--i": index + 1 }}>
                 <img
                   src={item.images?.[0]}
                   alt={item.name || `feature-${index + 1}`}
@@ -69,9 +70,9 @@ const OtherFeatures = () => {
                     e.target.src = fallbackImages[index] || "/placeholder.jpg";
                   }}
                 />
-             
-            </span>
-          ))}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </ScrollReveal>

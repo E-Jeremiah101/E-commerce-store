@@ -56,7 +56,7 @@ const RevealGridItem = ({ children, index }) => {
 const LandingProducts = ({ recommendations, isLoading }) => {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 ">
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
