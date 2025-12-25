@@ -13,7 +13,11 @@ export const ADMIN_ROLE_PERMISSIONS = {
   ],
 
   // Support → refunds & recovery
-  customer_support: [PERMISSIONS.REFUND_READ],
+  customer_support: [
+    PERMISSIONS.REFUND_READ,
+    PERMISSIONS.RECOVERY_READ,
+    PERMISSIONS.RECOVERY_WRITE,
+  ],
 
   // Supervisors → READ ONLY
   supervisor: [

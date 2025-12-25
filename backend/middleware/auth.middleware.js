@@ -118,31 +118,29 @@ export const protectRoute = async (req, res, next) => {
 
     try {
       const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+
+      // ✅ KEEP MONGOOSE DOCUMENT
       const user = await User.findById(decoded.userId).select("-password");
 
       if (!user) {
         return res.status(401).json({ message: "User not found" });
       }
-      
-      // Convert to plain object
-      const userObj = user.toObject ? user.toObject() : { ...user._doc };
-      
-      // Calculate permissions for admin users
-      if (userObj.role === "admin" && userObj.adminType) {
-        if (userObj.adminType === "super_admin") {
-          userObj.permissions = Object.values(PERMISSIONS);
+
+      // ✅ ATTACH PERMISSIONS WITHOUT CONVERSION
+      if (user.role === "admin" && user.adminType) {
+        if (user.adminType === "super_admin") {
+          user.permissions = Object.values(PERMISSIONS);
         } else {
-          userObj.permissions = ADMIN_ROLE_PERMISSIONS[userObj.adminType] || [];
+          user.permissions = ADMIN_ROLE_PERMISSIONS[user.adminType] || [];
         }
       } else {
-        userObj.permissions = [];
+        user.permissions = [];
       }
-      
-      // Set the user with permissions
-      req.user = userObj;
-      
-      next();
 
+      // ✅ req.user IS STILL A MONGOOSE DOCUMENT
+      req.user = user;
+
+      next();
     } catch (error) {
       if (error.name === "TokenExpiredError") {
         return res
@@ -153,11 +151,10 @@ export const protectRoute = async (req, res, next) => {
     }
   } catch (error) {
     console.log("Error in protectRoute middleware", error.message);
-    return res
-      .status(500)
-      .json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 //adminRoute
 
 export const adminRoute = (req, res, next) => {

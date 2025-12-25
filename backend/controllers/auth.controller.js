@@ -526,15 +526,56 @@ export const refreshToken = async (req, res) => {
   }
 };
 
+// export const getProfile = async (req, res) => {
+//   try {
+//     res.json(req.user);
+//   } catch (error) {
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
+
+//Forgot Password
+
 export const getProfile = async (req, res) => {
   try {
-    res.json(req.user);
+    console.log("🔍 Auth getProfile called for:", req.user?.email);
+
+    if (!req.user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Make sure we have a fresh user object with all properties
+    const user = req.user;
+
+    // Calculate permissions if not already set
+    if (!user.permissions) {
+      let permissions = [];
+      if (user.role === "admin" && user.adminType) {
+        console.log("Calculating permissions for admin type:", user.adminType);
+        if (user.adminType === "super_admin") {
+          permissions = Object.values(PERMISSIONS);
+        } else {
+          permissions = ADMIN_ROLE_PERMISSIONS[user.adminType] || [];
+        }
+      }
+      user.permissions = permissions;
+    }
+
+    console.log("✅ Auth getProfile returning user with permissions:", {
+      email: user.email,
+      role: user.role,
+      adminType: user.adminType,
+      permissions: user.permissions,
+      permissionsLength: user.permissions?.length || 0,
+    });
+
+    res.json(user);
   } catch (error) {
+    console.error("Error in getProfile:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
-// Forgot Password
 export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
