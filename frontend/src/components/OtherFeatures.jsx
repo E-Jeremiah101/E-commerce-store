@@ -51,7 +51,7 @@ const OtherFeatures = () => {
             <h1 className="text-3xl md:text-4xl font-medium tracking-normal mb-5 text-gray-900">
               CLASSIC WEARS
             </h1>
-            <div className="h-px w-16 bg-gray-300 mx-auto mb-6"></div>
+            <div className="h-px w-16 bg-gray-400 mx-auto mb-6"></div>
             <p className="text-sm md:text-base text-gray-500 tracking-widest uppercase max-w-sm mx-auto">
               Stay Relaxed, Stay Stylish: Redefine Comfort with the Perfect
               Style Fit!
