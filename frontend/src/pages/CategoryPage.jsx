@@ -4,6 +4,8 @@ import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import ProductCard from "../components/ProductCard.jsx";
 import GoBackButton from "../components/GoBackButton";
+import { formatPrice } from "../utils/currency.js";
+import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 
 const CategoryPage = () => {
   const { fetchProductsByCategory, products } = useProductStore();
@@ -44,6 +46,8 @@ const CategoryPage = () => {
     console.log("Category:", category);
     console.log("Products:", products);
   }, [products, category]);
+
+  const { settings } = useStoreSettings();
 
   if (isLoading)
     return (
