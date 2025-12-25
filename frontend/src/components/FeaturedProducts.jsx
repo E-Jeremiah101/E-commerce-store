@@ -163,7 +163,7 @@
 // };
 
 // export default FeaturedProducts;
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   ShoppingCart,
   ChevronLeft,
@@ -184,6 +184,14 @@ const FeaturedProducts = ({ featuredProducts }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [savedProducts, setSavedProducts] = useState({});
+
+  // Touch swipe state
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+
+  const sliderRef = useRef(null);
   const { user } = useUserStore();
   const { settings } = useStoreSettings();
 
@@ -310,6 +318,109 @@ const FeaturedProducts = ({ featuredProducts }) => {
   // Show chevrons only on desktop (1024px and above)
   const showChevrons = !isMobile && !isTablet;
 
+  // Minimum swipe distance (px) to trigger slide change
+  const minSwipeDistance = 50;
+
+  // Touch event handlers
+  const handleTouchStart = (e) => {
+    if (!isMobile && !isTablet) return; // Only for mobile/tablet
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+    setIsDragging(true);
+    setDragOffset(0);
+  };
+
+  const handleTouchMove = (e) => {
+    if ((!isMobile && !isTablet) || !touchStart) return;
+
+    const currentTouch = e.targetTouches[0].clientX;
+    const distance = touchStart - currentTouch;
+    setDragOffset(distance);
+
+    // Update touch end for swipe detection
+    setTouchEnd(currentTouch);
+  };
+
+  const handleTouchEnd = () => {
+    if ((!isMobile && !isTablet) || !touchStart || !touchEnd) {
+      setIsDragging(false);
+      return;
+    }
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      nextSlide();
+    } else if (isRightSwipe) {
+      prevSlide();
+    }
+
+    // Reset touch states
+    setTouchStart(null);
+    setTouchEnd(null);
+    setIsDragging(false);
+    setDragOffset(0);
+  };
+
+  // Mouse drag handlers for desktop testing
+  const handleMouseDown = (e) => {
+    if (!isMobile && !isTablet) return;
+    setTouchEnd(null);
+    setTouchStart(e.clientX);
+    setIsDragging(true);
+    setDragOffset(0);
+  };
+
+  const handleMouseMove = (e) => {
+    if ((!isMobile && !isTablet) || !touchStart || !isDragging) return;
+
+    const currentPosition = e.clientX;
+    const distance = touchStart - currentPosition;
+    setDragOffset(distance);
+
+    // Update touch end for swipe detection
+    setTouchEnd(currentPosition);
+  };
+
+  const handleMouseUp = () => {
+    if ((!isMobile && !isTablet) || !touchStart || !touchEnd || !isDragging) {
+      setIsDragging(false);
+      return;
+    }
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      nextSlide();
+    } else if (isRightSwipe) {
+      prevSlide();
+    }
+
+    // Reset states
+    setTouchStart(null);
+    setTouchEnd(null);
+    setIsDragging(false);
+    setDragOffset(0);
+  };
+
+  // Calculate the transform for the slider with drag offset
+  const calculateTransform = () => {
+    const baseTransform = currentIndex * (100 / itemsPerPage);
+    const dragTransform =
+      (dragOffset / (sliderRef.current?.offsetWidth || 1)) * 100;
+
+    // If dragging, add the drag offset to the transform
+    if (isDragging && dragOffset !== 0) {
+      return `translateX(-${baseTransform}%) translateX(${dragTransform}px)`;
+    }
+
+    return `translateX(-${baseTransform}%)`;
+  };
+
   return (
     <ScrollReveal direction="up" delay={0.6} duration={1}>
       <div className="py-19 mt-5">
@@ -322,13 +433,25 @@ const FeaturedProducts = ({ featuredProducts }) => {
           </div>
 
           <div className="relative">
-            <div className="overflow-hidden">
+            <div
+              className="overflow-hidden"
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              style={{ cursor: isDragging ? "grabbing" : "grab" }}
+            >
               <div
+                ref={sliderRef}
                 className="flex transition-transform duration-300 ease-in-out"
                 style={{
-                  transform: `translateX(-${
-                    currentIndex * (100 / itemsPerPage)
-                  }%)`,
+                  transform: calculateTransform(),
+                  transition: isDragging
+                    ? "none"
+                    : "transform 300ms ease-in-out",
                 }}
               >
                 {featuredProducts?.map((product) => {
@@ -341,17 +464,9 @@ const FeaturedProducts = ({ featuredProducts }) => {
                       className={`${
                         isMobile ? "w-1/2" : isTablet ? "w-1/3" : "w-1/4"
                       } flex-shrink-0 px-2 sm:px-3`}
+                      style={{ userSelect: "none", touchAction: "pan-y" }}
                     >
                       <div className="flex flex-col h-full overflow-hidden border-gray-700">
-                        {/* Discount Badge */}
-                        <div className="absolute top-1 right-1 z-10">
-                          {product.isPriceSlashed && product.previousPrice && (
-                            <span className="bg-red-100 text-red-800 rounded text-xs font-medium px-2 py-1">
-                              {Math.round(product.discountPercentage)}% OFF
-                            </span>
-                          )}
-                        </div>
-
                         {/* Product Image */}
                         <Link to={`/product/${product._id}`}>
                           <div className="relative flex overflow-hidden h-48 sm:h-56 rounded-xs">
@@ -372,6 +487,17 @@ const FeaturedProducts = ({ featuredProducts }) => {
                                 </span>
                               </div>
                             )}
+
+                            {/* Discount Badge */}
+                            <div className="absolute top-0 right-0 h-full  bg-opacity-50 flex items-start justify-start p-1">
+                              {product.isPriceSlashed &&
+                                product.previousPrice && (
+                                  <span className="bg-red-100 text-red-800 rounded text-xs px-2 py-1">
+                                    {Math.round(product.discountPercentage)}%
+                                    OFF
+                                  </span>
+                                )}
+                            </div>
                           </div>
                         </Link>
 

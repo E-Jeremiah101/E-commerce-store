@@ -7,7 +7,7 @@ const FAQSection = () => {
       question: "Do you ship worldwide?",
       answer:
         "Yes! We ship to most countries globally. Shipping costs and delivery times may vary depending on your location.",
-    },
+    }, 
     {
       question: "How long does delivery take?",
       answer:
