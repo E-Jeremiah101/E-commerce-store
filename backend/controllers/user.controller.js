@@ -169,6 +169,7 @@ export const updateProfile = async (req, res) => {
 };
 
 // GET all users (for admin) - UPDATED
+// GET all users (for admin) - UPDATED with order counts
 export const getAllUsers = async (req, res) => {
   try {
     console.log("🔍 getAllUsers called by:", req.user?.email);
@@ -194,6 +195,7 @@ export const getAllUsers = async (req, res) => {
 
     console.log("Query:", query);
 
+    // First, get users with basic info
     const users = await User.find(query)
       .populate("cartItems.product", "name price images")
       .select("-password")
@@ -201,25 +203,57 @@ export const getAllUsers = async (req, res) => {
 
     console.log(`Found ${users.length} users`);
 
-    // Add permissions for admin users
-    const usersWithPermissions = users.map((user) => {
-      const userObj = user.toObject();
-      let permissions = [];
+    // Import Order model to get order counts
+    const Order = (await import("../models/order.model.js")).default;
 
-      if (userObj.role === "admin" && userObj.adminType) {
-        permissions =
-          userObj.adminType === "super_admin"
-            ? Object.values(PERMISSIONS)
-            : ADMIN_ROLE_PERMISSIONS[userObj.adminType] || [];
-      }
+    // Get order counts for each user
+    const usersWithOrderCounts = await Promise.all(
+      users.map(async (user) => {
+        const userObj = user.toObject();
+        
+        // Get order statistics for this user
+        const orderStats = await Order.aggregate([
+          { $match: { user: user._id } },
+          {
+            $group: {
+              _id: "$status",
+              count: { $sum: 1 }
+            }
+          }
+        ]);
+        
+        // Convert array to object for easier access
+        const statsObj = {};
+        orderStats.forEach(stat => {
+          statsObj[stat._id] = stat.count;
+        });
+        
+        // Calculate completed orders (assuming status "delivered" means completed)
+        const completedOrders = statsObj["Delivered"] || 0;
+        const totalOrders = orderStats.reduce((total, stat) => total + stat.count, 0);
+        
+        // Add permissions for admin users
+        let permissions = [];
+        if (userObj.role === "admin" && userObj.adminType) {
+          permissions =
+            userObj.adminType === "super_admin"
+              ? Object.values(PERMISSIONS)
+              : ADMIN_ROLE_PERMISSIONS[userObj.adminType] || [];
+        }
 
-      return {
-        ...userObj,
-        permissions,
-      };
-    });
+        return {
+          ...userObj,
+          permissions,
+          orderStats: {
+            completed: completedOrders,
+            total: totalOrders,
+            byStatus: statsObj
+          }
+        };
+      })
+    );
 
-    res.json(usersWithPermissions);
+    res.json(usersWithOrderCounts);
   } catch (err) {
     console.error("Error fetching users:", err);
     res.status(500).json({

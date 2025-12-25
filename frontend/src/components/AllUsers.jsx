@@ -15,6 +15,8 @@ import {
   Package,
   Headphones,
   Eye,
+  CheckCircle,
+  BarChart3,
 } from "lucide-react";
 import { useUserStore } from "../stores/useUserStore.js";
 import { motion } from "framer-motion";
@@ -36,7 +38,15 @@ const AllUsers = () => {
   const [adminTypes, setAdminTypes] = useState([]);
   const [selectedAdminType, setSelectedAdminType] = useState("");
   const [newAdminType, setNewAdminType] = useState("");
-  const [stats, setStats] = useState({ total: 0, customers: 0, admins: 0 });
+  const [stats, setStats] = useState({
+    total: 0,
+    customers: 0,
+    admins: 0,
+    totalOrders: 0,
+    completedOrders: 0,
+    completionRate: 0,
+    totalCartValue: 0,
+  });
   const { user: currentUser } = useUserStore();
   const { settings } = useStoreSettings();
 
@@ -49,11 +59,41 @@ const AllUsers = () => {
       );
       setUsers(res.data);
 
-      // Calculate stats
+      // Calculate comprehensive stats
       const total = res.data.length;
       const customers = res.data.filter((u) => u.role === "customer").length;
       const admins = res.data.filter((u) => u.role === "admin").length;
-      setStats({ total, customers, admins });
+
+      // Calculate order statistics
+      let totalOrders = 0;
+      let completedOrders = 0;
+      let totalCartValue = 0;
+
+      res.data.forEach((user) => {
+        totalOrders += user.orderStats?.total || 0;
+        completedOrders += user.orderStats?.completed || 0;
+
+        // Calculate cart value
+        if (user.cartItems?.length > 0) {
+          const cartTotal = user.cartItems.reduce((sum, item) => {
+            return sum + (item.product?.price || 0) * (item.quantity || 1);
+          }, 0);
+          totalCartValue += cartTotal;
+        }
+      });
+
+      const completionRate =
+        totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0;
+
+      setStats({
+        total,
+        customers,
+        admins,
+        totalOrders,
+        completedOrders,
+        completionRate,
+        totalCartValue,
+      });
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Failed to load users");
@@ -248,6 +288,25 @@ const AllUsers = () => {
     );
   };
 
+  // Helper function to get order completion rate
+  const getOrderCompletionRate = (user) => {
+    const completed = user.orderStats?.completed || 0;
+    const total = user.orderStats?.total || 0;
+
+    if (total === 0) return 0;
+    return Math.round((completed / total) * 100);
+  };
+
+  // Format order completion for display
+  const formatOrderCompletion = (user) => {
+    const completed = user.orderStats?.completed || 0;
+    const total = user.orderStats?.total || 0;
+    const rate = getOrderCompletionRate(user);
+
+    if (total === 0) return "No orders";
+    return `${completed}/${total} (${rate}%)`;
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center min-h-[60vh] bg-gradient-to-br from-gray-50 to-white">
@@ -286,7 +345,7 @@ const AllUsers = () => {
               User Management
             </h1>
             <p className="text-gray-600 mt-1">
-              Manage user accounts, roles, and permissions
+              Manage user accounts, roles, and order statistics
             </p>
           </div>
           <div className="mt-4 md:mt-0 flex items-center space-x-2">
@@ -303,7 +362,7 @@ const AllUsers = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center">
               <div className="bg-blue-100 p-3 rounded-lg">
@@ -314,6 +373,10 @@ const AllUsers = () => {
                 <p className="text-2xl font-bold text-gray-900">
                   {stats.total}
                 </p>
+                <div className="flex text-xs text-gray-500 mt-1">
+                  <span className="mr-3">{stats.customers} customers</span>
+                  <span>{stats.admins} admins</span>
+                </div>
               </div>
             </div>
           </div>
@@ -321,12 +384,16 @@ const AllUsers = () => {
           <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center">
               <div className="bg-green-100 p-3 rounded-lg">
-                <User className="h-6 w-6 text-green-600" />
+                <CheckCircle className="h-6 w-6 text-green-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm text-gray-500">Customers</p>
+                <p className="text-sm text-gray-500">Completed Orders</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {stats.customers}
+                  {stats.completedOrders || 0}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  of {stats.totalOrders || 0} total •{" "}
+                  {stats.completionRate || 0}% rate
                 </p>
               </div>
             </div>
@@ -335,13 +402,31 @@ const AllUsers = () => {
           <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center">
               <div className="bg-purple-100 p-3 rounded-lg">
-                <Shield className="h-6 w-6 text-purple-600" />
+                <ShoppingCart className="h-6 w-6 text-purple-600" />
               </div>
               <div className="ml-4">
-                <p className="text-sm text-gray-500">Admins</p>
+                <p className="text-sm text-gray-500">Total Cart Value</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {stats.admins}
+                  {formatPrice(stats.totalCartValue || 0, settings?.currency)}
                 </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Across all user carts
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center">
+              <div className="bg-orange-100 p-3 rounded-lg">
+                <BarChart3 className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm text-gray-500">Active Users</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {users.filter((u) => u.cartItems?.length > 0).length}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">With items in cart</p>
               </div>
             </div>
           </div>
@@ -398,6 +483,9 @@ const AllUsers = () => {
                     User Details
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Orders
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Role & Permissions
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
@@ -445,6 +533,71 @@ const AllUsers = () => {
                         </div>
                       </td>
 
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-3">
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-green-600">
+                                {user.orderStats?.completed || 0}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Completed
+                              </div>
+                            </div>
+                            <div className="h-8 w-px bg-gray-300"></div>
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-blue-600">
+                                {user.orderStats?.total || 0}
+                              </div>
+                              <div className="text-xs text-gray-500">Total</div>
+                            </div>
+                          </div>
+
+                          {user.orderStats?.total > 0 && (
+                            <>
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div
+                                  className="bg-green-600 h-1.5 rounded-full transition-all duration-300"
+                                  style={{
+                                    width: `${getOrderCompletionRate(user)}%`,
+                                  }}
+                                ></div>
+                              </div>
+
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-medium text-gray-700">
+                                  Completion Rate
+                                </span>
+                                <span className="text-xs font-bold text-green-600">
+                                  {getOrderCompletionRate(user)}%
+                                </span>
+                              </div>
+                            </>
+                          )}
+
+                          {user.orderStats?.total === 0 && (
+                            <div className="text-center py-2">
+                              <span className="text-xs text-gray-400 italic">
+                                No orders yet
+                              </span>
+                            </div>
+                          )}
+
+                          {user.orderStats?.total > 0 && (
+                            <button
+                              onClick={() => {
+                                toast.success(
+                                  `Viewing ${user.firstname}'s order history (${user.orderStats.completed} completed of ${user.orderStats.total})`
+                                );
+                              }}
+                              className="w-full text-xs text-blue-600 hover:text-blue-800 font-medium py-1 border border-blue-100 rounded hover:bg-blue-50 transition"
+                            >
+                              View Order History
+                            </button>
+                          )}
+                        </div>
+                      </td>
+
                       <td className="px-6 py-4">
                         <div className="space-y-3">
                           <div className="flex items-center">
@@ -473,9 +626,8 @@ const AllUsers = () => {
                                   <span className="ml-1.5">
                                     {getAdminTypeLabel(user.adminType)}
                                   </span>
-                                </span>
-                                
-                              </div>
+                                </span>                               
+                              </div>                             
                             </div>
                           )}
                         </div>
@@ -550,16 +702,14 @@ const AllUsers = () => {
                               <Edit2 className="h-4 w-4 mr-2" />
                               Change Admin Type
                             </button>
-                          )}
-
-                        
+                          )}                      
                         </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="4" className="px-6 py-12 text-center">
+                    <td colSpan="5" className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center">
                         <User className="h-16 w-16 text-gray-300 mb-3" />
                         <p className="text-gray-500 text-lg">No users found</p>
@@ -577,19 +727,57 @@ const AllUsers = () => {
           </div>
         </div>
 
-        {/* Pagination/Info */}
+        {/* Summary Footer */}
         {users.length > 0 && (
-          <div className="mt-6 flex flex-col md:flex-row md:items-center justify-between text-sm text-gray-500">
-            <p>
-              Showing {users.length} of {stats.total} users
-            </p>
-            <p className="mt-2 md:mt-0">
-              Last updated:{" "}
-              {new Date().toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </p>
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="flex flex-col md:flex-row md:items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-800">Summary</p>
+                <p className="text-xs text-blue-600 mt-1">
+                  Showing {users.length} of {stats.total} users
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-4 mt-3 md:mt-0">
+                <div className="text-center">
+                  <p className="text-xs text-gray-600">Total Orders</p>
+                  <p className="text-lg font-bold text-blue-700">
+                    {stats.totalOrders}
+                  </p>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-xs text-gray-600">Completed</p>
+                  <p className="text-lg font-bold text-green-700">
+                    {stats.completedOrders}
+                  </p>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-xs text-gray-600">Completion Rate</p>
+                  <p className="text-lg font-bold text-orange-700">
+                    {stats.completionRate}%
+                  </p>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-xs text-gray-600">Active Carts</p>
+                  <p className="text-lg font-bold text-purple-700">
+                    {users.filter((u) => u.cartItems?.length > 0).length}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 md:mt-0 text-right">
+                <p className="text-xs text-gray-500">
+                  Last updated:{" "}
+                  {new Date().toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </motion.div>
@@ -607,13 +795,21 @@ const AllUsers = () => {
                 <h2 className="text-xl font-bold text-gray-900">
                   {selectedUser.firstname}'s Shopping Cart
                 </h2>
-                <p className="text-sm text-gray-500">
-                  {selectedUser.cartItems?.length || 0} items • Total:{" "}
-                  {formatPrice(
-                    getCartTotal(selectedUser.cartItems),
-                    settings?.currency
+                <div className="flex items-center space-x-4 mt-1">
+                  <p className="text-sm text-gray-500">
+                    {selectedUser.cartItems?.length || 0} items • Total:{" "}
+                    {formatPrice(
+                      getCartTotal(selectedUser.cartItems),
+                      settings?.currency
+                    )}
+                  </p>
+
+                  {selectedUser.orderStats?.total > 0 && (
+                    <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                      {selectedUser.orderStats.completed} completed orders
+                    </span>
                   )}
-                </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowCartModal(false)}
@@ -640,9 +836,17 @@ const AllUsers = () => {
                       )}
 
                       <div className="ml-4 flex-1">
-                        <h3 className="font-medium text-gray-900">
-                          {item.product?.name || "Unknown Product"}
-                        </h3>
+                        <div className="flex justify-between">
+                          <h3 className="font-medium text-gray-900">
+                            {item.product?.name || "Unknown Product"}
+                          </h3>
+                          <span className="font-bold text-blue-600">
+                            {formatPrice(
+                              (item.product?.price || 0) * (item.quantity || 1),
+                              settings?.currency
+                            )}
+                          </span>
+                        </div>
 
                         <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
                           <div>
@@ -653,7 +857,7 @@ const AllUsers = () => {
                           </div>
 
                           <div>
-                            <span className="text-gray-500">Price:</span>
+                            <span className="text-gray-500">Unit Price:</span>
                             <span className="ml-2 font-medium">
                               {formatPrice(
                                 item.product?.price || 0,
@@ -681,13 +885,12 @@ const AllUsers = () => {
                           )}
                         </div>
 
-                        <div className="mt-2">
-                          <span className="text-gray-500">Subtotal:</span>
-                          <span className="ml-2 font-bold text-blue-600">
-                            {formatPrice(
-                              (item.product?.price || 0) * (item.quantity || 1),
-                              settings?.currency
-                            )}
+                        <div className="mt-3 flex items-center justify-between">
+                          <span className="text-sm text-gray-500">
+                            Stock: {item.product?.stock || "N/A"}
+                          </span>
+                          <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
+                            ID: {item.product?._id?.slice(-6) || "N/A"}
                           </span>
                         </div>
                       </div>
@@ -702,6 +905,14 @@ const AllUsers = () => {
                     {selectedUser.firstname} hasn't added any items to their
                     cart yet
                   </p>
+                  {selectedUser.orderStats?.total > 0 && (
+                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                      <p className="text-sm text-blue-700">
+                        This user has {selectedUser.orderStats.completed}{" "}
+                        completed orders
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -715,8 +926,16 @@ const AllUsers = () => {
                   </p>
                 </div>
 
+                <div className="text-center">
+                  <p className="text-sm text-gray-500">User's Order Stats</p>
+                  <p className="text-sm font-medium">
+                    {selectedUser.orderStats?.completed || 0} completed •{" "}
+                    {selectedUser.orderStats?.total || 0} total
+                  </p>
+                </div>
+
                 <div className="text-right">
-                  <p className="text-sm text-gray-500">Estimated Total</p>
+                  <p className="text-sm text-gray-500">Cart Total</p>
                   <p className="text-2xl font-bold text-blue-600">
                     {formatPrice(
                       getCartTotal(selectedUser.cartItems),
@@ -934,7 +1153,7 @@ const AllUsers = () => {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden" // CHANGED: Added max-h and flex-col
+            className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden"
           >
             {/* Header - Fixed */}
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
@@ -952,10 +1171,9 @@ const AllUsers = () => {
                 <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
+
             {/* Content - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6">
-              {" "}
-              {/* CHANGED: Added overflow-y-auto and flex-1 */}
               <div className="mb-6">
                 <div className="flex items-center p-4 bg-purple-50 border border-purple-200 rounded-xl">
                   <Edit2 className="h-6 w-6 text-purple-600 mr-3" />
@@ -969,6 +1187,7 @@ const AllUsers = () => {
                   </div>
                 </div>
               </div>
+
               <div className="mb-6">
                 <div className="mb-4">
                   <p className="text-sm font-medium text-gray-700 mb-2">
@@ -1022,14 +1241,10 @@ const AllUsers = () => {
                             {getAdminTypeIcon(type.value)}
                           </div>
                           <div className="ml-3 flex-1 min-w-0">
-                            {" "}
-                            {/* CHANGED: Added flex-1 min-w-0 */}
                             <p className="font-medium text-gray-900 truncate">
                               {type.label}
                             </p>
                             <p className="text-xs text-gray-500 mt-1 line-clamp-2">
-                              {" "}
-                              {/* CHANGED: Added line-clamp-2 */}
                               {getAdminTypeDescription(type.value)}
                             </p>
                             <div className="mt-2">
@@ -1043,8 +1258,6 @@ const AllUsers = () => {
                           </div>
                           {newAdminType === type.value && (
                             <div className="ml-2 shrink-0">
-                              {" "}
-                              {/* CHANGED: Added shrink-0 */}
                               <div className="h-5 w-5 bg-purple-500 rounded-full flex items-center justify-center">
                                 <div className="h-2 w-2 bg-white rounded-full"></div>
                               </div>
@@ -1055,6 +1268,7 @@ const AllUsers = () => {
                     ))}
                 </div>
               </div>
+
               {newAdminType && newAdminType !== selectedUser.adminType && (
                 <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
                   <p className="text-sm font-medium text-blue-800 mb-2">
@@ -1084,8 +1298,8 @@ const AllUsers = () => {
                   </div>
                 </div>
               )}
-            </div>{" "}
-            {/* End of scrollable content */}
+            </div>
+
             {/* Footer - Fixed at bottom */}
             <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 shrink-0">
               <div className="flex gap-3">
