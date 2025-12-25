@@ -48,7 +48,6 @@ const InventoryTab = () => {
     stockLevels,
     lowStockAlerts,
     inventoryValuation,
-    stockHistory,
     inventoryByLocation,
     inventoryAging,
     fetchInventoryAging,
@@ -62,7 +61,6 @@ const InventoryTab = () => {
     adjustStock,
     updateFilters,
     clearFilters,
-    getInventoryStats,
     setActiveTab,
     activeTab,
     updateProductPrice,
@@ -94,6 +92,7 @@ const InventoryTab = () => {
   const [historyType, setHistoryType] = useState("stock");
   const [priceHistory, setPriceHistory] = useState([]);
   const [loadingPriceHistory, setLoadingPriceHistory] = useState(false);
+  
 
   
 
@@ -411,7 +410,8 @@ const InventoryTab = () => {
         )}
         
         {activeTab === "low-stock" && (
-          <LowStockView alerts={lowStockAlerts || []} onAdjust={handleAdjustStock} />
+          <LowStockView alerts={lowStockAlerts || []} onAdjust={handleAdjustStock}
+          loading={loading} />
         )}
         {activeTab === "price-management" && (
           <PriceManagementView
@@ -431,11 +431,11 @@ const InventoryTab = () => {
         )}
         {activeTab === "valuation" && <AgingReportView data={inventoryAging} />}
         {activeTab === "valuation" && inventoryValuation && (
-          <ValuationView data={inventoryValuation} />
+          <ValuationView data={inventoryValuation} loading={loading} />
         )}
        
         {activeTab === "locations" && (
-          <LocationsView locations={inventoryByLocation} settings={settings} />
+          <LocationsView locations={inventoryByLocation} settings={settings} loading={loading} />
         )}
       </div>
 
@@ -1085,6 +1085,13 @@ const PriceManagementView = ({
   };
 
   const summary = calculateSummary();
+
+  if (loading)
+    return (
+      <div className="flex justify-center p-12 ">
+        <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+      </div>
+    );
 
   return (
     <div className="space-y-6">
@@ -2497,7 +2504,7 @@ const DashboardView = ({ data, settings }) => (
 
 
 // Low Stock View Component
-const LowStockView = ({ alerts, onAdjust }) => {
+const LowStockView = ({ alerts, onAdjust, loading }) => {
   // Calculate counts from alerts
   const outOfStockCount = alerts.filter(a => a.status === "out").length;
   const lowStockCount = alerts.filter(a => a.status === "low").length;
@@ -2545,6 +2552,13 @@ const LowStockView = ({ alerts, onAdjust }) => {
   });
 
   const affectedProducts = Object.keys(groupedAlerts).length;
+
+  if (loading)
+    return (
+      <div className="flex justify-center p-12 ">
+        <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+      </div>
+    );
 
   return (
     <div className="p-6">
@@ -3293,7 +3307,7 @@ const AgingReportView = ({ data }) => {
 };
 
 // Valuation View Component
-const ValuationView = ({ data }) => {
+const ValuationView = ({ data, loading }) => {
   const valuationArray = data.valuation || [];
 
   const calculateSummary = () => {
@@ -3336,6 +3350,13 @@ const ValuationView = ({ data }) => {
     : valuationArray;
 
     const {settings} = useStoreSettings()
+
+    if (loading)
+      return (
+        <div className="flex justify-center items-center h-screen ">
+          <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+        </div>
+      );
 
   return (
     <div className="space-y-6 mt-10">
@@ -3659,7 +3680,13 @@ const ValuationView = ({ data }) => {
 
 
 
-const LocationsView = ({ locations, settings }) => {
+const LocationsView = ({ locations, settings, loading }) => {
+  if (loading)
+    return (
+      <div className="flex justify-center p-12  ">
+        <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
+      </div>
+    );
 
   if (!locations || locations.length === 0) {
     return (
