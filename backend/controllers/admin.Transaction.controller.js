@@ -1,17 +1,15 @@
 import Order from "../models/order.model.js";
-
 export const getAllTransactions = async (req, res) => {
   try {
     const { search = "", sortBy = "date", sortOrder = "desc" } = req.query;
 
-    // Find payment orders
+    // Find ALL payment orders (don't filter by refund status)
     const orders = await Order.find({
       flutterwaveTransactionId: { $exists: true },
-      refundStatus: { $nin: ["Refunded", "Fully Refunded"] },
     })
       .populate("user", "firstname lastname email")
       .select(
-        "orderNumber flutterwaveTransactionId flutterwaveRef totalAmount paymentMethod createdAt refundStatus"
+        "orderNumber flutterwaveTransactionId flutterwaveRef totalAmount paymentMethod createdAt refundStatus refunds totalRefunded"
       );
 
     const paymentTransactions = orders
@@ -20,16 +18,21 @@ export const getAllTransactions = async (req, res) => {
           order.flutterwaveTransactionId ||
           order.flutterwaveRef ||
           order.orderNumber,
+        orderId: order._id, // Add order ID for reference
         customer: {
-          name: `${order.user.firstname} ${order.user.lastname }`,
+          name: `${order.user.firstname} ${order.user.lastname}`,
           email: order.user.email,
         },
-        amount: order.totalAmount - (order.totalRefunded || 0),
+        amount: order.totalAmount,
+        netAmount: order.totalAmount - (order.totalRefunded || 0), // Add net amount after refunds
         paymentMethod: order.paymentMethod?.method || "flutterwave",
         type: "payment",
-        status: "success", 
+        status: order.refundStatus ? getPaymentStatus(order) : "success",
         date: order.createdAt,
-      })) 
+        originalOrder: order._id,
+        refunds: order.refunds || [],
+        totalRefunded: order.totalRefunded || 0,
+      }))
       .filter((tx) =>
         search
           ? tx.transactionId.toLowerCase().includes(search.toLowerCase())
@@ -50,6 +53,11 @@ export const getAllTransactions = async (req, res) => {
         ) {
           const tx = {
             transactionId: refund._id.toString(),
+            orderId: order._id, // Link to original order
+            originalTransactionId:
+              order.flutterwaveTransactionId ||
+              order.flutterwaveRef ||
+              order.orderNumber,
             customer: {
               name: `${order.user.firstname} ${order.user.lastname}`,
               email: order.user.email,
@@ -59,12 +67,17 @@ export const getAllTransactions = async (req, res) => {
             type: "refund",
             status: refund.status,
             date: refund.processedAt || refund.requestedAt,
+            linkedPaymentId:
+              order.flutterwaveTransactionId || order.flutterwaveRef,
           };
 
           // Apply search filter if query is provided
           if (
             !search ||
-            tx.transactionId.toLowerCase().includes(search.toLowerCase())
+            tx.transactionId.toLowerCase().includes(search.toLowerCase()) ||
+            tx.originalTransactionId
+              .toLowerCase()
+              .includes(search.toLowerCase())
           ) {
             refundTransactions.push(tx);
           }
@@ -101,3 +114,18 @@ export const getAllTransactions = async (req, res) => {
     });
   }
 };
+
+// Helper function to determine payment status based on refunds
+function getPaymentStatus(order) {
+  if (!order.refundStatus && !order.totalRefunded) return "success";
+
+  if (order.refundStatus === "Fully Refunded") return "fully refunded";
+  if (order.refundStatus === "Partially Refunded") return "partially refunded";
+  if (order.refundStatus === "Refunded") return "refunded";
+
+  // Fallback based on totalRefunded
+  if (order.totalRefunded >= order.totalAmount) return "fully refunded";
+  if (order.totalRefunded > 0) return "partially refunded";
+
+  return "success";
+}

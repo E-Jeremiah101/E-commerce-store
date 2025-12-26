@@ -7,6 +7,7 @@ import { useUserStore } from "../stores/useUserStore";
 import ExportTransactionPdf from "../utils/exportTransactionPdf.jsx";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "./StoreSettingsContext.jsx";
+
 const Transactions = () => {
   const [transactions, setTransaction] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +33,6 @@ const Transactions = () => {
 
   const { user } = useUserStore();
 
-  
   const fetchTransaction = async () => {
     try {
       setIsFetching(true);
@@ -40,14 +40,13 @@ const Transactions = () => {
         search: searchQuery,
         sortBy: "date",
         sortOrder,
-        startDate: startDate ? startDate.toISOString() : undefined,
-        endDate: endDate ? endDate.toISOString() : undefined,
       };
+
       if (startDate) params.startDate = startDate.toISOString();
       if (endDate) params.endDate = endDate.toISOString();
 
       const { data } = await axios.get("/admin/transactions", {
-        params: { search: searchQuery, sortBy, sortOrder },
+        params,
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
 
@@ -65,7 +64,7 @@ const Transactions = () => {
       setTransaction(sortedTransactions);
       setExportData(sortedTransactions);
     } catch (err) {
-      console.error("Error fetching orders:", err);
+      console.error("Error fetching transactions:", err);
     } finally {
       setIsFetching(false);
       setLoading(false);
@@ -79,21 +78,48 @@ const Transactions = () => {
   const handleSearchKeyDown = (e) => {
     if (e.key === "Enter") setSearchQuery(search);
   };
-;
-
 
   // Pagination logic
   const totalTransactions = transactions.length;
   const totalPages = Math.ceil(totalTransactions / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const transactionsList = transactions.slice(startIndex, startIndex + itemsPerPage);
+  const transactionsList = transactions.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   const handlePrev = () => setCurrentPage((p) => Math.max(p - 1, 1));
   const handleNext = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
   const handlePageClick = (pageNum) => setCurrentPage(pageNum);
 
+  const { settings } = useStoreSettings();
+
   // Get status badge color
-  const {settings} = useStoreSettings()
+  const getStatusColor = (status, type) => {
+    if (type === "refund") {
+      if (status === "Approved" || status === "Refunded")
+        return "bg-green-100 text-green-700";
+      if (status === "Partially Refunded")
+        return "bg-yellow-100 text-yellow-700";
+      if (status === "pending") return "bg-yellow-100 text-yellow-700";
+      return "bg-red-100 text-red-700";
+    } else {
+      if (status === "success") return "bg-green-100 text-green-700";
+      if (status === "fully refunded") return "bg-gray-100 text-gray-700";
+      if (status === "partially refunded") return "bg-blue-100 text-blue-700";
+      if (status === "refunded") return "bg-gray-100 text-gray-700";
+      if (status === "pending") return "bg-yellow-100 text-yellow-700";
+      return "bg-red-100 text-red-700";
+    }
+  };
+
+  // Get status display text
+  const getStatusText = (status, totalRefunded, amount) => {
+    if (status === "partially refunded" || status === "fully refunded") {
+      return status;
+    }
+    return status;
+  };
 
   if (loading)
     return (
@@ -142,6 +168,7 @@ const Transactions = () => {
             placeholder="Search by Transaction ID"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             className="px-3 py-2 rounded-lg border placeholder-gray-400 focus:ring-1 text-gray-500 w-50 md:w-1/4"
           />
 
@@ -174,8 +201,6 @@ const Transactions = () => {
               <option value="desc">Newest First</option>
               <option value="asc">Oldest First</option>
             </select>
-
-            {/* Add Export PDF Button */}
           </div>
 
           <div>
@@ -198,7 +223,7 @@ const Transactions = () => {
           </p>
         ) : (
           <>
-            {/* Orders Table */}
+            {/* Transactions Table */}
             <div className="overflow-x-auto  rounded-lg shadow-lg">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -228,7 +253,7 @@ const Transactions = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-300">
                   {transactionsList.map((tx) => (
-                    <tr key={tx.transactionId} className="hover:bg-gray-750">
+                    <tr key={tx.transactionId} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
                           <div className="flex items-center gap-2 mb-1">
@@ -236,6 +261,12 @@ const Transactions = () => {
                               {tx.transactionId}
                             </span>
                           </div>
+                          {tx.type === "refund" && tx.linkedPaymentId && (
+                            <div className="text-xs text-gray-500">
+                              Refund for: {tx.linkedPaymentId.substring(0, 20)}
+                              ...
+                            </div>
+                          )}
                         </div>
                       </td>
 
@@ -248,47 +279,84 @@ const Transactions = () => {
                         </div>
                       </td>
 
-                      <td className="px-6 py-4  text-sm text-gray-900 font-medium capitalize">
-                        {tx.type === "refund" ? "-" : ""}
-                        {formatPrice((tx.amount ?? 0), settings?.currency)}
+                      <td className="px-6 py-4">
+                        <div
+                          className={`text-sm font-medium ${
+                            tx.type === "refund"
+                              ? "text-red-600"
+                              : "text-gray-900"
+                          }`}
+                        >
+                          {tx.type === "refund" ? "-" : ""}
+                          {formatPrice(tx.amount ?? 0, settings?.currency)}
+                        </div>
+                        {tx.type === "payment" && tx.totalRefunded > 0 && (
+                          <>
+                            <div className="text-xs text-green-500 mt-1">
+                              Net:{" "}
+                              {formatPrice(
+                                (tx.amount || 0) - (tx.totalRefunded || 0),
+                                settings?.currency
+                              )}
+                            </div>
+                            <span className="-2 text-red-600 text-xs">
+                              (-{" "}
+                              {formatPrice(
+                                tx.totalRefunded || 0,
+                                settings?.currency
+                              )}
+                              )
+                            </span>
+                          </>
+                        )}
                       </td>
 
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium capitalize">
-                        {tx.paymentMethod.replace("_", " ")}
+                        {tx.paymentMethod?.replace("_", " ") || "flutterwave"}
                       </td>
 
                       <td className="px-6 py-4">
                         <span
                           className={`px-3 py-1 text-xs font-medium rounded-full
-                    ${
-                      tx.type === "payment"
-                        ? "bg-green-100 text-sm font-medium text-green-700"
-                        : "bg-red-100 text-sm font-medium text-red-700"
-                    }`}
+                            ${
+                              tx.type === "payment"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
                         >
                           {tx.type}
+                          {tx.type === "payment" && tx.totalRefunded > 0 && (
+                            <span className="ml-1 text-xs">
+                              (
+                              {tx.totalRefunded >= tx.amount
+                                ? "fully"
+                                : "partially"}{" "}
+                              refunded)
+                            </span>
+                          )}
                         </span>
                       </td>
 
                       <td className="px-6 py-4">
                         <span
-                          className={`px-3 py-1 text-xs rounded-full  font-medium
-                    ${
-                      tx.status === "success" ||
-                      tx.status === "processed" ||
-                      tx.status === "approved"
-                        ? "bg-green-100 text-green-700"
-                        : tx.status === "pending"
-                        ? "bg-yellow-100 text-yellow-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
+                          className={`px-3 py-1 text-xs rounded-full font-medium ${getStatusColor(
+                            tx.status,
+                            tx.type
+                          )}`}
                         >
-                          {tx.status}
+                          {getStatusText(
+                            tx.status,
+                            tx.totalRefunded,
+                            tx.amount
+                          )}
                         </span>
                       </td>
 
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                         {new Date(tx.date).toLocaleDateString()}
+                        <div className="text-xs text-gray-500">
+                          {new Date(tx.date).toLocaleTimeString()}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -327,7 +395,7 @@ const Transactions = () => {
                       className={`px-4 py-2 text-sm rounded ${
                         currentPage === page
                           ? "bg-gray-700 text-white"
-                          : "bg-gray-100 text-yellow-700 hover:bg-gray-200"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
                     >
                       {page}
@@ -344,6 +412,128 @@ const Transactions = () => {
                 </button>
               </div>
             )}
+
+            {/* Summary Stats */}
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold text-gray-700">
+                  Payment Summary
+                </h3>
+                <div className="mt-4">
+                  <div className="flex justify-between text-sm">
+                    <span>Total Payments:</span>
+                    <span className="font-medium">
+                      {formatPrice(
+                        transactions
+                          .filter((tx) => tx.type === "payment")
+                          .reduce((sum, tx) => sum + (tx.amount || 0), 0),
+                        settings?.currency
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span>Total Refunds:</span>
+                    <span className="font-medium text-red-600">
+                      {formatPrice(
+                        transactions
+                          .filter((tx) => tx.type === "refund")
+                          .reduce((sum, tx) => sum + (tx.amount || 0), 0),
+                        settings?.currency
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2 border-t pt-2">
+                    <span>Net Amount:</span>
+                    <span className="font-medium text-green-600">
+                      {formatPrice(
+                        transactions
+                          .filter((tx) => tx.type === "payment")
+                          .reduce(
+                            (sum, tx) =>
+                              sum +
+                              ((tx.amount || 0) - (tx.totalRefunded || 0)),
+                            0
+                          ),
+                        settings?.currency
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold text-gray-700">
+                  Transaction Count
+                </h3>
+                <div className="mt-4">
+                  <div className="flex justify-between text-sm">
+                    <span>Payment Transactions:</span>
+                    <span className="font-medium">
+                      {
+                        transactions.filter((tx) => tx.type === "payment")
+                          .length
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span>Refund Transactions:</span>
+                    <span className="font-medium">
+                      {transactions.filter((tx) => tx.type === "refund").length}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2 border-t pt-2">
+                    <span>Total Transactions:</span>
+                    <span className="font-medium">{transactions.length}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-lg shadow">
+                <h3 className="text-lg font-semibold text-gray-700">
+                  Refund Status
+                </h3>
+                <div className="mt-4">
+                  <div className="flex justify-between text-sm">
+                    <span>Fully Refunded:</span>
+                    <span className="font-medium">
+                      {
+                        transactions.filter(
+                          (tx) =>
+                            tx.type === "payment" &&
+                            (tx.status === "fully refunded" ||
+                              tx.totalRefunded >= tx.amount)
+                        ).length
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span>Partially Refunded:</span>
+                    <span className="font-medium">
+                      {
+                        transactions.filter(
+                          (tx) =>
+                            tx.type === "payment" &&
+                            (tx.status === "partially refunded" ||
+                              (tx.totalRefunded > 0 &&
+                                tx.totalRefunded < tx.amount))
+                        ).length
+                      }
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span>Pending Refunds:</span>
+                    <span className="font-medium text-yellow-600">
+                      {
+                        transactions.filter(
+                          (tx) =>
+                            tx.type === "refund" && tx.status === "pending"
+                        ).length
+                      }
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </>
         )}
       </motion.div>
