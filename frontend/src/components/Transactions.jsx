@@ -14,7 +14,6 @@ const Transactions = () => {
   const [isFetching, setIsFetching] = useState(false);
   const [search, setSearch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,7 +37,6 @@ const Transactions = () => {
       setIsFetching(true);
       const params = {
         search: searchQuery,
-        sortBy: "date",
         sortOrder,
       };
 
@@ -94,16 +92,14 @@ const Transactions = () => {
 
   const { settings } = useStoreSettings();
 
-  // Get status badge color
+  // Get status badge color based on your schema
   const getStatusColor = (status, type) => {
     if (type === "refund") {
-      if (status === "Approved" || status === "Refunded")
-        return "bg-green-100 text-green-700";
-      if (status === "Partially Refunded")
-        return "bg-yellow-100 text-yellow-700";
-      if (status === "pending") return "bg-yellow-100 text-yellow-700";
+      if (status === "refunded") return "bg-green-100 text-green-700";
+      if (status === "processing") return "bg-yellow-100 text-yellow-700";
       return "bg-red-100 text-red-700";
     } else {
+      // Payment statuses from your schema
       if (status === "success") return "bg-green-100 text-green-700";
       if (status === "fully refunded") return "bg-gray-100 text-gray-700";
       if (status === "partially refunded") return "bg-blue-100 text-blue-700";
@@ -113,12 +109,12 @@ const Transactions = () => {
     }
   };
 
-  // Get status display text
-  const getStatusText = (status, totalRefunded, amount) => {
-    if (status === "partially refunded" || status === "fully refunded") {
-      return status;
-    }
-    return status;
+  // Format status for display
+  const formatStatus = (status) => {
+    return status
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   };
 
   if (loading)
@@ -165,14 +161,14 @@ const Transactions = () => {
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-15 bg-white rounded-lg shadow-md p-4">
           <input
             type="text"
-            placeholder="Search by Transaction ID"
+            placeholder="Search by Transaction ID or Order Number"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={handleSearchKeyDown}
-            className="px-3 py-2 rounded-lg border placeholder-gray-400 focus:ring-1 text-gray-500 w-50 md:w-1/4"
+            className="px-3 py-2 rounded-lg border placeholder-gray-400 focus:ring-1 text-gray-500 w-50 md:w-1/3"
           />
 
-          <div className="flex gap-2 flex-wrap items-center ">
+          <div className="flex gap-2 flex-wrap items-center">
             <DatePicker
               selected={startDate}
               onChange={(date) => setStartDate(date)}
@@ -196,7 +192,7 @@ const Transactions = () => {
             <select
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
-              className="px-3 py-2 rounded-lg text-gray-500 "
+              className="px-3 py-2 rounded-lg text-gray-500 border"
             >
               <option value="desc">Newest First</option>
               <option value="asc">Oldest First</option>
@@ -219,12 +215,12 @@ const Transactions = () => {
 
         {totalTransactions === 0 ? (
           <p className="flex justify-center mt-7 tracking-widest">
-            No Transaction found.
+            No transactions found.
           </p>
         ) : (
           <>
             {/* Transactions Table */}
-            <div className="overflow-x-auto  rounded-lg shadow-lg">
+            <div className="overflow-x-auto rounded-lg shadow-lg">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
@@ -253,29 +249,33 @@ const Transactions = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-300">
                   {transactionsList.map((tx) => (
-                    <tr key={tx.transactionId} className="hover:bg-gray-50">
+                    <tr
+                      key={`${tx.type}-${tx.transactionId}`}
+                      className="hover:bg-gray-50"
+                    >
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm text-gray-900 font-medium">
-                              {tx.transactionId}
-                            </span>
+                          <div className="text-sm text-gray-900 font-medium">
+                            {tx.transactionId}
                           </div>
-                          {tx.type === "refund" && tx.linkedPaymentId && (
+                          {tx.type === "refund" && tx.originalTransactionId && (
                             <div className="text-xs text-gray-500">
-                              Refund for: {tx.linkedPaymentId.substring(0, 20)}
-                              ...
+                              Refund for:{" "}
+                              {tx.originalTransactionId.substring(0, 15)}...
                             </div>
                           )}
+                          <div className="text-xs text-gray-400">
+                            Order: {tx.orderNumber}
+                          </div>
                         </div>
                       </td>
 
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900 font-medium">
-                          {tx.customer?.name}
+                          {tx.customer?.name || "N/A"}
                         </div>
                         <div className="text-xs text-gray-400">
-                          {tx.customer?.email}
+                          {tx.customer?.email || "N/A"}
                         </div>
                       </td>
 
@@ -292,14 +292,14 @@ const Transactions = () => {
                         </div>
                         {tx.type === "payment" && tx.totalRefunded > 0 && (
                           <>
-                            <div className="text-xs text-green-500 mt-1">
+                            <div className="text-xs text-gray-500 mt-1">
                               Net:{" "}
                               {formatPrice(
                                 (tx.amount || 0) - (tx.totalRefunded || 0),
                                 settings?.currency
                               )}
                             </div>
-                            <span className="-2 text-red-600 text-xs">
+                            <span className="text-xs text-red-600">
                               (-{" "}
                               {formatPrice(
                                 tx.totalRefunded || 0,
@@ -309,6 +309,7 @@ const Transactions = () => {
                             </span>
                           </>
                         )}
+                       
                       </td>
 
                       <td className="px-6 py-4 text-sm text-gray-900 font-medium capitalize">
@@ -324,16 +325,8 @@ const Transactions = () => {
                                 : "bg-red-100 text-red-700"
                             }`}
                         >
-                          {tx.type}
-                          {tx.type === "payment" && tx.totalRefunded > 0 && (
-                            <span className="ml-1 text-xs">
-                              (
-                              {tx.totalRefunded >= tx.amount
-                                ? "fully"
-                                : "partially"}{" "}
-                              refunded)
-                            </span>
-                          )}
+                          {tx.type === "payment" ? "Payment" : "Refund"}
+                          
                         </span>
                       </td>
 
@@ -344,18 +337,19 @@ const Transactions = () => {
                             tx.type
                           )}`}
                         >
-                          {getStatusText(
-                            tx.status,
-                            tx.totalRefunded,
-                            tx.amount
-                          )}
+                          {formatStatus(tx.status)}
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-sm text-gray-900 font-medium">
-                        {new Date(tx.date).toLocaleDateString()}
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900 font-medium">
+                          {new Date(tx.date).toLocaleDateString()}
+                        </div>
                         <div className="text-xs text-gray-500">
-                          {new Date(tx.date).toLocaleTimeString()}
+                          {new Date(tx.date).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </div>
                       </td>
                     </tr>
@@ -448,12 +442,10 @@ const Transactions = () => {
                       {formatPrice(
                         transactions
                           .filter((tx) => tx.type === "payment")
-                          .reduce(
-                            (sum, tx) =>
-                              sum +
-                              ((tx.amount || 0) - (tx.totalRefunded || 0)),
-                            0
-                          ),
+                          .reduce((sum, tx) => sum + (tx.amount || 0), 0) -
+                          transactions
+                            .filter((tx) => tx.type === "refund")
+                            .reduce((sum, tx) => sum + (tx.amount || 0), 0),
                         settings?.currency
                       )}
                     </span>
@@ -481,9 +473,18 @@ const Transactions = () => {
                       {transactions.filter((tx) => tx.type === "refund").length}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm mt-2 border-t pt-2">
-                    <span>Total Transactions:</span>
-                    <span className="font-medium">{transactions.length}</span>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span>Refund Requests:</span>
+                    <span className="font-medium">
+                      {
+                        transactions.filter(
+                          (tx) =>
+                            tx.type === "payment" &&
+                            (tx.refundStatus === "Partial Refund Requested" ||
+                              tx.refundStatus === "Full Refund Requested")
+                        ).length
+                      }
+                    </span>
                   </div>
                 </div>
               </div>
@@ -501,7 +502,7 @@ const Transactions = () => {
                           (tx) =>
                             tx.type === "payment" &&
                             (tx.status === "fully refunded" ||
-                              tx.totalRefunded >= tx.amount)
+                              tx.refundStatus === "Fully Refunded")
                         ).length
                       }
                     </span>
@@ -514,8 +515,7 @@ const Transactions = () => {
                           (tx) =>
                             tx.type === "payment" &&
                             (tx.status === "partially refunded" ||
-                              (tx.totalRefunded > 0 &&
-                                tx.totalRefunded < tx.amount))
+                              tx.refundStatus === "Partially Refunded")
                         ).length
                       }
                     </span>
@@ -526,7 +526,7 @@ const Transactions = () => {
                       {
                         transactions.filter(
                           (tx) =>
-                            tx.type === "refund" && tx.status === "pending"
+                            tx.type === "refund" && tx.status === "processing"
                         ).length
                       }
                     </span>
