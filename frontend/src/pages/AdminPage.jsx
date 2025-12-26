@@ -309,6 +309,7 @@ import Transactions from "../components/Transactions.jsx";
 import toast from "react-hot-toast";
 import StoreSettings from "../components/StoreSettings.jsx";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
+import AdminCoupons from "../components/AdminCoupons.jsx";
 
 // Define constants at the top
 const STORAGE_KEY = "admin_active_tab";
@@ -324,6 +325,7 @@ const tabs = [
   { id: "OrderRecovery", label: "Recovery", icon: Headset },
   { id: "Transactions", label: "Transactions", icon: CreditCard },
   { id: "audit", label: "Audit Logs", icon: FileText },
+  { id: "coupon", label: "Coupons", icon: FileText },
   { id: "Settings", label: "Settings", icon: Settings },
 ];
 
@@ -348,6 +350,8 @@ const LOCAL_PERMISSIONS = {
   REFUND_WRITE: "refund:write",
   RECOVERY_READ: "recovery:read",
   RECOVERY_WRITE: "recovery:write",
+  COUPON_READ: "coupon_read",
+  COUPON_WRITE: "coupon_write",
   USER_READ: "user:read",
   USER_WRITE: "user:write",
   AUDIT_READ: "audit:read",
@@ -375,6 +379,7 @@ const LOCAL_ADMIN_ROLE_PERMISSIONS = {
     LOCAL_PERMISSIONS.ORDER_READ,
     LOCAL_PERMISSIONS.REFUND_READ,
     LOCAL_PERMISSIONS.AUDIT_READ,
+    LOCAL_PERMISSIONS.COUPON_READ,
   ],
   super_admin: Object.values(LOCAL_PERMISSIONS),
 };
@@ -388,6 +393,7 @@ const TAB_PERMISSIONS = {
   AdminOrder: LOCAL_PERMISSIONS.ORDER_READ,
   AdminRefunds: LOCAL_PERMISSIONS.REFUND_READ,
   OrderRecovery: LOCAL_PERMISSIONS.RECOVERY_READ,
+  coupon: LOCAL_PERMISSIONS.COUPON_READ,
   Transactions: LOCAL_PERMISSIONS.AUDIT_READ,
   audit: LOCAL_PERMISSIONS.AUDIT_READ,
   AllUsers: LOCAL_PERMISSIONS.USER_READ,
@@ -565,6 +571,8 @@ const AdminPage = () => {
           hasPermission(LOCAL_PERMISSIONS.AUDIT_READ) && <AuditLogsTab />}
         {activeTab === "AllUsers" &&
           hasPermission(LOCAL_PERMISSIONS.USER_READ) && <AllUsers />}
+        {activeTab === "coupon" &&
+          hasPermission(LOCAL_PERMISSIONS.COUPON_READ) && <AdminCoupons />}
         {activeTab === "Settings" &&
           hasPermission(LOCAL_PERMISSIONS.SETTINGS_WRITE) && <StoreSettings />}
       </div>

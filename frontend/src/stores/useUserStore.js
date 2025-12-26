@@ -190,6 +190,7 @@
 //     }
 //   },
 // }));
+
 import { create } from "zustand";
 import axios from "../lib/axios";
 import { toast } from "react-hot-toast";
@@ -204,6 +205,8 @@ const LOCAL_PERMISSIONS = {
   REFUND_WRITE: "refund:write",
   RECOVERY_READ: "recovery:read",
   RECOVERY_WRITE: "recovery:write",
+  COUPON_READ: "coupon_read",
+  COUPON_WRITE: "coupon_write",
   USER_READ: "user:read",
   USER_WRITE: "user:write",
   AUDIT_READ: "audit:read",
@@ -231,6 +234,7 @@ const LOCAL_ADMIN_ROLE_PERMISSIONS = {
     LOCAL_PERMISSIONS.ORDER_READ,
     LOCAL_PERMISSIONS.REFUND_READ,
     LOCAL_PERMISSIONS.AUDIT_READ,
+    LOCAL_PERMISSIONS.COUPON_READ,
   ],
   super_admin: Object.values(LOCAL_PERMISSIONS),
 };

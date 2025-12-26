@@ -9,7 +9,10 @@ export const PERMISSIONS = {
   REFUND_WRITE: "refund:write",
 
   RECOVERY_READ: "recovery:read",
-   RECOVERY_WRITE: "recovery:write",
+  RECOVERY_WRITE: "recovery:write",
+
+  COUPON_READ: "coupon:read",
+  COUPON_WRITE: "coupon:write",
 
   USER_READ: "user:read",
   USER_WRITE: "user:write",

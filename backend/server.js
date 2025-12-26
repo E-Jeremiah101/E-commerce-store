@@ -7,7 +7,7 @@ import { connectDB } from "./lib/db.js";
 import cookieParser from "cookie-parser";
 import path from "path";
 import cartRoutes from "./routes/cart.route.js";
-import couponRoutes from "./routes/coupon.route.js";
+import couponRoutes  from "./routes/adminCoupon.routes.js"
 import paymentRoutes from "./routes/payment.route.js";
 import analyticsRoutes from "./routes/analytics.route.js";
 import { connectRedis } from "./lib/redis.js";
@@ -136,7 +136,7 @@ app.use("/api/cart", cartRoutes);
 // });
 
 //couponRoutes
-app.use("/api/coupons", couponRoutes);
+app.use("/api/admin/coupons", couponRoutes);
 
 //paymentsRoutes
 app.use("/api/payments", paymentRoutes);

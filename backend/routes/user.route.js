@@ -54,7 +54,7 @@ const router = express.Router();
 
 // User profile routes (for authenticated users)
 router.get("/profile", protectRoute, getProfile);
-router.put("/profile", protectRoute, updateProfile);
+router.put("/update-profile", protectRoute, updateProfile);
 
 // Admin user management routes
 router.get(

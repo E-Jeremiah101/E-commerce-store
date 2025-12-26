@@ -27,7 +27,7 @@ const PersonalInfoPage = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const { data } = await axios.get("/api/users/me");
+        const { data } = await axios.get("/api/users/profile");
         setUser({
           ...data,
           phones: data.phones?.length
@@ -167,12 +167,12 @@ const PersonalInfoPage = () => {
         })),
       };
 
-      await axios.put("/api/users/me", updateData);
+      await axios.put("/api/users/update-profile", updateData);
 
       toast.success("Profile updated successfully!");
 
       // Refresh user data
-      const { data } = await axios.get("/api/users/me");
+      const { data } = await axios.get("/api/users/profile");
       setUser(data);
     } catch (err) {
       console.error("Error updating profile:", err);
