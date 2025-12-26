@@ -29,7 +29,13 @@ const couponSchema = new mongoose.Schema(
     },
     couponReason: {
       type: String,
-      enum: ["first_order", "high_value_order"],
+      enum: [
+        "first_order",
+        "high_value_order",
+        "special_reward", // manual (best name)
+        "loyalty_bonus", // manual
+        "customer_support",
+      ],
       required: true,
     },
     isReserved: { type: Boolean, default: false },

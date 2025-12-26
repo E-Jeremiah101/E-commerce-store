@@ -515,6 +515,7 @@ const AllUsers = () => {
                             <p className="text-sm font-bold text-gray-900">
                               {user.firstname} {user.lastname}
                             </p>
+                            <p className="text-xs text-gray-600">{user._id}</p>
                             <p className="text-sm text-gray-600">
                               {user.email}
                             </p>
@@ -626,8 +627,8 @@ const AllUsers = () => {
                                   <span className="ml-1.5">
                                     {getAdminTypeLabel(user.adminType)}
                                   </span>
-                                </span>                               
-                              </div>                             
+                                </span>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -702,7 +703,7 @@ const AllUsers = () => {
                               <Edit2 className="h-4 w-4 mr-2" />
                               Change Admin Type
                             </button>
-                          )}                      
+                          )}
                         </div>
                       </td>
                     </tr>

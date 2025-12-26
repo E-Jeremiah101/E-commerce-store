@@ -303,7 +303,7 @@ const OrderSummary = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const { data } = await axios.get("/users/me");
+        const { data } = await axios.get("/users/profile");
         setUser(data);
       } catch (err) {
         console.error("Error refreshing user:", err);
@@ -557,7 +557,7 @@ const OrderSummary = () => {
           <dl className="flex items-center justify-between gap-4">
             <dt className="text-base font-normal text-gray-600">Sub-Total</dt>
             <dt className="text-sm font-medium text-black">
-              {formatPrice(formattedSubtotal, settings?.currency)}
+              {formatPrice(Math.round(formattedSubtotal, settings?.currency))}
             </dt>
           </dl>
 
@@ -565,7 +565,7 @@ const OrderSummary = () => {
             <dl className="flex items-center justify-between gap-4">
               <dt className="text-base font-normal text-gray-600">Savings</dt>
               <dt className="text-base font-medium text-black">
-                {formatPrice(formattedSavings, settings?.currency)}
+                {formatPrice(Math.round(formattedSavings, settings?.currency))}
               </dt>
             </dl>
           )}
@@ -595,7 +595,7 @@ const OrderSummary = () => {
           <dl className="flex items-center justify-between gap-4">
             <dt className="text-base font-normal text-gray-600">Total </dt>
             <dt className="text-lg font-medium text-black-">
-              {formatPrice(grandTotal, settings?.currency)}
+              {formatPrice(Math.round(grandTotal, settings?.currency))}
             </dt>
           </dl>
         </div>

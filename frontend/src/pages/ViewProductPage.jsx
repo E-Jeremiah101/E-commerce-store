@@ -268,7 +268,7 @@ import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
     <div className="min-h-screen ">
       {/* Header */}
       <motion.div
-        className="flex items-center justify-between  py-5 fixed top-0 left-0 right-0 z-40 shadow-sm px-6   bg-gradient-to-br from-white via-gray-100 to-gray-300"
+        className="flex items-center justify-between  py-5 fixed top-0 left-0 right-0 z-40  px-7   bg-white"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}

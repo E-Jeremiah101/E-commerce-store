@@ -95,7 +95,7 @@ const CategoryPage = () => {
                  {/* Page Title - Centered with subtle styling */}
                  <div className="absolute left-1/2 transform -translate-x-1/2">
                    <div className="flex flex-col items-center">
-                     <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">
+                     <h2 className="text-[1.1rem] md:text-xl  font-semibold text-gray-900 tracking-tight">
                       {category.charAt(0).toUpperCase() +
             category
               .slice(1)
@@ -120,7 +120,7 @@ const CategoryPage = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
           >
             {displayedProducts?.length === 0 && (
-              <h2 className="text-3xl font-semibold text-black text-center col-span-full">
+              <h2 className="text-2xl font-semibold text-black text-center col-span-full">
                 No products found
               </h2>
             )}

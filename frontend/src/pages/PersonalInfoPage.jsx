@@ -204,7 +204,7 @@ const PersonalInfoPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
             {/* Back Button - Left aligned */}
-            <div className="flex items-center">
+            <motion.div className="flex items-center">
               <motion.div
                 whileHover={{ x: -2 }}
                 whileTap={{ scale: 0.95 }}
@@ -212,7 +212,7 @@ const PersonalInfoPage = () => {
               >
                 <GoBackButton />
               </motion.div>
-            </div>
+            </motion.div>
 
             {/* Page Title - Centered with subtle styling */}
             <div className="absolute left-1/2 transform -translate-x-1/2">
