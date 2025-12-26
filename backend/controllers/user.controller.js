@@ -169,7 +169,7 @@ export const updateProfile = async (req, res) => {
 };
 
 // GET all users (for admin) - UPDATED
-// GET all users (for admin) - UPDATED with order counts
+
 export const getAllUsers = async (req, res) => {
   try {
     console.log("🔍 getAllUsers called by:", req.user?.email);
@@ -187,31 +187,27 @@ export const getAllUsers = async (req, res) => {
         { email: searchRegex },
       ];
 
-      // If search looks like a MongoDB ObjectId
       if (/^[0-9a-fA-F]{24}$/.test(search.trim())) {
         query.$or.push({ _id: search.trim() });
       }
     }
 
-    console.log("Query:", query);
-
-    // First, get users with basic info
+    // Get users with basic info
     const users = await User.find(query)
       .populate("cartItems.product", "name price images")
       .select("-password")
       .sort({ createdAt: -1 });
 
-    console.log(`Found ${users.length} users`);
-
-    // Import Order model to get order counts
+    // Import models
     const Order = (await import("../models/order.model.js")).default;
+    const Coupon = (await import("../models/coupon.model.js")).default;
 
-    // Get order counts for each user
-    const usersWithOrderCounts = await Promise.all(
+    // Get order counts and coupon data for each user
+    const usersWithStats = await Promise.all(
       users.map(async (user) => {
         const userObj = user.toObject();
         
-        // Get order statistics for this user
+        // Get order statistics
         const orderStats = await Order.aggregate([
           { $match: { user: user._id } },
           {
@@ -222,15 +218,24 @@ export const getAllUsers = async (req, res) => {
           }
         ]);
         
-        // Convert array to object for easier access
+        // Convert array to object
         const statsObj = {};
         orderStats.forEach(stat => {
           statsObj[stat._id] = stat.count;
         });
         
-        // Calculate completed orders (assuming status "delivered" means completed)
+        // Calculate completed orders
         const completedOrders = statsObj["Delivered"] || 0;
+        const CancelledOrders = statsObj["Cancelled"] || 0;
         const totalOrders = orderStats.reduce((total, stat) => total + stat.count, 0);
+        
+        // Get coupon data for this user
+        const coupons = await Coupon.find({ userId: user._id });
+        
+        // Calculate coupon statistics
+        const activeCoupons = coupons.filter(c => c.isActive && new Date(c.expirationDate) > new Date()).length;
+        const usedCoupons = coupons.filter(c => c.usedAt).length;
+        const totalCoupons = coupons.length;
         
         // Add permissions for admin users
         let permissions = [];
@@ -246,14 +251,21 @@ export const getAllUsers = async (req, res) => {
           permissions,
           orderStats: {
             completed: completedOrders,
+            cancelled:CancelledOrders,
             total: totalOrders,
             byStatus: statsObj
+          },
+          couponStats: {
+            active: activeCoupons,
+            used: usedCoupons,
+            total: totalCoupons,
+            coupons: coupons.slice(0, 5) // Include recent 5 coupons for details
           }
         };
       })
     );
 
-    res.json(usersWithOrderCounts);
+    res.json(usersWithStats);
   } catch (err) {
     console.error("Error fetching users:", err);
     res.status(500).json({

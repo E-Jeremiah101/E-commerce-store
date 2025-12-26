@@ -48,6 +48,58 @@ export const createCoupon = async (req, res) => {
   }
 };
 
+export const deleteCoupon = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { force } = req.query;
+
+    const coupon = await Coupon.findById(id);
+
+    if (!coupon) {
+      return res.status(404).json({ message: "Coupon not found" });
+    }
+
+    // Check if coupon has been used
+    if (coupon.usedAt && !force) {
+      return res.status(400).json({
+        message: "This coupon has already been used.",
+        code: "COUPON_USED",
+        usedAt: coupon.usedAt,
+        suggestion: "Use ?force=true query parameter to delete anyway",
+      });
+    }
+
+    // Delete the coupon
+    await Coupon.findByIdAndDelete(id);
+
+    // Log the action if you have user context
+    console.log(
+      `Coupon ${coupon.code} deleted by ${req.user?.email || "admin"}`
+    );
+
+    res.json({
+      success: true,
+      message: `Coupon "${coupon.code}" deleted successfully`,
+      coupon: {
+        code: coupon.code,
+        discount: coupon.discountPercentage,
+        reason: coupon.couponReason,
+      },
+    });
+  } catch (error) {
+    console.error("Delete coupon error:", error);
+
+    if (error.name === "CastError") {
+      return res.status(400).json({ message: "Invalid coupon ID" });
+    }
+
+    res.status(500).json({
+      message: "Error deleting coupon",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
 export const getAllCoupons = async (req, res) => {
   try {
     const coupons = await Coupon.find()

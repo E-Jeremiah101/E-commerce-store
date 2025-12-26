@@ -289,6 +289,7 @@ import {
   CreditCard,
   User,
   FileText,
+  Ticket,
   Warehouse,
   Settings,
 } from "lucide-react";
@@ -325,7 +326,7 @@ const tabs = [
   { id: "OrderRecovery", label: "Recovery", icon: Headset },
   { id: "Transactions", label: "Transactions", icon: CreditCard },
   { id: "audit", label: "Audit Logs", icon: FileText },
-  { id: "coupon", label: "Coupons", icon: FileText },
+  { id: "coupon", label: "Coupons", icon: Ticket },
   { id: "Settings", label: "Settings", icon: Settings },
 ];
 
@@ -482,7 +483,9 @@ const AdminPage = () => {
       {/* Desktop sidebar */}
       <div className="hidden md:flex w-1/6 bg-gray-700 pb-7 flex-shrink-0 overflow-auto no-scroll flex-col">
         <div className="p-4 text-white">
-          <h2 className="text-lg font-semibold mb-4">Admin Dashboard</h2>
+          <h2 className="text-lg font-semibold mb-4">
+            {user.adminType.toUpperCase()}
+          </h2>
           <p className="text-sm text-gray-300">
             Welcome back, {user?.firstname || "Admin"}
           </p>
@@ -518,7 +521,9 @@ const AdminPage = () => {
       {/* Mobile tabs */}
       <div className="md:hidden bg-gray-800 py-3 px-2">
         <div className="flex justify-between items-center px-2 mb-3">
-          <h2 className="text-white text-lg font-semibold">Admin Dashboard</h2>
+          <h2 className="text-white text-lg font-semibold">
+            {user.adminType.toUpperCase()}
+          </h2>
 
           <button
             onClick={clearCache}

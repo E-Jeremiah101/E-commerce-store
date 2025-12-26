@@ -17,6 +17,10 @@ import {
   Eye,
   CheckCircle,
   BarChart3,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
 } from "lucide-react";
 import { useUserStore } from "../stores/useUserStore.js";
 import { motion } from "framer-motion";
@@ -27,6 +31,7 @@ import { ADMIN_ROLE_PERMISSIONS } from "../../../backend/constants/adminRoles.js
 
 const AllUsers = () => {
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
@@ -38,6 +43,11 @@ const AllUsers = () => {
   const [adminTypes, setAdminTypes] = useState([]);
   const [selectedAdminType, setSelectedAdminType] = useState("");
   const [newAdminType, setNewAdminType] = useState("");
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+
   const [stats, setStats] = useState({
     total: 0,
     customers: 0,
@@ -58,6 +68,7 @@ const AllUsers = () => {
         { withCredentials: true }
       );
       setUsers(res.data);
+      setFilteredUsers(res.data); // Initialize filtered users
 
       // Calculate comprehensive stats
       const total = res.data.length;
@@ -68,10 +79,12 @@ const AllUsers = () => {
       let totalOrders = 0;
       let completedOrders = 0;
       let totalCartValue = 0;
+      let CancelledOrders = 0;
 
       res.data.forEach((user) => {
         totalOrders += user.orderStats?.total || 0;
         completedOrders += user.orderStats?.completed || 0;
+        CancelledOrders += user.orderStats?.cancelled || 0;
 
         // Calculate cart value
         if (user.cartItems?.length > 0) {
@@ -82,8 +95,15 @@ const AllUsers = () => {
         }
       });
 
+      const validOrders = totalOrders - CancelledOrders;
       const completionRate =
-        totalOrders > 0 ? Math.round((completedOrders / totalOrders) * 100) : 0;
+        validOrders > 0 ? Math.round((completedOrders / validOrders) * 100) : 0;
+
+        const cancellationRate =
+          totalOrders > 0
+            ? Math.round((CancelledOrders / totalOrders) * 100)
+            : 0;
+
 
       setStats({
         total,
@@ -91,6 +111,8 @@ const AllUsers = () => {
         admins,
         totalOrders,
         completedOrders,
+        CancelledOrders,
+        cancellationRate,
         completionRate,
         totalCartValue,
       });
@@ -187,10 +209,84 @@ const AllUsers = () => {
     setShowChangeAdminTypeModal(true);
   };
 
+  // Filter users based on search and role filter
+  useEffect(() => {
+    let filtered = users;
+
+    // Apply search filter
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = filtered.filter(
+        (user) =>
+          user.firstname?.toLowerCase().includes(searchLower) ||
+          user.lastname?.toLowerCase().includes(searchLower) ||
+          user.email?.toLowerCase().includes(searchLower) ||
+          user._id?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Apply role filter
+    if (roleFilter) {
+      filtered = filtered.filter((user) => user.role === roleFilter);
+    }
+
+    setFilteredUsers(filtered);
+    setCurrentPage(1); // Reset to first page when filters change
+  }, [search, roleFilter, users]);
+
   useEffect(() => {
     fetchUsers();
     fetchAdminTypes();
-  }, [search, roleFilter]);
+  }, []);
+
+  // ================= PAGINATION LOGIC =================
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+
+  const getCurrentPageData = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredUsers.slice(startIndex, endIndex);
+  };
+
+  const handlePageChange = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      // Scroll to top of table
+      window.scrollTo({ top: 600, behavior: "smooth" });
+    }
+  };
+
+  const getPaginationRange = () => {
+    const totalNumbers = 5; // Number of page buttons to show
+    const totalBlocks = totalNumbers + 2; // Including first, last, and ellipsis
+
+    if (totalPages <= totalBlocks) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const startPage = Math.max(2, currentPage - 1);
+    const endPage = Math.min(totalPages - 1, currentPage + 1);
+
+    let pages = [1];
+
+    if (startPage > 2) {
+      pages.push("...");
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    if (endPage < totalPages - 1) {
+      pages.push("...");
+    }
+
+    if (totalPages > 1) {
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   // Helper function to get admin type label
   const getAdminTypeLabel = (value) => {
@@ -296,7 +392,13 @@ const AllUsers = () => {
     if (total === 0) return 0;
     return Math.round((completed / total) * 100);
   };
+const getOrderCancelledRate = (user) => {
+  const cancelled = user.orderStats?.cancelled || 0;
+  const total = user.orderStats?.total || 0;
 
+  if (total === 0) return 0;
+  return Math.round((cancelled / total) * 100);
+};
   // Format order completion for display
   const formatOrderCompletion = (user) => {
     const completed = user.orderStats?.completed || 0;
@@ -474,31 +576,35 @@ const AllUsers = () => {
         </div>
 
         {/* Table */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
                     User Details
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Orders
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Role & Permissions
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Coupons
+                  </th>
+
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Cart
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-700 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {users.length > 0 ? (
-                  users.map((user) => (
+                {getCurrentPageData().length > 0 ? (
+                  getCurrentPageData().map((user) => (
                     <tr
                       key={user._id}
                       className="hover:bg-gray-50 transition-colors"
@@ -545,6 +651,14 @@ const AllUsers = () => {
                                 Completed
                               </div>
                             </div>
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-red-600">
+                                {user.orderStats?.cancelled || 0}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Cancelled
+                              </div>
+                            </div>
                             <div className="h-8 w-px bg-gray-300"></div>
                             <div className="text-center">
                               <div className="text-lg font-bold text-blue-600">
@@ -573,6 +687,24 @@ const AllUsers = () => {
                                   {getOrderCompletionRate(user)}%
                                 </span>
                               </div>
+
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div
+                                  className="bg-red-600 h-1.5 rounded-full transition-all duration-300"
+                                  style={{
+                                    width: `${getOrderCancelledRate(user)}%`,
+                                  }}
+                                ></div>
+                              </div>
+
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs font-medium text-gray-700">
+                                  Cancelled Rate
+                                </span>
+                                <span className="text-xs font-bold text-red-600">
+                                  {getOrderCancelledRate(user)}%
+                                </span>
+                              </div>
                             </>
                           )}
 
@@ -582,19 +714,6 @@ const AllUsers = () => {
                                 No orders yet
                               </span>
                             </div>
-                          )}
-
-                          {user.orderStats?.total > 0 && (
-                            <button
-                              onClick={() => {
-                                toast.success(
-                                  `Viewing ${user.firstname}'s order history (${user.orderStats.completed} completed of ${user.orderStats.total})`
-                                );
-                              }}
-                              className="w-full text-xs text-blue-600 hover:text-blue-800 font-medium py-1 border border-blue-100 rounded hover:bg-blue-50 transition"
-                            >
-                              View Order History
-                            </button>
                           )}
                         </div>
                       </td>
@@ -629,6 +748,61 @@ const AllUsers = () => {
                                   </span>
                                 </span>
                               </div>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-4">
+                            <div className="text-center">
+                              <div
+                                className={`text-lg font-bold ${
+                                  user.couponStats?.active > 0
+                                    ? "text-green-600"
+                                    : "text-gray-400"
+                                }`}
+                              >
+                                {user.couponStats?.active || 0}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Active
+                              </div>
+                            </div>
+
+                            <div className="h-8 w-px bg-gray-300"></div>
+
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-blue-600">
+                                {user.couponStats?.used || 0}
+                              </div>
+                              <div className="text-xs text-gray-500">Used</div>
+                            </div>
+
+                            <div className="h-8 w-px bg-gray-300"></div>
+
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-gray-700">
+                                {user.couponStats?.total || 0}
+                              </div>
+                              <div className="text-xs text-gray-500">Total</div>
+                            </div>
+                          </div>
+
+                          {user.couponStats?.active > 0 && (
+                            <div className="mt-2">
+                              <button
+                                onClick={() => {
+                                  toast.success(
+                                    ` ${user.couponStats.coupons[0]?.code}`
+                                  );
+                                  // You can implement a modal here to show coupon details
+                                }}
+                                className="w-full text-xs text-green-600 hover:text-green-800 font-medium py-1 border border-green-100 rounded hover:bg-green-50 transition"
+                              >
+                                View Active Coupons
+                              </button>
                             </div>
                           )}
                         </div>
@@ -728,14 +902,112 @@ const AllUsers = () => {
           </div>
         </div>
 
+        {/* Pagination */}
+        {filteredUsers.length > itemsPerPage && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+            <div className="text-sm text-gray-600">
+              Showing{" "}
+              {Math.min(
+                (currentPage - 1) * itemsPerPage + 1,
+                filteredUsers.length
+              )}{" "}
+              to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of{" "}
+              {filteredUsers.length} users
+            </div>
+
+            <div className="flex items-center gap-1">
+              {/* First Page */}
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-lg ${
+                  currentPage === 1
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+                title="First Page"
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </button>
+
+              {/* Previous Page */}
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`p-2 rounded-lg ${
+                  currentPage === 1
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+                title="Previous Page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+
+              {/* Page Numbers */}
+              {getPaginationRange().map((page, index) => (
+                <React.Fragment key={index}>
+                  {page === "..." ? (
+                    <span className="px-3 py-1 text-gray-400">...</span>
+                  ) : (
+                    <button
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-1 rounded-lg ${
+                        currentPage === page
+                          ? "bg-black text-white"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )}
+                </React.Fragment>
+              ))}
+
+              {/* Next Page */}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-lg ${
+                  currentPage === totalPages
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+                title="Next Page"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+
+              {/* Last Page */}
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                className={`p-2 rounded-lg ${
+                  currentPage === totalPages
+                    ? "text-gray-300 cursor-not-allowed"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+                title="Last Page"
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="text-sm text-gray-500">
+              Page {currentPage} of {totalPages}
+            </div>
+          </div>
+        )}
+
         {/* Summary Footer */}
-        {users.length > 0 && (
+        {filteredUsers.length > 0 && (
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
             <div className="flex flex-col md:flex-row md:items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-blue-800">Summary</p>
                 <p className="text-xs text-blue-600 mt-1">
-                  Showing {users.length} of {stats.total} users
+                  Showing {filteredUsers.length} of {stats.total} users • Page{" "}
+                  {currentPage} of {totalPages}
                 </p>
               </div>
 
