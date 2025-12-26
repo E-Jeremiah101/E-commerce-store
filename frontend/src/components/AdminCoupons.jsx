@@ -111,22 +111,42 @@ export default function AdminCoupons() {
         couponReason: form.couponReason,
         userId: form.userId || null,
         note: form.note,
+        sendToAllUsers: form.sendToAllUsers, // Add this
       };
 
-      await axios.post("/admin/coupons", payload);
+      const response = await axios.post("/admin/coupons", payload);
 
-      toast.success("🎉 Coupon created successfully!");
-      setShowModal(false);
+      if (response.data.success) {
+        toast.success(response.data.message);
+        setShowModal(false);
 
-      setForm({
-        discountPercentage: 15,
-        expirationDate: "",
-        couponReason: "special_reward",
-        userId: "",
-        note: "",
-      });
+        // Show email stats if available
+        if (response.data.emailStats) {
+          const stats = response.data.emailStats;
+          toast.success(
+            <div>
+              <p>Coupon created successfully!</p>
+              <p className="text-sm mt-1">
+                Emails sent: {stats.sentCount} users
+                {stats.failedCount > 0 && ` (${stats.failedCount} failed)`}
+              </p>
+            </div>,
+            { duration: 5000 }
+          );
+        }
 
-      fetchCoupons();
+        // Reset form
+        setForm({
+          discountPercentage: 15,
+          expirationDate: "",
+          couponReason: "special_reward",
+          userId: "",
+          note: "",
+          sendToAllUsers: false,
+        });
+
+        fetchCoupons();
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to create coupon");
     } finally {
@@ -272,7 +292,6 @@ export default function AdminCoupons() {
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading coupons...</p>
           </div>
         </div>
       </div>
@@ -508,7 +527,7 @@ export default function AdminCoupons() {
                                 `User ${coupon.userId._id?.slice(-6)}`}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {coupon.userId._id?.slice(-8)}
+                              {coupon.userId._id}
                             </div>
                           </div>
                         </div>
@@ -702,213 +721,237 @@ export default function AdminCoupons() {
 
       {/* Create Coupon Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden animate-slideUp">
-            {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-white">
-                    Create New Coupon
-                  </h2>
-                  <p className="text-blue-100 text-sm mt-1">
-                    Generate a discount code for your customers
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="text-white/80 hover:text-white transition"
-                >
-                  <XCircle className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-6 space-y-5 h-100 overflow-y-auto">
-              {/* Auto-generated code preview */}
-              <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200 ">
+        <>
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden animate-slideUp">
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-700">
-                      Coupon Code
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Will be auto-generated
+                    <h2 className="text-xl font-bold text-white">
+                      Create New Coupon
+                    </h2>
+                    <p className="text-blue-100 text-sm mt-1">
+                      Generate a discount code for your customers
                     </p>
                   </div>
-                  <div className="px-3 py-1.5 bg-white rounded-lg border border-gray-300">
-                    <code className="text-sm font-mono text-gray-600">
-                      AUTO-GEN
-                    </code>
-                  </div>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="text-white/80 hover:text-white transition"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
 
-              {/* Discount Percentage */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <div className="flex items-center">
-                    <Percent className="w-4 h-4 mr-2  text-gray-400" />
-                    Discount Percentage
-                  </div>
-                </label>
-                <div className="relative">
-                  <input
-                    type="range"
-                    min="1"
-                    max="100"
-                    value={form.discountPercentage}
-                    onChange={(e) =>
-                      setForm({ ...form, discountPercentage: e.target.value })
-                    }
-                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <div className="absolute -bottom-6 left-0 right-0 text-center">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-bold">
-                      {form.discountPercentage}%
-                    </span>
+              {/* Modal Body */}
+              <div className="p-6 space-y-5 h-100 overflow-y-auto">
+                {/* Auto-generated code preview */}
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200 ">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">
+                        Coupon Code
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Will be auto-generated
+                      </p>
+                    </div>
+                    <div className="px-3 py-1.5 bg-white rounded-lg border border-gray-300">
+                      <code className="text-sm font-mono text-gray-600">
+                        AUTO-GEN
+                      </code>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Expiration Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <div className="flex items-center">
-                    <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                    Expiration Date
-                  </div>
-                </label>
-                <input
-                  type="date"
-                  value={form.expirationDate}
-                  onChange={(e) =>
-                    setForm({ ...form, expirationDate: e.target.value })
-                  }
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                  min={new Date().toISOString().split("T")[0]}
-                />
-              </div>
-
-              {/* Coupon Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <div className="flex items-center">
-                    <Tag className="w-4 h-4 mr-2 text-gray-400" />
-                    Coupon Type
-                  </div>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    {
-                      value: "special_reward",
-                      label: "Special Reward",
-                      icon: Sparkles,
-                      color: "bg-yellow-50 text-yellow-700 border-yellow-200",
-                    },
-                    {
-                      value: "loyalty_bonus",
-                      label: "Loyalty Bonus",
-                      icon: Users,
-                      color: "bg-blue-50 text-blue-700 border-blue-200",
-                    },
-                    {
-                      value: "first_order",
-                      label: "First Order",
-                      icon: Tag,
-                      color: "bg-green-50 text-green-700 border-green-200",
-                    },
-                    {
-                      value: "high_value_order",
-                      label: "High Value",
-                      icon: BarChart3,
-                      color: "bg-purple-50 text-purple-700 border-purple-200",
-                    },
-                  ].map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() =>
-                        setForm({ ...form, couponReason: option.value })
+                {/* Discount Percentage */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="flex items-center">
+                      <Percent className="w-4 h-4 mr-2  text-gray-400" />
+                      Discount Percentage
+                    </div>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="range"
+                      min="1"
+                      max="100"
+                      value={form.discountPercentage}
+                      onChange={(e) =>
+                        setForm({ ...form, discountPercentage: e.target.value })
                       }
-                      className={`p-3 border rounded-xl text-sm font-medium transition-all ${
-                        form.couponReason === option.value
-                          ? `${option.color} ring-2 ring-offset-2 ring-opacity-50`
-                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                      }`}
-                    >
-                      <div className="flex items-center justify-center">
-                        <option.icon className="w-4 h-4 mr-2" />
-                        {option.label}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* User ID (Optional) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <div className="flex items-center">
-                    <User className="w-4 h-4 mr-2 text-gray-400" />
-                    Assign to User (Optional)
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <div className="absolute -bottom-6 left-0 right-0 text-center">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-sm font-bold">
+                        {form.discountPercentage}%
+                      </span>
+                    </div>
                   </div>
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter user ID or leave empty for global coupon"
-                  value={form.userId}
-                  onChange={(e) => setForm({ ...form, userId: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                />
+                </div>
+
+                {/* Expiration Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="flex items-center">
+                      <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                      Expiration Date
+                    </div>
+                  </label>
+                  <input
+                    type="date"
+                    value={form.expirationDate}
+                    onChange={(e) =>
+                      setForm({ ...form, expirationDate: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    min={new Date().toISOString().split("T")[0]}
+                  />
+                </div>
+
+                {/* Coupon Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="flex items-center">
+                      <Tag className="w-4 h-4 mr-2 text-gray-400" />
+                      Coupon Type
+                    </div>
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      {
+                        value: "special_reward",
+                        label: "Special Reward",
+                        icon: Sparkles,
+                        color: "bg-yellow-50 text-yellow-700 border-yellow-200",
+                      },
+                      {
+                        value: "loyalty_bonus",
+                        label: "Loyalty Bonus",
+                        icon: Users,
+                        color: "bg-blue-50 text-blue-700 border-blue-200",
+                      },
+                      {
+                        value: "first_order",
+                        label: "First Order",
+                        icon: Tag,
+                        color: "bg-green-50 text-green-700 border-green-200",
+                      },
+                      {
+                        value: "high_value_order",
+                        label: "High Value",
+                        icon: BarChart3,
+                        color: "bg-purple-50 text-purple-700 border-purple-200",
+                      },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() =>
+                          setForm({ ...form, couponReason: option.value })
+                        }
+                        className={`p-3 border rounded-xl text-sm font-medium transition-all ${
+                          form.couponReason === option.value
+                            ? `${option.color} ring-2 ring-offset-2 ring-opacity-50`
+                            : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex items-center justify-center">
+                          <option.icon className="w-4 h-4 mr-2" />
+                          {option.label}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* User ID (Optional) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="flex items-center">
+                      <User className="w-4 h-4 mr-2 text-gray-400" />
+                      Assign to User (Optional)
+                    </div>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Enter user ID or leave empty for global coupon"
+                    value={form.userId}
+                    onChange={(e) =>
+                      setForm({ ...form, userId: e.target.value })
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                  />
+                </div>
+
+                {/* Note (Optional) */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Add Note (Optional)
+                  </label>
+                  <textarea
+                    placeholder="Add a note about this coupon..."
+                    value={form.note}
+                    onChange={(e) => setForm({ ...form, note: e.target.value })}
+                    rows="2"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                  />
+                </div>
+
+                {!form.userId && (
+                  <div className="flex items-center p-4 bg-gray-50 rounded-xl">
+                    <input
+                      type="checkbox"
+                      id="sendToAllUsers"
+                      checked={form.sendToAllUsers}
+                      onChange={(e) =>
+                        setForm({ ...form, sendToAllUsers: e.target.checked })
+                      }
+                      className="h-4 w-4 text-blue-600"
+                    />
+                    <label
+                      htmlFor="sendToAllUsers"
+                      className="ml-3 text-sm text-gray-700"
+                    >
+                      Notify all users about this coupon via email
+                    </label>
+                  </div>
+                )}
               </div>
 
-              {/* Note (Optional) */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Add Note (Optional)
-                </label>
-                <textarea
-                  placeholder="Add a note about this coupon..."
-                  value={form.note}
-                  onChange={(e) => setForm({ ...form, note: e.target.value })}
-                  rows="2"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                />
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="px-5 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreate}
-                  disabled={loading || !form.expirationDate}
-                  className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creating...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Coupon
-                    </>
-                  )}
-                </button>
+              {/* Modal Footer */}
+              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="px-5 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreate}
+                    disabled={loading || !form.expirationDate}
+                    className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Coupon
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* Add some custom animation */}
