@@ -88,6 +88,13 @@ const auditLogSchema = new mongoose.Schema(
         "VIEW_USER_ORDERS",
         "VIEW_USER_ORDER",
 
+        //coupon
+        "CREATE_COUPON",
+        "DELETE_COUPON",
+        "UPDATE_COUPON",
+        "TOGGLE_COUPON",
+        "COUPON_USED",
+
         // Category actions
         "CREATE_CATEGORY",
         "UPDATE_CATEGORY",
@@ -99,7 +106,7 @@ const auditLogSchema = new mongoose.Schema(
     entityType: {
       type: String,
       required: true,
-      enum: ["Product", "Order", "User", "Category", "System", "Other"],
+      enum: ["Product", "Order", "User", "Category", "Coupon", "System", "Other"],
     },
     entityId: {
       type: mongoose.Schema.Types.ObjectId,

@@ -14,7 +14,7 @@ const router = express.Router();
 router.use(protectRoute, requirePermission("coupon:read"), adminRoute);
 
 router.post("/", createCoupon);
-router.post("/:id/", deleteCoupon);
+router.delete("/:id/", deleteCoupon);
 router.get("/", getAllCoupons);
 router.put("/:id", updateCoupon);
 router.patch("/:id/toggle", toggleCoupon);

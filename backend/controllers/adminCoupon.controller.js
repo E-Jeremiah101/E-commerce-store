@@ -3,6 +3,7 @@ import { generateCouponCode } from "../lib/AdminGenerateCoupon.js";
 import storeSettings from "../models/storeSettings.model.js"
 import User from "../models/user.model.js";
 import { sendEmail } from "../lib/mailer.js";
+import AuditLogger from "../lib/auditLogger.js";
 
 
 export const createCoupon = async (req, res) => {
@@ -28,13 +29,6 @@ export const createCoupon = async (req, res) => {
         message: "System coupons are auto-generated",
       });
     }
-
-    // const userExists = await User.findById(userId);
-    //   if (!userExists) {
-    //     return res.status(404).json({
-    //       message: "User not found",
-    //     });
-    //   }
     
 
     // 3️⃣ Create coupon safely
@@ -43,8 +37,8 @@ export const createCoupon = async (req, res) => {
       discountPercentage,
       expirationDate,
       couponReason,
-      userId: userId,
-      isActive: true,
+      userId: userId || null,
+      isActive: true, 
     });
 
     if (coupon.userId) {
@@ -52,6 +46,13 @@ export const createCoupon = async (req, res) => {
       if (user?.email) {
         await sendCouponEmail({ to: user.email, coupon });
       }
+
+      await AuditLogger.logCouponCreation(
+        req.user._id,
+        `${req.user.firstname} ${req.user.lastname}`,
+        coupon,
+        req
+      );
       res.status(201).json({
         success: true,
         message: "Coupon created and sent to user",
@@ -109,6 +110,15 @@ export const deleteCoupon = async (req, res) => {
     // Delete the coupon
     await Coupon.findByIdAndDelete(id);
 
+    // Log coupon deletion
+    await AuditLogger.logCouponDeletion(
+      req.user._id,
+      `${req.user.firstname} ${req.user.lastname}`,
+      coupon,
+      !!force,
+      req
+    );
+
     // Log the action if you have user context
     console.log(
       `Coupon ${coupon.code} deleted by ${req.user?.email || "admin"}`
@@ -161,6 +171,14 @@ export const updateCoupon = async (req, res) => {
       new: true,
     });
 
+    await AuditLogger.logCouponUpdate(
+      req.user._id,
+      `${req.user.firstname} ${req.user.lastname}`,
+      coupon,
+      updates,
+      req
+    );
+
     res.json(coupon);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
@@ -172,6 +190,14 @@ export const toggleCoupon = async (req, res) => {
   const coupon = await Coupon.findById(req.params.id);
   coupon.isActive = !coupon.isActive;
   await coupon.save();
+
+  await AuditLogger.logCouponToggle(
+    req.user._id,
+    `${req.user.firstname} ${req.user.lastname}`,
+    coupon,
+    coupon.isActive,
+    req
+  );
 
   res.json(coupon);
 };

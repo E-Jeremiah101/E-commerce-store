@@ -24,6 +24,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { format } from "date-fns"; // ADD THIS IMPORT
+import Coupon from "../../../backend/models/coupon.model.js";
 
 const AuditLogsTab = () => {
   const [logs, setLogs] = useState([]);
@@ -104,6 +105,13 @@ const AuditLogsTab = () => {
     { value: "REFUND_WEBHOOK_APPROVED", label: "Webhook: Refund Approved" },
     { value: "REFUND_WEBHOOK_REJECTED", label: "Webhook: Refund Rejected" },
 
+    // Coupon actions
+    { value: "CREATE_COUPON", label: "Create Coupon" },
+    { value: "DELETE_COUPON", label: "Delete Coupon" },
+    { value: "UPDATE_COUPON", label: "Update Coupon" },
+    { value: "TOGGLE_COUPON", label: "Toggle Coupon Status" },
+    { value: "COUPON_USED", label: "Coupon Used" },
+
     // Category actions
     { value: "CREATE_CATEGORY", label: "Create Category" },
     { value: "UPDATE_CATEGORY", label: "Update Category" },
@@ -118,6 +126,7 @@ const AuditLogsTab = () => {
     { value: "PRODUCT", label: "Products" },
     { value: "ORDER", label: "Orders" },
     { value: "USER", label: "Users" },
+    {value: "COUPON", label:"Coupons"},
     { value: "CATEGORY", label: "Categories" },
     { value: "SYSTEM", label: "System" },
     { value: "OTHER", label: "Other" },
@@ -276,6 +285,18 @@ const AuditLogsTab = () => {
       case "VIEW_ORDER_DETAILS":
       case "VIEW_USER_ORDERS":
         return <Eye className="h-4 w-4 text-gray-500" />;
+
+      // Coupon actions
+      case "CREATE_COUPON":
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case "DELETE_COUPON":
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case "UPDATE_COUPON":
+        return <AlertCircle className="h-4 w-4 text-blue-500" />;
+      case "TOGGLE_COUPON":
+        return <RefreshCw className="h-4 w-4 text-yellow-500" />;
+      case "COUPON_USED":
+        return <DollarSign className="h-4 w-4 text-purple-500" />;
 
       // User actions
       case "UPDATE_USER_ROLE":

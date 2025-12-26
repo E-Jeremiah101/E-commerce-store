@@ -4,6 +4,7 @@ export const ENTITY_TYPES = {
   ORDER: "Order",
   USER: "User",
   CATEGORY: "Category",
+  COUPON: "Coupon",
   SYSTEM: "System",
   OTHER: "Other",
 };
@@ -33,7 +34,14 @@ export const ACTIONS = {
   VIEW_ORDER_DETAILS: "VIEW_ORDER_DETAILS",
   VIEW_USER_ORDERS: "VIEW_USER_ORDERS",
   VIEW_USER_ORDER: "VIEW_USER_ORDER",
-  ORDER_RECOVERY_EMAIL_SENT:"ORDER_RECOVERY_EMAIL_SENT",
+  ORDER_RECOVERY_EMAIL_SENT: "ORDER_RECOVERY_EMAIL_SENT",
+
+  //Coupon actions
+  CREATE_COUPON: "CREATE_COUPON",
+  DELETE_COUPON: "DELETE_COUPON",
+  UPDATE_COUPON: "UPDATE_COUPON",
+  TOGGLE_COUPON: "TOGGLE_COUPON",
+  COUPON_USED: "COUPON_USED",
 
   // Auth actions
   LOGIN: "LOGIN",
@@ -105,7 +113,8 @@ export const ACTION_LABELS = {
   // Order labels
   UPDATE_ORDER_STATUS: "Update Order Status",
   ORDER_RECOVERY_ATTEMPT: "Order Recovery Attempt",
-  ORDER_RECOVERY_SUCCESS: "Order Recovery Success",ORDER_RECOVERY_EMAIL_SENT:"Order recovery email sent",
+  ORDER_RECOVERY_SUCCESS: "Order Recovery Success",
+  ORDER_RECOVERY_EMAIL_SENT: "Order recovery email sent",
   ORDER_RECOVERY_FAILED: "Order Recovery Failed",
   ORDER_RECOVERY_DUPLICATE: "Order Recovery Duplicate",
   ORDER_RECOVERY_EMAIL_SENT: "ORDER_RECOVERY_EMAIL_SENT",
@@ -115,7 +124,13 @@ export const ACTION_LABELS = {
   VIEW_ORDER_DETAILS: "View Order Details",
   VIEW_USER_ORDERS: "View User Orders",
   VIEW_USER_ORDER: "View User Order",
-  
+
+  //coupon label
+  CREATE_COUPON: "Create Coupon",
+  DELETE_COUPON: "Delete Coupon",
+  UPDATE_COUPON: "Update Coupon",
+  TOGGLE_COUPON: "Toggle Coupon Status",
+  COUPON_USED: "Coupon Used",
 
   // Auth labels
   LOGIN: "Login",
