@@ -21,7 +21,10 @@ export const SEO = ({
   const storeName = settings?.storeName || "Store";
   const logo = settings?.logo || "/logo-buz.jpg";
   const storeEmail = settings?.supportEmail || "support@store.com";
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : url || "https://yourdomain.com";
+  const baseUrl =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : url || "https://e-commerce-store-dkry.onrender.com";
 
   const finalTitle = title || `${storeName} - Quality Products`;
   const finalDescription = description || `Shop at ${storeName} for quality products and great deals`;
@@ -132,7 +135,10 @@ export const OrganizationSchema = () => {
   const logo = settings?.logo || "/logo-buz.jpg";
   const email = settings?.supportEmail || "support@store.com";
   const phone = settings?.phoneNumber || "";
-  const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://yourdomain.com";
+  const baseUrl =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "https://e-commerce-store-dkry.onrender.com";
 
   const schema = {
     "@context": "https://schema.org",
