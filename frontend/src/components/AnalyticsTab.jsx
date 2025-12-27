@@ -1521,7 +1521,6 @@ const AnalyticsTab = () => {
                             )}
                           </div>
                         </td>
-                        
                       </tr>
                     ))}
                   </tbody>
@@ -1542,6 +1541,9 @@ const AnalyticsTab = () => {
                 Breakdown of items sold in the selected{" "}
                 <span className="uppercase font-bold">{selectedRange}</span>{" "}
                 period
+                <span className="text-xs text-amber-600 ml-2">
+                  (Excluding cancelled orders)
+                </span>
               </p>
             </div>
             <div className="flex items-center gap-4"></div>

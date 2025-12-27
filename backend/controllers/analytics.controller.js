@@ -289,6 +289,7 @@ if (startDate) {
     {
       $match: {
         ...dateFilter,
+        status: { $nin: ["Cancelled"] },
         $or: [
           { "coupon.code": { $exists: true, $ne: null } },
           { couponCode: { $exists: true, $ne: null } },
@@ -319,6 +320,7 @@ if (startDate) {
     {
       $match: {
         ...dateFilter,
+        status: { $nin: ["Cancelled"] },
         $or: [
           { "coupon.code": { $exists: true, $ne: null } },
           { couponCode: { $exists: true, $ne: null } },
@@ -597,7 +599,7 @@ async function getAnalyticsData(startDate, endDate) {
           { couponCode: { $exists: true, $ne: null } },
         ],
       },
-    },
+    },  
     {
       $group: {
         _id: null,
@@ -961,6 +963,7 @@ async function getProductSalesData(startDate, endDate) {
   try {
     const matchStage = {
       $match: {
+        status: { $nin: ["Cancelled"] },
         ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {}),
       },
     };
@@ -1054,6 +1057,7 @@ async function getProductSalesData(startDate, endDate) {
       totals.totalUnits > 0 ? totals.totalRevenue / totals.totalUnits : 0;
 
     const totalOrders = await Order.countDocuments({
+      status: { $nin: ["Cancelled"] },
       ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {}),
     });
 
