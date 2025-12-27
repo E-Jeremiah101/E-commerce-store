@@ -13,8 +13,8 @@ import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "./StoreSettingsContext.jsx"
 
 const STATUS_WORKFLOW = {
-  Pending: ["Processing", "Shipped", "Delivered", "Cancelled"],
-  Processing: ["Shipped", "Delivered", "Cancelled"],
+  Pending: ["Processing", "Cancelled"],
+  Processing: ["Shipped",  "Cancelled"],
   Shipped: ["Delivered", "Cancelled"],
   Delivered: [],
   Cancelled: [], 

@@ -1,4 +1,3 @@
-
 import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
@@ -15,20 +14,18 @@ import {
 } from "../lib/redis.js";
 import Coupon from "../models/coupon.model.js";
 import Order from "../models/order.model.js";
-import User from "../models/user.model.js"; 
+import User from "../models/user.model.js";
 import Product from "../models/product.model.js";
 import { sendEmail } from "../lib/mailer.js";
 import { flw } from "../lib/flutterwave.js";
 import redis from "../lib/redis.js";
 import { calculateDeliveryFee } from "../service/deliveryConfig.js";
-import storeSettings from "../models/storeSettings.model.js"
+import { calculateEstimatedDeliveryDate } from "../utils/deliveryCalculator.js";
+import storeSettings from "../models/storeSettings.model.js";
 
- 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../../.env") });
-
-
 
 async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
   const session = await mongoose.startSession();
@@ -148,7 +145,7 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
     await session.endSession();
   }
 }
- 
+
 async function releaseInventory(reservationId) {
   // Check if we've already processed this release
   const alreadyReleased = await getReleasedReservation(reservationId);
@@ -165,7 +162,6 @@ async function releaseInventory(reservationId) {
     console.log(`No reservation found: ${reservationId}`);
     return;
   }
-
 
   console.log(`🔄 Releasing reservation: ${reservationId}`);
 
@@ -374,16 +370,16 @@ async function confirmInventory(reservationId) {
 // Helper function to release both inventory and coupon together
 async function releaseCheckoutResources(reservationId) {
   if (!reservationId) return;
-  
+
   try {
     console.log(`🔄 Releasing checkout resources for: ${reservationId}`);
-    
+
     // Release coupon first
     await releaseCoupon(reservationId);
-    
+
     // Then release inventory (which already calls releaseCoupon, but that's okay - it will handle duplicates)
     await releaseInventory(reservationId);
-    
+
     console.log(`✅ Successfully released all resources for: ${reservationId}`);
   } catch (error) {
     console.error("❌ Error releasing checkout resources:", error);
@@ -481,7 +477,6 @@ setInterval(async () => {
     } else {
       console.log("✅ No expired or stuck reservations found");
     }
-
 
     //add this, might change later
     const expiredCoupons = await Coupon.updateMany(
@@ -619,10 +614,8 @@ async function confirmCouponUsage(userId, couponCode, orderNumber) {
 }
 // Helper function to check if a product has active Redis reservations
 async function checkProductHasActiveReservation(product, activeReservationIds) {
-
   return activeReservationIds.size > 0;
 }
- 
 
 async function checkCouponEligibility(userId, orderAmount) {
   try {
@@ -649,7 +642,7 @@ async function checkCouponEligibility(userId, orderAmount) {
     // Count completed orders for this user
     const orderCount = await Order.countDocuments({
       user: userId,
-      flutterwaveTransactionId: { $exists: true, $ne: null }
+      flutterwaveTransactionId: { $exists: true, $ne: null },
     });
 
     console.log(`📊 User ${userId} has ${orderCount} previous paid orders`);
@@ -673,8 +666,7 @@ async function checkCouponEligibility(userId, orderAmount) {
       };
     }
 
-    
-    const highValueThreshold = 300000; 
+    const highValueThreshold = 300000;
 
     if (orderAmount > highValueThreshold) {
       console.log(
@@ -695,7 +687,6 @@ async function checkCouponEligibility(userId, orderAmount) {
     return null;
   }
 }
-
 
 async function createNewCoupon(userId, options = {}) {
   const {
@@ -852,6 +843,9 @@ async function processOrderCreation(transactionData) {
       discount: Number(meta.discountAmount) || 0,
       deliveryFee: Number(meta.deliveryFee) || 0,
       deliveryZone: meta.deliveryZone || "Same City",
+      estimatedDeliveryDate: calculateEstimatedDeliveryDate(
+        meta.deliveryZone || "Same City"
+      ).estimatedDeliveryDate,
       totalAmount: Number(meta.finalTotal) || Number(data.amount) || 0,
       orderNumber: generateOrderNumber(),
       couponCode: couponCode || null,
@@ -886,8 +880,6 @@ async function processOrderCreation(transactionData) {
     // 4. CLEAR CART
     await User.findByIdAndUpdate(userId, { cartItems: [] });
 
-   
-
     return { order, isNew: true };
   } catch (error) {
     // Handle duplicate order error
@@ -916,7 +908,6 @@ export const createCheckoutSession = async (req, res) => {
     const { products, couponCode, deliveryAddress, deliveryFee, deliveryZone } =
       req.body;
     const userId = req.user._id;
-
 
     if (!Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ error: "Invalid or empty products array" });
@@ -1011,31 +1002,28 @@ export const createCheckoutSession = async (req, res) => {
         error: availabilityError.message,
       });
     }
-   let calculatedDeliveryFee = 0;
-   let finalDeliveryFee = 0;
+    let calculatedDeliveryFee = 0;
+    let finalDeliveryFee = 0;
 
-   if (deliveryAddress && deliveryAddress.state) {
-     // Use frontend-provided fee if available, otherwise calculate
-     if (deliveryFee !== undefined && deliveryFee !== null) {
-       calculatedDeliveryFee = Number(deliveryFee);
-       console.log("✅ Using frontend delivery fee:", calculatedDeliveryFee);
-     } else {
-       // Fallback: calculate on backend
-       calculatedDeliveryFee = calculateDeliveryFee(
-         deliveryAddress.state,
-         deliveryAddress.city || "",
-         deliveryAddress.lga || ""
-       ); 
-       console.log(
-         "🔄 Calculated delivery fee on backend:",
-         calculatedDeliveryFee
-       );
-     }
-   }
+    if (deliveryAddress && deliveryAddress.state) {
+      // Use frontend-provided fee if available, otherwise calculate
+      if (deliveryFee !== undefined && deliveryFee !== null) {
+        calculatedDeliveryFee = Number(deliveryFee);
+        console.log("✅ Using frontend delivery fee:", calculatedDeliveryFee);
+      } else {
+        // Fallback: calculate on backend
+        calculatedDeliveryFee = calculateDeliveryFee(
+          deliveryAddress.state,
+          deliveryAddress.city || "",
+          deliveryAddress.lga || ""
+        );
+        console.log(
+          "🔄 Calculated delivery fee on backend:",
+          calculatedDeliveryFee
+        );
+      }
+    }
 
-
-    
-  
     // Calculate totals
     const originalTotal = products.reduce((acc, p) => {
       const qty = p.quantity || 1;
@@ -1049,7 +1037,6 @@ export const createCheckoutSession = async (req, res) => {
     if (couponCode && couponCode.trim() !== "") {
       try {
         const couponCodeUpper = couponCode.trim().toUpperCase();
-
 
         validCoupon = await Coupon.findOne({
           code: couponCodeUpper,
@@ -1082,13 +1069,15 @@ export const createCheckoutSession = async (req, res) => {
     );
     console.log("🛒 Original total:", originalTotal);
 
-    const finalTotal = Math.max(0, originalTotal - discountAmount + finalDeliveryFee);
+    const finalTotal = Math.max(
+      0,
+      originalTotal - discountAmount + finalDeliveryFee
+    );
     const tx_ref = `ECOSTORE-${Date.now()}`;
 
-    
     const reservationId = `res_${tx_ref}`;
-    try {  
-      await reserveInventory(products, reservationId, 25); 
+    try {
+      await reserveInventory(products, reservationId, 25);
       console.log(`✅ Inventory reserved: ${reservationId}`);
 
       //add this can change later
@@ -1123,11 +1112,10 @@ export const createCheckoutSession = async (req, res) => {
     if (validCoupon) {
       console.log(`   Coupon Details: ${validCoupon.discountPercentage}% off`);
     }
- 
 
     const payload = {
       tx_ref,
-      amount: finalTotal ,
+      amount: finalTotal,
       currency: "NGN",
       redirect_url: `${process.env.CLIENT_URL}/purchase-success`,
       customer: {
@@ -1157,7 +1145,7 @@ export const createCheckoutSession = async (req, res) => {
         originalTotal,
         discountAmount,
         deliveryFee: finalDeliveryFee,
-        deliveryZone: deliveryZone || "", 
+        deliveryZone: deliveryZone || "",
         finalTotal,
         deliveryAddress: addressString || "",
         phoneNumber: defaultPhone.number || "",
@@ -1334,7 +1322,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       );
 
       // Release any reserved inventory
-      
+
       if (reservationId) {
         await releaseCheckoutResources(reservationId);
       }
@@ -1467,7 +1455,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
             couponCode: couponCode,
             originalTotal: originalTotal,
             discountAmount: discountAmount,
-            deliveryFee: deliveryFee, 
+            deliveryFee: deliveryFee,
             deliveryZone: deliveryZone,
             finalTotal: finalTotal,
             deliveryAddress: deliveryAddress || "No address provided",
@@ -1521,7 +1509,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
                       to: user.email,
                       coupon: newCoupon,
                       couponType: couponEligibility.emailType,
-                     
                     });
                     console.log(`Coupon email sent for: ${newCoupon.code}`);
                   }
@@ -1590,7 +1577,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     }
   }
 };
-
 
 async function withRetry(fn, retries = 3, delay = 200) {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -1741,7 +1727,7 @@ export const checkoutSuccess = async (req, res) => {
                 couponType: couponEligibility.codePrefix,
                 reason: couponEligibility.reason,
                 daysValid: 30,
-              });
+              }); 
 
               if (newCoupon) {
                 console.log(
@@ -1796,6 +1782,7 @@ export const checkoutSuccess = async (req, res) => {
       message: "Payment verified and order finalized",
       orderId: finalOrder._id,
       orderNumber: finalOrder.orderNumber,
+      estimatedDeliveryDate: finalOrder.estimatedDeliveryDate,
       isNew: isNewOrder,
     });
   } catch (error) {
@@ -1818,11 +1805,7 @@ export const checkoutSuccess = async (req, res) => {
   }
 };
 
-
-export const sendDetailedOrderEmail = async ({
-  to,
-  order,
-}) => {
+export const sendDetailedOrderEmail = async ({ to, order }) => {
   if (!to || !order) return;
 
   let customerName = "";
@@ -1878,7 +1861,7 @@ export const sendDetailedOrderEmail = async ({
             item.quantity || 1
           }</td>
           <td style="padding: 8px 12px; text-align:right; border:1px solid #eee;">${formatter.format(
-           item.price || item.unitPrice || 0
+            item.price || item.unitPrice || 0
           )}
             
           </td>
@@ -1888,10 +1871,8 @@ export const sendDetailedOrderEmail = async ({
 
   const totalAmount = order.totalAmount || order.totalPrice || order.total || 0;
   const subtotal = order.subtotal || order.subTotal || 0;
-  const discount = order.discount || 0
-  
+  const discount = order.discount || 0;
 
-  
   const html = `
     <div style="font-family: Arial, sans-serif; background-color: #f6f8fa; padding: 20px;">
       <div style="max-width: 700px; margin: auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.06);">
@@ -2001,7 +1982,9 @@ export const sendDetailedOrderEmail = async ({
     `Items:`,
     ...items.map(
       (it) =>
-        ` - ${it.quantity || 1} x ${it.name || "Item"} — ${formatter.format(it.price)}`
+        ` - ${it.quantity || 1} x ${it.name || "Item"} — ${formatter.format(
+          it.price
+        )}`
     ),
     ``,
     `Thanks for shopping with  ${settings?.storeName}!`,
@@ -2159,5 +2142,3 @@ Thank you for choosing sustainable shopping with ${settings.storeName}
     text,
   });
 };
-
- 

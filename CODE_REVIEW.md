@@ -172,18 +172,10 @@ Client stores in localStorage/cookies
 ✅ Uses JWT with proper expiration
 ✅ Refresh tokens stored in Redis (secure, fast)
 ✅ Implements refresh token rotation
-✅ Password hashing (likely with bcrypt)
+✅ Password hashing with bcrypt
 ✅ Token cleanup on logout
 
-**Issues:**
-⚠️ **No CSRF protection** - Consider adding CSRF tokens
-⚠️ **Tokens in localStorage** - Vulnerable to XSS attacks
 
-- **Fix:** Move to httpOnly cookies
-  ⚠️ **No rate limiting** on login attempts
-- **Fix:** Add login attempt throttling
-
----
 
 ### 2. Role-Based Access Control (RBAC)
 
@@ -309,14 +301,6 @@ priceCurrency: "USD",
 ✅ Refund history stored with order
 ✅ Payment method details captured
 
-**Issues:**
-⚠️ **No order status workflow validation**
-
-- Can jump from Pending → Delivered without Shipped
-- **Fix:** Enforce valid status transitions
-  ⚠️ **No estimated delivery date**
-- Users can't see when package arrives
-- **Fix:** Add deliveryDate calculation
 
 ---
 
@@ -1106,7 +1090,7 @@ High risk of bugs!
 | Missing indexes    | 🟡 Medium | database | Add MongoDB indexes    |
 | No query caching   | 🟡 Medium | backend  | Implement Redis cache  |
 
-### 🟢 Low Issues
+### 🟢 Low Issues 
 
 | Issue               | Severity | Location | Fix                      |
 | ------------------- | -------- | -------- | ------------------------ |

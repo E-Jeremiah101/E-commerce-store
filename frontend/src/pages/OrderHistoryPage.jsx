@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import React, { useEffect, useState } from "react";
 import { useProductStore } from "../stores/useProductStore.js";
+import { SEO } from "../components/SEO";
+import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import Ongoing from "../components/Ongoing.jsx";
 import Delivered from "../components/Delivered.jsx";
 import RefundTab from "../components/RefundTab.jsx";
@@ -15,9 +17,16 @@ const tabs = [
 
 const OrderHistoryPage = () => {
   const [activeTab, setActiveTab] = useState("ongoing");
+  const { settings } = useStoreSettings();
 
   return (
     <>
+      <SEO
+        title={`Order History | ${settings?.storeName || "Store"}`}
+        description={`View and track all your orders at ${settings?.storeName}. Check order status, delivery details, and manage returns easily.`}
+        image={settings?.logo}
+        canonicalUrl={window.location.href}
+      />
       <motion.div
         className="fixed top-0 left-0 right-0 z-40 bg-white backdrop-blur-md"
         style={{ borderBottom: "none", boxShadow: "none" }}
@@ -78,4 +87,3 @@ const OrderHistoryPage = () => {
 };
 
 export default OrderHistoryPage;
-

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import {useParams, useSearchParams, Link } from "react-router-dom";
+import { useParams, useSearchParams, Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard.jsx";
+import { SEO } from "../components/SEO";
 import axios from "../lib/axios";
 import { useCartStore } from "../stores/useCartStore";
 import { toast } from "react-hot-toast";
@@ -46,8 +47,6 @@ const SearchResultsPage = () => {
       try {
         const res = await axios.get(`/products/search?q=${query}`);
         setProducts(res.data);
-
-   
       } catch (error) {
         console.error("Error fetching search results:", error);
       } finally {
@@ -56,8 +55,6 @@ const SearchResultsPage = () => {
     };
     fetchResults();
   }, [query]);
-
-  
 
   // Pagination logic
   const totalProducts = products?.length || 0;
@@ -74,7 +71,12 @@ const SearchResultsPage = () => {
 
   return (
     <>
-<motion.div
+      <SEO
+        title={`Search Results for "${query}" | Shop`}
+        description={`Found ${products.length} results for "${query}". Browse our collection of quality products with fast shipping.`}
+        canonicalUrl={window.location.href}
+      />
+      <motion.div
         className="fixed top-0 left-0 right-0 z-40 bg-white backdrop-blur-md"
         style={{ borderBottom: "none", boxShadow: "none" }}
         initial={{ opacity: 0, y: -10 }}
@@ -98,7 +100,7 @@ const SearchResultsPage = () => {
             <div className="absolute left-1/2 transform -translate-x-1/2">
               <div className="flex flex-col items-center">
                 <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">
-                 Search Result
+                  Search Result
                 </h2>
               </div>
             </div>

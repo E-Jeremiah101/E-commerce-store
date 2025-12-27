@@ -60,6 +60,7 @@ const orderSchema = new mongoose.Schema(
       required: true,
     },
     deliveredAt: Date,
+    estimatedDeliveryDate: Date,
     totalAmount: {
       type: Number,
       required: true,

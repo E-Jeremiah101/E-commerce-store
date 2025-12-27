@@ -2,12 +2,14 @@ import React, { useState } from "react";
 import { UserPlus, User, Mail, Lock, Loader, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { SEO } from "../components/SEO";
 import {
   checkRequired,
   checkLength,
   checkEmail,
 } from "../utils/validateForm.js";
 import { useUserStore } from "../stores/useUserStore";
+import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import GoBackButton from "../components/GoBackButton";
 
 const SignUpPage = () => {
@@ -86,15 +88,24 @@ const SignUpPage = () => {
 
     // signup(formData);
   };
+
+  const { settings } = useStoreSettings();
+
   return (
     <div className="h-[] overflow-hidden flex-col py-12  sm:px-6 lg:px-8 ">
+      <SEO
+        title={`Create an Account | ${settings?.storeName || "Store"}`}
+        description={`Sign up for a free account at ${settings?.storeName}. Access exclusive deals, track your orders, and enjoy a seamless shopping experience.`}
+        image={settings?.logo}
+        canonicalUrl={window.location.href}
+      />
       <motion.div
         className="sm:mx-auto sm:w-full sm:max-w-md"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <GoBackButton/>
+        <GoBackButton />
         <h2 className="mt-6 text-3xl px-4 text-black  tracking-widest">
           Create Account
         </h2>

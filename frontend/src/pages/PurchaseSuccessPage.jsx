@@ -8,6 +8,7 @@ import Confetti from "react-confetti";
 const PurchaseSuccessPage = () => {
   const [isProcessing, setIsProcessing] = useState(true);
   const [orderNumber, setOrderNumber] = useState("");
+  const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState(null);
   const [error, setError] = useState(null);
   const [needsRefresh, setNeedsRefresh] = useState(false);
   const { clearCart } = useCartStore();
@@ -55,6 +56,7 @@ const PurchaseSuccessPage = () => {
           // Order completed successfully
           clearCart();
           setOrderNumber(response.data.orderNumber);
+          setEstimatedDeliveryDate(response.data.estimatedDeliveryDate);
           setIsProcessing(false);
 
           // Clean up URL
@@ -165,7 +167,16 @@ const PurchaseSuccessPage = () => {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-400">Estimated delivery</span>
               <span className="text-sm font-semibold text-emerald-400">
-                3–5 business days
+                {estimatedDeliveryDate
+                  ? new Date(estimatedDeliveryDate).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      }
+                    )
+                  : "Calculating..."}
               </span>
             </div>
           </div>

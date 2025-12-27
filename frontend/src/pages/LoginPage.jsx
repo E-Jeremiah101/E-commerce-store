@@ -1,15 +1,10 @@
 import React, { useState } from "react";
-import {
-  LogIn,
-  Mail,
-  Lock,
-  Loader,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+import { LogIn, Mail, Lock, Loader, Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { SEO } from "../components/SEO";
 import { useUserStore } from "../stores/useUserStore";
+import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import GoBackButton from "../components/GoBackButton";
 
 const LoginPage = () => {
@@ -36,15 +31,24 @@ const LoginPage = () => {
     }
     console.log(email, password);
   };
+
+  const { settings } = useStoreSettings();
+
   return (
     <div className=" overflow-hidden flex-col py-12  sm:px-6 lg:px-8">
+      <SEO
+        title={`Login to Your Account | ${settings?.storeName || "Store"}`}
+        description={`Sign in to your account to manage orders, track shipments, and save preferences at ${settings?.storeName}.`}
+        image={settings?.logo}
+        canonicalUrl={window.location.href}
+      />
       <motion.div
         className="sm:mx-auto sm:w-full sm:max-w-md"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <GoBackButton/>
+        <GoBackButton />
         <h2 className="mt-6 px-4 text-3xl  text-black  tracking-widest">
           Login
         </h2>

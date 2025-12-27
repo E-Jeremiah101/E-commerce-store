@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useProductStore } from "../stores/useProductStore.js";
 import { useParams } from "react-router-dom";
 import { motion } from "framer-motion";
+import { SEO } from "../components/SEO";
 import ProductCard from "../components/ProductCard.jsx";
 import GoBackButton from "../components/GoBackButton";
 import { formatPrice } from "../utils/currency.js";
@@ -71,43 +72,52 @@ const CategoryPage = () => {
 
   return (
     <>
+      {/* SEO Meta Tags */}
+      <SEO
+        title={`${category.charAt(0).toUpperCase() + category.slice(1)} | ${
+          settings?.storeName || "Store"
+        }`}
+        description={`Shop our ${category} collection at ${settings?.storeName}. Find quality ${category} products with fast shipping and great deals.`}
+        image={settings?.logo}
+        canonicalUrl={window.location.href}
+      />
       {/* Header */}
-     <motion.div
-             className="fixed top-0 left-0 right-0 z-40 bg-white backdrop-blur-md"
-             style={{ borderBottom: "none", boxShadow: "none" }}
-             initial={{ opacity: 0, y: -10 }}
-             animate={{ opacity: 1, y: 0 }}
-             transition={{ duration: 0.5, ease: "easeOut" }}
-           >
-             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-               <div className="flex items-center justify-between h-16 sm:h-20">
-                 {/* Back Button - Left aligned */}
-                 <div className="flex items-center">
-                   <motion.div
-                     whileHover={{ x: -2 }}
-                     whileTap={{ scale: 0.95 }}
-                     className="p-2 -ml-2 rounded-lg hover:bg-gray-50 transition-colors"
-                   >
-                     <GoBackButton />
-                   </motion.div>
-                 </div>
-     
-                 {/* Page Title - Centered with subtle styling */}
-                 <div className="absolute left-1/2 transform -translate-x-1/2">
-                   <div className="flex flex-col items-center">
-                     <h2 className="text-[1.1rem] md:text-xl  font-semibold text-gray-900 tracking-tight">
-                      {category.charAt(0).toUpperCase() +
-            category
-              .slice(1)
-              .toUpperCase()
-              .replace(/\s+/g, "-")
-              .replace(/&/g, " & ")}
-                     </h2>
-                   </div>
-                 </div>
-               </div>
-             </div>
-           </motion.div>
+      <motion.div
+        className="fixed top-0 left-0 right-0 z-40 bg-white backdrop-blur-md"
+        style={{ borderBottom: "none", boxShadow: "none" }}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 sm:h-20">
+            {/* Back Button - Left aligned */}
+            <div className="flex items-center">
+              <motion.div
+                whileHover={{ x: -2 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-2 -ml-2 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <GoBackButton />
+              </motion.div>
+            </div>
+
+            {/* Page Title - Centered with subtle styling */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
+              <div className="flex flex-col items-center">
+                <h2 className="text-[1.1rem] md:text-xl  font-semibold text-gray-900 tracking-tight">
+                  {category.charAt(0).toUpperCase() +
+                    category
+                      .slice(1)
+                      .toUpperCase()
+                      .replace(/\s+/g, "-")
+                      .replace(/&/g, " & ")}
+                </h2>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Products Grid */}
       <div className="min-h-screen mt-3">
@@ -173,13 +183,3 @@ const CategoryPage = () => {
 };
 
 export default CategoryPage;
-
-
-
-
-
-
-
-
-
-

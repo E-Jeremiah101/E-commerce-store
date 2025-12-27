@@ -3,6 +3,8 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import axios from "../lib/axios";
 import { motion } from "framer-motion";
 import { Loader } from "lucide-react";
+import { SEO } from "../components/SEO";
+import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { requestRefund } from "../stores/refundRequestStore";
@@ -122,6 +124,11 @@ const RequestReturnPage = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
     >
+      <SEO
+        title={`Request Return for Order #${order.orderNumber} | Returns & Refunds`}
+        description={`Submit a return request for your order #${order.orderNumber}. Fast and easy returns process with secure refunds.`}
+        canonicalUrl={window.location.href}
+      />
       <ToastContainer />
 
       <div className="max-w-2xl mx-auto">
@@ -129,15 +136,17 @@ const RequestReturnPage = () => {
           <div className="mb-6">
             <GoBackButton />
           </div>
-          <div><h1 className="text-2xl font-bold text-gray-900 ">
-            Request a Return
-          </h1></div>
-          
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 ">
+              Request a Return
+            </h1>
+          </div>
         </div>
         <p className="text-gray-600 mb-5">
-          <span className="text-gray-900 font-medium">#{order.orderNumber}</span> 
-            • Placed on{" "}
-          {new Date(order.createdAt).toLocaleDateString()}
+          <span className="text-gray-900 font-medium">
+            #{order.orderNumber}
+          </span>
+          • Placed on {new Date(order.createdAt).toLocaleDateString()}
         </p>
 
         <div className="bg-gradient-to-br from-white via-gray-50 to-gray-100 rounded-xl p-6 shadow-sm mb-8">
@@ -354,5 +363,3 @@ const RequestReturnPage = () => {
 };
 
 export default RequestReturnPage;
-
-

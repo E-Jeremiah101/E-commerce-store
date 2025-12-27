@@ -6,14 +6,15 @@ import toast from "react-hot-toast";
 import { ShoppingCart, Heart } from "lucide-react";
 import { useCartStore } from "../stores/useCartStore";
 import { useUserStore } from "../stores/useUserStore";
+import { SEO, ProductSEO } from "../components/SEO";
 import GoBackButton from "../components/GoBackButton";
 import { ChevronUp, ChevronDown } from "lucide-react";
 import DOMPurify from "dompurify";
 import ProductReviews from "../components/ProductReviews";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
- 
-  const ViewProductPage = () => {
+
+const ViewProductPage = () => {
   const { id } = useParams();
   const { fetchProductById } = useProductStore();
   const { addToCart, isLoading, cart } = useCartStore();
@@ -41,7 +42,7 @@ import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
           100
         ).toFixed(0);
 
-        const { settings } = useStoreSettings();
+      const { settings } = useStoreSettings();
 
       return (
         <div className="flex flex-col gap-2">
@@ -50,8 +51,7 @@ import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
               {formatPrice(product.price, settings?.currency)}
             </span>
             <span className="text-gray-500 line-through text-lg">
-              
-               {formatPrice(product.previousPrice, settings?.currency)}
+              {formatPrice(product.previousPrice, settings?.currency)}
             </span>
             <span className="bg-red-100 text-red-800 text-sm font-medium px-2 py-1 rounded">
               {discountPercentage}% OFF
@@ -64,7 +64,7 @@ import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
         </div>
       );
     }
- const { settings } = useStoreSettings();
+    const { settings } = useStoreSettings();
     return (
       <span className="text-[1.2rem] text-black font-medium tracking-tight">
         {formatPrice(product.price, settings?.currency)}
@@ -264,8 +264,24 @@ import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 
   if (!product) return <p className="text-center mt-10">Product not found.</p>;
 
+  const { settings } = useStoreSettings();
+
   return (
     <div className="min-h-screen ">
+      {/* SEO Meta Tags */}
+      <ProductSEO
+        productName={product.name}
+        productDescription={
+          product.description?.slice(0, 160) || `Shop ${product.name}`
+        }
+        productImage={product.images?.[0] || settings?.logo}
+        productPrice={product.price}
+        productUrl={window.location.href}
+        inStock={getVariantStock() > 0}
+        rating={product.averageRating || 4.5}
+        reviewCount={product.reviews?.length || 0}
+        brand={settings?.storeName}
+      />
       {/* Header */}
       <motion.div
         className="flex items-center justify-between  py-5 fixed top-0 left-0 right-0 z-40  px-7   bg-white"
@@ -492,7 +508,6 @@ import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
                     Enjoy your purchase on discount sale
                   </span>
                 </div>
-               
               </div>
             )}
           </div>
@@ -537,13 +552,15 @@ import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
                 <div className="flex justify-between">
                   <span className="text-blue-700">Current Price:</span>
                   <span className="font-medium">
-                    ₦{product.price.toLocaleString()}
+                    {formatPrice(product.price, settings?.currency)}
+                    {product.price.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-blue-700">Original Price:</span>
                   <span className="line-through">
-                    ₦{product.previousPrice?.toLocaleString()}
+                    {formatPrice(product.price, settings?.currency)}
+                    {product.previousPrice?.toLocaleString()}
                   </span>
                 </div>
                 <div className="flex justify-between">
