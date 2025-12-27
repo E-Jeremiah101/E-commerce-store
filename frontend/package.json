@@ -27,6 +27,7 @@
     "react-confetti": "^6.4.0",
     "react-datepicker": "^8.10.0",
     "react-dom": "^19.2.0",
+    "react-helmet-async": "^2.0.5",
     "react-hot-toast": "^2.6.0",
     "react-icons": "^5.5.0",
     "react-intersection-observer": "^9.16.0",
