@@ -1,11 +1,11 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
-import { BrowserRouter } from 'react-router-dom';
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import "./index.css";
+import App from "./App.jsx";
+import { BrowserRouter } from "react-router-dom";
 import React from "react";
-import { StoreSettingsProvider } from './components/StoreSettingsContext.jsx';
-
+import { HelmetProvider } from "react-helmet-async";
+import { StoreSettingsProvider } from "./components/StoreSettingsContext.jsx";
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -34,11 +34,13 @@ export default ErrorBoundary;
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <ErrorBoundary>
-      <BrowserRouter>
-        <StoreSettingsProvider>
-          <App />
-        </StoreSettingsProvider>
-      </BrowserRouter>
+      <HelmetProvider>
+        <BrowserRouter>
+          <StoreSettingsProvider>
+            <App />
+          </StoreSettingsProvider>
+        </BrowserRouter>
+      </HelmetProvider>
     </ErrorBoundary>
   </StrictMode>
 );

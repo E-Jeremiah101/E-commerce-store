@@ -666,7 +666,7 @@ async function checkCouponEligibility(userId, orderAmount) {
         `✅ User ${userId} eligible for FIRST ORDER coupon (first time customer)`
       );
       return {
-        discountPercentage: 10,
+        discountPercentage: 2,
         codePrefix: "WELCOME",
         reason: "first_order",
         emailType: "welcome_coupon",
@@ -674,14 +674,14 @@ async function checkCouponEligibility(userId, orderAmount) {
     }
 
     
-    const highValueThreshold = 4; 
+    const highValueThreshold = 300000; 
 
     if (orderAmount > highValueThreshold) {
       console.log(
         `✅ User ${userId} eligible for HIGH VALUE ORDER coupon (order > ${highValueThreshold})`
       );
       return {
-        discountPercentage: 15,
+        discountPercentage: 10,
         codePrefix: "BIGSPEND",
         reason: "high_value_order",
         emailType: "bigspender_coupon",
@@ -1087,13 +1087,13 @@ export const createCheckoutSession = async (req, res) => {
 
     
     const reservationId = `res_${tx_ref}`;
-    try {
-      await reserveInventory(products, reservationId, 3); 
+    try {  
+      await reserveInventory(products, reservationId, 25); 
       console.log(`✅ Inventory reserved: ${reservationId}`);
 
       //add this can change later
       if (validCoupon) {
-        await reserveCoupon(userId, couponCode, reservationId, 3);
+        await reserveCoupon(userId, couponCode, reservationId, 25);
       }
     } catch (reservationError) {
       console.error("❌ Inventory reservation failed:", reservationError);

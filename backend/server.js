@@ -2,13 +2,12 @@ import express from "express";
 import dotenv from "dotenv";
 import authRouthes from "./routes/auth.route.js";
 import productRoutes from "./routes/product.routes.js";
-import Order from "./models/order.model.js";
 import { connectDB } from "./lib/db.js";
 import cookieParser from "cookie-parser";
 import path from "path";
 import cartRoutes from "./routes/cart.route.js";
-import couponRoutes  from "./routes/adminCoupon.routes.js";
-import userCouponRoutes from "./routes/coupon.route.js"
+import couponRoutes from "./routes/adminCoupon.routes.js";
+import userCouponRoutes from "./routes/coupon.route.js";
 import paymentRoutes from "./routes/payment.route.js";
 import analyticsRoutes from "./routes/analytics.route.js";
 import { connectRedis } from "./lib/redis.js";
@@ -21,14 +20,14 @@ import reviewRoutes from "./routes/review.routes.js";
 import visitorRoutes from "./routes/visitor.route.js";
 import refundRoutes from "./routes/refund.routes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
-import Product from "./models/product.model.js";
 import savedProductRoutes from "./routes/savedProduct.routes.js";
 import inventoryRoutes from "./routes/inventory.routes.js";
 import auditRoutes from "./routes/auditLog.routes.js";
 import adminTransactionRoutes from "./routes/admin.transaction.route.js";
 import storeSettingsRoutes from "./routes/storeSettings.route.js";
 import webhookRoutes from "./routes/flutterRefundWebhookRoute.js";
-import locationRoutes from "./routes/location.routes.js"
+import locationRoutes from "./routes/location.routes.js";
+import sitemapRoutes from "./routes/sitemap.route.js";
 
 dotenv.config();
 const app = express();
@@ -54,7 +53,28 @@ app.set("trust proxy", true);
 app.use(express.json({ limit: "10mb" })); // allow to parse the body of the request
 app.use(cookieParser());
 
-app.use("/api/locations", locationRoutes); 
+// SEO-friendly headers
+app.use((req, res, next) => {
+  // Cache control for static assets
+  if (req.url.match(/\.(js|css|woff|woff2|eot|ttf|otf)$/)) {
+    res.set("Cache-Control", "public, max-age=31536000, immutable");
+  }
+  // Cache control for HTML
+  else if (req.url.endsWith(".html") || req.url === "/") {
+    res.set("Cache-Control", "public, max-age=3600");
+  }
+  // SEO headers
+  res.set("X-Content-Type-Options", "nosniff");
+  res.set("X-Frame-Options", "SAMEORIGIN");
+  res.set("X-XSS-Protection", "1; mode=block");
+  res.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
+
+// Sitemap and robots.txt routes (should be before static files)
+app.use("/", sitemapRoutes);
+
+app.use("/api/locations", locationRoutes);
 
 app.use("/api/webhooks", webhookRoutes);
 
@@ -66,77 +86,7 @@ app.use("/api/products", productRoutes);
 
 //cartRoutes
 app.use("/api/cart", cartRoutes);
-// Add to app.js (after your check route)
-// app.get('/api/fix-refund-id/:orderNumber', async (req, res) => {
-//   try {
-//     const order = await Order.findOne({ 
-//       orderNumber: req.params.orderNumber 
-//     });
-    
-//     if (!order) return res.json({ error: "Order not found" });
-    
-//     // Find the Processing refund
-//     const refund = order.refunds.find(r => r.status === "Processing");
-    
-//     if (!refund) return res.json({ error: "No Processing refund found" });
-    
-//     // Add the missing Flutterwave ID (from your logs: 4389336)
-//     refund.flutterwaveRefundId = "4389336";
-//     refund.flw_ref = "JayyTech_DGMOWQ1765919081746514920";
-//     refund.flutterwaveResponse = {
-//       id: 4389336,
-//       amount_refunded: 100,
-//       status: "completed",
-//       flw_ref: "JayyTech_DGMOWQ1765919081746514920",
-//       created_at: "2025-12-16T21:13:16.000Z"
-//     };
-    
-//     await order.save();
-    
-//     res.json({
-//       success: true,
-//       message: "Fixed! Added Flutterwave ID to refund",
-//       refundId: refund._id,
-//       flutterwaveRefundId: refund.flutterwaveRefundId,
-//       newStatus: "Ready for webhook"
-//     });
-    
-//   } catch (error) {
-//     res.json({ error: error.message });
-//   }
-// });
-// // Add this route anywhere in app.js (before app.listen)
-// app.get('/api/check-refund/:orderNumber', async (req, res) => {
-//   try {
-//     const order = await Order.findOne({ 
-//       orderNumber: req.params.orderNumber 
-//     });
-    
-//     if (!order) {
-//       return res.json({ error: "Order not found" });
-//     }
-    
-//     // Find the Processing refund
-//     const refund = order.refunds.find(r => r.status === "Processing");
-    
-//     res.json({
-//       orderFound: true,
-//       orderNumber: order.orderNumber,
-//       refundExists: !!refund,
-//       refundId: refund?._id,
-//       refundStatus: refund?.status,
-//       flutterwaveRefundId: refund?.flutterwaveRefundId || "❌ MISSING",
-//       hasFlwRef: !!refund?.flw_ref,
-//       createdAt: refund?.createdAt,
-//       processedAt: refund?.processedAt
-//     });
-    
-//   } catch (error) {
-//     res.json({ error: error.message });
-//   }
-// });
 
-//admin create couponRoutes
 app.use("/api/admin/coupons", couponRoutes);
 
 //usercouponroutw

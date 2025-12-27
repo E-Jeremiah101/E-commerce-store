@@ -650,6 +650,7 @@ const StockLevelsView = ({
                           <img
                             src={product.image}
                             alt={product.name}
+                            loading="lazy"
                             className="h-10 w-10 rounded object-cover mr-3"
                           />
                         )}
@@ -1363,6 +1364,7 @@ const PriceManagementView = ({
                             <img
                               src={product.image}
                               alt={product.name}
+                              loading="lazy"
                               className="h-10 w-10 rounded object-cover mr-3"
                             />
                           )}
@@ -2346,6 +2348,7 @@ const DashboardView = ({ data, settings }) => (
                     <img
                       src={product.image}
                       alt={product.name}
+                      loading="lazy"
                       className="h-12 w-12 rounded-lg object-cover border"
                     />
                   ) : (
@@ -2441,6 +2444,7 @@ const DashboardView = ({ data, settings }) => (
                   <img
                     src={product.image}
                     alt={product.name}
+                    loading="lazy"
                     className="w-10 h-10 rounded object-cover"
                   />
                 )}
@@ -2480,6 +2484,7 @@ const DashboardView = ({ data, settings }) => (
                   <img
                     src={product.image}
                     alt={product.name}
+                    loading="lazy"
                     className="w-10 h-10 rounded object-cover"
                   />
                 )}
@@ -2645,6 +2650,7 @@ const LowStockView = ({ alerts, onAdjust, loading }) => {
                       <img
                         src={group.image}
                         alt={group.name}
+                        loading="lazy"
                         className="h-16 w-16 rounded-xl object-cover border"
                       />
                     ) : (
@@ -3721,6 +3727,7 @@ const LocationsView = ({ locations, settings, loading }) => {
             <img
               src={settings?.logo}
               alt={settings?.storeName}
+              loading="lazy"
               className="h-16 md:h-20 w-auto" // Responsive height
             />
           </div>
@@ -3985,6 +3992,7 @@ const LocationsView = ({ locations, settings, loading }) => {
                               <img
                                 src={product.productImage}
                                 alt={product.productImage}
+                                loading="lazy"
                                 className="w-10 h-10 rounded object-cover"
                               />
                             </div>

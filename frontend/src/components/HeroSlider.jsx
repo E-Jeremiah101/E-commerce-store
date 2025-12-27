@@ -44,7 +44,7 @@ const HeroSlider = () => {
             <img
               src={slide.url}
               alt={slide.title}
-              loading="eager"
+              loading="lazy"
               className="w-full h-[40rem] sm:h-[35rem] lg:h-[44rem] object-cover object-center lg:object-center"
             />
             {/* Absolute text */}

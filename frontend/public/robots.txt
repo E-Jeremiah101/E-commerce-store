@@ -1,0 +1,26 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /login
+Disallow: /signup
+Disallow: /reset-password
+Disallow: /forgot-password
+Disallow: /personal-info
+Disallow: /cart
+
+# Search Engine Crawlers
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Sitemap
+Sitemap: https://e-commerce-store-dkry.onrender.com/sitemap.xml
+Sitemap: https://e-commerce-store-dkry.onrender.com/sitemap-products.xml
+
+# Cache Control
+Cache-Control: max-age=604800

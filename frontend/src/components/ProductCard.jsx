@@ -88,6 +88,7 @@ const ProductCard = ({ product }) => {
             className="object-cover w-full h-full hover:scale-105 transition-transform"
             src={product.images?.[0]}
             alt={product.name}
+            loading="lazy"
           />
 
           {/* Dark overlay for better contrast */}

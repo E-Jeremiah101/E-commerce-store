@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useProductStore } from "../stores/useProductStore.js";
+import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import axios from "../lib/axios";
 import FeaturedProducts from "../components/FeaturedProducts.jsx";
 import { Link } from "react-router-dom";
@@ -9,8 +10,10 @@ import Footer from "../components/Footer.jsx";
 import HeroSlider from "../components/HeroSlider.jsx";
 import OtherFeatures from "../components/OtherFeatures.jsx";
 import LandingProducts from "../components/LandingProducts.jsx";
+import { SEO, OrganizationSchema } from "../components/SEO";
 
 const HomePage = () => {
+  const { settings } = useStoreSettings();
   const [categories, setCategories] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
@@ -67,6 +70,20 @@ const HomePage = () => {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
     >
+      {/* SEO Meta Tags */}
+      <SEO
+        title={`${
+          settings?.storeName || "Store"
+        } - Quality Products at Great Prices`}
+        description={`Shop at ${
+          settings?.storeName || "Store"
+        } for quality products with fast shipping and secure payments. Discover great deals on trending items.`}
+        image={settings?.logo || "/logo-buz.jpg"}
+      />
+
+      {/* Organization Schema */}
+      <OrganizationSchema />
+
       {/* HERO SLIDER */}
       <motion.div
         className="relative  pt-2  md:py-0"

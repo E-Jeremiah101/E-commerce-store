@@ -325,7 +325,7 @@ export const sendGlobalCouponToAllUsers = async (coupon) => {
         $ne: null,
         $ne: "", // Exclude empty emails
       },
-      role: { $ne: "" }, // Optional: exclude admin users
+      role: { $ne: "admin" }, // Optional: exclude admin users
     }).select("email firstname lastname");
 
     console.log(`Found ${users.length} users with emails`);

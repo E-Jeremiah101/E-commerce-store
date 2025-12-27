@@ -88,6 +88,7 @@ const CanceledTab = () => {
                         <img
                           src={item.image}
                           alt={item.name}
+                          loading="lazy"
                           className="w-20 h-20 object-cover rounded"
                         />
                         <div className="flex-1 space-y-3">
