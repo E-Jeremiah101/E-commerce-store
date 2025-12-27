@@ -6,7 +6,8 @@ import Product from "../models/product.model.js";
 import { flw } from "../lib/flutterwave.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
-import storeSettings from "../models/storeSettings.model.js"
+import storeSettings from "../models/storeSettings.model.js";
+import { restoreStockForCancelledOrder } from "./inventory.controller.js";
 
 const logOrderAction = async (
   req,
@@ -937,13 +938,59 @@ export const updateOrderStatus = async (req, res) => {
   try {
     const settings = await storeSettings.findOne();
     const { orderId } = req.params;
-    const { status } = req.body;
+    const { status, cancelReason } = req.body;
 
     const order = await Order.findById(orderId).populate("user");
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     const oldStatus = order.status;
     const oldIsProcessed = order.isProcessed;
+
+
+     if (status === "Cancelled" && oldStatus !== "Cancelled") {
+       // RESTORE STOCK BEFORE UPDATING ORDER STATUS
+       try {
+         console.log(
+           `🔄 Restoring stock for cancelled order #${order.orderNumber}`
+         );
+         const restorationResults = await restoreStockForCancelledOrder(order);
+
+         // Log the stock restoration
+         await logOrderAction(
+           req,
+           "ORDER_CANCELLED_STOCK_RESTORED",
+           orderId,
+           {
+             stockRestoration: {
+               totalItems: order.products.length,
+               restorationResults,
+             },
+             cancellationDetails: {
+               oldStatus,
+               newStatus: status,
+               reason: cancelReason || "No reason provided",
+             },
+           },
+           `Order cancelled and stock restored: ${order.products.length} items returned to inventory`
+         );
+       } catch (restoreError) {
+         console.error(
+           "❌ Failed to restore stock for cancelled order:",
+           restoreError
+         );
+         // Continue with cancellation but log the error
+         await logOrderAction(
+           req,
+           "ORDER_CANCELLED_STOCK_RESTORE_FAILED",
+           orderId,
+           {
+             error: restoreError.message,
+           },
+           "Order cancelled but stock restoration failed"
+         );
+       }
+     }
+
 
     const newIsProcessed =
       oldStatus === "Pending" && status !== "Pending" ? true : oldIsProcessed;
@@ -1024,11 +1071,17 @@ export const updateOrderStatus = async (req, res) => {
 
     // Respond immediately so the client receives the update without waiting for email delivery
     console.log(" Order updated:", order);
-    res.status(200).json({
-      success: true,
-      message: `Order status updated to ${status}`,
-      order,
-    });
+     res.status(200).json({
+       success: true,
+       message: `Order status updated to ${status}`,
+       order,
+       ...(status === "Cancelled"
+         ? {
+             stockRestored: true,
+             note: "Items have been returned to inventory",
+           }
+         : {}),
+     });
 
     // Send notification email in background (fire-and-forget)
     (async () => {

@@ -46,7 +46,165 @@ const logVariantInventoryAction = async (
   }
 };
 
+// Helper function to restore stock when order is cancelled
+export const restoreStockForCancelledOrder = async (order) => {
+  try {
+    const stockRestorationResults = [];
+    
+    for (const item of order.products) {
+      if (!item.product) {
+        stockRestorationResults.push({
+          status: 'NO_PRODUCT_ID',
+          message: `No product ID found for "${item.name}" - cannot restore stock`,
+          productName: item.name,
+          quantity: item.quantity
+        });
+        continue;
+      }
 
+      const product = await Product.findById(item.product);
+      if (!product) {
+        stockRestorationResults.push({
+          status: 'PRODUCT_NOT_FOUND',
+          message: `Product "${item.name}" not found in database`,
+          productName: item.name,
+          quantity: item.quantity
+        });
+        continue;
+      }
+
+      // For products with variants
+      if (product.variants && product.variants.length > 0) {
+        // Find the specific variant
+        const variant = product.variants.find(v => 
+          (v.size === item.selectedSize || (!v.size && !item.selectedSize)) &&
+          (v.color === item.selectedColor || (!v.color && !item.selectedColor))
+        );
+        
+        if (variant) {
+          const oldStock = variant.countInStock;
+          variant.countInStock += item.quantity;
+          
+          // Create inventory log for stock restoration
+          const inventoryLog = new InventoryLog({
+            productId: product._id,
+            variantId: variant._id,
+            variantName: `${variant.color || 'Default'} - ${variant.size || 'One Size'}`,
+            adjustmentType: "add",
+            quantity: item.quantity,
+            oldStock,
+            newStock: variant.countInStock,
+            reason: "order_cancellation",
+            notes: `Order #${order.orderNumber} cancelled - stock restored`,
+            adjustedBy: order.user,
+            referenceId: order._id
+          });
+          
+          await inventoryLog.save();
+          
+          stockRestorationResults.push({
+            status: 'RESTORED',
+            message: `✅ Stock restored for ${item.name}: ${item.quantity} units added back to ${variant.size || 'N/A'}/${variant.color || 'N/A'}`,
+            productName: item.name,
+            quantity: item.quantity,
+            variantSize: variant.size,
+            variantColor: variant.color,
+            oldStock,
+            newStock: variant.countInStock
+          });
+        } else {
+          // Try fuzzy matching
+          const fuzzyVariant = product.variants.find(v => {
+            const sizeMatch = !item.selectedSize || v.size === item.selectedSize || 
+                             v.size === '' || v.size === 'Standard';
+            const colorMatch = !item.selectedColor || v.color === item.selectedColor || 
+                              v.color === '' || v.color === 'Standard';
+            return sizeMatch && colorMatch;
+          });
+          
+          if (fuzzyVariant) {
+            const oldStock = fuzzyVariant.countInStock;
+            fuzzyVariant.countInStock += item.quantity;
+            
+            // Create inventory log
+            const inventoryLog = new InventoryLog({
+              productId: product._id,
+              variantId: fuzzyVariant._id,
+              variantName: `${fuzzyVariant.color || 'Default'} - ${fuzzyVariant.size || 'One Size'}`,
+              adjustmentType: "add",
+              quantity: item.quantity,
+              oldStock,
+              newStock: fuzzyVariant.countInStock,
+              reason: "order_cancellation",
+              notes: `Order #${order.orderNumber} cancelled - stock restored (fuzzy match)`,
+              adjustedBy: order.user,
+              referenceId: order._id
+            });
+            
+            await inventoryLog.save();
+            
+            stockRestorationResults.push({
+              status: 'RESTORED_FUZZY',
+              message: `✅ Stock restored (fuzzy match) for ${item.name}: ${item.quantity} units added back to ${fuzzyVariant.size || 'N/A'}/${fuzzyVariant.color || 'N/A'}`,
+              productName: item.name,
+              quantity: item.quantity,
+              variantSize: fuzzyVariant.size,
+              variantColor: fuzzyVariant.color,
+              oldStock,
+              newStock: fuzzyVariant.countInStock
+            });
+          } else {
+            stockRestorationResults.push({
+              status: 'VARIANT_NOT_FOUND',
+              message: `❌ Could not find variant for ${item.name} (Size: ${item.selectedSize || 'Any'}, Color: ${item.selectedColor || 'Any'})`,
+              productName: item.name,
+              quantity: item.quantity
+            });
+          }
+        }
+      } else {
+        // For products without variants
+        const oldStock = product.countInStock || 0;
+        product.countInStock = (product.countInStock || 0) + item.quantity;
+        
+        // Create inventory log
+        const inventoryLog = new InventoryLog({
+          productId: product._id,
+          variantId: null,
+          variantName: "No Variant",
+          adjustmentType: "add",
+          quantity: item.quantity,
+          oldStock,
+          newStock: product.countInStock,
+          reason: "order_cancellation",
+          notes: `Order #${order.orderNumber} cancelled - stock restored`,
+          adjustedBy: order.user,
+          referenceId: order._id
+        });
+        
+        await inventoryLog.save();
+        
+        stockRestorationResults.push({
+          status: 'RESTORED',
+          message: `✅ Stock restored for ${item.name}: ${item.quantity} units added back`,
+          productName: item.name,
+          quantity: item.quantity,
+          oldStock,
+          newStock: product.countInStock
+        });
+      }
+      
+      await product.save();
+    }
+    
+    console.log("📊 Stock restoration results:", stockRestorationResults);
+    return stockRestorationResults;
+    
+  } catch (error) {
+    console.error("❌ Error restoring stock for cancelled order:", error);
+    throw error;
+  }
+};
 
 const getTopSellingProducts = async (
   limit = 10,

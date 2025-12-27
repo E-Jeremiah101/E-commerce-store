@@ -87,7 +87,9 @@ const auditLogSchema = new mongoose.Schema(
         "VIEW_ORDER_DETAILS",
         "VIEW_USER_ORDERS",
         "VIEW_USER_ORDER",
-
+        "ORDER_CANCELLED_STOCK_RESTORED",
+        "ORDER_CANCELLED_STOCK_RESTORE_FAILED",
+ 
         //coupon
         "CREATE_COUPON",
         "DELETE_COUPON",

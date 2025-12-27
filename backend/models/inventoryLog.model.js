@@ -43,6 +43,7 @@ const inventoryLogSchema = new mongoose.Schema(
         "transfer_out",
         "initial",
         "other",
+        "order_cancellation",
       ],
       required: true,
     },
