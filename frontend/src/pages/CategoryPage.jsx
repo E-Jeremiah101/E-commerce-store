@@ -7,8 +7,9 @@ import ProductCard from "../components/ProductCard.jsx";
 import GoBackButton from "../components/GoBackButton";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-const CategoryPage = () => {
+const CategoryPageContent = () => {
   const { fetchProductsByCategory, products } = useProductStore();
   const { category } = useParams();
   const [isLoading, setIsLoading] = useState(true);
@@ -182,4 +183,10 @@ const CategoryPage = () => {
   );
 };
 
-export default CategoryPage;
+export default function CategoryPage() {
+  return (
+    <ErrorBoundary>
+      <CategoryPageContent />
+    </ErrorBoundary>
+  );
+}

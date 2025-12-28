@@ -6,8 +6,9 @@ import { SEO } from "../components/SEO";
 import { useUserStore } from "../stores/useUserStore";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import GoBackButton from "../components/GoBackButton";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-const LoginPage = () => {
+const LoginPageContent = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -178,4 +179,10 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default function LoginPage() {
+  return (
+    <ErrorBoundary>
+      <LoginPageContent />
+    </ErrorBoundary>
+  );
+}

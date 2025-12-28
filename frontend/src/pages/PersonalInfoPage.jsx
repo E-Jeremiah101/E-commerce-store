@@ -7,12 +7,13 @@ import {
   getCitiesByState,
   getLGAsByCity,
   getAreasByCity,
-} from "../utils/nigerianLocations"; 
+} from "../utils/nigerianLocations";
 import { Check, User, Phone, Mail, Lock, Loader, MapPin } from "lucide-react";
 import GoBackButton from "../components/GoBackButton";
 import { toast, ToastContainer } from "react-toastify";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-const PersonalInfoPage = () => {
+const PersonalInfoPageContent = () => {
   const { user, setUser } = useUserStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -218,7 +219,7 @@ const PersonalInfoPage = () => {
             <div className="absolute left-1/2 transform -translate-x-1/2">
               <div className="flex flex-col items-center">
                 <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">
-                 Personal Information
+                  Personal Information
                 </h2>
               </div>
             </div>
@@ -227,7 +228,7 @@ const PersonalInfoPage = () => {
       </motion.div>
 
       <motion.div
-        className="w-full mt-8 md:mx-auto md:w-full md:max-w-2xl" 
+        className="w-full mt-8 md:mx-auto md:w-full md:max-w-2xl"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.2 }}
@@ -337,7 +338,6 @@ const PersonalInfoPage = () => {
                     className="block w-full px-4 py-4 pl-10 rounded-md border border-gray-300 focus:outline-none text-gray-800 focus:ring-2 focus:ring-black"
                   />
                 </div>
-  
               </div>
             ))}
 
@@ -350,7 +350,6 @@ const PersonalInfoPage = () => {
                       {a.label || "Delivery"} Address{" "}
                       {i === 0 ? "(Primary)" : ""}
                     </label>
-  
                   </div>
                   <label className="flex items-center mt-1">
                     <input
@@ -450,7 +449,7 @@ const PersonalInfoPage = () => {
                 {/* LGA */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    LGA  *
+                    LGA *
                   </label>
                   <select
                     value={a.lga || ""}
@@ -582,4 +581,10 @@ const PersonalInfoPage = () => {
   );
 };
 
-export default PersonalInfoPage;
+export default function PersonalInfoPage() {
+  return (
+    <ErrorBoundary>
+      <PersonalInfoPageContent />
+    </ErrorBoundary>
+  );
+}

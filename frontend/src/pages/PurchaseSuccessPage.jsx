@@ -4,8 +4,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { useCartStore } from "../stores/useCartStore";
 import axios from "../lib/axios";
 import Confetti from "react-confetti";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-const PurchaseSuccessPage = () => {
+const PurchaseSuccessPageContent = () => {
   const [isProcessing, setIsProcessing] = useState(true);
   const [orderNumber, setOrderNumber] = useState("");
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState(null);
@@ -205,4 +206,10 @@ const PurchaseSuccessPage = () => {
   );
 };
 
-export default PurchaseSuccessPage;
+export default function PurchaseSuccessPage() {
+  return (
+    <ErrorBoundary>
+      <PurchaseSuccessPageContent />
+    </ErrorBoundary>
+  );
+}

@@ -3,6 +3,7 @@ import { useParams, Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useProductStore } from "../stores/useProductStore.js";
 import toast from "react-hot-toast";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 import { ShoppingCart, Heart } from "lucide-react";
 import { useCartStore } from "../stores/useCartStore";
 import { useUserStore } from "../stores/useUserStore";
@@ -14,7 +15,7 @@ import ProductReviews from "../components/ProductReviews";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 
-const ViewProductPage = () => {
+const ViewProductPageContent = () => {
   const { id } = useParams();
   const { fetchProductById } = useProductStore();
   const { addToCart, isLoading, cart } = useCartStore();
@@ -594,4 +595,10 @@ const ViewProductPage = () => {
   );
 };
 
-export default ViewProductPage;
+export default function ViewProductPage() {
+  return (
+    <ErrorBoundary>
+      <ViewProductPageContent />
+    </ErrorBoundary>
+  );
+}

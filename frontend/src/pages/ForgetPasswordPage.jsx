@@ -4,10 +4,11 @@ import toast from "react-hot-toast";
 import { Link } from "react-router-dom";
 import { useUserStore } from "../stores/useUserStore";
 import { useEffect } from "react";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-const ForgotPasswordPage = () => {
+const ForgotPasswordPageContent = () => {
   // Ensure spinner does not show if user navigates directly here
-  
+
   useEffect(() => {
     useUserStore.setState({ checkingAuth: false });
   }, []);
@@ -81,4 +82,10 @@ const ForgotPasswordPage = () => {
   );
 };
 
-export default ForgotPasswordPage;
+export default function ForgotPasswordPage() {
+  return (
+    <ErrorBoundary>
+      <ForgotPasswordPageContent />
+    </ErrorBoundary>
+  );
+}

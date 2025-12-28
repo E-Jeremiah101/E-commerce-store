@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../lib/axios";
 import toast from "react-hot-toast";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-const ResetPasswordPage = () => {
+const ResetPasswordPageContent = () => {
   const { token } = useParams();
   const navigate = useNavigate();
   const [password, setPassword] = useState("");
@@ -49,4 +50,10 @@ const ResetPasswordPage = () => {
   );
 };
 
-export default ResetPasswordPage;
+export default function ResetPasswordPage() {
+  return (
+    <ErrorBoundary>
+      <ResetPasswordPageContent />
+    </ErrorBoundary>
+  );
+}

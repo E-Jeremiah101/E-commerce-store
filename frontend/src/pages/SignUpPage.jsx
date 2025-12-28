@@ -11,8 +11,9 @@ import {
 import { useUserStore } from "../stores/useUserStore";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import GoBackButton from "../components/GoBackButton";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-const SignUpPage = () => {
+const SignUpPageContent = () => {
   const [formData, setFormData] = useState({
     firstname: "",
     lastname: "",
@@ -324,4 +325,10 @@ const SignUpPage = () => {
   );
 };
 
-export default SignUpPage;
+export default function SignUpPage() {
+  return (
+    <ErrorBoundary>
+      <SignUpPageContent />
+    </ErrorBoundary>
+  );
+}

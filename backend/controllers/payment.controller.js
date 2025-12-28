@@ -1715,7 +1715,7 @@ export const checkoutSuccess = async (req, res) => {
           isNewOrder = isNew; // Store whether this is a new order
 
           // ONLY process coupons and send emails for NEW orders
-          if (isNew) {
+          if (isNew) {    
             // Handle coupon eligibility
             const couponEligibility = await checkCouponEligibility(
               userId,

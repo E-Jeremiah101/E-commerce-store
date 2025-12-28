@@ -598,24 +598,11 @@ const useUserStore = create(
 
 **18 Pages:**
 
-- HomePage ✅ (Has SEO)
-- ViewProductPage ⚠️ (Needs SEO)
-- CategoryPage ⚠️ (Needs SEO)
-- CartPage ⚠️ (Needs SEO)
-- LoginPage, SignUpPage ⚠️ (Need SEO)
-- AdminPage, AdminOrderDetails ✅ (Admin only)
-- OrderHistoryPage ⚠️ (Needs SEO)
-- SearchResultsPage ⚠️ (Needs SEO)
-- RequestReturnPage ⚠️ (Needs SEO)
-- ... (more pages)
+
 
 **Issues:**
 ⚠️ **Inconsistent loading states**
 
-- Some pages use loading spinner, some don't
-  ⚠️ **No error boundaries**
-- 1 error in component crashes whole page
-- **Fix:** Add Error Boundary component
   ⚠️ **No skeleton loaders**
 - Blank page while loading
 - **Fix:** Add skeleton UI while fetching
@@ -665,11 +652,7 @@ const useUserStore = create(
 ✅ Organization schema
 ✅ Dynamic store settings used
 
-**What's Missing:**
-⚠️ No SEO on product pages
-⚠️ No canonical URLs for pagination
-⚠️ No structured data for breadcrumbs
-⚠️ No image optimization (alt text, lazy loading)
+
 
 ---
 
@@ -730,15 +713,7 @@ const HomePage = lazy(() => import("./pages/HomePage"));
 
 ---
 
-### ⚠️ Security Issues
 
-#### 1. **Tokens in LocalStorage**
-
-```
-Problem: XSS attack can steal tokens
-Current: tokens stored in localStorage
-Risk: High
-Fix: Move to httpOnly cookies
 ```
 
 **Before:**

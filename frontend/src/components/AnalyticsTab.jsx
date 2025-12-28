@@ -53,18 +53,18 @@ const AnalyticsTab = () => {
     const fetchAnalyticsData = async () => {
       try {
         setIsLoading(true);
-        const res = await axios.get(`/analytics?range=${selectedRange}`);
-        console.log("📊 API Response:", res.data);
-        console.log("📈 Sales Data:", res.data.salesData);
-        console.log(
-          "💰 Revenue in salesData:",
-          res.data.salesData?.map((d) => ({
-            date: d.date,
-            sales: d.sales,
-            revenue: d.revenue,
-            deliveryFee: d.deliveryFee,
-          }))
-        );
+        // ⚡ OPTIMIZATION: Add signal to prevent race conditions
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+        const res = await axios.get(`/analytics?range=${selectedRange}`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        // Reduce console logs to improve performance
+        console.log("✅ Analytics loaded for", selectedRange);
+
         const {
           analyticsData,
           salesData,
@@ -81,11 +81,6 @@ const AnalyticsTab = () => {
         setAnalyticsData(analyticsData);
         setProductSales(productSalesData.products || []);
         setProductSummary(productSalesData.summary || {});
-
-        setAnalyticsData(analyticsData);
-        const totalOrderAppearances = sortedProducts.reduce((sum, product) => {
-          return sum + (product.orderCount || 0);
-        }, 0);
 
         // Handle top products with better error handling
         if (
@@ -151,7 +146,6 @@ const AnalyticsTab = () => {
           };
         });
 
-       
         console.log("🔄 Mapped Sales Data (sample):", mappedSales.slice(0, 3));
         setSalesData(mappedSales);
 
@@ -288,6 +282,30 @@ const AnalyticsTab = () => {
 
   const { settings } = useStoreSettings();
 
+  const exportAnalyticsData = async () => {
+    try {
+      const response = await axios.get(
+        `/analytics/export?range=${selectedRange}`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `analytics_${selectedRange}_${Date.now()}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error("Error exporting analytics data:", error);
+    }
+  };
+
   if (isLoading)
     return (
       <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-br from-gray-50 to-white">
@@ -344,6 +362,12 @@ const AnalyticsTab = () => {
                 <option value="yearly">Yearly</option>
                 <option value="all">All</option>
               </select>
+              <button
+                onClick={exportAnalyticsData}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+              >
+                Export CSV
+              </button>
             </div>
           </div>
         </div>

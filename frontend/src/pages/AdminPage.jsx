@@ -57,7 +57,6 @@
 //   }
 // };
 
-
 // const TAB_PERMISSIONS = {
 //   PRODUCT_READ: "product:read",
 //   PRODUCT_WRITE: "product:write",
@@ -139,7 +138,6 @@
 
 //   const { fetchAllProducts } = useProductStore();
 
-
 //   // Save active tab to localStorage whenever it changes
 //   useEffect(() => {
 //     try {
@@ -163,7 +161,6 @@
 //     const permission = TAB_PERMISSIONS[tab.id];
 //     return permission && hasPermission(permission);
 //   });
-
 
 //   return (
 //     <div className="bg-gradient-to-br from-white via-gray-100 to-gray-300 flex-2 md:flex md:h-[100vh] md:w-full p md:mx-auto md:overflow-hidden -10 min-h-screen">
@@ -311,6 +308,7 @@ import toast from "react-hot-toast";
 import StoreSettings from "../components/StoreSettings.jsx";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import AdminCoupons from "../components/AdminCoupons.jsx";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
 // Define constants at the top
 const STORAGE_KEY = "admin_active_tab";
@@ -401,7 +399,7 @@ const TAB_PERMISSIONS = {
   Settings: LOCAL_PERMISSIONS.SETTINGS_WRITE,
 };
 
-const AdminPage = () => {
+const AdminPageContent = () => {
   const { settings } = useStoreSettings();
   const { user } = useUserStore();
 
@@ -585,4 +583,10 @@ const AdminPage = () => {
   );
 };
 
-export default AdminPage;
+export default function AdminPage() {
+  return (
+    <ErrorBoundary>
+      <AdminPageContent />
+    </ErrorBoundary>
+  );
+}

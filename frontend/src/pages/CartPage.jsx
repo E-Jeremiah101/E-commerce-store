@@ -9,8 +9,9 @@ import PeopleAlsoBought from "../components/PeopleAlsoBought";
 import OrderSummary from "../components/OrderSummary";
 import GiftCouponCard from "../components/GiftCouponCard";
 import GoBackButton from "../components/GoBackButton";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-const CartPage = () => {
+const CartPageContent = () => {
   const { cart, isLoading } = useCartStore();
   const { settings } = useStoreSettings();
 
@@ -98,7 +99,14 @@ const CartPage = () => {
     </>
   );
 };
-export default CartPage;
+
+export default function CartPage() {
+  return (
+    <ErrorBoundary>
+      <CartPageContent />
+    </ErrorBoundary>
+  );
+}
 
 const EmptyCartUI = () => (
   <motion.div

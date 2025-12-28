@@ -7,7 +7,9 @@ import GoBackButton from "../components/GoBackButton";
 import { motion } from "framer-motion";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
-const SavedProductsPage = () => {
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
+
+const SavedProductsPageContent = () => {
   const [savedProducts, setSavedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useUserStore();
@@ -55,8 +57,6 @@ const SavedProductsPage = () => {
   };
   const { settings } = useStoreSettings();
 
-  
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -67,37 +67,37 @@ const SavedProductsPage = () => {
 
   return (
     <>
-     <motion.div
-             className="fixed top-0 left-0 right-0 z-40 bg-white backdrop-blur-md"
-             style={{ borderBottom: "none", boxShadow: "none" }}
-             initial={{ opacity: 0, y: -10 }}
-             animate={{ opacity: 1, y: 0 }}
-             transition={{ duration: 0.5, ease: "easeOut" }}
-           >
-             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-               <div className="flex items-center justify-between h-16 sm:h-20">
-                 {/* Back Button - Left aligned */}
-                 <div className="flex items-center">
-                   <motion.div
-                     whileHover={{ x: -2 }}
-                     whileTap={{ scale: 0.95 }}
-                     className="p-2 -ml-2 rounded-lg hover:bg-gray-50 transition-colors"
-                   >
-                     <GoBackButton />
-                   </motion.div>
-                 </div>
-     
-                 {/* Page Title - Centered with subtle styling */}
-                 <div className="absolute left-1/2 transform -translate-x-1/2">
-                   <div className="flex flex-col items-center">
-                     <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">
-                       Wishlist ({savedProducts.length})
-                     </h2>
-                   </div>
-                 </div>
-               </div>
-             </div>
-           </motion.div>
+      <motion.div
+        className="fixed top-0 left-0 right-0 z-40 bg-white backdrop-blur-md"
+        style={{ borderBottom: "none", boxShadow: "none" }}
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 sm:h-20">
+            {/* Back Button - Left aligned */}
+            <div className="flex items-center">
+              <motion.div
+                whileHover={{ x: -2 }}
+                whileTap={{ scale: 0.95 }}
+                className="p-2 -ml-2 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <GoBackButton />
+              </motion.div>
+            </div>
+
+            {/* Page Title - Centered with subtle styling */}
+            <div className="absolute left-1/2 transform -translate-x-1/2">
+              <div className="flex flex-col items-center">
+                <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">
+                  Wishlist ({savedProducts.length})
+                </h2>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
 
       <div className="min-h-screen bg-gray-50 py-8 mt-12">
         <div className="max-w-6xl mx-auto px-4">
@@ -140,10 +140,7 @@ const SavedProductsPage = () => {
                     </Link>
 
                     <p className="text-sm lg:text-md text-black">
-                      {formatPrice(
-                        product.price,
-                        settings?.currency
-                      )}
+                      {formatPrice(product.price, settings?.currency)}
                     </p>
 
                     <div className="text-right">
@@ -165,4 +162,10 @@ const SavedProductsPage = () => {
   );
 };
 
-export default SavedProductsPage;
+export default function SavedProductsPage() {
+  return (
+    <ErrorBoundary>
+      <SavedProductsPageContent />
+    </ErrorBoundary>
+  );
+}

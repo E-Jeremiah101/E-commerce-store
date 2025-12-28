@@ -2,8 +2,9 @@ import React from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, XCircle } from "lucide-react";
 import { Link } from "react-router-dom";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-const PurchaseCancelPage = () => {
+const PurchaseCancelPageContent = () => {
   return (
     <div className="h-screen w-screen bg-gray-700 flex items-center justify-center px-4">
       <motion.div
@@ -47,4 +48,10 @@ const PurchaseCancelPage = () => {
   );
 };
 
-export default PurchaseCancelPage;
+export default function PurchaseCancelPage() {
+  return (
+    <ErrorBoundary>
+      <PurchaseCancelPageContent />
+    </ErrorBoundary>
+  );
+}

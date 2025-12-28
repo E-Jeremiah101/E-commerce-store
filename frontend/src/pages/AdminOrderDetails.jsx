@@ -5,8 +5,9 @@ import { motion } from "framer-motion";
 import GoBackButton from "../components/GoBackButton";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-const AdminOrderDetails = () => {
+const AdminOrderDetailsContent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
@@ -322,4 +323,10 @@ const { settings } = useStoreSettings();
    );
 };
 
-export default AdminOrderDetails;
+export default function AdminOrderDetails() {
+  return (
+    <ErrorBoundary>
+      <AdminOrderDetailsContent />
+    </ErrorBoundary>
+  );
+}

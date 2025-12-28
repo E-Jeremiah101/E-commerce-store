@@ -8,6 +8,7 @@ import Delivered from "../components/Delivered.jsx";
 import RefundTab from "../components/RefundTab.jsx";
 import CanceledTab from "../components/CanceledTab.jsx";
 import GoBackButton from "../components/GoBackButton";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 const tabs = [
   { id: "ongoing", label: "Ongoing" },
   { id: "delivered", label: "Delivered" },
@@ -15,7 +16,7 @@ const tabs = [
   { id: "canceled", label: "Canceled" },
 ];
 
-const OrderHistoryPage = () => {
+const OrderHistoryPageContent = () => {
   const [activeTab, setActiveTab] = useState("ongoing");
   const { settings } = useStoreSettings();
 
@@ -86,4 +87,10 @@ const OrderHistoryPage = () => {
   );
 };
 
-export default OrderHistoryPage;
+export default function OrderHistoryPage() {
+  return (
+    <ErrorBoundary>
+      <OrderHistoryPageContent />
+    </ErrorBoundary>
+  );
+}

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useProductStore } from "../stores/useProductStore.js";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import axios from "../lib/axios";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 import FeaturedProducts from "../components/FeaturedProducts.jsx";
 import { Link } from "react-router-dom";
 import FAQSection from "../components/FAQSection.jsx";
@@ -12,7 +13,7 @@ import OtherFeatures from "../components/OtherFeatures.jsx";
 import LandingProducts from "../components/LandingProducts.jsx";
 import { SEO, OrganizationSchema } from "../components/SEO";
 
-const HomePage = () => {
+const HomePageContent = () => {
   const { settings } = useStoreSettings();
   const [categories, setCategories] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
@@ -185,4 +186,10 @@ const HomePage = () => {
   );
 };
 
-export default HomePage;
+export default function HomePage() {
+  return (
+    <ErrorBoundary>
+      <HomePageContent />
+    </ErrorBoundary>
+  );
+}

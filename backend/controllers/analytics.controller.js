@@ -2,9 +2,22 @@ import Order from "../models/order.model.js";
 import Product from "../models/product.model.js";
 import User from "../models/user.model.js";
 import Visitor from "../models/visitors.model.js";
+import redis from "../lib/redis.js";
 
 // MAIN FUNCTION
 export const getAnalytics = async (range = "weekly") => {
+  // ⚡ OPTIMIZATION: Check cache first
+  const cacheKey = `analytics:${range}`;
+  try {
+    const cached = await redis.get(cacheKey);
+    if (cached) {
+      console.log("✅ Returning cached analytics data");
+      return JSON.parse(cached);
+    }
+  } catch (cacheError) {
+    console.log("⚠️ Cache read failed, proceeding with DB query");
+  }
+
   const endDate = new Date();
   endDate.setHours(23, 59, 59, 999);
   const startDate = getStartDate(range, endDate);
@@ -19,10 +32,6 @@ export const getAnalytics = async (range = "weekly") => {
   }
 
   // Calculate previous period for comparison
-
-
-
- 
 
   // Get current period data
   const analyticsData = await getAnalyticsData(startDate, endDate);
@@ -55,17 +64,17 @@ export const getAnalytics = async (range = "weekly") => {
     couponDiscountRate: 0,
   };
 
-if (startDate) {
-  const durationMs = endDate.getTime() - startDate.getTime() + 1;
+  if (startDate) {
+    const durationMs = endDate.getTime() - startDate.getTime() + 1;
 
-  const prevEndDate = new Date(startDate.getTime() - 1);
-  const prevStartDate = new Date(prevEndDate.getTime() - durationMs + 1);
+    const prevEndDate = new Date(startDate.getTime() - 1);
+    const prevStartDate = new Date(prevEndDate.getTime() - durationMs + 1);
 
-  console.log("📅 Previous Period Start:", prevStartDate);
-  console.log("📅 Previous Period End:", prevEndDate);
+    console.log("📅 Previous Period Start:", prevStartDate);
+    console.log("📅 Previous Period End:", prevEndDate);
 
-  prevAnalyticsData = await getAnalyticsData(prevStartDate, prevEndDate);
-}
+    prevAnalyticsData = await getAnalyticsData(prevStartDate, prevEndDate);
+  }
 
   const calculateChange = (current, previous, metricType = "default") => {
     console.log(
@@ -369,7 +378,7 @@ if (startDate) {
     { $limit: 10 },
   ]);
 
-  return {
+  const result = {
     analyticsData,
     salesData,
     statusCharts,
@@ -382,6 +391,17 @@ if (startDate) {
     couponTrend,
     couponPerformance,
   };
+
+  // ⚡ OPTIMIZATION: Cache results for 5 minutes
+  try {
+    const cacheKey = `analytics:${range}`;
+    await redis.setEx(cacheKey, 300, JSON.stringify(result)); // 5 minute cache
+    console.log("✅ Analytics cached for 5 minutes");
+  } catch (cacheError) {
+    console.log("⚠️ Cache write failed, but returning fresh data");
+  }
+
+  return result;
 };
 
 // MAIN ANALYTIC STATS - UPDATED WITH DATE FILTERING
@@ -396,152 +416,152 @@ async function getAnalyticsData(startDate, endDate) {
     dateFilter.createdAt = { $gte: startDate, $lte: endDate };
   }
 
-  const totalOrdersAllStatuses = await Order.countDocuments(dateFilter);
-
-  const [totalUsers, totalProducts, allOrders, visitors] = await Promise.all([
-    // Users: Filter by date if dates provided
+  // ⚡ OPTIMIZATION: Use Promise.all() to parallelize all count operations
+  // Previously: 15+ sequential countDocuments queries
+  // Now: All counts done in parallel (4 queries instead of 15+)
+  const [
+    totalUsersResult,
+    totalProductsResult,
+    allOrdersResult,
+    visitorsResult,
+    orderStatusCounts,
+  ] = await Promise.all([
+    // Count users
     User.countDocuments(dateFilter),
 
-    // Products: Usually shouldn't be filtered by date (products exist regardless of when created)
+    // Count products (not filtered by date)
     Product.countDocuments({ archived: { $ne: true } }),
 
-    // Orders: Filter by date AND status
-    Order.countDocuments({
-      ...dateFilter,
-    }),
+    // Count all orders
+    Order.countDocuments(dateFilter),
 
-    // Visitors: Filter by date
+    // Count visitors
     Visitor.countDocuments(dateFilter),
-  ]);
 
-  // Order status counts with date filtering
-  const pendingOrders = await Order.countDocuments({
-    ...dateFilter,
-    status: "Pending",
-  });
-
-  const processingOrders = await Order.countDocuments({
-    ...dateFilter,
-    status: "Processing",
-  });
-
-  const shippedOrders = await Order.countDocuments({
-    ...dateFilter,
-    status: "Shipped",
-  });
-
-  const deliveredOrders = await Order.countDocuments({
-    ...dateFilter,
-    status: "Delivered",
-  });
-
-  const canceledOrders = await Order.countDocuments({
-    ...dateFilter,
-    status: "Cancelled",
-  });
-  const refundedOrders = await Order.countDocuments({
-    ...dateFilter,
-    status: "Refunded",
-  });
-  const partiallyRefundedOrders = await Order.countDocuments({
-    ...dateFilter,
-    status: "Partially Refunded",
-  });
-
-  
-// const revenue = await Order.aggregate([
-//   {
-//     $match: {
-//       ...dateFilter,
-//       status: { $nin: ["Cancelled"] },
-//     },
-//   },
-//   {
-//     $group: {
-//       _id: null,
-
-//       grossRevenue: {
-//         $sum: {
-//           $cond: [
-//             // ✅ subTotal already excludes delivery
-//             { $gt: ["$subTotal", 0] },
-//             {
-//               $subtract: [
-//                 "$subTotal",
-//                 {
-//                   $cond: [
-//                     { $gt: ["$discount", 0] },
-//                     "$discount",
-//                     { $ifNull: ["$coupon.discount", 0] },
-//                   ],
-//                 },
-//               ],
-//             },
-
-//             // ✅ totalAmount includes delivery → remove it
-//             {
-//               $subtract: [
-//                 { $ifNull: ["$totalAmount", 0] },
-//                 {
-//                   $add: [
-//                     { $ifNull: ["$deliveryFee", 0] },
-//                     {
-//                       $cond: [
-//                         { $gt: ["$discount", 0] },
-//                         "$discount",
-//                         { $ifNull: ["$coupon.discount", 0] },
-//                       ],
-//                     },
-//                   ],
-//                 },
-//               ],
-//             },
-//           ],
-//         },
-//       },
-
-//       totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } },
-//       totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
-//     },
-//   },
-// ]);
-
-
- 
-  const revenue = await Order.aggregate([
-  {
-    $match: {
-      ...dateFilter,
-      status: { $nin: ["Cancelled"] },
-    },
-  },
-  {
-    $group: {
-      _id: null,
-      // If subtotal exists, use it (it should already exclude discount)
-      // If not, calculate from totalAmount
-      grossRevenue: {
-        $sum: {
-          $cond: [
-            { $gt: ["$subTotal", 0] },
-            "$subTotal", // subtotal should already exclude discount
-            {
-              $subtract: [
-                { $ifNull: ["$totalAmount", 0] },
-                { $ifNull: ["$deliveryFee", 0] },
-              ],
-            },
-          ],
+    // ⚡ OPTIMIZATION: Get all order status counts in ONE aggregation pipeline
+    // Instead of 7 separate countDocuments calls, use single aggregation
+    Order.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
         },
       },
-      totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } },
-      totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
-      // Calculate total discount for verification
-      totalDiscountFromDiscountField: { $sum: "$discount" },
-      totalDiscountFromCouponField: { $sum: "$coupon.discount" },
+    ]),
+  ]);
+
+  // Map aggregation results to status counts
+  const statusCountMap = {};
+  orderStatusCounts.forEach((doc) => {
+    statusCountMap[doc._id] = doc.count;
+  });
+
+  const totalOrdersAllStatuses = allOrdersResult;
+  const totalUsers = totalUsersResult;
+  const totalProducts = totalProductsResult;
+  const allOrders = allOrdersResult;
+  const visitors = visitorsResult;
+
+  const pendingOrders = statusCountMap["Pending"] || 0;
+  const processingOrders = statusCountMap["Processing"] || 0;
+  const shippedOrders = statusCountMap["Shipped"] || 0;
+  const deliveredOrders = statusCountMap["Delivered"] || 0;
+  const canceledOrders = statusCountMap["Cancelled"] || 0;
+  const refundedOrders = statusCountMap["Refunded"] || 0;
+  const partiallyRefundedOrders = statusCountMap["Partially Refunded"] || 0;
+
+  // const revenue = await Order.aggregate([
+  //   {
+  //     $match: {
+  //       ...dateFilter,
+  //       status: { $nin: ["Cancelled"] },
+  //     },
+  //   },
+  //   {
+  //     $group: {
+  //       _id: null,
+
+  //       grossRevenue: {
+  //         $sum: {
+  //           $cond: [
+  //             // ✅ subTotal already excludes delivery
+  //             { $gt: ["$subTotal", 0] },
+  //             {
+  //               $subtract: [
+  //                 "$subTotal",
+  //                 {
+  //                   $cond: [
+  //                     { $gt: ["$discount", 0] },
+  //                     "$discount",
+  //                     { $ifNull: ["$coupon.discount", 0] },
+  //                   ],
+  //                 },
+  //               ],
+  //             },
+
+  //             // ✅ totalAmount includes delivery → remove it
+  //             {
+  //               $subtract: [
+  //                 { $ifNull: ["$totalAmount", 0] },
+  //                 {
+  //                   $add: [
+  //                     { $ifNull: ["$deliveryFee", 0] },
+  //                     {
+  //                       $cond: [
+  //                         { $gt: ["$discount", 0] },
+  //                         "$discount",
+  //                         { $ifNull: ["$coupon.discount", 0] },
+  //                       ],
+  //                     },
+  //                   ],
+  //                 },
+  //               ],
+  //             },
+  //           ],
+  //         },
+  //       },
+
+  //       totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } },
+  //       totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
+  //     },
+  //   },
+  // ]);
+
+  const revenue = await Order.aggregate([
+    {
+      $match: {
+        ...dateFilter,
+        status: { $nin: ["Cancelled"] },
+      },
     },
-  },
-]);
+    {
+      $group: {
+        _id: null,
+        // If subtotal exists, use it (it should already exclude discount)
+        // If not, calculate from totalAmount
+        grossRevenue: {
+          $sum: {
+            $cond: [
+              { $gt: ["$subTotal", 0] },
+              "$subTotal", // subtotal should already exclude discount
+              {
+                $subtract: [
+                  { $ifNull: ["$totalAmount", 0] },
+                  { $ifNull: ["$deliveryFee", 0] },
+                ],
+              },
+            ],
+          },
+        },
+        totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } },
+        totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
+        // Calculate total discount for verification
+        totalDiscountFromDiscountField: { $sum: "$discount" },
+        totalDiscountFromCouponField: { $sum: "$coupon.discount" },
+      },
+    },
+  ]);
   const unitValueData = await Order.aggregate([
     {
       $match: {
@@ -599,7 +619,7 @@ async function getAnalyticsData(startDate, endDate) {
           { couponCode: { $exists: true, $ne: null } },
         ],
       },
-    },  
+    },
     {
       $group: {
         _id: null,
@@ -1089,3 +1109,289 @@ async function getProductSalesData(startDate, endDate) {
     };
   }
 }
+
+export const exportAnalytics = async (req, res) => {
+  try {
+    const range = req.query.range || "weekly";
+    const result = await getAnalytics(range);
+
+    // Prepare CSV data from analytics result
+    const {
+      analyticsData,
+      salesData = [],
+      topProducts = [],
+      productSalesData = { products: [], summary: {} },
+      couponTrend = [],
+      couponPerformance = [],
+    } = result;
+
+    // Create CSV rows
+    const csvRows = [];
+
+    // Header
+    csvRows.push(["Analytics Report", `(${range})`]);
+    csvRows.push(["Generated", new Date().toLocaleString()]);
+    csvRows.push([]);
+
+    // ===== KEY METRICS SECTION =====
+    csvRows.push(["KEY METRICS"]);
+    csvRows.push(["Metric", "Current", "Previous Period", "Change %"]);
+
+    if (analyticsData) {
+      csvRows.push([
+        "Total Products",
+        analyticsData.products || 0,
+        analyticsData.prevProducts || 0,
+        analyticsData.productsChange || 0,
+      ]);
+      csvRows.push([
+        "Total Users",
+        analyticsData.users || 0,
+        analyticsData.prevUsers || 0,
+        analyticsData.usersChange || 0,
+      ]);
+      csvRows.push([
+        "Total Visitors",
+        analyticsData.visitors || 0,
+        analyticsData.prevVisitors || 0,
+        analyticsData.visitorsChange || 0,
+      ]);
+      csvRows.push([
+        "Total Orders",
+        analyticsData.allOrders || 0,
+        analyticsData.prevAllOrders || 0,
+        analyticsData.allOrdersChange || 0,
+      ]);
+      csvRows.push([
+        "Gross Revenue",
+        analyticsData.grossRevenue || 0,
+        analyticsData.prevGrossRevenue || 0,
+        analyticsData.grossRevenueChange || 0,
+      ]);
+      csvRows.push([
+        "Net Revenue",
+        analyticsData.netRevenue || 0,
+        analyticsData.prevNetRevenue || 0,
+        analyticsData.netRevenueChange || 0,
+      ]);
+      csvRows.push([
+        "Total Delivery Fee",
+        analyticsData.totalDeliveryFee || 0,
+        analyticsData.prevTotalDeliveryFee || 0,
+        analyticsData.totalDeliveryFeeChange || 0,
+      ]);
+      csvRows.push([
+        "Total Refunded",
+        analyticsData.totalRefunded || 0,
+        analyticsData.prevTotalRefunded || 0,
+        analyticsData.totalRefundedChange || 0,
+      ]);
+      csvRows.push([
+        "Average Order Value",
+        analyticsData.averageOrderValue || 0,
+        analyticsData.prevAverageOrderValue || 0,
+        analyticsData.averageOrderValueChange || 0,
+      ]);
+      csvRows.push([
+        "Average Unit Value",
+        analyticsData.averageUnitValue || 0,
+        analyticsData.prevAverageUnitValue || 0,
+        analyticsData.averageUnitValueChange || 0,
+      ]);
+    }
+
+    // ===== ORDER STATUS BREAKDOWN =====
+    csvRows.push([]);
+    csvRows.push(["ORDER STATUS BREAKDOWN"]);
+    csvRows.push(["Status", "Count"]);
+    if (analyticsData) {
+      csvRows.push(["Pending Orders", analyticsData.pendingOrders || 0]);
+      csvRows.push(["Processing Orders", analyticsData.processingOrders || 0]);
+      csvRows.push(["Shipped Orders", analyticsData.shippedOrders || 0]);
+      csvRows.push(["Delivered Orders", analyticsData.deliveredOrders || 0]);
+      csvRows.push(["Cancelled Orders", analyticsData.canceledOrders || 0]);
+    }
+
+    // ===== REFUND STATUS BREAKDOWN =====
+    csvRows.push([]);
+    csvRows.push(["REFUND STATUS BREAKDOWN"]);
+    csvRows.push(["Status", "Count"]);
+    if (analyticsData) {
+      csvRows.push(["Refunds Pending", analyticsData.refundsPending || 0]);
+      csvRows.push(["Refunds Approved", analyticsData.refundsApproved || 0]);
+      csvRows.push(["Refunds Rejected", analyticsData.refundsRejected || 0]);
+      csvRows.push([
+        "Refunds Processing",
+        analyticsData.refundsProcessing || 0,
+      ]);
+    }
+
+    // ===== SALES TREND DATA =====
+    csvRows.push([]);
+    csvRows.push(["SALES TREND DATA BY DATE"]);
+    if (salesData && salesData.length > 0) {
+      csvRows.push([
+        "Date",
+        "Orders",
+        "Revenue",
+        "Delivery Fee",
+        "Total Amount",
+        "Visitors",
+        "Coupons Used",
+        "Coupon Discount",
+        "Avg Coupon Discount",
+        "Refunds",
+      ]);
+      salesData.forEach((day) => {
+        csvRows.push([
+          day.date || "",
+          day.orders || 0,
+          day.revenue || 0,
+          day.deliveryFee || 0,
+          day.totalAmount || 0,
+          day.visitors || 0,
+          day.couponsUsed || 0,
+          day.couponDiscount || 0,
+          day.avgCouponDiscount || 0,
+          day.refunds || 0,
+        ]);
+      });
+    }
+
+    // ===== TOP PRODUCTS =====
+    csvRows.push([]);
+    csvRows.push(["TOP PRODUCTS"]);
+    if (topProducts && topProducts.length > 0) {
+      csvRows.push([
+        "Product Name",
+        "Product ID",
+        "Units Sold",
+        "Total Revenue",
+      ]);
+      topProducts.forEach((product) => {
+        csvRows.push([
+          product.name || product.productName || "",
+          product._id || product.productId || product.id || "",
+          product.totalSold || product.sales || product.quantity || 0,
+          product.totalRevenue || 0,
+        ]);
+      });
+    }
+
+    // ===== PRODUCT SALES DATA =====
+    csvRows.push([]);
+    csvRows.push(["PRODUCT SALES DATA"]);
+    if (
+      productSalesData.products &&
+      Array.isArray(productSalesData.products) &&
+      productSalesData.products.length > 0
+    ) {
+      csvRows.push([
+        "Product Name",
+        "Product ID",
+        "Units Sold",
+        "Total Revenue",
+        "Average Unit Value",
+        "Revenue Per Unit",
+      ]);
+      productSalesData.products.forEach((product) => {
+        csvRows.push([
+          product.name || product.productName || "",
+          product._id || product.productId || "",
+          product.unitsSold || 0,
+          product.totalRevenue || 0,
+          product.averageUnitValue || 0,
+          product.revenuePerUnit || 0,
+        ]);
+      });
+    }
+
+    // ===== PRODUCT SALES SUMMARY =====
+    csvRows.push([]);
+    csvRows.push(["PRODUCT SALES SUMMARY"]);
+    csvRows.push(["Metric", "Value"]);
+    if (productSalesData.summary) {
+      csvRows.push([
+        "Total Products",
+        productSalesData.summary.totalProducts || 0,
+      ]);
+      csvRows.push([
+        "Total Units Sold",
+        productSalesData.summary.totalUnits || 0,
+      ]);
+      csvRows.push([
+        "Total Revenue",
+        productSalesData.summary.totalRevenue || 0,
+      ]);
+      csvRows.push([
+        "Overall Average Unit Value",
+        productSalesData.summary.overallAUV || 0,
+      ]);
+      csvRows.push(["Total Orders", productSalesData.summary.totalOrders || 0]);
+    }
+
+    // ===== COUPON TREND DATA =====
+    csvRows.push([]);
+    csvRows.push(["COUPON TREND DATA"]);
+    if (couponTrend && Array.isArray(couponTrend) && couponTrend.length > 0) {
+      csvRows.push(["Date", "Coupons Used", "Total Discount"]);
+      couponTrend.forEach((item) => {
+        csvRows.push([
+          item._id || "",
+          item.count || 0,
+          item.totalDiscount || 0,
+        ]);
+      });
+    }
+
+    // ===== COUPON PERFORMANCE =====
+    csvRows.push([]);
+    csvRows.push(["COUPON PERFORMANCE"]);
+    if (
+      couponPerformance &&
+      Array.isArray(couponPerformance) &&
+      couponPerformance.length > 0
+    ) {
+      csvRows.push([
+        "Coupon Code",
+        "Times Used",
+        "Total Discount",
+        "Usage Rate",
+      ]);
+      couponPerformance.forEach((coupon) => {
+        csvRows.push([
+          coupon.code || coupon.couponCode || "",
+          coupon.timesUsed || coupon.count || 0,
+          coupon.totalDiscount || 0,
+          coupon.usageRate || "N/A",
+        ]);
+      });
+    }
+
+    // Convert to CSV string
+    const csvString = csvRows
+      .map((row) =>
+        row
+          .map((cell) => {
+            const value = String(cell || "");
+            // Escape quotes and wrap in quotes if contains comma
+            if (value.includes(",") || value.includes('"')) {
+              return `"${value.replace(/"/g, '""')}"`;
+            }
+            return value;
+          })
+          .join(",")
+      )
+      .join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=analytics_${range}_${Date.now()}.csv`
+    );
+    res.send(csvString);
+  } catch (error) {
+    console.error("Error exporting analytics:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};

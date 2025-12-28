@@ -9,8 +9,9 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { requestRefund } from "../stores/refundRequestStore";
 import GoBackButton from "../components/GoBackButton";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-const RequestReturnPage = () => {
+const RequestReturnPageContent = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -362,4 +363,10 @@ const RequestReturnPage = () => {
   );
 };
 
-export default RequestReturnPage;
+export default function RequestReturnPage() {
+  return (
+    <ErrorBoundary>
+      <RequestReturnPageContent />
+    </ErrorBoundary>
+  );
+}

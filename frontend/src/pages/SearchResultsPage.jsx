@@ -7,8 +7,9 @@ import { useCartStore } from "../stores/useCartStore";
 import { toast } from "react-hot-toast";
 import GoBackButton from "../components/GoBackButton";
 import { motion } from "framer-motion";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-const SearchResultsPage = () => {
+const SearchResultsPageContent = () => {
   const [products, setProducts] = useState([]);
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q");
@@ -168,4 +169,10 @@ const SearchResultsPage = () => {
   );
 };
 
-export default SearchResultsPage;
+export default function SearchResultsPage() {
+  return (
+    <ErrorBoundary>
+      <SearchResultsPageContent />
+    </ErrorBoundary>
+  );
+}
