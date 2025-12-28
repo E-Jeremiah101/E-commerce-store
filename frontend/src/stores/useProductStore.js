@@ -56,18 +56,54 @@ export const useProductStore = create((set, get) => ({
       set({ loading: false });
     }
   },
-  deleteProduct: async (productId) => {
+  // deleteProduct: async (productId) => {
+  //   try {
+  //     await axios.delete(`/products/${productId}`);
+  //     set((prevProducts) => ({
+  //       products: prevProducts.products.filter(
+  //         (product) => product._id !== productId
+  //       ),
+  //     }));
+  //     toast.success("Product deleted successfully.");
+  //   } catch (error) {
+  //     console.error("Error deleting product:", error);
+  //     toast.error("Failed to delete product. Please try again.");
+  //   }
+  // },
+
+  deleteProduct: async (productId, deleteType = "archive") => {
     try {
-      await axios.delete(`/products/${productId}`);
+      if (deleteType === "permanent") {
+        // Use permanent delete endpoint
+        await axios.delete(`/products/${productId}/permanent`);
+      } else {
+        // Use regular delete endpoint (archive)
+        await axios.delete(`/products/${productId}`);
+      }
+
       set((prevProducts) => ({
         products: prevProducts.products.filter(
           (product) => product._id !== productId
         ),
       }));
-      toast.success("Product deleted successfully.");
+
+      const message =
+        deleteType === "permanent"
+          ? "Product permanently deleted successfully."
+          : "Product archived successfully.";
+
+      toast.success(message);
+      return true;
     } catch (error) {
       console.error("Error deleting product:", error);
-      toast.error("Failed to delete product. Please try again.");
+
+      const errorMessage =
+        deleteType === "permanent"
+          ? "Failed to permanently delete product. Please try again."
+          : "Failed to archive product. Please try again.";
+
+      toast.error(errorMessage);
+      return false;
     }
   },
   toggleFeaturedProduct: async (productId) => {
@@ -87,7 +123,7 @@ export const useProductStore = create((set, get) => ({
       console.error("Error updating product:", error);
       toast.error("Failed to update product.");
     }
-  }, 
+  },
   fetchFeaturedProducts: async () => {
     set({ loading: true });
     try {

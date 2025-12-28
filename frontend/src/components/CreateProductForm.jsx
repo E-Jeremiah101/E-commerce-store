@@ -500,8 +500,10 @@
 // };
 
 // export default CreateProductForm;
+
+
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   PlusCircle,
   Upload,
@@ -510,6 +512,9 @@ import {
   Trash2,
   X,
   AlertCircle,
+  Archive,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import { useProductStore } from "../stores/useProductStore.js";
 import ReactQuill from "react-quill-new";
@@ -530,12 +535,16 @@ const fallbackCategories = [
 
 const CreateProductForm = () => {
   const [categories, setCategories] = useState(fallbackCategories);
-  const [categoriesData, setCategoriesData] = useState([]); // Store full category objects
+  const [categoriesData, setCategoriesData] = useState([]);
   const [newCategory, setNewCategory] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState(null);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [productCount, setProductCount] = useState(0);
+  const [deleteType, setDeleteType] = useState("archive");
+  const [fetchingProductCount, setFetchingProductCount] = useState(false);
 
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -560,8 +569,8 @@ const CreateProductForm = () => {
     try {
       const res = await axios.get("/categories");
       if (res.data?.length > 0) {
-        setCategoriesData(res.data); // Store full objects
-        setCategories(res.data.map((c) => c.name)); // Store just names for select
+        setCategoriesData(res.data);
+        setCategories(res.data.map((c) => c.name));
       }
     } catch (error) {
       console.warn("Using fallback categories (failed to fetch):", error);
@@ -592,11 +601,8 @@ const CreateProductForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Ensure variants are properly set for products without sizes/colors
       const productData = { ...newProduct };
 
-      // If no variants were generated but we have a product without sizes/colors,
-      // create a default variant
       if (
         (!productData.sizes || productData.sizes.length === 0) &&
         (!productData.colors || productData.colors.length === 0) &&
@@ -625,7 +631,6 @@ const CreateProductForm = () => {
           countInStock: 0,
           variants: [],
         });
-        toast.success("Product created successfully!");
       }
     } catch (error) {
       toast.error("Error creating product, try again");
@@ -638,7 +643,6 @@ const CreateProductForm = () => {
       return toast.error("Category name cannot be empty.");
     }
 
-    // Check if category already exists
     if (categories.includes(newCategory.trim())) {
       return toast.error("Category already exists.");
     }
@@ -649,7 +653,6 @@ const CreateProductForm = () => {
         name: newCategory.trim(),
       });
 
-      // Update both data arrays
       setCategoriesData((prev) => [...prev, res.data]);
       setCategories((prev) => [...prev, res.data.name]);
       setNewProduct((prev) => ({ ...prev, category: res.data.name }));
@@ -663,65 +666,86 @@ const CreateProductForm = () => {
     }
   };
 
-  // Delete category with confirmation
-  const handleDeleteCategory = async (categoryName) => {
-    if (!categoryName) return;
-
-    setDeletingCategory(categoryName);
-
-    try {
-      // Find category by name to get its ID
-      const category = categoriesData.find((c) => c.name === categoryName);
-
-      if (!category) {
-        toast.error("Category not found.");
-        return;
-      }
-
-      // Delete using the category ID
-      await axios.delete(`/categories/${category._id}`);
-
-      // Update local state
-      setCategoriesData((prev) => prev.filter((c) => c.name !== categoryName));
-      setCategories((prev) => prev.filter((c) => c !== categoryName));
-
-      // If deleted category was selected, clear selection
-      if (newProduct.category === categoryName) {
-        setNewProduct((prev) => ({ ...prev, category: "" }));
-      }
-
-      toast.success(`Category "${categoryName}" deleted successfully.`);
-    } catch (error) {
-      if (error.response?.status === 400) {
-        // Category is in use by products
-        toast.error(
-          error.response?.data?.message || "Cannot delete category in use."
-        );
-      } else {
-        toast.error(
-          error.response?.data?.message || "Failed to delete category."
-        );
-      }
-    } finally {
-      setDeletingCategory(null);
-      setShowDeleteConfirm(null);
-    }
-  };
-
-  // Open delete confirmation
-  const openDeleteConfirm = (categoryName) => {
+  // Open delete confirmation and fetch product count
+  const openDeleteConfirm = async (categoryName) => {
     if (newProduct.category === categoryName) {
       toast.error(
         "Cannot delete currently selected category. Please select another category first."
       );
       return;
     }
-    setShowDeleteConfirm(categoryName);
+
+    const category = categoriesData.find((c) => c.name === categoryName);
+    if (!category) {
+      toast.error("Category not found.");
+      return;
+    }
+
+    setCategoryToDelete({ id: category._id, name: categoryName });
+    setFetchingProductCount(true);
+    setDeleteType("archive"); // Reset to default
+
+    try {
+      const res = await axios.get(`/categories/${category._id}/product-count`);
+      setProductCount(res.data.productCount || 0);
+    } catch (error) {
+      console.error("Error fetching product count:", error);
+      setProductCount(0);
+    } finally {
+      setFetchingProductCount(false);
+      setShowDeleteConfirm(true);
+    }
+  };
+
+  // Delete category with selected option
+  // Delete category with selected option
+  const handleDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+
+    setDeletingCategory(categoryToDelete.name);
+
+    try {
+      const res = await axios.delete(`/categories/delete/${categoryToDelete.id}`, {
+        data: { deleteType },
+      });
+
+      if (res.data.success) {
+        // Update local state
+        setCategoriesData((prev) =>
+          prev.filter((c) => c.name !== categoryToDelete.name)
+        );
+        setCategories((prev) =>
+          prev.filter((c) => c !== categoryToDelete.name)
+        );
+
+        // If deleted category was selected, clear selection
+        if (newProduct.category === categoryToDelete.name) {
+          setNewProduct((prev) => ({ ...prev, category: "" }));
+        }
+
+        toast.success(res.data.message);
+
+        // Refresh categories list
+        fetchCategories();
+      } else {
+        toast.error(res.data.message || "Failed to delete category.");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to delete category."
+      );
+    } finally {
+      setDeletingCategory(null);
+      setShowDeleteConfirm(false);
+      setCategoryToDelete(null);
+      setProductCount(0);
+      setDeleteType("archive");
+    }
   };
 
   // Handle variant generation
   const generateVariants = () => {
-    // If no sizes and no colors, create a simple product with one variant
     if (newProduct.sizes.length === 0 && newProduct.colors.length === 0) {
       const variants = [
         {
@@ -741,14 +765,12 @@ const CreateProductForm = () => {
       return;
     }
 
-    // If we have sizes or colors, generate combinations
     const variants = [];
     const sizes = newProduct.sizes.length > 0 ? newProduct.sizes : [""];
     const colors = newProduct.colors.length > 0 ? newProduct.colors : [""];
 
     sizes.forEach((size) => {
       colors.forEach((color) => {
-        // Cleaner SKU generation
         const sizePart = size ? `-${size.replace(/\s+/g, "")}` : "";
         const colorPart = color ? `-${color.replace(/\s+/g, "")}` : "";
 
@@ -781,7 +803,6 @@ const CreateProductForm = () => {
     const updatedVariants = [...newProduct.variants];
     updatedVariants[index].countInStock = parseInt(stock) || 0;
 
-    // Calculate total stock
     const totalStock = updatedVariants.reduce(
       (sum, variant) => sum + variant.countInStock,
       0
@@ -804,10 +825,9 @@ const CreateProductForm = () => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
 
-    // Validate file types and sizes
     const validFiles = files.filter((file) => {
       const isValidType = file.type.startsWith("image/");
-      const isValidSize = file.size <= 5 * 1024 * 1024; // 5MB max
+      const isValidSize = file.size <= 5 * 1024 * 1024;
 
       if (!isValidType) toast.error(`${file.name} is not a valid image file`);
       if (!isValidSize) toast.error(`${file.name} is too large (max 5MB)`);
@@ -831,7 +851,7 @@ const CreateProductForm = () => {
       .then((images) => {
         setNewProduct((prev) => ({
           ...prev,
-          images: [...prev.images, ...images].slice(0, 10), // Max 10 images
+          images: [...prev.images, ...images].slice(0, 10),
         }));
         toast.success(`Added ${images.length} image(s)`);
       })
@@ -896,7 +916,7 @@ const CreateProductForm = () => {
                 />
               </div>
 
-              {/* DESCRIPTION - Fixed Height */}
+              {/* DESCRIPTION */}
               <div className="h-64">
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Description *
@@ -908,7 +928,7 @@ const CreateProductForm = () => {
                     onChange={handleDescriptionChange}
                     modules={modules}
                     formats={formats}
-                    className="h-full [&_.ql-container]:!min-h-[120px] [&_.ql-editor]:!min-h-[120px] [&_.ql-container]:bg-gray-700 [&_.ql-editor]:text-white text-white "
+                    className="h-full [&_.ql-container]:!min-h-[120px] [&_.ql-editor]:!min-h-[120px] [&_.ql-container]:bg-gray-700 [&_.ql-editor]:text-white"
                     placeholder="Enter product description..."
                   />
                 </div>
@@ -1148,10 +1168,7 @@ const CreateProductForm = () => {
                             <button
                               type="button"
                               onClick={() => openDeleteConfirm(category)}
-                              disabled={
-                                deletingCategory === category ||
-                                newProduct.category === category
-                              }
+                              disabled={newProduct.category === category}
                               className="text-red-400 hover:text-red-300 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                               title={
                                 newProduct.category === category
@@ -1159,11 +1176,7 @@ const CreateProductForm = () => {
                                   : "Delete category"
                               }
                             >
-                              {deletingCategory === category ? (
-                                <Loader className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Trash2 className="h-3 w-3" />
-                              )}
+                              <Trash2 className="h-3 w-3" />
                             </button>
                           </div>
                         ))}
@@ -1262,53 +1275,172 @@ const CreateProductForm = () => {
       </div>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-gray-800 rounded-xl p-6 max-w-md w-full"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <AlertCircle className="h-6 w-6 text-red-500" />
-              <h3 className="text-lg font-bold text-white">Delete Category</h3>
-            </div>
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-gray-800 rounded-xl p-6 max-w-md w-full"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <AlertTriangle className="h-6 w-6 text-yellow-500" />
+                <h3 className="text-lg font-bold text-white">
+                  Delete Category
+                </h3>
+              </div>
 
-            <p className="text-gray-300 mb-6">
-              Are you sure you want to delete the category{" "}
-              <span className="font-bold text-white">
-                "{showDeleteConfirm}"
-              </span>
-              ? This action cannot be undone.
-            </p>
+              {fetchingProductCount ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader className="h-6 w-6 animate-spin text-white" />
+                </div>
+              ) : (
+                <>
+                  <p className="text-gray-300 mb-4">
+                    Are you sure you want to delete the category{" "}
+                    <span className="font-bold text-white">
+                      "{categoryToDelete?.name}"
+                    </span>
+                    ?
+                  </p>
 
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2 text-gray-300 hover:text-white"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeleteCategory(showDeleteConfirm)}
-                disabled={deletingCategory === showDeleteConfirm}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50"
-              >
-                {deletingCategory === showDeleteConfirm ? (
-                  <span className="flex items-center gap-2">
-                    <Loader className="h-4 w-4 animate-spin" />
-                    Deleting...
-                  </span>
-                ) : (
-                  "Delete"
-                )}
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+                  {productCount > 0 ? (
+                    <>
+                      <div className="bg-yellow-900/30 border border-yellow-700 rounded-lg p-4 mb-4">
+                        <div className="flex items-start gap-2">
+                          <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-yellow-200 font-medium mb-1">
+                              ⚠️ This category contains {productCount}{" "}
+                              product(s)
+                            </p>
+                            <p className="text-yellow-300 text-sm">
+                              Choose what happens to the products:
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Delete Type Selection */}
+                      <div className="space-y-3 mb-6">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setDeleteType("archive")}
+                            className={`flex-1 p-3 rounded-lg border transition-all ${
+                              deleteType === "archive"
+                                ? "bg-blue-900 border-blue-600"
+                                : "bg-gray-700 border-gray-600 hover:bg-gray-600"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Archive className="h-5 w-5" />
+                              <div className="text-left">
+                                <p className="font-medium text-white">
+                                  Archive Products
+                                </p>
+                                <p className="text-sm text-gray-300">
+                                  Move to archived products
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setDeleteType("permanent")}
+                            className={`flex-1 p-3 rounded-lg border transition-all ${
+                              deleteType === "permanent"
+                                ? "bg-red-900 border-red-600"
+                                : "bg-gray-700 border-gray-600 hover:bg-gray-600"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Trash2 className="h-5 w-5" />
+                              <div className="text-left">
+                                <p className="font-medium text-white">
+                                  Delete Permanently
+                                </p>
+                                <p className="text-sm text-gray-300">
+                                  Cannot be recovered
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        </div>
+
+                        {/* Warning for permanent delete */}
+                        {deleteType === "permanent" && (
+                          <div className="bg-red-900/30 border border-red-700 rounded-lg p-3">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 flex-shrink-0" />
+                              <p className="text-red-300 text-sm">
+                                This will permanently delete {productCount}{" "}
+                                product(s) and their images from the database.
+                                This action cannot be undone.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4 mb-6">
+                      <div className="flex items-center gap-2">
+                        <Info className="h-5 w-5 text-blue-400" />
+                        <p className="text-blue-300 text-sm">
+                          This category has no products. Only the category will
+                          be deleted.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDeleteConfirm(false);
+                        setCategoryToDelete(null);
+                        setProductCount(0);
+                        setDeleteType("archive");
+                      }}
+                      className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+                      disabled={deletingCategory}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeleteCategory}
+                      disabled={deletingCategory}
+                      className={`px-4 py-2 text-white rounded-lg transition-colors ${
+                        deleteType === "permanent"
+                          ? "bg-red-600 hover:bg-red-700"
+                          : "bg-yellow-600 hover:bg-yellow-700"
+                      } disabled:opacity-50`}
+                    >
+                      {deletingCategory ? (
+                        <span className="flex items-center gap-2">
+                          <Loader className="h-4 w-4 animate-spin" />
+                          {deleteType === "permanent"
+                            ? "Deleting..."
+                            : "Archiving..."}
+                        </span>
+                      ) : deleteType === "permanent" ? (
+                        "Delete Permanently"
+                      ) : (
+                        "Archive & Delete"
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
