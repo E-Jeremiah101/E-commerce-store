@@ -30,7 +30,6 @@ const LoginPageContent = () => {
       setBackendError(result.error); // show the backend message
       return;
     }
-    console.log(email, password);
   };
 
   const { settings } = useStoreSettings();

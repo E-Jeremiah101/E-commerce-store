@@ -1105,3 +1105,4 @@ export const permanentDeleteProduct = async (req, res) => {
   }
 };
 
+

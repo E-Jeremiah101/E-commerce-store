@@ -882,9 +882,7 @@ const getRejectedEmailContent = (
 `;
 };
 
-// ====================================================
 // EMAIL SENDING FUNCTIONS
-// ====================================================
 
 export const sendRefundRequestedEmail = async (order, refund, settings, formatter) => {
   try {
@@ -1548,7 +1546,7 @@ export const flutterwaveWebhook = async (req, res) => {
   }
 };
 
-
+ 
 
 export const rejectRefund = async (req, res) => {
   try {

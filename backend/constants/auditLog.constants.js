@@ -86,6 +86,7 @@ export const ACTIONS = {
   // Category actions
   CREATE_CATEGORY: "CREATE_CATEGORY",
   UPDATE_CATEGORY: "UPDATE_CATEGORY",
+  DELETE_CATEGORY: "DELETE_CATEGORY",
 
   // User actions
   UPDATE_USER_ROLE: "UPDATE_USER_ROLE",
@@ -176,6 +177,7 @@ export const ACTION_LABELS = {
   // Category labels
   CREATE_CATEGORY: "Create Category",
   UPDATE_CATEGORY: "Update Category",
+  DELETE_CATEGORY:  "Delete Catgory",
 
   // User labels
   UPDATE_USER_ROLE: "Update User Role",

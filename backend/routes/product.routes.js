@@ -32,12 +32,6 @@ import { requirePermission } from "../middleware/permission.middleware.js";
 
 const router = express.Router();
 
-// router.use((req, res, next) => {
-//   console.log(`🔍 [ROUTE DEBUG] ${req.method} ${req.originalUrl}`);
-//   console.log(`🔍 [ROUTE DEBUG] Params:`, req.params);
-//   next();
-// });
-
 router.patch("/:id/price/slash", protectRoute, adminRoute, slashProductPrice);
 router.patch("/:id/price/reset", protectRoute, adminRoute, resetProductPrice);
 router.patch("/:id/price", protectRoute, adminRoute, updateProductPrice);
@@ -53,8 +47,7 @@ router.get("/:id", getProductById);
 
 // Variant-specific routes (public)
 router.get("/:id/variants", getProductVariants);
-router.get("/stock/:productId", getVariantStock); // ADD THIS ROUTE
-// In product.routes.js
+router.get("/stock/:productId", getVariantStock); 
 router.get('/debug-stock/:productId', debugProductStock);
 
 router.get("/:productId/check-availability", checkVariantAvailability);
@@ -92,7 +85,6 @@ router.put(
 );
 router.delete("/cache/featured", protectRoute, adminRoute, clearFeaturedCache);
 
-// Price management routes (admin only)
  
 
 export default router; 

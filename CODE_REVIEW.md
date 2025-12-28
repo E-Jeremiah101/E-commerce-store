@@ -202,13 +202,6 @@ Client stores in localStorage/cookies
 }
 ```
 
-**Issues:**
-⚠️ **No activity logging on permission denied attempts**
-
-- **Fix:** Log failed auth attempts to audit log
-  ⚠️ **Hardcoded role permissions** in constants
-- **Better:** Store in database for runtime management
-
 ---
 
 ### 3. Payment Processing (Flutterwave)
@@ -236,8 +229,6 @@ Client stores in localStorage/cookies
 ✅ Support for coupons & delivery fees
 ✅ Email notifications
 
-**Issues:**
-⚠️ **Controller is 2000+ lines** - Too complex, needs splitting
 
 - **Fix:** Break into smaller services
   ⚠️ **Webhook retry logic is complex** - Risk of duplicate orders
@@ -328,17 +319,6 @@ Update order status
 ✅ Partial refund support
 ✅ Refund history tracking
 
-**Issues:**
-⚠️ **Webhook webhook retry logic is complex**
-
-- Risk of duplicate refunds
-- **Fix:** Add webhook deduplication (use idempotency key)
-  ⚠️ **No timeout on pending refunds**
-- Admin could leave refund hanging
-- **Fix:** Add auto-reject after 30 days
-  ⚠️ **Limited error handling**
-- What if Flutterwave API is down?
-- **Fix:** Add retry mechanism with exponential backoff
 
 ---
 
@@ -378,17 +358,6 @@ Update order status
 ✅ Image hosting on Cloudinary
 ✅ SEO-friendly structure
 
-**Issues:**
-⚠️ **No stock level alerts**
-
-- Admin doesn't know when stock is low
-- **Fix:** Add low-stock notification threshold
-  ⚠️ **No product version history**
-- Can't see what changed in product
-- **Fix:** Track changes in audit log
-  ⚠️ **Bulk operations are slow**
-- Updating 1000 products needs optimization
-- **Fix:** Implement batch update operations
 
 ---
 
@@ -402,13 +371,6 @@ Update order status
 - Inventory logs for audit
 - Real-time stock validation
 
-**Issues:**
-⚠️ **No inventory forecasting**
-
-- Can't predict when stock will run out
-  ⚠️ **No supplier management**
-- Can't track reorder points
-  ⚠️ **No barcode/SKU validation**
 
 ---
 
@@ -430,17 +392,6 @@ Update order status
 ✅ Comparison with previous period
 ✅ Visitor analytics separate
 
-**Issues:**
-⚠️ **Slow aggregation queries**
-
-- Calculating all metrics on-demand is slow
-- **Fix:** Pre-calculate and cache with Redis
-  ⚠️ **No filtering by category/region**
-- Can't see regional performance
-  ⚠️ **No export functionality**
-- Can't download analytics data
-
----
 
 ### 9. Audit Logging
 
@@ -603,6 +554,10 @@ const useUserStore = create(
 **Issues:**
 ⚠️ **Inconsistent loading states**
 
+- Some pages use loading spinner, some don't
+  ⚠️ **No error boundaries**
+- 1 error in component crashes whole page
+- **Fix:** Add Error Boundary component
   ⚠️ **No skeleton loaders**
 - Blank page while loading
 - **Fix:** Add skeleton UI while fetching
@@ -652,7 +607,11 @@ const useUserStore = create(
 ✅ Organization schema
 ✅ Dynamic store settings used
 
-
+**What's Missing:**
+⚠️ No SEO on product pages
+⚠️ No canonical URLs for pagination
+⚠️ No structured data for breadcrumbs
+⚠️ No image optimization (alt text, lazy loading)
 
 ---
 
@@ -713,7 +672,15 @@ const HomePage = lazy(() => import("./pages/HomePage"));
 
 ---
 
+### ⚠️ Security Issues
 
+#### 1. **Tokens in LocalStorage**
+
+```
+Problem: XSS attack can steal tokens
+Current: tokens stored in localStorage
+Risk: High
+Fix: Move to httpOnly cookies
 ```
 
 **Before:**

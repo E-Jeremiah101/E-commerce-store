@@ -100,6 +100,7 @@ const auditLogSchema = new mongoose.Schema(
         // Category actions
         "CREATE_CATEGORY",
         "UPDATE_CATEGORY",
+        "DELETE_CATEGORY",
 
         // User actions
         "UPDATE_USER_ROLE",

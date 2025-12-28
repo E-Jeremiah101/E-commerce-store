@@ -457,16 +457,6 @@ export const refreshToken = async (req, res) => {
   }
 };
 
-// export const getProfile = async (req, res) => {
-//   try {
-//     res.json(req.user);
-//   } catch (error) {
-//     res.status(500).json({ message: "Server error", error: error.message });
-//   }
-// };
-
-//Forgot Password
-
 export const getProfile = async (req, res) => {
   try {
     console.log("🔍 Auth getProfile called for:", req.user?.email);
@@ -599,7 +589,6 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
-// Reset Password
 export const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
@@ -686,7 +675,7 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-// Change password (requires authentication)
+
 export const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
