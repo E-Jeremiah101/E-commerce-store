@@ -177,6 +177,9 @@ const ViewProductPage = lazy(() => import("./pages/ViewProductPage.jsx"));
 const ViewOrderPage = lazy(() => import("./pages/ViewOrderPage.jsx"));
 const SavedProductsPage = lazy(() => import("./pages/SavedProductsPage.jsx"));
 const RequestReturnPage = lazy(() => import("./pages/RequestReturnPage.jsx"));
+const ArchivedProductsList = lazy(() =>
+  import("./components/ArchivedProductsList.jsx")
+);
 
 
 function App() {
@@ -275,7 +278,6 @@ function App() {
             path="/vieworders/:id/return"
             element={<RequestReturnPage />}
           />
-
           <Route
             path="Personal-info"
             element={user ? <PersonalInfoPage /> : <Navigate to="/login" />}
@@ -283,6 +285,11 @@ function App() {
           <Route
             path="/purchase-success"
             element={user ? <PurchaseSuccessPage /> : <Navigate to="/login" />}
+          />
+
+          <Route
+            path="/admin/products/archived-product"
+            element={user ? <ArchivedProductsList /> : <Navigate to="/" />}
           />
           <Route
             path="/purchase-cancel"
