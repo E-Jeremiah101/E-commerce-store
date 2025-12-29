@@ -289,6 +289,7 @@ import {
   Ticket,
   Warehouse,
   Settings,
+  Archive
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import AnalyticsTab from "../components/AnalyticsTab.jsx";
@@ -309,6 +310,7 @@ import StoreSettings from "../components/StoreSettings.jsx";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import AdminCoupons from "../components/AdminCoupons.jsx";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
+import ArchivedProductsList from "../components/ArchivedProductsList.jsx";
 
 // Define constants at the top
 const STORAGE_KEY = "admin_active_tab";
@@ -316,6 +318,7 @@ const STORAGE_KEY = "admin_active_tab";
 const tabs = [
   { id: "create", label: "Create Product", icon: PlusCircle },
   { id: "products", label: "Product List", icon: ShoppingBasket },
+  { id: "archivedList", label: "Archived List", icon: ShoppingBasket },
   { id: "inventory", label: "Manage Inventory", icon: Warehouse },
   { id: "analytics", label: "Analytics Report", icon: BarChart },
   { id: "AdminOrder", label: "Orders", icon: Package },
@@ -387,6 +390,7 @@ const LOCAL_ADMIN_ROLE_PERMISSIONS = {
 const TAB_PERMISSIONS = {
   create: LOCAL_PERMISSIONS.PRODUCT_WRITE,
   products: LOCAL_PERMISSIONS.PRODUCT_READ,
+  archivedList:LOCAL_PERMISSIONS.PRODUCT_READ,
   inventory: LOCAL_PERMISSIONS.PRODUCT_WRITE,
   analytics: LOCAL_PERMISSIONS.AUDIT_READ,
   AdminOrder: LOCAL_PERMISSIONS.ORDER_READ,
@@ -558,6 +562,11 @@ const AdminPageContent = () => {
           )}
         {activeTab === "products" &&
           hasPermission(LOCAL_PERMISSIONS.PRODUCT_READ) && <ProductsList />}
+
+        {activeTab === "archivedList" &&
+          hasPermission(LOCAL_PERMISSIONS.PRODUCT_READ) && (
+            <ArchivedProductsList />
+          )}
         {activeTab === "inventory" &&
           hasPermission(LOCAL_PERMISSIONS.PRODUCT_WRITE) && <InventoryTab />}
         {activeTab === "analytics" &&

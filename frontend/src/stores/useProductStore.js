@@ -56,20 +56,6 @@ export const useProductStore = create((set, get) => ({
       set({ loading: false });
     }
   },
-  // deleteProduct: async (productId) => {
-  //   try {
-  //     await axios.delete(`/products/${productId}`);
-  //     set((prevProducts) => ({
-  //       products: prevProducts.products.filter(
-  //         (product) => product._id !== productId
-  //       ),
-  //     }));
-  //     toast.success("Product deleted successfully.");
-  //   } catch (error) {
-  //     console.error("Error deleting product:", error);
-  //     toast.error("Failed to delete product. Please try again.");
-  //   }
-  // },
 
   deleteProduct: async (productId, deleteType = "archive") => {
     try {
