@@ -11,7 +11,6 @@ import {
   Ticket,
   Warehouse,
   Settings,
-  Archive
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import AnalyticsTab from "../components/AnalyticsTab.jsx";
@@ -32,7 +31,7 @@ import StoreSettings from "../components/StoreSettings.jsx";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import AdminCoupons from "../components/AdminCoupons.jsx";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
-import ArchivedProductsList from "../components/ArchivedProductsList.jsx";
+
 
 // Define constants at the top
 const STORAGE_KEY = "admin_active_tab";
@@ -230,14 +229,17 @@ const AdminPageContent = () => {
         </ul>
 
         {/* Clear Cache Button in Sidebar */}
-        <div className="mt-auto px-3 py-4">
-          <button
-            onClick={clearCache}
-            className="w-full flex items-center justify-center px-3 py-2 bg-blue-600 hover:bg-blue-400 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
-          >
-            Clear Featured Cache
-          </button>
-        </div>
+        {(hasPermission(LOCAL_PERMISSIONS.PRODUCT_WRITE) ||
+          hasPermission(LOCAL_PERMISSIONS.PRODUCT_READ)) && (
+          <div className="mt-auto px-3 py-4">
+            <button
+              onClick={clearCache}
+              className="w-full flex items-center justify-center px-3 py-2 bg-blue-600 hover:bg-blue-400 text-white text-sm font-medium rounded-lg transition-colors cursor-pointer"
+            >
+              Clear Featured Cache
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Mobile tabs */}

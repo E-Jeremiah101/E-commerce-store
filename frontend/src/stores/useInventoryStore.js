@@ -28,7 +28,7 @@ export const useInventoryStore = create((set, get) => ({
   },
 
 
-  // 📊 Get Dashboard Data
+  // Get Dashboard Data
   fetchDashboard: async () => {
     set({ loading: true });
     try {
@@ -43,7 +43,7 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  // 📦 Get Stock Levels
+  //  Get Stock Levels
   fetchStockLevels: async (page = 1, filters = {}) => {
     set({ loading: true });
     try {
@@ -55,12 +55,12 @@ export const useInventoryStore = create((set, get) => ({
         ...get().filters,
       };
 
-      console.log("📡 Fetching stock levels with params:", params);
+      console.log(" Fetching stock levels with params:", params);
 
       const res = await axios.get("/inventory/stock-levels", { params });
 
-      console.log("✅ Stock levels response:", res.data);
-      console.log("📦 First product in response:", res.data.stockLevels[0]);
+      console.log("Stock levels response:", res.data);
+      console.log(" First product in response:", res.data.stockLevels[0]);
 
       set({
         stockLevels: res.data.stockLevels,
@@ -70,8 +70,8 @@ export const useInventoryStore = create((set, get) => ({
 
       return res.data;
     } catch (error) {
-      console.error("❌ Error fetching stock levels:", error);
-      toast.error("Failed to load stock levels");
+      console.error(" Error fetching stock levels:", error);
+     console.log("Failed to load stock levels");
       set({ loading: false });
       throw error;
     }
@@ -80,7 +80,7 @@ export const useInventoryStore = create((set, get) => ({
   
   // In your store, rename fetchLowStockAlerts to fetchAllAlerts
 
-  // 🚨 Get Low Stock Alerts
+  // Get Low Stock Alerts
   fetchLowStockAlerts: async (threshold = 10) => {
     set({ loading: true });
     try {
@@ -119,7 +119,7 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  // // 🔄 Adjust Stock
+
   adjustStock: async (productId, adjustmentData) => {
     set({ loading: true });
     try {
@@ -193,32 +193,6 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  // //  Bulk Update Stock
-  // bulkUpdateStock: async (updates) => {
-  //   set({ loading: true });
-  //   try {
-  //     const res = await axios.post("/inventory/bulk-adjust", { updates });
-
-  //     if (res.data.errorCount > 0) {
-  //       toast.error(`Completed with ${res.data.errorCount} errors`);
-  //     } else {
-  //       toast.success(`Updated ${res.data.successCount} products successfully`);
-  //     }
-
-  //     // Refresh data
-  //     get().fetchStockLevels(get().pagination.currentPage);
-  //     get().fetchDashboard();
-
-  //     set({ loading: false });
-  //     return res.data;
-  //   } catch (error) {
-  //     console.error("Error in bulk update:", error);
-  //     toast.error("Failed to perform bulk update");
-  //     set({ loading: false });
-  //     throw error;
-  //   }
-  // },
- 
   //  Update Filters
   updateFilters: (newFilters) => {
     set((state) => ({
@@ -319,9 +293,9 @@ export const useInventoryStore = create((set, get) => ({
   slashProductPrice: async (productId, newPrice, reason = "") => {
     set({ loading: true });
     try {
-      console.log("🔄 [STORE] Slashing price for product:", productId);
+      console.log(" [STORE] Slashing price for product:", productId);
       console.log(
-        "🔄 [STORE] Request URL:",
+        " [STORE] Request URL:",
         `/products/${productId}/price/slash`
       );
 
@@ -330,7 +304,7 @@ export const useInventoryStore = create((set, get) => ({
         reason,
       });
 
-      console.log("✅ [STORE] Price slash response:", res.data);
+      console.log(" [STORE] Price slash response:", res.data);
       toast.success("Price slashed successfully!");
 
       // Update the product in stockLevels
@@ -351,8 +325,8 @@ export const useInventoryStore = create((set, get) => ({
       set({ loading: false });
       return res.data;
     } catch (error) {
-      console.error("❌ [STORE] Error slashing price:", error);
-      console.error("❌ [STORE] Error response:", error.response?.data);
+      console.error(" [STORE] Error slashing price:", error);
+      console.error(" [STORE] Error response:", error.response?.data);
       toast.error(error.response?.data?.message || "Failed to slash price");
       set({ loading: false });
       throw error;
@@ -362,13 +336,11 @@ export const useInventoryStore = create((set, get) => ({
   resetProductPrice: async (productId, reason = "") => {
     set({ loading: true });
     try {
-      console.log("🔄 [STORE] Resetting price for product:", productId);
+      console.log(" [STORE] Resetting price for product:", productId);
 
       const res = await axios.patch(`/products/${productId}/price/reset`, {
         reason,
       });
-
-      toast.success("Price reset successfully!");
 
       // Update the product in stockLevels
       set((state) => ({
@@ -388,7 +360,7 @@ export const useInventoryStore = create((set, get) => ({
       set({ loading: false });
       return res.data;
     } catch (error) {
-      console.error("❌ [STORE] Error resetting price:", error);
+      console.error(" [STORE] Error resetting price:", error);
       toast.error(error.response?.data?.message || "Failed to reset price");
       set({ loading: false });
       throw error;
@@ -398,14 +370,12 @@ export const useInventoryStore = create((set, get) => ({
   updateProductPrice: async (productId, newPrice, reason = "") => {
     set({ loading: true });
     try {
-      console.log("🔄 [STORE] Updating price for product:", productId);
+      console.log("[STORE] Updating price for product:", productId);
 
       const res = await axios.patch(`/products/${productId}/price`, {
         newPrice: parseFloat(newPrice),
         reason,
       });
-
-      toast.success("Price updated successfully!");
 
       // Update the product in stockLevels
       set((state) => ({

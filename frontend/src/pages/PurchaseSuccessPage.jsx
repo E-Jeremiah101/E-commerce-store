@@ -52,7 +52,7 @@ const PurchaseSuccessPageContent = () => {
 
         console.log("🔍 Backend response:", response.data);
 
-        // ✅ FIX: Check if the request was actually successful
+        //  Cif the request was actually successful
         if (response.data.success) {
           // Order completed successfully
           clearCart();
@@ -67,7 +67,8 @@ const PurchaseSuccessPageContent = () => {
           url.searchParams.delete("status");
           window.history.replaceState({}, document.title, url);
         } else {
-          // ❌ Backend says order is still processing or lock is busy
+
+          //  Backend says order is still processing or lock is busy
           // Wait longer and retry instead of immediate refresh
           console.log("Order still processing, waiting...");
           setTimeout(() => {
@@ -98,7 +99,7 @@ const PurchaseSuccessPageContent = () => {
       </div>
     );
 
-  // ❌ Error state
+  //  Error state
   if (error)
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-700 px-4">
@@ -126,7 +127,7 @@ const PurchaseSuccessPageContent = () => {
       </div>
     );
 
-  // ✅ Success state
+  //  Success state
   return (
     <div className="h-screen w-screen bg-gray-700 flex items-center justify-center px-4 relative">
       <Confetti

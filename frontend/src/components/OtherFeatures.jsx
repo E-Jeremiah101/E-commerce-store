@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import "../components/Otherfeatures.css";
+import "../css/ClassicSpinDisplay.css";
 import axios from "../lib/axios";
 import { Link } from "react-router-dom";
 import ScrollReveal from "./ScrollReveal.jsx";

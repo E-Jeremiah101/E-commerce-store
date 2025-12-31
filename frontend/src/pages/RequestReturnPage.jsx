@@ -4,6 +4,7 @@ import axios from "../lib/axios";
 import { motion } from "framer-motion";
 import { Loader } from "lucide-react";
 import { SEO } from "../components/SEO";
+import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -101,6 +102,7 @@ const RequestReturnPageContent = () => {
       setSaving(false);
     }
   };
+  const { settings } = useStoreSettings();
 
   if (loading) {
     return (
@@ -144,9 +146,7 @@ const RequestReturnPageContent = () => {
           </div>
         </div>
         <p className="text-gray-600 mb-5">
-          <span className="text-gray-900 font-medium">
-            #{order.orderNumber}
-          </span>
+          <span className="text-gray-900 font-medium">{order.orderNumber}</span>
           • Placed on {new Date(order.createdAt).toLocaleDateString()}
         </p>
 
@@ -210,7 +210,10 @@ const RequestReturnPageContent = () => {
                       value={productId}
                       disabled={remainingQuantity <= 0}
                     >
-                      {`${productName} — ₦${productPrice.toLocaleString()} 
+                      {`${productName} — ${formatPrice(
+                        productPrice,
+                        settings?.currency
+                      )} 
                       (Available: ${remainingQuantity} of ${availableQuantity})`}
                       {remainingQuantity <= 0 && " — Already requested"}
                     </option>
@@ -325,7 +328,10 @@ const RequestReturnPageContent = () => {
                   <div className="flex justify-between text-sm text-gray-600 mt-1">
                     <span>Qty: {item.quantity}</span>
                     <span className="font-medium">
-                      ₦{(item.price * item.quantity).toLocaleString()}
+                      {formatPrice(
+                        item.price * item.quantity,
+                        settings?.currency
+                      )}
                     </span>
                   </div>
                 </div>
@@ -335,25 +341,31 @@ const RequestReturnPageContent = () => {
             <div className="border-t pt-4 mt-4">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
-                <span>₦{order.subtotal?.toLocaleString() || 0}</span>
+                <span>
+                  {formatPrice(order.subtotal, settings?.currency) || 0}
+                </span>
               </div>
               {order.discount > 0 && (
                 <div className="flex justify-between text-gray-600">
                   <span>Discount</span>
                   <span className="text-red-500">
-                    -₦{order.discount?.toLocaleString() || 0}
+                    -{formatPrice(order.discount, settings?.currency) || 0}
                   </span>
                 </div>
               )}
               {order.deliveryFee > 0 && (
                 <div className="flex justify-between text-gray-600">
                   <span>Delivery Fee</span>
-                  <span>₦{order.deliveryFee?.toLocaleString() || 0}</span>
+                  <span>
+                    {formatPrice(order.deliveryFee, settings?.currency) || 0}
+                  </span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-lg mt-2">
                 <span>Total</span>
-                <span>₦{order.totalAmount?.toLocaleString() || 0}</span>
+                <span>
+                  {formatPrice(order.totalAmount, settings?.currency) || 0}
+                </span>
               </div>
             </div>
           </div>

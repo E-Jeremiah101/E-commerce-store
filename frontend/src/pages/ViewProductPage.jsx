@@ -15,6 +15,7 @@ import ProductReviews from "../components/ProductReviews";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 
+
 const ViewProductPageContent = () => {
   const { id } = useParams();
   const { fetchProductById } = useProductStore();
@@ -55,17 +56,16 @@ const ViewProductPageContent = () => {
               {formatPrice(product.previousPrice, settings?.currency)}
             </span>
             <span className="bg-red-100 text-red-800 text-sm font-medium px-2 py-1 rounded">
-              {discountPercentage}% OFF
+              {Math.round(discountPercentage)}% off
             </span>
           </div>
           <p className="text-xs text-green-600 font-medium">
-            🎉 You save ₦
-            {(product.previousPrice - product.price).toLocaleString()}
+             You save {" "}
+            {formatPrice(Math.round(product.previousPrice - product.price), settings?.currency)}
           </p>
         </div>
       );
     }
-    const { settings } = useStoreSettings();
     return (
       <span className="text-[1.2rem] text-black font-medium tracking-tight">
         {formatPrice(product.price, settings?.currency)}
@@ -423,14 +423,14 @@ const ViewProductPageContent = () => {
                   ) : (
                     <p className="text-red-500 text-xs mt-1">Out of stock</p>
                   )
-                ) : // Show nothing or hint when selection is incomplete
+                ) : 
                 (product.colors?.length > 0 && !selectedColor) ||
                   (product.sizes?.length > 0 && !selectedSize) ? (
                   <p className="text-gray-400 text-xs mt-1">
                     Select options to see availability
                   </p>
                 ) : null
-              ) : // For products without variants
+              ) : 
               product.countInStock > 0 ? (
                 <p className="text-gray-500 text-xs mt-1">
                   In Stock:{" "}
@@ -542,48 +542,6 @@ const ViewProductPageContent = () => {
               __html: DOMPurify.sanitize(product.description),
             }}
           ></div>
-
-          {/* Price History Section (Admin only or for transparency) */}
-          {user?.role === "admin" && product.isPriceSlashed && (
-            <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-              <h4 className="text-sm font-medium text-blue-800 mb-2">
-                Price History (Admin View)
-              </h4>
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-blue-700">Current Price:</span>
-                  <span className="font-medium">
-                    {formatPrice(product.price, settings?.currency)}
-                    {product.price.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-blue-700">Original Price:</span>
-                  <span className="line-through">
-                    {formatPrice(product.price, settings?.currency)}
-                    {product.previousPrice?.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-blue-700">Discount:</span>
-                  <span className="text-red-600 font-medium">
-                    {(
-                      ((product.previousPrice - product.price) /
-                        product.previousPrice) *
-                      100
-                    ).toFixed(1)}
-                    % OFF
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-blue-700">You Save:</span>
-                  <span className="text-green-600 font-medium">
-                    ₦{(product.previousPrice - product.price).toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

@@ -107,7 +107,7 @@ import {
   clearFeaturedCache,
   checkVariantAvailability,
   checkCartAvailability,
-  debugProductStock,
+  // debugProductStock,
   permanentDeleteProduct,
   restoreProduct,
   getArchivedProducts,
@@ -125,7 +125,6 @@ import { requirePermission } from "../middleware/permission.middleware.js";
 
 const router = express.Router();
 
-// ✅ REORDER: Static routes BEFORE parameterized routes
 
 // Public static routes
 router.get("/featured", getFeaturedProducts);
@@ -145,8 +144,14 @@ router.get(
   getAllProducts
 );
 
-// ✅ IMPORTANT: Put /archived BEFORE all /:id routes
-router.get("/archived", protectRoute, adminRoute, getArchivedProducts);
+// IMPORTANT: Put /archived BEFORE all /:id routes
+router.get(
+  "/archived",
+  protectRoute,
+  adminRoute,
+  requirePermission("product:read"),
+  getArchivedProducts
+);
 
 // Other admin POST route
 router.post(
@@ -161,19 +166,49 @@ router.post(
 router.post("/check-cart-availability", checkCartAvailability);
 
 // Cache route (static)
-router.delete("/cache/featured", protectRoute, adminRoute, clearFeaturedCache);
+router.delete(
+  "/cache/featured",
+  protectRoute,
+  adminRoute,
+  requirePermission("product:read"),
+  clearFeaturedCache
+);
 
 // Variant-specific routes (these have patterns but come before generic :id)
 router.get("/:id/variants", getProductVariants);
 router.get("/stock/:productId", getVariantStock);
-router.get("/debug-stock/:productId", debugProductStock);
+// router.get("/debug-stock/:productId", debugProductStock);
 router.get("/:productId/check-availability", checkVariantAvailability);
 
 // Price routes (specific patterns with /price)
-router.patch("/:id/price/slash", protectRoute, adminRoute, slashProductPrice);
-router.patch("/:id/price/reset", protectRoute, adminRoute, resetProductPrice);
-router.patch("/:id/price", protectRoute, adminRoute, updateProductPrice);
-router.get("/:id/price-history", protectRoute, adminRoute, getPriceHistory);
+router.patch(
+  "/:id/price/slash",
+  protectRoute,
+  adminRoute,
+  requirePermission("product:write"),
+  slashProductPrice
+);
+router.patch(
+  "/:id/price/reset",
+  protectRoute,
+  adminRoute,
+  requirePermission("product:write"),
+  resetProductPrice
+);
+router.patch(
+  "/:id/price",
+  protectRoute,
+  adminRoute,
+  requirePermission("product:write"),
+  updateProductPrice
+);
+router.get(
+  "/:id/price-history",
+  protectRoute,
+  adminRoute,
+  requirePermission("product:read"),
+  getPriceHistory
+);
 
 // Product-specific routes with /restore and /permanent patterns
 router.patch("/:id/restore", protectRoute, adminRoute, restoreProduct);
@@ -181,20 +216,34 @@ router.delete(
   "/:id/permanent",
   protectRoute,
   adminRoute,
+  requirePermission("product:write"),
   permanentDeleteProduct
 );
 
 // Other product-specific routes
-router.put("/:id/reduce-stock", protectRoute, adminRoute, reduceProduct);
-router.put("/:id/variants", protectRoute, adminRoute, updateVariantStock);
+router.put(
+  "/:id/reduce-stock",
+  protectRoute,
+  adminRoute,
+  requirePermission("product:write"),
+  reduceProduct
+);
+router.put(
+  "/:id/variants",
+  protectRoute,
+  adminRoute,
+  requirePermission("product:write"),
+  updateVariantStock
+);
 router.put(
   "/:productId/variants/:variantId/inventory",
   protectRoute,
   adminRoute,
+  requirePermission("product:write"),
   updateVariantInventory
 );
 
-// ✅ FINALLY: Generic /:id routes (should come LAST)
+// FINALLY: Generic /:id routes (should come LAST)
 router.get("/:id", getProductById);
 router.patch(
   "/:id",
@@ -203,6 +252,12 @@ router.patch(
   requirePermission("product:write"),
   toggleFeaturedProduct
 );
-router.delete("/:id", protectRoute, adminRoute, deleteProduct);
+router.delete(
+  "/:id",
+  protectRoute,
+  adminRoute,
+  requirePermission("product:write"),
+  deleteProduct
+);
 
 export default router;

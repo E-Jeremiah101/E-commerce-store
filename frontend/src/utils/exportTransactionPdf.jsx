@@ -147,7 +147,7 @@ const ExportTransactionPdf = ({ data, filters = {}, total = 0 }) => {
         "Date",
       ];
 
-      // Calculate table width - make it fit within page
+      // Calculate table width 
       const tableWidth = pageWidth - 80; // 40px margin on each side
       console.log("Table width:", tableWidth, "pt");
 

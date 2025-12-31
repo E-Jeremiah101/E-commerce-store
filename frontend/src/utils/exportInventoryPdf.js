@@ -88,7 +88,7 @@ export const exportInventoryPDF = (
     doc.setTextColor(150, 150, 150);
     doc.text("Page 1 of 1", 105, 280, { align: "center" });
 
-    // ========== DETAILED INVENTORY PAGE ==========
+    //  DETAILED INVENTORY PAGE 
     if (type === "detailed" && inventoryData.length > 0) {
       doc.addPage();
 
@@ -116,7 +116,7 @@ export const exportInventoryPDF = (
         ),
       ]);
 
-      // Create table with autoTable - FIXED COLUMN WIDTHS
+      // Create table with autoTable 
       autoTable(doc, {
         head: [
           ["#", "Product", "Category", "Variant", "Stock", "Price", "Value"],
@@ -146,7 +146,7 @@ export const exportInventoryPDF = (
         alternateRowStyles: {
           fillColor: [250, 250, 250],
         },
-        // FIXED: Proper column widths that fit in A4
+        //  Proper column widths that fit in A4
         columnStyles: {
           0: { cellWidth: 10, halign: "center" }, // # (10mm)
           1: { cellWidth: 40 }, // Product (40mm)
@@ -268,7 +268,7 @@ export const exportSimpleInventoryPDF = (inventoryData) => {
         fontSize: 8,
         cellPadding: 3,
       },
-      // FIXED: Column widths that definitely fit
+      //  Column widths that definitely fit
       columnStyles: {
         0: { cellWidth: 8, halign: "center" }, // # (8mm)
         1: { cellWidth: 45 }, // Product (45mm)
@@ -413,7 +413,7 @@ export const quickExportInventory = (stockLevels) => {
   }
 };
 
-// ========== HELPER FUNCTIONS ==========
+//  HELPER FUNCTIONS 
 
 /**
  * Format variant string

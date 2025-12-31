@@ -45,9 +45,9 @@ const PersonalInfoPageContent = () => {
                   state: "",
                   city: "",
                   lga: "",
-                  area: "", // Added area field
+                  area: "", 
                   landmark: "",
-                  address: "", // Added detailed address field
+                  address: "", 
                   isDefault: true,
                 },
                 {

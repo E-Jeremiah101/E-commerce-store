@@ -4,7 +4,7 @@ export default function useTrackVisitors() {
   const hasLogged = useRef(false);
 
   useEffect(() => {
-    // Prevent duplicate calls in dev or hot reload
+    
     if (hasLogged.current || localStorage.getItem("visitorLogged")) return;
     hasLogged.current = true;
     localStorage.setItem("visitorLogged", "true");

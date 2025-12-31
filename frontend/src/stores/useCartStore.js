@@ -47,8 +47,6 @@ export const useCartStore = create((set, get) => ({
       set({ coupon: response.data });
     } catch (error) {
       console.error("Error fetching coupon:", error);
-      // Suppress noisy toast messages for background coupon fetches.
-      // Log for debugging but avoid spamming the user with repeated toasts.
       console.debug(
         "Unable to load coupons at the moment.",
         error?.message || error
@@ -107,13 +105,12 @@ export const useCartStore = create((set, get) => ({
       console.error("Failed to clear server cart:", e);
     }
   },
-  // In useCartStore.js - Update addToCart function
-  // In your useCartStore.js - Update the addToCart function for logged-in users
+  //Update the addToCart function for logged-in users
   addToCart: async (product, selectedSize, selectedColor) => {
     const { calculateTotals } = get();
     set({ isLoading: true });
     try {
-      console.log("🛒 Starting addToCart:", {
+      console.log(" Starting addToCart:", {
         productId: product._id,
         selectedSize,
         selectedColor,
@@ -131,7 +128,7 @@ export const useCartStore = create((set, get) => ({
       );
 
       const availableStock = variantStockResponse.data.stock;
-      console.log("📊 Available stock:", availableStock);
+      console.log(" Available stock:", availableStock);
 
       if (availableStock <= 0) {
         toast.error("This variant is out of stock");
@@ -144,7 +141,7 @@ export const useCartStore = create((set, get) => ({
 
       if (!user) {
         // GUEST FLOW
-        console.log("🛒 Guest cart flow");
+        console.log(" Guest cart flow");
         set((prevState) => {
           const existingItem = prevState.cart.find(
             (item) =>
@@ -188,20 +185,19 @@ export const useCartStore = create((set, get) => ({
         set({ isLoading: false });
         return;
       } else {
-        // LOGGED IN USER FLOW - FIXED
-        console.log("🛒 Logged in user flow");
+  
 
         // Prepare the request body - send empty strings instead of undefined
          const requestBody = {
            productId: product._id,
-           size: selectedSize || "", // Empty string if not provided
-           color: selectedColor || "", // Empty string if not provided
+           size: selectedSize || "", 
+           color: selectedColor || "", 
          };
 
-        console.log("🛒 Sending to server:", requestBody);
+        console.log(" Sending to server:", requestBody);
 
         const response = await axios.post("/cart", requestBody);
-        console.log("🛒 Server response:", response.data);
+        console.log(" Server response:", response.data);
 
         // Update local state with the response from server
         set({ cart: response.data });
@@ -210,7 +206,7 @@ export const useCartStore = create((set, get) => ({
 
       calculateTotals();
     } catch (error) {
-      console.error("❌ Error adding product to cart:", {
+      console.error(" Error adding product to cart:", {
         status: error.response?.status,
         data: error.response?.data,
         message: error.message,
@@ -289,11 +285,11 @@ export const useCartStore = create((set, get) => ({
         return;
       }
 
-      // FIXED: Ensure we always send proper data format
+      //  Ensure we always send proper data format
       const requestData = {
         quantity: Math.max(quantity, 1),
-        size: size || "", // Always send as string, never undefined
-        color: color || "", // Always send as string, never undefined
+        size: size || "", 
+        color: color || "",
       };
 
       console.log("🔄 Updating quantity:", { productId, ...requestData });
@@ -304,7 +300,7 @@ export const useCartStore = create((set, get) => ({
       set({ cart: response.data });
       get().calculateTotals();
     } catch (error) {
-      console.error("❌ Error updating quantity:", {
+      console.error(" Error updating quantity:", {
         status: error.response?.status,
         data: error.response?.data,
         message: error.message,
@@ -317,7 +313,7 @@ export const useCartStore = create((set, get) => ({
         toast.error(error.response.data?.message || "Cannot update quantity");
       } else if (error.response?.status === 404) {
         toast.error("Product no longer available");
-        await get().getCartItems(); // Refresh cart to remove unavailable items
+        await get().getCartItems(); 
       } else {
         toast.error("Unable to update item quantity.");
       }
@@ -339,7 +335,6 @@ export const useCartStore = create((set, get) => ({
     set({ subtotal, total });
   },
 
-  // Add this function to your existing useCartStore - no other changes needed
   validateCartItems: async () => {
     try {
       const { cart } = get();

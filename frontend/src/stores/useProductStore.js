@@ -48,7 +48,6 @@ export const useProductStore = create((set, get) => ({
       set({ products: response.data.products, loading: false });
     } catch (error) {
       console.error("Error fetching category products:", error);
-      // Suppress noisy toast for category fetch failures.
       console.debug(
         "Failed to load category products.",
         error?.message || error
@@ -93,7 +92,6 @@ export const useProductStore = create((set, get) => ({
     }
   },
   toggleFeaturedProduct: async (productId) => {
-    // set({ loading: true });
     try {
       const response = await axios.patch(`/products/${productId}`);
       set((prevProducts) => ({
@@ -105,7 +103,6 @@ export const useProductStore = create((set, get) => ({
       }));
       toast.success("Product updated successfully.");
     } catch (error) {
-      // set({ loading: false });
       console.error("Error updating product:", error);
       toast.error("Failed to update product.");
     }
@@ -193,7 +190,6 @@ export const useProductStore = create((set, get) => ({
         }
       );
 
-      // Update the products state with the new variant stock
       set((state) => ({
         products: state.products.map((product) => {
           if (product._id === productId) {
@@ -203,13 +199,6 @@ export const useProductStore = create((set, get) => ({
                 ? { ...variant, countInStock: res.data.countInStock }
                 : variant
             );
-
-            // Also update the main product stock if needed (sum of all variants)
-            const totalVariantStock =
-              updatedVariants?.reduce(
-                (sum, variant) => sum + (variant.countInStock || 0),
-                0
-              ) || 0;
 
             return {
               ...product,

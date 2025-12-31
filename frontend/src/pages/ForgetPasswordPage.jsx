@@ -7,7 +7,6 @@ import { useEffect } from "react";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
 const ForgotPasswordPageContent = () => {
-  // Ensure spinner does not show if user navigates directly here
 
   useEffect(() => {
     useUserStore.setState({ checkingAuth: false });
