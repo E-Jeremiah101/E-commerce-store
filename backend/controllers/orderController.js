@@ -62,9 +62,9 @@ export const getUserOrders = async (req, res) => {
   try {
     const userId = req.user._id.toString();
 
-    const orders = await Order.find({ user: userId })
+    const orders = await Order.find({ user: userId,  })
       .populate("products.product", "name image price")
-      .populate("refunds.product") 
+      .populate("refunds.product")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -763,7 +763,23 @@ export const supportRecoverOrder = async (req, res) => {
 
 export const getAllOrders = async (req, res) => {
   try {
-    const { sortBy, sortOrder = "desc", search } = req.query;
+    const {
+      sortBy,
+      sortOrder = "desc",
+      search,
+      showArchived = false,
+    } = req.query;
+
+    let query = {};
+
+    // Filter by archived status
+    if (showArchived === "true") {
+      query.isArchived = true; // Show only archived orders
+    } else if (showArchived === "false") {
+      query.isArchived = false; // Show only active orders
+    } else {
+      query.isArchived = { $ne: true }; // Default: exclude archived (for backward compatibility)
+    }
 
     // Get date parameters safely with default values
     const startDate = req.query.startDate;
@@ -827,11 +843,18 @@ export const getAllOrders = async (req, res) => {
       console.log("No date parameters provided");
     }
 console.log("Final search filter:", searchFilter);
+const finalQuery = { ...query };
+if (searchFilter.$or) {
+  finalQuery.$or = searchFilter.$or;
+}
+if (searchFilter.createdAt) {
+  finalQuery.createdAt = searchFilter.createdAt;
+}
     // Fetch all orders with basic sorting (newest first by default)
-    let orders = await Order.find(searchFilter)
+    let orders = await Order.find(finalQuery)
       .populate("user", "firstname lastname email phone address")
       .populate("products.product", "name price image")
-      .sort({ createdAt: -1 }) // Newest orders first by default
+      .sort({ createdAt: -1 })
       .populate("refunds.product", "name image")
       .lean();
       console.log(`Found ${orders.length} orders with filter`);
@@ -852,7 +875,7 @@ console.log("Final search filter:", searchFilter);
       // 1. Pending orders ALWAYS come first (highest priority)
       if (a.status === "Pending" && b.status !== "Pending") return -1;
       if (b.status === "Pending" && a.status !== "Pending") return 1;
-
+ 
       // 2. If both are Pending, sort by creation date (newest first)
       if (a.status === "Pending" && b.status === "Pending") {
         return new Date(b.createdAt) - new Date(a.createdAt);
@@ -1554,57 +1577,3 @@ const sendRecoveryOrderEmail = async (to, order, recoveryInfo) => {
   }
 };
 
-// Add this temporary route to debug
-export const debugUserOrders = async (req, res) => {
-  try {
-    const userId = "690dd720ab63c6361683a660"; // Your user ID from logs
-    console.log(`🔍 Debugging orders for user: ${userId}`);
-    
-    // Check orders
-    const orders = await Order.find({ user: userId }).sort({ createdAt: -1 });
-    console.log(`📊 Total orders found: ${orders.length}`);
-    
-    orders.forEach((order, index) => {
-      console.log(`${index + 1}. ${order.orderNumber}:`);
-      console.log(`   - Status: ${order.status}`);
-      console.log(`   - Payment Status: ${order.paymentStatus}`);
-      console.log(`   - Total: ${order.totalAmount}`);
-      console.log(`   - Created: ${order.createdAt}`);
-      console.log(`   - Is Processed: ${order.isProcessed}`);
-    });
-    
-    // Check coupons
-    const coupons = await Coupon.find({ userId: userId }).sort({ createdAt: -1 });
-    console.log(`🎫 Total coupons found: ${coupons.length}`);
-    
-    coupons.forEach((coupon, index) => {
-      console.log(`${index + 1}. ${coupon.code}:`);
-      console.log(`   - Reason: ${coupon.couponReason}`);
-      console.log(`   - Active: ${coupon.isActive}`);
-      console.log(`   - Used: ${coupon.usedAt ? 'Yes' : 'No'}`);
-      console.log(`   - Expires: ${coupon.expirationDate}`);
-    });
-    
-    return res.status(200).json({
-      orders: orders.length,
-      coupons: coupons.length,
-      details: {
-        orders: orders.map(o => ({
-          orderNumber: o.orderNumber,
-          paymentStatus: o.paymentStatus,
-          totalAmount: o.totalAmount,
-          createdAt: o.createdAt
-        })),
-        coupons: coupons.map(c => ({
-          code: c.code,
-          reason: c.couponReason,
-          isActive: c.isActive,
-          usedAt: c.usedAt
-        }))
-      }
-    });
-  } catch (error) {
-    console.error("Debug error:", error);
-    return res.status(500).json({ error: error.message });
-  }
-};

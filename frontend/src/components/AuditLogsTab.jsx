@@ -22,6 +22,7 @@ import {
   User,
   TrendingDown,
   DollarSign,
+  Archive
 } from "lucide-react";
 import { format } from "date-fns"; // ADD THIS IMPORT
 import Coupon from "../../../backend/models/coupon.model.js";
@@ -65,6 +66,7 @@ const AuditLogsTab = () => {
     { value: "ORDER_RECOVERY_FAILED", label: "Order Recovery Failed" },
     { value: "CREATE_ORDER", label: "Create Order" },
     { value: "ORDER_RECOVERY_EMAIL_SENT", label: "Order recovery email sent" },
+    { value: "AUTO_ORDER_ARCHIVE", label: "Auto Order Archive" },
 
     // Auth actions
     { value: "LOGIN", label: "Login" },
@@ -115,6 +117,7 @@ const AuditLogsTab = () => {
     // Category actions
     { value: "CREATE_CATEGORY", label: "Create Category" },
     { value: "UPDATE_CATEGORY", label: "Update Category" },
+    { value: "DELETE_CATEGORY", label: "delete Category" },
 
     // User actions
     { value: "UPDATE_USER_ROLE", label: "Update User Role" },
@@ -192,6 +195,8 @@ const AuditLogsTab = () => {
       case "CREATE_PRODUCT":
       case "CREATE_CATEGORY":
         return <CheckCircle className="h-4 w-4 text-green-500" />;
+        case "DELETE_CATEGORY":
+          return <XCircle className="h-4 w-4 text-red-500"/>
       case "DELETE_PRODUCT":
       case "PERMANENT_DELETE_PRODUCT":
         return <XCircle className="h-4 w-4 text-red-500" />;
@@ -221,7 +226,9 @@ const AuditLogsTab = () => {
         return <XCircle className="h-4 w-4 text-red-500" />;
       case "FORGOT_PASSWORD_REQUEST":
       case "RESET_PASSWORD":
-        return <Key className="h-4 w-4 text-blue-500" />; // Add Key import
+        return <Key className="h-4 w-4 text-blue-500" />; 
+
+      
 
       // Error cases
       case "LOGIN_ERROR":
@@ -285,6 +292,8 @@ const AuditLogsTab = () => {
       case "VIEW_ORDER_DETAILS":
       case "VIEW_USER_ORDERS":
         return <Eye className="h-4 w-4 text-gray-500" />;
+        case "AUTO_ORDER_ARCHIVE":
+          return <Archive className="h-4 w-4 text-gray-500" />;
 
       // Coupon actions
       case "CREATE_COUPON":

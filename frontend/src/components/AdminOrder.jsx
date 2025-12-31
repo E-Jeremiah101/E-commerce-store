@@ -8,18 +8,20 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Archive,
+  RotateCcw,
 } from "lucide-react";
 import { formatPrice } from "../utils/currency.js";
-import { useStoreSettings } from "./StoreSettingsContext.jsx"
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
 const STATUS_WORKFLOW = {
   Pending: ["Processing", "Cancelled"],
-  Processing: ["Shipped",  "Cancelled"],
+  Processing: ["Shipped", "Cancelled"],
   Shipped: ["Delivered", "Cancelled"],
   Delivered: [],
-  Cancelled: [], 
+  Cancelled: [],
   Refunded: [],
-  "Partially Refunded": [],
+  "Partially Refunded": [], 
 };
 
 const AdminOrdersPage = () => {
@@ -34,22 +36,24 @@ const AdminOrdersPage = () => {
     startDate: "",
     endDate: "",
   });
+  const [viewMode, setViewMode] = useState("active");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const navigate = useNavigate();
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-const getValidNextStatuses = (currentStatus) => {
-  return STATUS_WORKFLOW[currentStatus] || [];
-};
+  const getValidNextStatuses = (currentStatus) => {
+    return STATUS_WORKFLOW[currentStatus] || [];
+  };
 
-const hasRefunds = (order) => {
-  return order.refunds && order.refunds.length > 0;
-};
+  const hasRefunds = (order) => {
+    return order.refunds && order.refunds.length > 0;
+  };
 
   // Helper function to convert Date to string (YYYY-MM-DD)
   const dateToString = (date) => {
@@ -77,41 +81,64 @@ const hasRefunds = (order) => {
     setCurrentPage(1);
   }, [searchQuery, sortBy, sortOrder]);
 
-  // Fetch orders
+  const params = {
+    search: searchQuery,
+    sortBy,
+    sortOrder,
+  };
+
+  if (dateRange.startDate && dateRange.startDate.trim() !== "") {
+    params.startDate = dateRange.startDate;
+  }
+  if (dateRange.endDate && dateRange.endDate.trim() !== "") {
+    params.endDate = dateRange.endDate;
+  }
+
+  console.log("Fetching orders with params:", params);
+
+  // Update the fetchOrders function to combine both collections
   const fetchOrders = async () => {
     try {
       setIsFetching(true);
-      const params = {
-        search: searchQuery,
-        sortBy,
-        sortOrder,
-      };
 
-      if (dateRange.startDate && dateRange.startDate.trim() !== "") {
-        params.startDate = dateRange.startDate;
+      setOrders([]);
+
+      if (viewMode === "archived") {
+
+        // Get from archive collection
+        const { data } = await axios.get("/admin/orders/archived", {
+          params,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        setOrders(data.orders);
+      } else {
+        
+        const { data } = await axios.get("/admin/orders", {
+          params,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+         
+        // Filter out archived orders on the frontend
+        const activeOrders = data.orders.filter((order) => !order.isArchived);
+        setOrders(activeOrders);
       }
-      if (dateRange.endDate && dateRange.endDate.trim() !== "") {
-        params.endDate = dateRange.endDate;
-      }
-
-      console.log("Fetching orders with params:", params);
-
-      const { data } = await axios.get("/admin/orders", {
-        params,
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setOrders(data.orders);
-    } catch (err) {
-      console.error("Error fetching orders:", err);
+    } catch (error) {
+      console.error("Fetch orders failed:", error);
+      setOrders([]);
     } finally {
       setIsFetching(false);
       setLoading(false);
     }
   };
 
+
   useEffect(() => {
     fetchOrders();
-  }, [searchQuery, sortBy, sortOrder, dateRange]);
+  }, [viewMode, searchQuery, sortBy, sortOrder, dateRange]);
 
   // Handle search key down
   const handleSearchKeyDown = (e) => {
@@ -371,6 +398,26 @@ const hasRefunds = (order) => {
     }
   };
 
+  const handleRestoreOrder = async (archiveId) => {
+    try {
+      await axios.post(
+        `/admin/orders/recover/${archiveId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      alert("Order restored successfully!");
+      fetchOrders();
+      setShowRestoreConfirm(null);
+    } catch (err) {
+      console.error(err);
+      alert(
+        "Failed to restore order: " + err.response?.data?.error || err.message
+      );
+    }
+  };
+
   const toggleDropdown = (orderId) => {
     setOpenDropdownId(openDropdownId === orderId ? null : orderId);
   };
@@ -414,6 +461,7 @@ const hasRefunds = (order) => {
         return "bg-yellow-500 text-white";
     }
   };
+
   const { settings } = useStoreSettings();
 
   if (loading)
@@ -447,17 +495,99 @@ const hasRefunds = (order) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
+        {/* Toggle Switch for Active/Archived Orders */}
+        <div className="flex items-center justify-between mb-6 bg-white p-4 rounded-lg shadow-md">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {viewMode === "active" ? "Active Orders" : "Archived Orders"}
+            </h1>
+            <p className="text-gray-600 text-sm mt-1">
+              {viewMode === "active"
+                ? "Manage current orders and update their status"
+                : "View archived orders (older than 6 months)"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-sm font-medium ${
+                  viewMode === "active" ? "text-blue-600" : "text-gray-500"
+                }`}
+              >
+                Active
+              </span>
+              <button
+                onClick={() =>
+                  setViewMode(viewMode === "active" ? "archived" : "active")
+                }
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none   focus:ring-offset-2 ${
+                  viewMode === "archived" ? "bg-purple-600" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    viewMode === "archived" ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+              <span
+                className={`text-sm font-medium ${
+                  viewMode === "archived" ? "text-purple-600" : "text-gray-500"
+                }`}
+              >
+                Archived
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Restore Confirmation Modal */}
+        {showRestoreConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Restore Order
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to restore order{" "}
+                <span className="font-semibold">
+                  {showRestoreConfirm.orderNumber}
+                </span>{" "}
+                back to active orders?
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowRestoreConfirm(null)}
+                  className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleRestoreOrder(showRestoreConfirm.id)}
+                  className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                >
+                  <RotateCcw size={16} />
+                  Restore Order
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Search & Filter Section */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 mt-5 bg-white rounded-lg shadow-md p-4">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 bg-white rounded-lg shadow-md p-4">
           <div className="flex flex-col md:flex-row gap-3 w-full">
             {/* Text Search */}
             <input
               type="text"
-              placeholder="Search by ORD/EC0STORE/Id"
+              placeholder={`Search by ${
+                viewMode === "active" ? "ORD/EC0STORE/Id" : "Order Number"
+              }`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              className="px-3 py-2 rounded-lg border border-gray-300 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 w-full md:w-1/3"
+              className="px-3 py-2 rounded-lg border border-gray-300 placeholder-gray-400 focus:ring-1   text-gray-700 w-full md:w-1/3"
             />
 
             {/* Enhanced Date Range Filter - DROPDOWN STYLE */}
@@ -762,9 +892,14 @@ const hasRefunds = (order) => {
         )}
 
         {totalOrders === 0 ? (
-          <p className="flex justify-center mt-7 tracking-widest">
-            No orders found.
-          </p>
+          <div className="flex flex-col items-center justify-center py-12">
+            <Archive size={48} className="text-gray-400 mb-4" />
+            <p className="text-gray-600 text-lg">
+              {viewMode === "active"
+                ? "No active orders found."
+                : "No archived orders found."}
+            </p>
+          </div>
         ) : (
           <>
             {/* Orders Table */}
@@ -797,13 +932,19 @@ const hasRefunds = (order) => {
                     <tr key={order._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
-                          <div className="flex items-center gap-2 mb-1 relative">
-                            <span className="text-gray-900 font-semibold pt-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-gray-900 font-semibold">
                               {order.orderNumber}
                             </span>
-                            {order.status === "Pending" && (
-                              <span className="bg-red-500 text-white px-1 py-0.5 text-[0.44rem] rounded absolute top-0 left-0 tracking-wider z-50">
-                                NEW
+                            {order.status === "Pending" &&
+                              viewMode === "active" && (
+                                <span className="bg-red-500 text-white px-1 py-0.5 text-[0.44rem] rounded tracking-wider">
+                                  NEW
+                                </span>
+                              )}
+                            {viewMode === "archived" && (
+                              <span className="bg-purple-500 text-white px-1 py-0.5 text-[0.44rem] rounded tracking-wider">
+                                ARCHIVED
                               </span>
                             )}
                           </div>
@@ -814,6 +955,17 @@ const hasRefunds = (order) => {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
+                            {viewMode === "archived" && order.archivedAt && (
+                              <>
+                                <span className="mx-1">|</span>
+                                <span className="text-purple-500">
+                                  Archived:{" "}
+                                  {new Date(
+                                    order.archivedAt
+                                  ).toLocaleDateString()}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -868,7 +1020,7 @@ const hasRefunds = (order) => {
                       <td className="px-6 py-4">
                         <div className="flex flex-col space-y-2">
                           <span
-                            className={` py-1 px-2 rounded text-xs font-medium text-center ${getStatusColor(
+                            className={`py-1 px-2 rounded text-xs font-medium text-center ${getStatusColor(
                               order.status
                             )}`}
                           >
@@ -884,156 +1036,99 @@ const hasRefunds = (order) => {
                               onClick={() =>
                                 navigate(`/admin/orders/${order._id}`)
                               }
-                              className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-sm tracking-widest"
+                              className={`px-3 py-1 rounded text-sm tracking-widest ${
+                                viewMode === "active"
+                                  ? "bg-yellow-600 hover:bg-yellow-700 text-white"
+                                  : "bg-yellow-400 text-yellow-900 hover:bg-yellow-500"
+                              }`}
                             >
                               Details
                             </button>
                           </div>
 
-                          <div className="relative dropdown-container">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleDropdown(order._id);
-                              }}
-                              className="p-1 hover:bg-gray-200 rounded transition-colors"
-                            >
-                              <MoreVertical
-                                className="text-gray-700"
-                                size={23}
-                              />
-                            </button>
-                            {/* Dropdown menu */}
-                            {/* {openDropdownId === order._id && (
-                              <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
-                                <div className="py-1">
-                                  <div className="px-4 py-2 text-xs text-gray-400 border-b border-gray-700">
-                                    Change Status
-                                  </div>
-                                  <button
-                                    onClick={() =>
-                                      handleStatusChange(order._id, "Pending")
-                                    }
-                                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-                                  >
-                                    Pending
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleStatusChange(
-                                        order._id,
-                                        "Processing"
-                                      )
-                                    }
-                                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-                                  >
-                                    Processing
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleStatusChange(order._id, "Shipped")
-                                    }
-                                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-                                  >
-                                    Shipped
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleStatusChange(order._id, "Delivered")
-                                    }
-                                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-                                  >
-                                    Delivered
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleStatusChange(order._id, "Cancelled")
-                                    }
-                                    className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-                                  >
-                                    Cancelled
-                                  </button>
-                                  {order.status === "Partially Refunded" && (
-                                    <button
-                                      onClick={() =>
-                                        handleStatusChange(
-                                          order._id,
-                                          "Partially Refunded"
-                                        )
-                                      }
-                                      className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-                                    >
-                                      Partially Refunded
-                                    </button>
-                                  )}
-                                  {order.status === "Refunded" && (
-                                    <button
-                                      onClick={() =>
-                                        handleStatusChange(
-                                          order._id,
-                                          "Refunded"
-                                        )
-                                      }
-                                      className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-                                    >
-                                      Refunded
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            )} */}
-                            {openDropdownId === order._id && (
-                              <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
-                                <div className="py-1">
-                                  <div className="px-4 py-2 text-xs text-gray-400 border-b border-gray-700">
-                                    Change Status
-                                  </div>
+                          {viewMode === "active" ? (
+                            // Active mode: Show status dropdown
+                            <div className="relative dropdown-container">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleDropdown(order._id);
+                                }}
+                                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                title="Change status"
+                              >
+                                <MoreVertical
+                                  className="text-gray-700"
+                                  size={23}
+                                />
+                              </button>
 
-                                  {getValidNextStatuses(order.status).map(
-                                    (statusOption) => {
-                                      // Special handling for refund statuses
-                                      if (
-                                        statusOption === "Refunded" ||
-                                        statusOption === "Partially Refunded"
-                                      ) {
-                                        // Only show refund options if order is delivered AND has refunds
-                                        if (
-                                          order.status !== "Delivered" &&
-                                          !hasRefunds(order)
-                                        ) {
-                                          return null;
-                                        }
-                                      }
-
-                                      return (
-                                        <button
-                                          key={statusOption}
-                                          onClick={() =>
-                                            handleStatusChange(
-                                              order._id,
-                                              statusOption
-                                            )
-                                          }
-                                          className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-                                        >
-                                          {statusOption}
-                                        </button>
-                                      );
-                                    }
-                                  )}
-
-                                  {/* Show message if no valid next statuses */}
-                                  {getValidNextStatuses(order.status).length ===
-                                    0 && (
-                                    <div className="px-4 py-2 text-xs text-gray-400">
-                                      No further status changes available
+                              {openDropdownId === order._id && (
+                                <div className="absolute right-0 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-lg z-10">
+                                  <div className="py-1">
+                                    <div className="px-4 py-2 text-xs text-gray-400 border-b border-gray-700">
+                                      Change Status
                                     </div>
-                                  )}
+
+                                    {getValidNextStatuses(order.status).map(
+                                      (statusOption) => {
+                                        if (
+                                          statusOption === "Refunded" ||
+                                          statusOption === "Partially Refunded"
+                                        ) {
+                                          if (
+                                            order.status !== "Delivered" &&
+                                            !hasRefunds(order)
+                                          ) {
+                                            return null;
+                                          }
+                                        }
+
+                                        return (
+                                          <button
+                                            key={statusOption}
+                                            onClick={() =>
+                                              handleStatusChange(
+                                                order._id,
+                                                statusOption
+                                              )
+                                            }
+                                            className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+                                          >
+                                            {statusOption}
+                                          </button>
+                                        );
+                                      }
+                                    )}
+
+                                    {getValidNextStatuses(order.status)
+                                      .length === 0 && (
+                                      <div className="px-4 py-2 text-xs text-gray-400">
+                                        No further status changes available
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                            
-                          </div>
+                              )}
+                            </div>
+                          ) : (
+                            // Archived mode: Show restore button
+                            <div>
+                              <button
+                                onClick={() =>
+                                  setShowRestoreConfirm({
+                                    id: order._id,
+                                    orderNumber: order.orderNumber,
+                                  })
+                                }
+                                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm tracking-widest flex items-center gap-1"
+                                title="Restore to active orders"
+                              >
+                                <RotateCcw size={14} />
+                                Restore
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1061,8 +1156,10 @@ const hasRefunds = (order) => {
                       onClick={() => handlePageClick(page)}
                       className={`px-4 py-2 text-sm rounded ${
                         currentPage === page
-                          ? "bg-gray-700 text-white"
-                          : "bg-gray-100 text-yellow-700 hover:bg-gray-200"
+                          ? viewMode === "active"
+                            ? "bg-blue-600 text-white"
+                            : "bg-purple-600 text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
                     >
                       {page}

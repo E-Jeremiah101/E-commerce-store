@@ -35,6 +35,7 @@ export const ACTIONS = {
   VIEW_USER_ORDERS: "VIEW_USER_ORDERS",
   VIEW_USER_ORDER: "VIEW_USER_ORDER",
   ORDER_RECOVERY_EMAIL_SENT: "ORDER_RECOVERY_EMAIL_SENT",
+  AUTO_ORDER_ARCHIVE: "AUTO_ORDER_ARCHIVE",
 
   //Coupon actions
   CREATE_COUPON: "CREATE_COUPON",
@@ -125,6 +126,7 @@ export const ACTION_LABELS = {
   VIEW_ORDER_DETAILS: "View Order Details",
   VIEW_USER_ORDERS: "View User Orders",
   VIEW_USER_ORDER: "View User Order",
+  AUTO_ORDER_ARCHIVE: "Auto Order Archive",
 
   //coupon label
   CREATE_COUPON: "Create Coupon",

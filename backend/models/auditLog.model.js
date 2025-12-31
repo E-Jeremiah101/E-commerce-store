@@ -12,7 +12,7 @@ const auditLogSchema = new mongoose.Schema(
     adminId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default:null,
     },
     adminName: {
       type: String,
@@ -89,6 +89,7 @@ const auditLogSchema = new mongoose.Schema(
         "VIEW_USER_ORDER",
         "ORDER_CANCELLED_STOCK_RESTORED",
         "ORDER_CANCELLED_STOCK_RESTORE_FAILED",
+        "AUTO_ORDER_ARCHIVE",
  
         //coupon
         "CREATE_COUPON",

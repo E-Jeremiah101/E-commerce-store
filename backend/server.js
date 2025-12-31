@@ -28,7 +28,7 @@ import storeSettingsRoutes from "./routes/storeSettings.route.js";
 import webhookRoutes from "./routes/flutterRefundWebhookRoute.js";
 import locationRoutes from "./routes/location.routes.js";
 import sitemapRoutes from "./routes/sitemap.route.js";
-
+import { startOrderArchiveCron } from "./service/orderArchive.service.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -70,7 +70,7 @@ app.use((req, res, next) => {
   res.set("Referrer-Policy", "strict-origin-when-cross-origin");
   next();
 });
-
+startOrderArchiveCron();
 // Sitemap and robots.txt routes (should be before static files)
 app.use("/", sitemapRoutes);
 
