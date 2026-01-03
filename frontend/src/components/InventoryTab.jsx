@@ -15,6 +15,7 @@ import {
   XCircle as CloseIcon,
   RefreshCw,
   BarChart,
+  BarChart3,
   CheckCircle,
   XCircle,
   Plus,
@@ -281,37 +282,6 @@ const InventoryTab = () => {
         className="bg-white shadow-sm border-b"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-6">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Inventory Management
-              </h1>
-            </div>
-            <div className="flex items-center gap-3 mt-4 sm:mt-0">         
-              <button
-                onClick={() => useInventoryStore.getState().exportCSV()}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-green-700"
-                disabled={loading}
-              >
-                <FileText className="h-4 w-4" />
-                Export CSV
-              </button>
-              <button
-                onClick={handleSyncOrders}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Sync Orders
-              </button>
-              <button
-                onClick={handleRefresh}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Refresh
-              </button>
-            </div>
-          </div> */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
@@ -321,7 +291,7 @@ const InventoryTab = () => {
             <div className="flex items-center gap-3 mt-4 sm:mt-0">
               {/* Export - Green Gradient */}
               <button
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 transition-all shadow hover:shadow-md"
+                className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 transition-all shadow hover:shadow-md whitespace-nowrap"
                 onClick={() => useInventoryStore.getState().exportCSV()}
               >
                 <FileText className="h-4 w-4" />
@@ -330,7 +300,7 @@ const InventoryTab = () => {
 
               {/* Sync - Blue Gradient */}
               <button
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all shadow hover:shadow-md"
+                className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all shadow hover:shadow-md whitespace-nowrap"
                 onClick={handleSyncOrders}
               >
                 <RefreshCw className="h-4 w-4" />
@@ -339,7 +309,7 @@ const InventoryTab = () => {
 
               {/* Refresh - Gray Gradient */}
               <button
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all shadow hover:shadow-md"
+                className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all shadow hover:shadow-md"
                 onClick={handleRefresh}
               >
                 <RefreshCw className="h-4 w-4" />
@@ -572,36 +542,41 @@ const StockLevelsView = ({
 
   return (
     <div className="bg-white rounded-xl shadow-sm  overflow-hidden">
-      <div className="p-6 border-b">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h2 className="text-xl font-semibold text-gray-800">Stock Levels</h2>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                value={filters.search || ""}
-                onChange={onSearch}
-              />
-            </div>
-            <select
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={filters.category || ""}
-              onChange={(e) => updateFilters({ category: e.target.value })}
-            >
-              <option value="">All Categories</option>
-            </select>
-            <button
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
-              onClick={() => clearFilters()}
-            >
-              <Filter className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+     <div className="p-4 md:p-6 border-b">
+  <div className="flex flex-col gap-4">
+    {/* Title */}
+    <h2 className="text-lg md:text-xl font-semibold text-gray-800">
+      Stock Levels
+    </h2>
+
+    {/* Filters in Grid Layout */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Search Input - Full width on mobile, spans 2 columns on larger screens */}
+      <div className="sm:col-span-2 relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Search products..."
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-1 text-sm md:text-base"
+          value={filters.search || ""}
+          onChange={onSearch}
+        />
       </div>
+
+      {/* Category Select */}
+      <select
+        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring1 text-sm md:text-base bg-white"
+        value={filters.category || ""}
+        onChange={(e) => updateFilters({ category: e.target.value })}
+      >
+        <option value="">All Categories</option>
+        {/* Add your category options here */}
+      </select>
+
+      
+    </div>
+  </div>
+</div>
       {loading ? (
         <div className="flex justify-center items-center p-12">
           <div className="w-8 h-8 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
@@ -2274,7 +2249,9 @@ const DashboardView = ({ data, settings }) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <StatCard
         title="Total Stock Value"
-        value={`${formatPrice(data?.summary?.totalStockValue, settings?.currency) || "0"}`}
+        value={`${
+          formatPrice(data?.summary?.totalStockValue, settings?.currency) || "0"
+        }`}
         icon={DollarSign}
         trend="+12.5%"
         color="blue"
@@ -2296,15 +2273,15 @@ const DashboardView = ({ data, settings }) => (
     </div>
 
     {/* Fast Moving / Top Selling Products */}
-    <div className="bg-white rounded-xl shadow-sm  p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-xl shadow-sm p-4 md:p-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-6 gap-4 md:gap-0">
         <div>
           <h3 className="text-lg font-semibold text-gray-800">
             {data.summary?.hasOrderData
               ? "Top Selling Products (Last 30 Days)"
               : "Fast Moving Products"}
           </h3>
-          <p className="text-gray-600 mt-1">
+          <p className="text-gray-600 mt-1 text-sm md:text-base">
             {data.summary?.hasOrderData
               ? "Based on actual delivered orders"
               : "Based on current stock levels"}
@@ -2317,15 +2294,15 @@ const DashboardView = ({ data, settings }) => (
       </div>
 
       {data.fastMovingProducts && data.fastMovingProducts.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-3 md:space-y-4">
           {data.fastMovingProducts.map((product, index) => (
             <div
               key={product.id}
-              className="flex items-center justify-between p-4 hover:bg-gray-50 rounded-lg  border border-gray-100"
+              className="flex flex-col md:flex-row md:items-center justify-between p-3 md:p-4 hover:bg-gray-50 rounded-lg border border-gray-100 gap-3 md:gap-0"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 md:gap-4">
                 <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                     index === 0
                       ? "bg-yellow-100 text-yellow-800 border-2 border-yellow-300"
                       : index === 1
@@ -2335,36 +2312,40 @@ const DashboardView = ({ data, settings }) => (
                       : "bg-blue-100 text-blue-800 border-2 border-blue-300"
                   }`}
                 >
-                  <span className="font-bold text-sm">#{index + 1}</span>
+                  <span className="font-bold text-xs md:text-sm">
+                    #{index + 1}
+                  </span>
                 </div>
 
-                <div className="relative">
+                <div className="relative flex-shrink-0">
                   {product.image ? (
                     <img
                       src={product.image}
                       alt={product.name}
                       loading="lazy"
-                      className="h-12 w-12 rounded-lg object-cover border"
+                      className="h-10 w-10 md:h-12 md:w-12 rounded-lg object-cover border"
                     />
                   ) : (
-                    <div className="h-12 w-12 rounded-lg bg-gray-100 border flex items-center justify-center">
-                      <Package className="h-6 w-6 text-gray-400" />
+                    <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg bg-gray-100 border flex items-center justify-center">
+                      <Package className="h-5 w-5 md:h-6 md:w-6 text-gray-400" />
                     </div>
                   )}
                 </div>
 
-                <div>
-                  <p className="font-medium text-gray-900">{product.name}</p>
-                  <div className="flex items-center gap-3 mt-1">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 text-sm md:text-base truncate">
+                    {product.name}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
                     {product.category && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full whitespace-nowrap">
                         {product.category}
                       </span>
                     )}
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
                         <ShoppingBag className="h-3 w-3 text-green-600" />
-                        <span className="text-sm font-medium text-green-700">
+                        <span className="text-xs md:text-sm font-medium text-green-700">
                           {product.totalQuantitySold ||
                             product.currentStock ||
                             0}{" "}
@@ -2373,8 +2354,10 @@ const DashboardView = ({ data, settings }) => (
                       </div>
                       {product.orderCount > 0 && (
                         <>
-                          <span className="text-xs text-gray-400">•</span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-400 hidden md:inline">
+                            •
+                          </span>
+                          <span className="text-xs text-gray-500 hidden md:inline">
                             {product.orderCount} orders
                           </span>
                         </>
@@ -2384,11 +2367,11 @@ const DashboardView = ({ data, settings }) => (
                 </div>
               </div>
 
-              <div className="text-right">
-                <p className="font-bold text-gray-900 text-lg">
+              <div className="text-right md:ml-4">
+                <p className="font-bold text-gray-900 text-base md:text-lg">
                   {formatPrice(product?.value, settings?.currency)}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-xs md:text-sm text-gray-500">
                   {product.source === "orders" ? "Revenue" : "Stock Value"}
                 </p>
 
@@ -2402,14 +2385,14 @@ const DashboardView = ({ data, settings }) => (
           ))}
         </div>
       ) : (
-        <div className="text-center py-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-4">
-            <ShoppingBag className="h-8 w-8 text-blue-400" />
+        <div className="text-center py-8 md:py-12">
+          <div className="inline-flex items-center justify-center w-14 h-14 md:w-16 md:h-16 rounded-full bg-blue-50 mb-4">
+            <ShoppingBag className="h-6 w-6 md:h-8 md:w-8 text-blue-400" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-2">
             No Sales Data Available
           </h3>
-          <p className="text-gray-600 max-w-md mx-auto">
+          <p className="text-gray-600 text-sm md:text-base max-w-md mx-auto px-2">
             Top selling products will appear here once orders are delivered and
             processed.
           </p>

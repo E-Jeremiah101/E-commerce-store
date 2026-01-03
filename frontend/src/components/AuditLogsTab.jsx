@@ -734,7 +734,7 @@ import { format } from "date-fns";
                 <Download className="h-4 w-4" />
                 Export CSV
               </button>
-              <button
+              <button 
                 onClick={triggerManualArchive}
                 disabled={archiveLoading}
                 className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors disabled:opacity-50 whitespace-nowrap"

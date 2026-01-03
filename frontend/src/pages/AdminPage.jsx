@@ -112,7 +112,7 @@ const LOCAL_ADMIN_ROLE_PERMISSIONS = {
 const TAB_PERMISSIONS = {
   create: LOCAL_PERMISSIONS.PRODUCT_WRITE,
   products: LOCAL_PERMISSIONS.PRODUCT_READ,
-  inventory: LOCAL_PERMISSIONS.PRODUCT_WRITE,
+  inventory: LOCAL_PERMISSIONS.PRODUCT_READ,
   analytics: LOCAL_PERMISSIONS.AUDIT_READ,
   AdminOrder: LOCAL_PERMISSIONS.ORDER_READ,
   AdminRefunds: LOCAL_PERMISSIONS.REFUND_READ,
@@ -288,7 +288,7 @@ const AdminPageContent = () => {
           hasPermission(LOCAL_PERMISSIONS.PRODUCT_READ) && <ProductsList />}
 
         {activeTab === "inventory" &&
-          hasPermission(LOCAL_PERMISSIONS.PRODUCT_WRITE) && <InventoryTab />}
+          hasPermission(LOCAL_PERMISSIONS.PRODUCT_READ) && <InventoryTab />}
         {activeTab === "analytics" &&
           hasPermission(LOCAL_PERMISSIONS.AUDIT_READ) && <AnalyticsTab />}
         {activeTab === "AdminOrder" &&
