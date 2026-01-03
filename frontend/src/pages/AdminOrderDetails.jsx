@@ -7,6 +7,7 @@ import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
+
 const AdminOrderDetailsContent = () => {
   const { id } = useParams();
   const navigate = useNavigate();

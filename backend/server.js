@@ -29,6 +29,7 @@ import webhookRoutes from "./routes/flutterRefundWebhookRoute.js";
 import locationRoutes from "./routes/location.routes.js";
 import sitemapRoutes from "./routes/sitemap.route.js";
 import { startOrderArchiveCron } from "./service/orderArchive.service.js";
+import auditLogArchiveJob from "./jobs/auditLogArchive.job.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -70,6 +71,17 @@ app.use((req, res, next) => {
   res.set("Referrer-Policy", "strict-origin-when-cross-origin");
   next();
 });
+const startAuditArchiveJob = () => {
+  auditLogArchiveJob.scheduleMonthlyArchive();
+
+  // Optional: Run immediately on startup to check for overdue archives
+  setTimeout(() => {
+    auditLogArchiveJob.runArchiveJob().catch(console.error);
+  }, 60000); // Wait 1 minute after startup
+};
+
+// Call this function when your app starts
+startAuditArchiveJob();
 startOrderArchiveCron();
 // Sitemap and robots.txt routes (should be before static files)
 app.use("/", sitemapRoutes);

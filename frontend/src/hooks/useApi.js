@@ -1,4 +1,3 @@
-// hooks/useApi.js
 import { useState } from "react";
 import axiosInstance from "../lib/axios";
 

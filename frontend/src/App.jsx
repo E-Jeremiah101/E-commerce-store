@@ -180,6 +180,7 @@ const RequestReturnPage = lazy(() => import("./pages/RequestReturnPage.jsx"));
 const ArchivedProductsList = lazy(() =>
   import("./components/ArchivedProductsList.jsx")
 );
+const ArchivedAuditLogsTab = lazy(() => import("./components/ArchivedAuditLogsTab.jsx"))
 
 
 function App() {
@@ -290,6 +291,10 @@ function App() {
           <Route
             path="/admin/products/archived-product"
             element={user ? <ArchivedProductsList /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/admin/audit/archived-audit-logs"
+            element={user ? <ArchivedAuditLogsTab /> : <Navigate to="/" />}
           />
           <Route
             path="/purchase-cancel"

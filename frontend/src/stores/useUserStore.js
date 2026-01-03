@@ -16,6 +16,7 @@ const LOCAL_PERMISSIONS = {
   COUPON_WRITE: "coupon_write",
   USER_READ: "user:read",
   USER_WRITE: "user:write",
+  AUDIT_WRITE: "audit:write",
   AUDIT_READ: "audit:read",
   SETTINGS_WRITE: "settings:write",
 };

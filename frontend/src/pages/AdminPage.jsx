@@ -38,7 +38,8 @@ const STORAGE_KEY = "admin_active_tab";
 
 const tabs = [
   { id: "create", label: "Create Product", icon: PlusCircle },
-  { id: "products", label: "Product List", icon: ShoppingBasket },,
+  { id: "products", label: "Product List", icon: ShoppingBasket },
+  ,
   { id: "inventory", label: "Manage Inventory", icon: Warehouse },
   { id: "analytics", label: "Analytics Report", icon: BarChart },
   { id: "AdminOrder", label: "Orders", icon: Package },
@@ -76,6 +77,7 @@ const LOCAL_PERMISSIONS = {
   COUPON_WRITE: "coupon_write",
   USER_READ: "user:read",
   USER_WRITE: "user:write",
+  AUDIT_WRITE: "audit:write",
   AUDIT_READ: "audit:read",
   SETTINGS_WRITE: "settings:write",
 };
@@ -299,6 +301,7 @@ const AdminPageContent = () => {
           hasPermission(LOCAL_PERMISSIONS.AUDIT_READ) && <Transactions />}
         {activeTab === "audit" &&
           hasPermission(LOCAL_PERMISSIONS.AUDIT_READ) && <AuditLogsTab />}
+        
         {activeTab === "AllUsers" &&
           hasPermission(LOCAL_PERMISSIONS.USER_READ) && <AllUsers />}
         {activeTab === "coupon" &&
