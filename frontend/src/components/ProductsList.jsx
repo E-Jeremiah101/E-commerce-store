@@ -98,7 +98,47 @@ const ProductsList = () => {
         return 0;
     }
   });
+  // Add this function to your ProductsList component
+  const handleExport = async (type = "summary") => {
+    try {
+      // Get authentication token from your auth system
+      const token =
+        localStorage.getItem("token") || sessionStorage.getItem("token");
 
+      const endpoint =
+        type === "detailed"
+          ? "/api/products/export/detailed-csv"
+          : "/api/products/export/csv";
+
+      const response = await fetch(endpoint, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to export products");
+      }
+
+      // Get the blob and create download link
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download =
+        type === "detailed"
+          ? "products_detailed_export.csv"
+          : "products_export.csv";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Export error:", error);
+      alert("Failed to export products. Please try again.");
+    }
+  };
+  
   // Pagination logic
   const totalProducts = sortedProducts.length;
   const totalPages = Math.ceil(totalProducts / productsPerPage);
@@ -309,7 +349,6 @@ const ProductsList = () => {
                   </option>
                 ))}
               </select>
-
               <select
                 value={filterStock}
                 onChange={(e) => {
@@ -323,7 +362,6 @@ const ProductsList = () => {
                 <option value="low-stock">Low Stock (≤10)</option>
                 <option value="out-of-stock">Out of Stock</option>
               </select>
-
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
@@ -335,11 +373,16 @@ const ProductsList = () => {
                 <option value="stock-low">Stock: Low to High</option>
                 <option value="stock-high">Stock: High to Low</option>
               </select>
-
-              <button className="px-4 py-2.5 border  rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2">
-                <Download size={16} />
-                <span>Export</span>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => handleExport("summary")}
+                  className="px-4 py-2.5 border rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+                >
+                  <Download size={16} />
+                  <span>Export CSV</span>
+                </button>
+              </div>
+              
             </div>
           </div>
         </div>
@@ -418,7 +461,6 @@ const ProductsList = () => {
 
                   <td className="px-6 py-4">
                     <div className="flex items-center">
-                      
                       <span
                         className={`ml-3 text-sm font-medium ${
                           product.countInStock === 0

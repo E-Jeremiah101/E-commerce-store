@@ -253,16 +253,6 @@ import { format } from "date-fns";
     }
   };
 
-  const checkArchiveStatus = async () => {
-    try {
-      const response = await axios.get("/audit-logs/archives/status");
-      setArchiveStats(response.data);
-      setShowArchiveStats(true);
-    } catch (error) {
-      console.error("Error checking archive status:", error);
-      showMessage("error", "Failed to check archive status");
-    }
-  };
 
   const getActionIcon = (action) => {
     switch (action) {

@@ -53,7 +53,7 @@ const AnalyticsTab = () => {
     const fetchAnalyticsData = async () => {
       try {
         setIsLoading(true);
-        // ⚡ OPTIMIZATION: Add signal to prevent race conditions
+        //  OPTIMIZATION: Add signal to prevent race conditions
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
@@ -102,13 +102,8 @@ const AnalyticsTab = () => {
           }));
           setTopProducts(processedProducts);
         } else {
-          console.log("⚠️ No top products from API, using fallback data");
-          // Fallback dummy data
-          setTopProducts([
-            { name: "Selecter Vento", id: "2444300", sales: 128 },
-            { name: "Blue backpack", id: "241518", sales: 401 },
-            { name: "Water Bottle", id: "249876", sales: 287 },
-          ]);
+          console.log(" No top products ");
+          setTopProducts([]);
         }
 
         if (couponTrend && Array.isArray(couponTrend)) {
