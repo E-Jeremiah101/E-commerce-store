@@ -1105,6 +1105,104 @@ export const permanentDeleteProduct = async (req, res) => {
   }
 };
 // Export products to CSV
+// export const exportProductsCSV = async (req, res) => {
+//   try {
+//     const products = await Product.find({
+//       archived: { $ne: true },
+//     }).select(
+//       "name description price images category sizes colors variants isFeatured archived createdAt previousPrice isPriceSlashed averageRating numReviews"
+//     );
+
+//     // Transform products for CSV
+//     const csvData = [];
+    
+//     // Add CSV headers
+//     csvData.push([
+//       'Product ID',
+//       'Name',
+//       'Description',
+//       'Category',
+//       'Price',
+//       'Previous Price',
+//       'Discount Percentage',
+//       'Featured',
+//       'Average Rating',
+//       'Total Reviews',
+//       'Total Stock',
+//       'Total Variants',
+//       'Sizes Available',
+//       'Colors Available',
+//       'Image URLs',
+//       'Created At'
+//     ].join(','));
+
+//     // Add product data
+//     products.forEach((product) => {
+//       const totalVariantStock = product.variants.reduce(
+//         (sum, v) => sum + (v.countInStock || 0),
+//         0
+//       );
+
+//       const discountPercentage =
+//         product.isPriceSlashed && product.previousPrice
+//           ? (
+//               ((product.previousPrice - product.price) /
+//                 product.previousPrice) *
+//               100
+//             ).toFixed(1)
+//           : null;
+
+//       // Format data for CSV (escape commas and quotes)
+//       const escapeCSV = (field) => {
+//         if (field === null || field === undefined) return '';
+//         const stringField = String(field);
+//         // If contains comma, quote, or newline, wrap in quotes and escape quotes
+//         if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+//           return `"${stringField.replace(/"/g, '""')}"`;
+//         }
+//         return stringField;
+//       };
+
+//       csvData.push([
+//         escapeCSV(product._id),
+//         escapeCSV(product.name),
+//         escapeCSV(product.description),
+//         escapeCSV(product.category),
+//         escapeCSV(product.price),
+//         escapeCSV(product.previousPrice || ''),
+//         escapeCSV(discountPercentage || ''),
+//         escapeCSV(product.isFeatured ? 'Yes' : 'No'),
+//         escapeCSV(product.averageRating || 0),
+//         escapeCSV(product.numReviews || 0),
+//         escapeCSV(totalVariantStock),
+//         escapeCSV(product.variants?.length || 0),
+//         escapeCSV(product.sizes?.join('; ') || ''),
+//         escapeCSV(product.colors?.join('; ') || ''),
+//         escapeCSV(product.images?.join('; ') || ''),
+//         escapeCSV(product.createdAt.toISOString())
+//       ].join(','));
+//     });
+
+//     // Generate CSV content
+//     const csvContent = csvData.join('\n');
+    
+//     // Set headers for file download
+//     res.setHeader('Content-Type', 'text/csv');
+//     res.setHeader('Content-Disposition', 'attachment; filename=products_export.csv');
+    
+//     res.send(csvContent);
+//   } catch (error) {
+//     console.log("Error in exportProductsCSV controller", error.message);
+//     res.status(500).json({ message: "Server error", error: error.message });
+//   }
+// };
+// Helper function to strip HTML tags
+const stripHtmlTags = (html) => {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, '').trim();
+};
+
+// Export products to CSV (updated version)
 export const exportProductsCSV = async (req, res) => {
   try {
     const products = await Product.find({
@@ -1163,10 +1261,13 @@ export const exportProductsCSV = async (req, res) => {
         return stringField;
       };
 
+      // Strip HTML from description before exporting
+      const cleanDescription = stripHtmlTags(product.description);
+
       csvData.push([
         escapeCSV(product._id),
         escapeCSV(product.name),
-        escapeCSV(product.description),
+        escapeCSV(cleanDescription), // Use cleaned description
         escapeCSV(product.category),
         escapeCSV(product.price),
         escapeCSV(product.previousPrice || ''),
@@ -1196,6 +1297,7 @@ export const exportProductsCSV = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 
 // Export products with variants in separate rows (detailed export)
 export const exportProductsDetailedCSV = async (req, res) => {
@@ -1306,3 +1408,4 @@ export const exportProductsDetailedCSV = async (req, res) => {
   }
 };
 
+ 

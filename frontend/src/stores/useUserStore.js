@@ -127,6 +127,14 @@ export const useUserStore = create((set, get) => ({
   logout: async () => {
     try {
       await axios.post("/auth/logout");
+
+       try {
+         const { useCartStore } = await import("./useCartStore");
+         useCartStore.getState().clearCart();
+       } catch (e) {
+         console.debug("Error clearing cart on logout:", e);
+       }
+       
       set({ user: null });
     } catch (error) {
       toast.error(
