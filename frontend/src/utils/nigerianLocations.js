@@ -437,7 +437,7 @@ export const NIGERIAN_LOCATIONS = {
     },
   },
 
-  KADUNA: {
+  KADUNA: { 
     label: "Kaduna State",
     capital: "Kaduna",
     cities: {

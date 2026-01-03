@@ -146,6 +146,9 @@ const HomePageContent = () => {
         </div>
       </div>
 
+
+{/* Mediuma and large screen */}
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 root lg:px-25">
         {isLoadingCategories ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">

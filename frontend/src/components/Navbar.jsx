@@ -8,7 +8,7 @@ import {
   User,
   Package,
   Menu,
-  X,
+  X, 
   Heart,
   Search,
   ChevronDown,
@@ -19,6 +19,7 @@ import { useCartStore } from "../stores/useCartStore.js";
 import SearchBar from "./SearchBar.jsx";
 import UserBadge from "./UserBadge.jsx";
 import { useStoreSettings } from "./StoreSettingsContext.jsx";
+import axios from "../lib/axios.js";
 
 const Navbar = () => {
   const { user, logout } = useUserStore();
@@ -32,22 +33,39 @@ const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [desktopCollectionsOpen, setDesktopCollectionsOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
   const mobileMenuRef = useRef(null);
   const desktopCollectionsRef = useRef(null);
   const mobileCollectionsRef = useRef(null);
 
-  const categories = [
-    { name: "Fragrance", path: "/category/Fragrance" },
-    { name: "T-Shirts", path: "/category/t-shirts" },
-    { name: "Suits & Blazers", path: "/category/suits&blazers" },
-    { name: "Jackets & Outerwear", path: "/category/Jackets&Outerwear" },
-    { name: "Underwear & Socks", path: "/category/underwear&socks" },
-    { name: "Footwear", path: "/category/footwears" },
-    { name: "Sets & Co-ords", path: "/category/sets&cords" },
-    { name: "Accessories", path: "/category/Accessories" },
-    { name: "Bottoms", path: "/category/bottoms" },
-  ];
+  useEffect(() => {
+      const fetchCategories = async () => {
+        try {
+          const res = await axios.get("/categories-with-images");
+          setCategories(res.data);
+        } catch (error) {
+          setCategories([]);
+          console.error("Error fetching categories:", error);
+        } finally {
+          setIsLoadingCategories(false);
+        }
+      };
+      fetchCategories();
+    }, []);
+
+  // const categories = [
+  //   { name: "Fragrance", path: "/category/Fragrance" },
+  //   { name: "T-Shirts", path: "/category/t-shirts" },
+  //   { name: "Suits & Blazers", path: "/category/suits&blazers" },
+  //   { name: "Jackets & Outerwear", path: "/category/Jackets&Outerwear" },
+  //   { name: "Underwear & Socks", path: "/category/underwear&socks" },
+  //   { name: "Footwear", path: "/category/footwears" },
+  //   { name: "Sets & Co-ords", path: "/category/sets&cords" },
+  //   { name: "Accessories", path: "/category/Accessories" },
+  //   { name: "Bottoms", path: "/category/bottoms" },
+  // ];
 
   // Handle scroll effect
   useEffect(() => {
@@ -181,11 +199,11 @@ const Navbar = () => {
                 </button>
 
                 {desktopCollectionsOpen && (
-                  <div className="absolute top-full left-0 mt-1 w-64 bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
+                  <div className="absolute left-1/2 transform -translate-x-1/2 grid md:grid-cols-3 lg:grid-cols-3 gap-2 mt-1 w-3xl bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
                     {categories.map((category) => (
                       <Link
-                        key={category.path}
-                        to={category.path}
+                        key={category.name}
+                        to={`/category/${category.name}`}
                         className="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors font-medium"
                         onClick={() => {
                           setDesktopCollectionsOpen(false);
@@ -440,7 +458,7 @@ const Navbar = () => {
                     <span className="font-medium">Home</span>
                   </Link>
 
-                  {/* Mobile Collections Accordion - FIXED: Now closes properly */}
+                  {/* Mobile Collections Accordion */}
                   <div className="px-6" ref={mobileCollectionsRef}>
                     <button
                       data-collections-button
@@ -460,15 +478,15 @@ const Navbar = () => {
                     </button>
 
                     <div
-                      className={`overflow-hidden transition-all duration-300 ${
+                      className={`overflow-y-scroll transition-all duration-300 ${
                         isCollectionsOpen ? "max-h-96" : "max-h-0"
                       }`}
                     >
-                      <div className="pl-9 py-2 space-y-1">
+                      <div className="pl-5 py-2 space-y-1 no-scroll">
                         {categories.map((category) => (
                           <Link
-                            key={category.path}
-                            to={category.path}
+                            key={category.name}
+                            to={`/category/${category.name}`}
                             className="block py-2 px-4 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
                             onClick={() => {
                               setIsCollectionsOpen(false);
