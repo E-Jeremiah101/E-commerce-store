@@ -16,6 +16,7 @@ import {
   TrendingUp,
   TrendingDown,
   Scissors,
+  BarChart,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -301,20 +302,21 @@ const AnalyticsTab = () => {
     }
   };
 
-  if (isLoading)
+ if (isLoading)
     return (
-      <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-br from-gray-50 to-white">
-        <div className="flex space-x-3 mb-6">
-          <div className="h-5 w-5 bg-gray-700 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-          <div className="h-5 w-5 bg-gray-600 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-          <div className="h-5 w-5 bg-gray-500 rounded-full animate-bounce"></div>
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-8">
+        <div className="flex flex-col items-center justify-center h-96">
+          <div className="relative">
+            <div className="h-24 w-24 rounded-full border-4 border-gray-200 border-t-blue-600 animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <BarChart className="h-10 w-10 text-gray-400 animate-pulse" />
+            </div>
+          </div>
+          <p className="mt-6 text-lg font-medium text-gray-600">
+            Loading Analytics...
+          </p>
+          <p className="text-sm text-gray-400 mt-2">Please wait a moment</p>
         </div>
-        <p className="text-gray-700 font-medium text-lg animate-pulse">
-          Please wait, Loading data
-        </p>
-        <p className="text-gray-500 text-sm mt-2">
-          Preparing your analytics dashboard...
-        </p>
       </div>
     );
 

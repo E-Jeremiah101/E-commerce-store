@@ -8,21 +8,17 @@ import {
   Archive,
   Loader,
   AlertCircle,
-  Eye,
-  Edit,
   Package,
   Search,
-  Filter,
   Download,
   Plus,
   ChevronLeft,
   ChevronRight,
-  MoreVertical,
   Tag,
-  DollarSign,
   Layers,
   Palette,
   Grid,
+  ShoppingBasket,
 } from "lucide-react";
 import { useProductStore } from "../stores/useProductStore.js";
 import { Link } from "react-router-dom";
@@ -212,11 +208,11 @@ const ProductsList = () => {
           <div className="relative">
             <div className="h-24 w-24 rounded-full border-4 border-gray-200 border-t-blue-600 animate-spin"></div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <Package className="h-10 w-10 text-gray-400 animate-pulse" />
+              <ShoppingBasket className="h-10 w-10 text-gray-400 animate-pulse" />
             </div>
           </div>
           <p className="mt-6 text-lg font-medium text-gray-600">
-            Loading your products...
+            Loading Products...
           </p>
           <p className="text-sm text-gray-400 mt-2">Please wait a moment</p>
         </div>

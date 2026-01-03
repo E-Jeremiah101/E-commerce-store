@@ -77,8 +77,6 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  
-  // In your store, rename fetchLowStockAlerts to fetchAllAlerts
 
   // Get Low Stock Alerts
   fetchLowStockAlerts: async (threshold = 10) => {

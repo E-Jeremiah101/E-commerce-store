@@ -23,6 +23,7 @@ import {
   Globe,
   BarChart3,
   RefreshCw,
+  Ticket,
 } from "lucide-react";
 
 export default function AdminCoupons() {
@@ -286,17 +287,36 @@ export default function AdminCoupons() {
       .join(" ");
   };
 
-  if (loading && coupons.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-6">
-        <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // if (loading && coupons.length === 0) {
+  //   return (
+  //     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-6">
+  //       <div className="flex items-center justify-center h-96">
+  //         <div className="text-center">
+  //           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // }
+   if (loading)
+           return (
+             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-8">
+               <div className="flex flex-col items-center justify-center h-96">
+                 <div className="relative">
+                   <div className="h-24 w-24 rounded-full border-4 border-gray-200 border-t-blue-600 animate-spin"></div>
+                   <div className="absolute inset-0 flex items-center justify-center">
+                     <Ticket className="h-10 w-10 text-gray-400 animate-pulse" />
+                   </div>
+                 </div>
+                 <p className="mt-6 text-lg font-medium text-gray-600">
+                   Loading Coupons...
+                 </p>
+                 <p className="text-sm text-gray-400 mt-2">
+                   Please wait a moment
+                 </p>
+               </div>
+             </div>
+           );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-4 md:p-6">

@@ -29,6 +29,7 @@ import {
   Clock,
   ChevronDown,
   AlertCircle,
+  Warehouse,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useUserStore } from "../stores/useUserStore.js";
@@ -293,29 +294,48 @@ const InventoryTab = () => {
     }
   };
 
-  if (loading && !dashboardData) {
-    return (
-      <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-br from-gray-50 to-white">
-        <div className="flex space-x-2 mb-6">
-          <div
-            className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
-            style={{ animationDelay: "0ms" }}
-          ></div>
-          <div
-            className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
-            style={{ animationDelay: "150ms" }}
-          ></div>
-          <div
-            className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
-            style={{ animationDelay: "300ms" }}
-          ></div>
+  // if (loading && !dashboardData) {
+  //   return (
+  //     <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-br from-gray-50 to-white">
+  //       <div className="flex space-x-2 mb-6">
+  //         <div
+  //           className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
+  //           style={{ animationDelay: "0ms" }}
+  //         ></div>
+  //         <div
+  //           className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
+  //           style={{ animationDelay: "150ms" }}
+  //         ></div>
+  //         <div
+  //           className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
+  //           style={{ animationDelay: "300ms" }}
+  //         ></div>
+  //       </div>
+  //       <p className="text-gray-600 font-medium animate-pulse">
+  //         Please wait, Loading data...
+  //       </p>
+  //     </div>
+  //   );
+  // }
+
+  if (loading)
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-8">
+          <div className="flex flex-col items-center justify-center h-96">
+            <div className="relative">
+              <div className="h-24 w-24 rounded-full border-4 border-gray-200 border-t-blue-600 animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Warehouse className="h-10 w-10 text-gray-400 animate-pulse" />
+              </div>
+            </div>
+            <p className="mt-6 text-lg font-medium text-gray-600">
+              Loading Inventory...
+            </p>
+            <p className="text-sm text-gray-400 mt-2">Please wait a moment</p>
+          </div>
         </div>
-        <p className="text-gray-600 font-medium animate-pulse">
-          Please wait, Loading data...
-        </p>
-      </div>
-    );
-  }
+      );
+  
 
   return (
     <div className="min-h-screen bg-gray-50">
