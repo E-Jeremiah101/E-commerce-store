@@ -34,9 +34,6 @@ import {
 import toast from "react-hot-toast";
 import { useUserStore } from "../stores/useUserStore.js";
 import { useInventoryStore } from "../stores/useInventoryStore.js";
-import {
-  exportSimpleInventoryPDF,
-} from "../utils/exportInventoryPdf.js";
 import axios from "../lib/axios.js";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "./StoreSettingsContext.jsx";
@@ -189,45 +186,6 @@ const InventoryTab = () => {
 
   const { settings } = useStoreSettings();
 
-  const handleExportPDF = () => {
-    try {
-      const exportData = stockLevels.flatMap((product) => {
-        if (!product.variants || product.variants.length === 0) {
-          return [
-            {
-              name: product.name,
-              product: product.name,
-              category: product.category,
-              countInStock: product.totalStock || 0,
-              stock: product.totalStock || 0,
-              price: product.price || 0,
-              totalValue: product.totalValue || 0,
-            },
-          ];
-        }
-
-        return product.variants.map((variant) => ({
-          name: product.name,
-          product: product.name,
-          category: product.category,
-          color: variant.color,
-          size: variant.size,
-          countInStock: variant.countInStock || 0,
-          stock: variant.countInStock || 0,
-          price: variant.price || product.price || 0,
-          sku: variant.sku,
-          variantValue: variant.variantValue || 0,
-        }));
-      });
-
-      exportSimpleInventoryPDF(exportData);
-      toast.success("PDF exported successfully!");
-    } catch (error) {
-      console.error("Export error:", error);
-      toast.error("Failed to export PDF");
-    }
-  };
-
   const handleAdjustStock = (product) => {
     console.log("🔄 Adjusting product:", product);
     setSelectedProduct({
@@ -294,30 +252,6 @@ const InventoryTab = () => {
     }
   };
 
-  // if (loading && !dashboardData) {
-  //   return (
-  //     <div className="flex flex-col justify-center items-center h-screen bg-gradient-to-br from-gray-50 to-white">
-  //       <div className="flex space-x-2 mb-6">
-  //         <div
-  //           className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
-  //           style={{ animationDelay: "0ms" }}
-  //         ></div>
-  //         <div
-  //           className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
-  //           style={{ animationDelay: "150ms" }}
-  //         ></div>
-  //         <div
-  //           className="h-4 w-4 bg-gray-700 rounded-full animate-bounce"
-  //           style={{ animationDelay: "300ms" }}
-  //         ></div>
-  //       </div>
-  //       <p className="text-gray-600 font-medium animate-pulse">
-  //         Please wait, Loading data...
-  //       </p>
-  //     </div>
-  //   );
-  // }
-
   if (loading)
       return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-8">
@@ -347,22 +281,21 @@ const InventoryTab = () => {
         className="bg-white shadow-sm border-b"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-6">
+          {/* <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-6">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
                 Inventory Management
               </h1>
             </div>
-            <div className="flex items-center gap-3 mt-4 sm:mt-0">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={handleExportPDF}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                >
-                  <FileText className="h-4 w-4" />
-                  Export PDF
-                </button>
-              </div>
+            <div className="flex items-center gap-3 mt-4 sm:mt-0">         
+              <button
+                onClick={() => useInventoryStore.getState().exportCSV()}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-green-700"
+                disabled={loading}
+              >
+                <FileText className="h-4 w-4" />
+                Export CSV
+              </button>
               <button
                 onClick={handleSyncOrders}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
@@ -372,7 +305,42 @@ const InventoryTab = () => {
               </button>
               <button
                 onClick={handleRefresh}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </button>
+            </div>
+          </div> */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center py-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Inventory Management
+              </h1>
+            </div>
+            <div className="flex items-center gap-3 mt-4 sm:mt-0">
+              {/* Export - Green Gradient */}
+              <button
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 transition-all shadow hover:shadow-md"
+                onClick={() => useInventoryStore.getState().exportCSV()}
+              >
+                <FileText className="h-4 w-4" />
+                Export CSV
+              </button>
+
+              {/* Sync - Blue Gradient */}
+              <button
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:from-blue-600 hover:to-indigo-700 transition-all shadow hover:shadow-md"
+                onClick={handleSyncOrders}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Sync Orders
+              </button>
+
+              {/* Refresh - Gray Gradient */}
+              <button
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-lg hover:from-gray-700 hover:to-gray-800 transition-all shadow hover:shadow-md"
+                onClick={handleRefresh}
               >
                 <RefreshCw className="h-4 w-4" />
                 Refresh
@@ -428,10 +396,13 @@ const InventoryTab = () => {
             onPriceAction={handlePriceAction}
           />
         )}
-        
+
         {activeTab === "low-stock" && (
-          <LowStockView alerts={lowStockAlerts || []} onAdjust={handleAdjustStock}
-          loading={loading} />
+          <LowStockView
+            alerts={lowStockAlerts || []}
+            onAdjust={handleAdjustStock}
+            loading={loading}
+          />
         )}
         {activeTab === "price-management" && (
           <PriceManagementView
@@ -453,9 +424,13 @@ const InventoryTab = () => {
         {activeTab === "valuation" && inventoryValuation && (
           <ValuationView data={inventoryValuation} loading={loading} />
         )}
-       
+
         {activeTab === "locations" && (
-          <LocationsView locations={inventoryByLocation} settings={settings} loading={loading} />
+          <LocationsView
+            locations={inventoryByLocation}
+            settings={settings}
+            loading={loading}
+          />
         )}
       </div>
 

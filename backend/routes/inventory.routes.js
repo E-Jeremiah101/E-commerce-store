@@ -8,6 +8,7 @@ import {
   getInventoryValuation,
   syncOrdersWithInventory,
   getInventoryAgingReport,
+  exportInventoryCSV,
 } from "../controllers/inventory.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
@@ -42,6 +43,7 @@ router.get("/locations", getInventoryByLocation);
 
 //  Inventory Valuation
 router.get("/valuation", getInventoryValuation);
+router.get("/export-csv", exportInventoryCSV);
 
 router.post("/sync-orders", syncOrdersWithInventory);
 router.get("/aging-report",  getInventoryAgingReport);

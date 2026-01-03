@@ -27,7 +27,6 @@ export const useInventoryStore = create((set, get) => ({
     sortOrder: "asc",
   },
 
-
   // Get Dashboard Data
   fetchDashboard: async () => {
     set({ loading: true });
@@ -71,12 +70,11 @@ export const useInventoryStore = create((set, get) => ({
       return res.data;
     } catch (error) {
       console.error(" Error fetching stock levels:", error);
-     console.log("Failed to load stock levels");
+      console.log("Failed to load stock levels");
       set({ loading: false });
       throw error;
     }
   },
-
 
   // Get Low Stock Alerts
   fetchLowStockAlerts: async (threshold = 10) => {
@@ -117,7 +115,6 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-
   adjustStock: async (productId, adjustmentData) => {
     set({ loading: true });
     try {
@@ -146,7 +143,6 @@ export const useInventoryStore = create((set, get) => ({
       throw error;
     }
   },
-  
 
   //  Get Inventory by Location
   fetchInventoryByLocation: async () => {
@@ -167,7 +163,6 @@ export const useInventoryStore = create((set, get) => ({
       throw error;
     }
   },
-
 
   // Get Inventory Valuation
   fetchInventoryValuation: async (groupBy = "category") => {
@@ -399,5 +394,32 @@ export const useInventoryStore = create((set, get) => ({
       throw error;
     }
   },
-  
+
+  exportCSV: async () => {
+   
+    try {
+      const res = await axios.get("/inventory/export-csv", {
+        responseType: "blob", // Important for file downloads
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `inventory_export_${new Date().toISOString().split("T")[0]}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      toast.success("CSV export downloaded successfully!");
+
+    } catch (error) {
+      console.error("Error exporting CSV:", error);
+      toast.error("Failed to export CSV");
+      throw error;
+    }
+  },
 }));

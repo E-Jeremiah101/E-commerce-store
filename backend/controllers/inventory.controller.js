@@ -1484,3 +1484,204 @@ const generateAgingRecommendations = (buckets, totalValue) => {
 
   return recommendations;
 };
+
+export const exportInventoryCSV = async (req, res) => {
+  try {
+    console.log("📊 Generating CSV export...");
+    
+    // Fetch all products with variants
+    const products = await Product.find({
+      archived: { $ne: true },
+      "variants.0": { $exists: true }
+    }).select("name price category costPrice images variants countInStock createdAt updatedAt");
+
+    // Create CSV content
+    const headers = [
+      'Product ID',
+      'Product Name',
+      'Category',
+      'Product Price',
+      'Total Stock',
+      'Total Value',
+      'Variant ID',
+      'Variant Name',
+      'Size',
+      'Color',
+      'Variant SKU',
+      'Variant Price',
+      'Variant Stock',
+      'Variant Value',
+      'Low Stock Alert',
+      'Out of Stock',
+      'Last Updated',
+      'Created Date'
+    ];
+
+    const csvRows = [headers.join(',')];
+    
+    let totalInventoryValue = 0;
+    let totalStockCount = 0;
+    let totalProducts = 0;
+    let totalVariants = 0;
+    let outOfStockCount = 0;
+    let lowStockCount = 0;
+
+    // Process each product
+    products.forEach((product) => {
+      const productVariants = product.variants || [];
+      const productTotalStock = productVariants.reduce((sum, variant) => 
+        sum + (variant.countInStock || 0), 0
+      );
+      const productTotalValue = productVariants.reduce((sum, variant) => {
+        const variantPrice = variant.price || product.price;
+        const variantStock = variant.countInStock || 0;
+        return sum + variantPrice * variantStock;
+      }, 0);
+
+      totalInventoryValue += productTotalValue;
+      totalStockCount += productTotalStock;
+      totalProducts++;
+
+      // If product has variants, export each variant separately
+      if (productVariants.length > 0) {
+        productVariants.forEach((variant) => {
+          totalVariants++;
+          
+          const variantStock = variant.countInStock || 0;
+          const variantPrice = variant.price || product.price;
+          const variantValue = variantPrice * variantStock;
+          const variantName = `${variant.color || 'Default'} - ${variant.size || 'One Size'}`;
+          
+          const isLowStock = variantStock > 0 && variantStock <= 5;
+          const isOutOfStock = variantStock === 0;
+          
+          if (isOutOfStock) outOfStockCount++;
+          if (isLowStock) lowStockCount++;
+          
+          const row = [
+            `"${product._id}"`,
+            `"${product.name.replace(/"/g, '""')}"`,
+            `"${product.category || ''}"`,
+            product.price || 0,
+            productTotalStock,
+            productTotalValue,
+            `"${variant._id}"`,
+            `"${variantName.replace(/"/g, '""')}"`,
+            `"${variant.size || ''}"`,
+            `"${variant.color || ''}"`,
+            `"${variant.sku || ''}"`,
+            variantPrice,
+            variantStock,
+            variantValue,
+            isLowStock ? 'YES' : 'NO',
+            isOutOfStock ? 'YES' : 'NO',
+            `"${product.updatedAt.toISOString()}"`,
+            `"${product.createdAt.toISOString()}"`
+          ];
+
+          csvRows.push(row.join(','));
+        });
+      } else {
+        // Handle products without variants (fallback)
+        totalVariants++;
+        const isLowStock = productTotalStock > 0 && productTotalStock <= 5;
+        const isOutOfStock = productTotalStock === 0;
+        
+        if (isOutOfStock) outOfStockCount++;
+        if (isLowStock) lowStockCount++;
+        
+        const row = [
+          `"${product._id}"`,
+          `"${product.name.replace(/"/g, '""')}"`,
+          `"${product.category || ''}"`,
+          product.price || 0,
+          productTotalStock,
+          productTotalValue,
+          'N/A',
+          'No Variant',
+          'N/A',
+          'N/A',
+          'N/A',
+          product.price || 0,
+          productTotalStock,
+          productTotalValue,
+          isLowStock ? 'YES' : 'NO',
+          isOutOfStock ? 'YES' : 'NO',
+          `"${product.updatedAt.toISOString()}"`,
+          `"${product.createdAt.toISOString()}"`
+        ];
+
+        csvRows.push(row.join(','));
+      }
+    });
+
+    // Add summary section
+    csvRows.push('');
+    csvRows.push('SUMMARY');
+    csvRows.push(['Metric', 'Value'].join(','));
+    csvRows.push(['Total Products', totalProducts].join(','));
+    csvRows.push(['Total Variants', totalVariants].join(','));
+    csvRows.push(['Total Stock Units', totalStockCount].join(','));
+    csvRows.push(['Total Inventory Value', totalInventoryValue].join(','));
+    csvRows.push(['Out of Stock Variants', outOfStockCount].join(','));
+    csvRows.push(['Low Stock Variants', lowStockCount].join(','));
+    csvRows.push(['Report Date', new Date().toISOString()].join(','));
+    csvRows.push(['Generated By', `"${req.user?.firstname || 'System'} ${req.user?.lastname || ''}"`].join(','));
+
+    const csvContent = csvRows.join('\n');
+
+    // Set headers for file download
+    const timestamp = new Date().toISOString().split('T')[0];
+    const filename = `inventory_export_${timestamp}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    
+    // Audit log
+    await AuditLogger.log({
+      adminId: req.user._id,
+      adminName: `${req.user.firstname} ${req.user.lastname}`,
+      action: "INVENTORY_EXPORT_CSV",
+      entityType: ENTITY_TYPES.SYSTEM,
+      entityId: null,
+      entityName: "Inventory Export",
+      changes: {
+        exportDetails: {
+          totalProducts,
+          totalVariants,
+          totalStock: totalStockCount,
+          totalValue: totalInventoryValue,
+          filename
+        }
+      },
+      ...AuditLogger.getRequestInfo(req),
+      additionalInfo: `CSV export generated with ${totalProducts} products and ${totalVariants} variants`
+    });
+
+    res.send(csvContent);
+    console.log(`✅ CSV export generated: ${filename} (${totalProducts} products, ${totalVariants} variants)`);
+
+  } catch (error) {
+    console.error("❌ Error exporting inventory to CSV:", error);
+    
+    // Log error
+    await AuditLogger.log({
+      adminId: req.user._id,
+      adminName: `${req.user.firstname} ${req.user.lastname}`,
+      action: "INVENTORY_EXPORT_CSV_FAILED",
+      entityType: ENTITY_TYPES.SYSTEM,
+      entityId: null,
+      entityName: "Failed Export",
+      changes: {
+        error: error.message
+      },
+      ...AuditLogger.getRequestInfo(req),
+      additionalInfo: "CSV export failed"
+    });
+    
+    res.status(500).json({ 
+      message: "Failed to export inventory", 
+      error: error.message 
+    });
+  }
+};
