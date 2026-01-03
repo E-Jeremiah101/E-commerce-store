@@ -484,10 +484,10 @@ export const getInventoryDashboard = async (req, res) => {
     );
 
     // For demo - you'll need actual order data for real turnover
-    const inventoryTurnover = totalVariantStock > 0 ? 
-      (totalUnitsSoldLast30Days / totalVariantStock).toFixed(2) : 0;
+    // const inventoryTurnover = totalVariantStock > 0 ? 
+    //   (totalUnitsSoldLast30Days / totalVariantStock).toFixed(2) : 0;
 
-    // Prepare fast moving products - USE ACTUAL ORDER DATA
+    // Prepare fast moving products 
     let fastMovingProducts = [];
     let hasOrderData = false;
 
@@ -543,14 +543,14 @@ export const getInventoryDashboard = async (req, res) => {
         totalStockValue,
         lowStockCount: lowStockProducts.length,
         outOfStockCount: outOfStockProducts.length,
-        inventoryTurnover,
+        // inventoryTurnover,
         // ORDER STATS - FROM ACTUAL ORDERS
         totalOrdersLast30Days: stats.totalOrders,
         deliveredOrdersLast30Days: stats.deliveredOrders,
         totalRevenueLast30Days: stats.totalRevenue,
         totalSalesLast30Days: totalUnitsSoldLast30Days,
         hasOrderData: hasOrderData,
-        totalVariantStock, // Add this for debugging
+        totalVariantStock, // Added this for debugging
       },
       fastMovingProducts,
       alerts: {

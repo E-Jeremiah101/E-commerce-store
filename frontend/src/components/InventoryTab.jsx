@@ -445,14 +445,6 @@ const StatCard = ({ title, value, icon: Icon, trend, color }) => {
         <div>
           <p className="text-sm font-medium opacity-80">{title}</p>
           <p className="text-2xl font-bold mt-2">{value}</p>
-          <div className="flex items-center gap-1 mt-2">
-            {trend?.startsWith("+") ? (
-              <TrendingUp className="h-4 w-4" />
-            ) : (
-              <TrendingDown className="h-4 w-4" />
-            )}
-            <span className="text-sm">{trend}</span>
-          </div>
         </div>
         <div className="p-3 rounded-lg bg-white bg-opacity-50">
           <Icon className="h-6 w-6" />
@@ -2253,21 +2245,18 @@ const DashboardView = ({ data, settings }) => (
           formatPrice(data?.summary?.totalStockValue, settings?.currency) || "0"
         }`}
         icon={DollarSign}
-        trend="+12.5%"
         color="blue"
       />
       <StatCard
         title="Low Stock"
         value={data.summary?.lowStockCount || 0}
         icon={AlertTriangle}
-        trend="+3"
         color="yellow"
       />
       <StatCard
         title="Total Products"
         value={data.summary?.totalProducts || 0}
         icon={Layers}
-        trend="+5"
         color="green"
       />
     </div>
@@ -2323,7 +2312,7 @@ const DashboardView = ({ data, settings }) => (
                       src={product.image}
                       alt={product.name}
                       loading="lazy"
-                      className="h-10 w-10 md:h-12 md:w-12 rounded-lg object-cover border"
+                      className="h-12 w-12 md:h-13 md:w-13 rounded-lg object-cover "
                     />
                   ) : (
                     <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg bg-gray-100 border flex items-center justify-center">
@@ -2375,9 +2364,9 @@ const DashboardView = ({ data, settings }) => (
                   {product.source === "orders" ? "Revenue" : "Stock Value"}
                 </p>
 
-                {product.price > 0 && (
+                {product.orderCount > 1 && (
                   <p className="text-xs text-gray-500 mt-1">
-                    {formatPrice(product?.price, settings?.currency)} each
+                    {formatPrice(product?.price, settings?.currency)}{" "}each
                   </p>
                 )}
               </div>
