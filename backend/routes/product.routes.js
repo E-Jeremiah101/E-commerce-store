@@ -23,6 +23,8 @@ import {
   getArchivedProducts,
   exportProductsCSV,
   exportProductsDetailedCSV,
+  trackProductView,
+  getRecentlyViewedProducts,
 } from "../controllers/product.controller.js";
 
 import {
@@ -31,8 +33,8 @@ import {
   updateProductPrice,
   getPriceHistory,
 } from "../controllers/price.controller.js";
-import { protectRoute } from "../middleware/auth.middleware.js";
-import { adminRoute } from "../middleware/auth.middleware.js";
+import { protectRoute, adminRoute} from "../middleware/auth.middleware.js";
+import { authenticateOptional } from "../middleware/authOptional.middleware.js";
 import { requirePermission } from "../middleware/permission.middleware.js";
 
 const router = express.Router();
@@ -85,6 +87,8 @@ router.delete(
   requirePermission("product:read"),
   clearFeaturedCache
 );
+router.get("/recently-viewed", authenticateOptional, getRecentlyViewedProducts);
+
 router.get(
   "/export/csv",
   protectRoute,
@@ -92,6 +96,7 @@ router.get(
   requirePermission("product:read"),
   exportProductsCSV
 );
+
 
 router.get(
   "/export/detailed-csv",
@@ -171,7 +176,7 @@ router.put(
 );
 
 // FINALLY: Generic /:id routes (should come LAST)
-router.get("/:id", getProductById);
+router.get("/:id", authenticateOptional, trackProductView, getProductById);
 router.patch(
   "/:id",
   protectRoute,

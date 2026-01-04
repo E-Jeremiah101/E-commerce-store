@@ -17,7 +17,7 @@ export const useProductStore = create((set, get) => ({
         loading: false,
       }));
       toast.success("Product created successfully!");
-      return true; 
+      return true;
     } catch (error) {
       console.error(
         "Error creating product:",
@@ -40,7 +40,19 @@ export const useProductStore = create((set, get) => ({
       console.debug("Unable to load products.", error?.message || error);
       set({ loading: false });
     }
+  }, 
+
+  fetchRecentlyViewed: async () => {
+    set({ loading: true });
+    try {
+      const response = await axios.get("/api/products/recently-viewed");
+      set({ products: response.data.products, loading: false });
+    } catch (error) {
+      console.error("Error fetching recently viewed:", error);
+      set({ products: [], loading: false });
+    }
   },
+   
   fetchProductsByCategory: async (category) => {
     set({ loading: true });
     try {

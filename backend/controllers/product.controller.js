@@ -5,7 +5,7 @@ import {optimizeCloudinaryUrl} from "../lib/optimizeCloudinaryUrl.js";
 import Category from "../models/categoy.model.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
-
+import { addToRecentlyViewed } from "../lib/recentlyViewed.js";
 export const clearFeaturedCache = async (req, res) => {
   try {
     await redis.del("featured_products");
@@ -1023,6 +1023,147 @@ export const getArchivedProducts = async (req, res) => {
   }
 };
 
+
+export const trackProductView = async (req, res, next) => {
+  try {
+    console.log("🔍 trackProductView called:", {
+      userId: req.user?._id,
+      userEmail: req.user?.email,
+      isGuest: !req.user,
+      productId: req.params.id,
+      hasUser: !!req.user,
+    });
+
+    if (!req.params.id) {
+      console.log("⚠️ Skipping tracking - no product ID");
+      return next();
+    }
+
+    // Fetch the product
+    const product = await Product.findById(req.params.id)
+      .select(
+        "name price images category variants previousPrice isPriceSlashed"
+      )
+      .lean();
+
+    if (!product) {
+      console.log("⚠️ Product not found for tracking");
+      return next();
+    }
+
+    console.log("📦 Product found:", product.name);
+
+    // Calculate total variant stock
+    const totalVariantStock =
+      product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) || 0;
+
+    // Calculate discount if slashed
+    const discountPercentage =
+      product.isPriceSlashed && product.previousPrice
+        ? (
+            ((product.previousPrice - product.price) / product.previousPrice) *
+            100
+          ).toFixed(1)
+        : null;
+
+    // Create a standardized product object with consistent ID format
+    const productWithStock = {
+      _id: product._id.toString(), // Always string
+      name: product.name,
+      price: product.price,
+      images: product.images,
+      category: product.category,
+      variants: product.variants || [],
+      countInStock: totalVariantStock,
+      discountPercentage,
+      previousPrice: product.previousPrice,
+      isPriceSlashed: product.isPriceSlashed,
+      // Add any other fields you want to store
+    };
+
+    // Import dynamically
+    const { addToRecentlyViewed } = await import("../lib/recentlyViewed.js");
+
+    // For logged-in users: use their user ID
+    if (req.user?._id) {
+      console.log(
+        "📝 Adding to recently viewed for logged-in user:",
+        req.user._id
+      );
+      await addToRecentlyViewed(req.user._id.toString(), productWithStock);
+      console.log("✅ Added to recently viewed (user)");
+    }
+    // For guests: generate a unique ID
+    else {
+      const guestIdentifier = generateGuestIdentifier(req);
+      console.log("📝 Adding to recently viewed for guest:", guestIdentifier);
+      await addToRecentlyViewed(`guest:${guestIdentifier}`, productWithStock);
+      console.log("✅ Added to recently viewed (guest)");
+    }
+
+    next();
+  } catch (error) {
+    console.error("❌ Error tracking product view:", error);
+    next();
+  }
+};
+
+// Helper function to generate guest identifier
+const generateGuestIdentifier = (req) => {
+  // Use IP + User-Agent as identifier
+  const ip = req.ip || req.connection.remoteAddress || "unknown";
+  const userAgent = req.headers["user-agent"] || "unknown";
+
+  // Create a simple hash
+  const combined = `${ip}-${userAgent}`;
+  let hash = 0;
+
+  for (let i = 0; i < combined.length; i++) {
+    const char = combined.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+
+  return Math.abs(hash).toString(16).slice(0, 12);
+};
+
+// Get recently viewed products for the current user
+export const getRecentlyViewedProducts = async (req, res) => {
+  try {
+    console.log("🔍 getRecentlyViewedProducts called:", {
+      userId: req.user?._id,
+      userEmail: req.user?.email,
+      isGuest: !req.user,
+      hasUser: !!req.user,
+    });
+
+    // Import dynamically
+    const { getRecentlyViewed } = await import("../lib/recentlyViewed.js");
+    let recentlyViewed = [];
+
+    // For logged-in users
+    if (req.user?._id) {
+      console.log("📊 Fetching recently viewed for user:", req.user._id);
+      recentlyViewed = await getRecentlyViewed(req.user._id.toString(), 12);
+    }
+    // For guests
+    else {
+      const guestIdentifier = generateGuestIdentifier(req);
+      console.log("📊 Fetching recently viewed for guest:", guestIdentifier);
+      recentlyViewed = await getRecentlyViewed(`guest:${guestIdentifier}`, 8);
+    }
+
+    console.log("📦 Recently viewed found:", recentlyViewed.length);
+
+    // Return what we have (could be empty array)
+    res.json({ products: recentlyViewed });
+  } catch (error) {
+    console.error("❌ Error getting recently viewed products:", error);
+    // Return empty array on error (NO FALLBACK)
+    res.json({ products: [] });
+  }
+};
+
 // Restore archived product
 export const restoreProduct = async (req, res) => {
   try {
@@ -1311,5 +1452,3 @@ export const exportProductsDetailedCSV = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
- 

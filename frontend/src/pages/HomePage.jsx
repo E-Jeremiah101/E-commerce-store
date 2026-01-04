@@ -12,6 +12,7 @@ import HeroSlider from "../components/HeroSlider.jsx";
 import OtherFeatures from "../components/OtherFeatures.jsx";
 import LandingProducts from "../components/LandingProducts.jsx";
 import { SEO, OrganizationSchema } from "../components/SEO";
+import RecentlyViewed from "../components/RecentlyViewed.jsx";
 
 const HomePageContent = () => {
   const { settings } = useStoreSettings();
@@ -141,13 +142,19 @@ const HomePageContent = () => {
               ))}
             </div>
           ) : (
-            ""
+            <div className="flex gap-4 overflow-hidden">
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-10 bg-gray-200 rounded-full animate-pulse min-w-20"
+                ></div>
+              ))}
+            </div>
           )}
         </div>
       </div>
 
-
-{/* Mediuma and large screen */}
+      {/* Mediuma and large screen */}
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 root lg:px-25">
         {isLoadingCategories ? (
@@ -165,10 +172,13 @@ const HomePageContent = () => {
             isLoading={isLoadingRecommendations}
           />
         ) : (
-          <div className="text-center py-12">
-            <div className="text-gray-500 text-lg mb-4">
-              No categories found
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+            {[...Array(14)].map((_, i) => (
+              <div
+                key={i}
+                className="h-48 bg-gray-200 rounded-lg animate-pulse"
+              ></div>
+            ))}
           </div>
         )}
 
@@ -182,6 +192,7 @@ const HomePageContent = () => {
         )}
 
         <FAQSection className="look" />
+        <RecentlyViewed className="look" />
       </div>
 
       <Footer />

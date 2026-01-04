@@ -557,7 +557,7 @@ export const getInventoryDashboard = async (req, res) => {
         lowStock: lowStockProducts.slice(0, 5),
         outOfStock: outOfStockProducts.slice(0, 5),
       },
-    });
+    }); 
   } catch (error) {
     console.error("Error getting inventory dashboard:", error);
     res.status(500).json({ message: "Server error", error: error.message });
