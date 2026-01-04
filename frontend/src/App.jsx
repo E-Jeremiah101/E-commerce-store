@@ -181,7 +181,7 @@ const ArchivedProductsList = lazy(() =>
   import("./components/ArchivedProductsList.jsx")
 );
 const ArchivedAuditLogsTab = lazy(() => import("./components/ArchivedAuditLogsTab.jsx"));
-const RecentlyViewedPage = lazy(() => import("./pages/RecentlyViewedPage.jsx"));
+
 
 function App() {
   useTrackVisitors();
@@ -292,7 +292,7 @@ function App() {
             path="/admin/products/archived-product"
             element={user ? <ArchivedProductsList /> : <Navigate to="/" />}
           />
-          <Route path="/recently-viewed" element={<RecentlyViewedPage />} />
+          
           <Route
             path="/admin/audit/archived-audit-logs"
             element={user ? <ArchivedAuditLogsTab /> : <Navigate to="/" />}

@@ -281,12 +281,12 @@ const RecentlyViewed = () => {
       <div className="mb-8 bg-white py-10 px-4 sm:px-6 lg:px-8 ">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex justify-center items-center mb-6">
+          <div className="flex justify-center items-center mb-5">
             <div className="text-center">
               <h1 className="text-3xl md:text-4xl font-medium tracking-normal mb-5 text-gray-900">
                 Recently Viewed
               </h1>
-              <div className="h-px w-16 bg-gray-400 mx-auto mb-6"></div>
+              <div className="h-px w-16 bg-gray-400 mx-auto mb-2"></div>
             </div>
           </div>
 
