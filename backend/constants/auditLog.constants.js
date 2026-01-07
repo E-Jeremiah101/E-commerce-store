@@ -1,4 +1,3 @@
-// constants/audit.constants.js
 export const ENTITY_TYPES = {
   PRODUCT: "Product",
   ORDER: "Order",

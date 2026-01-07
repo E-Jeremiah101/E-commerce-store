@@ -2,7 +2,7 @@ import express from "express";
 import {
   saveProduct,
   unsaveProduct,
-  getSavedProducts,
+  getSavedProducts, 
   checkProductSaved,
 } from "../controllers/savedProduct.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";

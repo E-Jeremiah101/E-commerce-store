@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useProductStore } from "../stores/useProductStore.js";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
@@ -19,8 +20,10 @@ const HomePageContent = () => {
   const [categories, setCategories] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [isLoadingRecommendations, setIsLoadingRecommendations] =
-    useState(true);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
+  
+  const hasShownInitialRecommendations = useRef(false);
 
   const {
     fetchFeaturedProducts,
@@ -28,7 +31,6 @@ const HomePageContent = () => {
     loading: isLoadingProducts,
   } = useProductStore();
 
-  // Fetch dynamic categories from backend
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -44,26 +46,104 @@ const HomePageContent = () => {
     fetchCategories();
   }, []);
 
-  // Fetch featured products
   useEffect(() => {
     fetchFeaturedProducts();
   }, [fetchFeaturedProducts]);
 
-  // Fetch random recommendations - ONLY ONCE
   useEffect(() => {
+    const CACHE_KEY = "cached_recommendations";
+    const CACHE_TIME_KEY = "cached_recommendations_time";
+    const REFRESH_INTERVAL = 2 * 60 * 1000; 
+
     const fetchRecommendations = async () => {
-      try {
-        const res = await axios.get("/products/recommendations");
-        setRecommendations(res.data);
-      } catch (error) {
-        setRecommendations([]);
-        console.error(error);
-      } finally {
-        setIsLoadingRecommendations(false);
+      const cached = localStorage.getItem(CACHE_KEY);
+      const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
+      
+    
+      if (cached) {
+        setRecommendations(JSON.parse(cached));
+        hasShownInitialRecommendations.current = true;
       }
+      
+      const isCacheExpired = !cachedTime || 
+        (Date.now() - parseInt(cachedTime) > REFRESH_INTERVAL);
+      
+     
+      if (!cached || isCacheExpired) {
+        try {
+          const res = await axios.get("/products/recommendations");
+          const freshData = res.data;
+          setRecommendations(freshData);
+          localStorage.setItem(CACHE_KEY, JSON.stringify(freshData));
+          localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
+        } catch (error) {
+          console.error("Error fetching fresh recommendations:", error);
+   
+          if (!cached) {
+            setRecommendations([]);
+          }
+        }
+      }
+      
+      setIsLoadingRecommendations(false);
     };
+
     fetchRecommendations();
   }, []);
+
+  useEffect(() => {
+    if (!isLoadingCategories && !isLoadingRecommendations && !isLoadingProducts) {
+
+      setTimeout(() => {
+        setIsInitialLoadComplete(true);
+      }, 100);
+    }
+  }, [isLoadingCategories, isLoadingRecommendations, isLoadingProducts]);
+
+
+  if (!isInitialLoadComplete) {
+    return (
+      <div className="min-h-screen bg-white">
+        {/* Hero skeleton */}
+        <div className="h-64 md:h-96 bg-gray-200 animate-pulse"></div>
+        
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Categories skeleton */}
+          <div className="hidden md:flex justify-center gap-6 mb-8">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="h-6 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+            ))}
+          </div>
+          
+          {/* Mobile categories skeleton */}
+          <div className="md:hidden mb-6">
+            <div className="flex gap-3 overflow-hidden">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Products skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-12">
+            {[...Array(12)].map((_, i) => (
+              <div key={i} className="h-80 bg-gray-100 rounded-lg animate-pulse"></div>
+            ))}
+          </div>
+          
+          {/* Featured products skeleton */}
+          <div className="mb-12">
+            <div className="h-8 w-48 bg-gray-200 rounded-lg animate-pulse mb-6"></div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-64 bg-gray-100 rounded-lg animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -74,12 +154,8 @@ const HomePageContent = () => {
     >
       {/* SEO Meta Tags */}
       <SEO
-        title={`${
-          settings?.storeName || "Store"
-        } - Quality Products at Great Prices`}
-        description={`Shop at ${
-          settings?.storeName || "Store"
-        } for quality products with fast shipping and secure payments. Discover great deals on trending items.`}
+        title={`${settings?.storeName || "Store"} - Quality Products at Great Prices`}
+        description={`Shop at ${settings?.storeName || "Store"} for quality products with fast shipping and secure payments. Discover great deals on trending items.`}
         image={settings?.logo || "/logo-buz.jpg"}
       />
 
@@ -88,7 +164,7 @@ const HomePageContent = () => {
 
       {/* HERO SLIDER */}
       <motion.div
-        className="relative  pt-2  md:py-0"
+        className="relative pt-2 md:py-0"
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.2 }}
@@ -96,6 +172,7 @@ const HomePageContent = () => {
         <HeroSlider />
       </motion.div>
 
+      {/* Desktop Categories */}
       <div className="hidden md:flex justify-center items-center text-black mb-5 mt-9 look">
         <ul className="flex flex-wrap justify-center gap-x-7 gap-y-6 px-30 max-w-5xl text-sm text-center tracking-widest">
           {categories.map((category) => (
@@ -110,18 +187,10 @@ const HomePageContent = () => {
         </ul>
       </div>
 
+      {/* Mobile Categories */}
       <div className="bg-white pb-4 py-6 border-b md:hidden">
         <div className="max-w-7xl mx-auto px-4">
-          {isLoadingCategories ? (
-            <div className="flex gap-4 overflow-hidden">
-              {[...Array(8)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-10 bg-gray-200 rounded-full animate-pulse min-w-20"
-                ></div>
-              ))}
-            </div>
-          ) : categories.length > 0 ? (
+          {categories.length > 0 ? (
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide no-scroll">
               {/* All Categories Button */}
               <button className="flex-shrink-0 px-4 py-2 bg-black text-white rounded hover:bg-gray-800 transition-colors whitespace-nowrap uppercase">
@@ -154,40 +223,21 @@ const HomePageContent = () => {
         </div>
       </div>
 
-      {/* Mediuma and large screen */}
-
+      {/* Main Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 root lg:px-25">
-        {isLoadingCategories ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {[...Array(14)].map((_, i) => (
-              <div
-                key={i}
-                className="h-48 bg-gray-200 rounded-lg animate-pulse"
-              ></div>
-            ))}
-          </div>
-        ) : categories.length > 0 ? (
+
+        {recommendations.length > 0 && (
           <LandingProducts
             recommendations={recommendations}
-            isLoading={isLoadingRecommendations}
+            isLoading={false} 
           />
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-            {[...Array(14)].map((_, i) => (
-              <div
-                key={i}
-                className="h-48 bg-gray-200 rounded-lg animate-pulse"
-              ></div>
-            ))}
-          </div>
         )}
 
-        {/* TITLE SECTION */}
-
+        {/* Other Features */}
         <OtherFeatures className="look" />
 
-        {/* FEATURED PRODUCTS */}
-        {!isLoadingProducts && products.length > 0 && (
+       
+        {products.length > 0 && (
           <FeaturedProducts className="look" featuredProducts={products} />
         )}
 

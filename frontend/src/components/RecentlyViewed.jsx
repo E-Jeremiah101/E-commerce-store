@@ -24,7 +24,6 @@ const RecentlyViewed = () => {
   const [isTablet, setIsTablet] = useState(false);
   const [savedProducts, setSavedProducts] = useState({});
 
-  // Touch swipe state
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -38,7 +37,7 @@ const RecentlyViewed = () => {
 
   useEffect(() => {
     const fetchRecentlyViewed = async () => {
-      console.log("🔄 Fetching recently viewed:", {
+      console.log(" Fetching recently viewed:", {
         user: !!user,
         userId: user?._id,
       });
@@ -46,14 +45,14 @@ const RecentlyViewed = () => {
       try {
         setLoading(true);
         const response = await axios.get("/products/recently-viewed");
-        console.log("📦 Recently viewed response:", {
+        console.log(" Recently viewed response:", {
           count: response.data.products?.length,
           products: response.data.products?.map((p) => p.name),
         });
 
         setRecentlyViewed(response.data.products || []);
       } catch (error) {
-        console.error("❌ Error fetching recently viewed:", error);
+        console.error(" Error fetching recently viewed:", error);
         setRecentlyViewed([]);
       } finally {
         setLoading(false);
@@ -63,7 +62,7 @@ const RecentlyViewed = () => {
     fetchRecentlyViewed();
   }, [user]);
 
-  // Check saved status for all products
+
   useEffect(() => {
     if (user && recentlyViewed?.length > 0) {
       recentlyViewed.forEach((product) => {

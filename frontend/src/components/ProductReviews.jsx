@@ -17,8 +17,6 @@ const ProductReviews = ({ productId }) => {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   
-
-  // Load all reviews
   const fetchReviews = async () => {
     try {
       const data = await getProductReviews(productId);
@@ -28,7 +26,6 @@ const ProductReviews = ({ productId }) => {
     }
   };
 
-  // Check if user can review
   const checkCanReview = async () => {
     try {
       console.log(" Checking canReview for:", productId);
@@ -40,25 +37,23 @@ const ProductReviews = ({ productId }) => {
     }
   };
 
-  // Load reviews always
   useEffect(() => {
     console.log("Product ID:", productId);
     fetchReviews();
   }, [productId]);
 
-  // Ensure user is loaded from store or backend
+
   useEffect(() => {
     if (!user && fetchUser) {
-      console.log(" No user yet → fetching user...");
+      console.log(" No user yet fetching user...");
       fetchUser();
     }
   }, []);
 
-  // Run eligibility check only when user becomes available
   useEffect(() => {
     console.log(" User in ProductReviews:", user);
     if (user) {
-      console.log(" User available → Checking canReview...");
+      console.log(" User available  Checking canReview...");
       checkCanReview();
     }
   }, [user, productId]);
@@ -66,7 +61,6 @@ const ProductReviews = ({ productId }) => {
   const handleAddReview = async (e) => {
     e.preventDefault();
 
-    // Custom validation before calling backend
     if (rating === 0 && comment.trim() === "") {
       toast.error("Please add a star rating or write a review comment.");
       return;
@@ -90,7 +84,7 @@ const ProductReviews = ({ productId }) => {
       setCanReview(false);
       fetchReviews();
     } catch (err) {
-      console.error("❌ Error adding review:", err);
+      console.error(" Error adding review:", err);
       toast.error("Failed to submit review");
     }
   };
@@ -98,8 +92,8 @@ const ProductReviews = ({ productId }) => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    const day = String(date.getDate()).padStart(2, "0"); // Day with leading zero
-    const month = String(date.getMonth() + 1).padStart(2, "0"); // Month is 0-indexed
+    const day = String(date.getDate()).padStart(2, "0"); 
+    const month = String(date.getMonth() + 1).padStart(2, "0"); 
     const year = date.getFullYear();
     return `${day}-${month}-${year}`;
   };
@@ -169,7 +163,7 @@ const ProductReviews = ({ productId }) => {
       {canReview && (
         <form onSubmit={handleAddReview} className="mt-6 space-y-3">
           <h4 className="font-semibold tracking-widest">Add your review</h4>
-          {/* ⭐ Star Rating Input */}
+          {/*  Star Rating Input */}
 
           <div className="mb-3">
             <label className="block font-medium mb-1">Your Rating:</label>

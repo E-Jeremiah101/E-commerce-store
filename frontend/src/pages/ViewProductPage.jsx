@@ -14,6 +14,7 @@ import DOMPurify from "dompurify";
 import ProductReviews from "../components/ProductReviews";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
+import RecentlyViewed from "../components/RecentlyViewed.jsx";
 
 
 const ViewProductPageContent = () => {
@@ -553,6 +554,8 @@ const ViewProductPageContent = () => {
       <div id="product-reviews">
         <ProductReviews productId={product._id} />
       </div>
+
+      <RecentlyViewed className="look" />
     </div>
   );
 };

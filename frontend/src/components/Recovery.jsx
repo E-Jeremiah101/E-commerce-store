@@ -31,7 +31,7 @@ const Recovery = () => {
 
         setResult({
           type: hasOutOfStock ? "warning" : "success",
-          message: `✅ ${response.data.message}`,
+          message: ` ${response.data.message}`,
           data: response.data,
           details: `
 ORDER RECOVERED SUCCESSFULLY!
@@ -77,7 +77,7 @@ This order already exists in the system.
       } else {
         setResult({
           type: "error",
-          message: `❌ ${error.response?.data?.error || "Recovery failed"}`,
+          message: `${error.response?.data?.error || "Recovery failed"}`,
           details: `
 Error: ${error.response?.data?.error || error.message}
 ${
