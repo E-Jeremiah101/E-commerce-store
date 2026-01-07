@@ -74,9 +74,9 @@ const ProductCard = ({ product }) => {
 
   return (
     <div className="flex-w-full relative flex-col h-full overflow-hidden border-gray-700">
-      <div className="absolute top-1 right-1 z-10">
+      <div className="absolute -top-1 -right-0 z-10">
         {product.isPriceSlashed && product.previousPrice && (
-          <span className="bg-red-100 text-red-800 rounded text-[0.60rem] font-medium px-1 py-1">
+          <span className="bg-red-100 text-red-800 text-xs font-medium px-1 py-1">
             {Math.round(product.discountPercentage)}% OFF
           </span>
         )}
@@ -96,8 +96,8 @@ const ProductCard = ({ product }) => {
 
           {/* Out of Stock Overlay */}
           {product.countInStock === 0 && (
-            <div className="absolute top-0 left-0 w-full h-full bg-black/40 bg-opacity-50 flex items-start justify-start p-1">
-              <span className="bg-red-600 text-white text-[0.60rem]  px-2 py-1 rounded shadow-md">
+            <div className="absolute inset-0 bg-black/40 bg-opacity-50 flex items-center justify-center">
+              <span className="bg-red-600 text-white text-xs font-bold px-3 py-2 rounded-sm shadow-lg">
                 OUT OF STOCK
               </span>
             </div>

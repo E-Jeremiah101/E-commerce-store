@@ -345,23 +345,23 @@ const RecentlyViewed = () => {
                                 alt={product.name}
                               />
 
-                              {/* Dark overlay for better contrast */}
+                              
                               <div className="absolute inset-0 bg-black opacity-10" />
 
                               {/* Out of Stock Overlay */}
                               {product.countInStock === 0 && (
-                                <div className="absolute top-0 left-0 w-full h-full bg-black/40 bg-opacity-50 flex items-start justify-start p-1">
-                                  <span className="bg-red-600 text-white text-xs px-2 py-1 rounded shadow-md">
+                                <div className="absolute inset-0 bg-black/40 bg-opacity-50 flex items-center justify-center">
+                                  <span className="bg-red-600 text-white text-xs font-bold px-3 py-2 rounded-sm shadow-lg">
                                     OUT OF STOCK
                                   </span>
                                 </div>
                               )}
 
                               {/* Discount Badge */}
-                              <div className="absolute top-0 right-0 h-full bg-opacity-50 flex items-start justify-start p-1">
+                              <div className="absolute top-0 right-0 h-full bg-opacity-50 flex items-start justify-start ">
                                 {product.isPriceSlashed &&
                                   product.previousPrice && (
-                                    <span className="bg-red-100 text-red-800 rounded text-xs px-2 py-1">
+                                    <span className="bg-red-100 text-red-800  text-xs px-2 py-1">
                                       {Math.round(product.discountPercentage)}%
                                       OFF
                                     </span>
