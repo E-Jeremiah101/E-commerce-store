@@ -15,14 +15,12 @@ import {
   XCircle as CloseIcon,
   RefreshCw,
   BarChart,
-  BarChart3,
   CheckCircle,
   XCircle,
   Plus,
   Minus,
   FileText,
   Tag,
-  Filter,
   Search,
   Calendar,
   MapPin,
@@ -69,11 +67,11 @@ const InventoryTab = () => {
     filters,
   } = useInventoryStore();
 
-  useEffect(() => {
-    console.log("📊 Stock Levels Data:", stockLevels);
-    console.log("📊 First Product:", stockLevels[0]);
-    console.log("📊 First Product Variants:", stockLevels[0]?.variants);
-  }, [stockLevels]);
+  // useEffect(() => {
+  //   console.log("📊 Stock Levels Data:", stockLevels);
+  //   console.log("📊 First Product:", stockLevels[0]);
+  //   console.log("📊 First Product Variants:", stockLevels[0]?.variants);
+  // }, [stockLevels]);
 
   const { user } = useUserStore();
   const [showAdjustModal, setShowAdjustModal] = useState(false);
@@ -253,7 +251,7 @@ const InventoryTab = () => {
     }
   };
 
-  if (loading)
+  if (loading && !DashboardView)
       return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-8">
           <div className="flex flex-col items-center justify-center h-96">
@@ -288,6 +286,7 @@ const InventoryTab = () => {
                 Inventory Management
               </h1>
             </div>
+            
             <div className="flex items-center gap-3 mt-4 sm:mt-0">
               {/* Export - Green Gradient */}
               <button
@@ -2482,7 +2481,7 @@ const LowStockView = ({ alerts, onAdjust, loading }) => {
   const lowStockCount = alerts.filter(a => a.status === "low").length;
   const totalAlerts = alerts.length;
 
-  // Group by product for summary
+
   const groupedAlerts = alerts.reduce((groups, alert) => {
     const productId = alert.productId || alert.id.split("-")[0];
     if (!groups[productId]) {
@@ -2534,31 +2533,18 @@ const LowStockView = ({ alerts, onAdjust, loading }) => {
 
   return (
     <div className="p-6">
-      {/* Header with accurate counts */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
               Stock Alert Dashboard
             </h1>
-            <p className="text-gray-600 mt-2">
+            <p className="text-gray-600 text-sm font-semibold mt-2">
               {totalAlerts} total alerts across {affectedProducts} products
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Out of Stock</p>
-              <p className="text-2xl font-bold text-red-600">
-                {outOfStockCount}
-              </p>
-            </div>
             <div className="h-8 w-px bg-gray-300"></div>
-            <div className="text-right">
-              <p className="text-sm text-gray-500">Low Stock</p>
-              <p className="text-2xl font-bold text-yellow-600">
-                {lowStockCount}
-              </p>
-            </div>
             <div className="h-8 w-px bg-gray-300"></div>
             <div className="text-right">
               <p className="text-sm text-gray-500">Total Alerts</p>
@@ -3264,9 +3250,6 @@ const AgingReportView = ({ data }) => {
                     <p className="text-gray-600 text-sm mt-1">{rec.message}</p>
                     <button className="mt-3 text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1">
                       {rec.action}
-                      <span className="transition-transform duration-200 group-hover:translate-x-1">
-                        →
-                      </span>
                     </button>
                   </div>
                 </div>
@@ -3695,7 +3678,7 @@ const LocationsView = ({ locations, settings, loading }) => {
               src={settings?.logo}
               alt={settings?.storeName}
               loading="lazy"
-              className="h-16 md:h-20 w-auto" // Responsive height
+              className="h-16 md:h-20 w-auto" 
             />
           </div>
         </div>
@@ -3710,7 +3693,7 @@ const LocationsView = ({ locations, settings, loading }) => {
           </div>
           <div className="bg-white bg-opacity-20 p-4 rounded-lg">
             <p className="text-sm text-gray-900">Total Inventory Value</p>
-            <p className="text-2xl font-smibold mt-2 text-black">
+            <p className="text-2xl font-semibold mt-2 text-black">
               {formatPrice(location?.totalValue, settings?.currency)}
             </p>
             <p className="text-xs text-gray-800 mt-1">Current value</p>
@@ -4075,7 +4058,6 @@ const LocationsView = ({ locations, settings, loading }) => {
             <p className="text-sm text-gray-600">Value at Risk</p>
             <p className="text-2xl font-bold text-red-600">
               {formatPrice(0, settings?.currency)}{" "}
-              {/* This would need calculation of out-of-stock value */}
             </p>
           </div>
         </div>

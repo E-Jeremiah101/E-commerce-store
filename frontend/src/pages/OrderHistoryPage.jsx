@@ -1,6 +1,5 @@
 import { motion } from "framer-motion";
-import React, { useEffect, useState } from "react";
-import { useProductStore } from "../stores/useProductStore.js";
+import  { useState } from "react";
 import { SEO } from "../components/SEO";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import Ongoing from "../components/Ongoing.jsx";

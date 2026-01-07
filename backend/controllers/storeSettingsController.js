@@ -11,8 +11,6 @@ export const getStoreSettings = async (req, res) => {
   res.json(settings);
 };
 
-
-
 export const updateStoreSettings = async (req, res) => {
   const {
     storeName,

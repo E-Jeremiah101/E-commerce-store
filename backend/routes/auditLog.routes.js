@@ -10,7 +10,6 @@ import {
   getPriceHistory,
 } from "../controllers/auditLog.controller.js";
 
-// Import archive controllers
 import {
   getArchives,
   getArchiveById,
@@ -25,7 +24,6 @@ import { requirePermission } from "../middleware/permission.middleware.js";
 
 const router = express.Router();
 
-// Existing routes
 router.get(
   "/",
   protectRoute,
@@ -38,8 +36,6 @@ router.get("/export", protectRoute, adminRoute, exportAuditLogs);
 router.get("/:id", protectRoute, adminRoute, getAuditLogById);
 router.get("/price-history", protectRoute, adminRoute, getPriceHistory);
 
-// **IMPORTANT: Put specific routes BEFORE parameterized routes**
-// Archive routes - specific endpoints first
 router.get(
   "/archives/list",
   protectRoute,
@@ -62,7 +58,6 @@ router.post(
   triggerManualArchive
 );
 
-// Archive parameterized routes - these should come AFTER specific routes
 router.get(
   "/archives/download/:id",
   protectRoute,

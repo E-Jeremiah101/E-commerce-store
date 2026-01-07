@@ -17,7 +17,7 @@ import { requirePermission } from "../middleware/permission.middleware.js";
 
 const router = express.Router();
 
-// All routes are protected and admin only
+
 router.use(
   protectRoute,
   adminRoute,
@@ -25,23 +25,18 @@ router.use(
   requirePermission("product:read")
 );
 
-//  Stock Dashboard  
+ 
 router.get("/dashboard", getInventoryDashboard);
 
-//  Stock Levels
+
 router.get("/stock-levels", getStockLevels);
 
-//  Low Stock Alerts
 router.get("/low-stock", getLowStockAlerts);
 
-//  Stock Adjustments
 router.post("/adjust/:productId", adjustStock);
 
-//  Multi-location Inventory
 router.get("/locations", getInventoryByLocation);
 
-
-//  Inventory Valuation
 router.get("/valuation", getInventoryValuation);
 router.get("/export-csv", exportInventoryCSV);
 

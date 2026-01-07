@@ -17,7 +17,6 @@ export const authenticateOptional = async (req, res, next) => {
     try {
       const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
 
-      // Get user from database
       const user = await User.findById(decoded.userId).select("-password");
 
       if (!user) {
@@ -25,7 +24,6 @@ export const authenticateOptional = async (req, res, next) => {
         return next();
       }
 
-      // Attach permissions
       if (user.role === "admin" && user.adminType) {
         if (user.adminType === "super_admin") {
           user.permissions = Object.values(PERMISSIONS);
@@ -41,21 +39,22 @@ export const authenticateOptional = async (req, res, next) => {
       next();
     } catch (error) {
       if (error.name === "TokenExpiredError") {
+
         // Token expired, continue without user
-        console.log("⚠️ Token expired in optional auth");
+        console.log("Token expired in optional auth");
         req.user = null;
         return next();
       }
       // Other token errors, continue without user
       console.log(
-        "⚠️ Token verification failed in optional auth:",
+        "Token verification failed in optional auth:",
         error.message
       );
       req.user = null;
       next();
     }
   } catch (error) {
-    console.log("❌ Error in authenticateOptional middleware:", error.message);
+    console.log(" Error in authenticateOptional middleware:", error.message);
     req.user = null;
     next();
   }

@@ -97,7 +97,7 @@ const AdminOrdersPage = () => {
 
   console.log("Fetching orders with params:", params);
 
-  // Update the fetchOrders function to combine both collections
+ 
   const fetchOrders = async () => {
     try {
       setIsFetching(true);
@@ -617,7 +617,7 @@ const AdminOrdersPage = () => {
                 </div>
               </div>
 
-              {/* Date Picker Dropdown (not modal) */}
+              {/* Date Picker Dropdown  */}
               {showDatePicker && (
                 <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 w-[500px]">
                   <div className="p-4">

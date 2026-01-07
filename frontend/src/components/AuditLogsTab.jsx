@@ -240,8 +240,8 @@ import { format } from "date-fns";
       
       if (response.data.success) {
         showMessage("success", response.data.message || "Archive completed successfully");
-        fetchLogs(); // Refresh logs list
-        fetchArchiveStats(); // Refresh stats
+        fetchLogs();
+        fetchArchiveStats();
         setShowArchivePrompt(false);
       } else {
         showMessage("info", response.data.message || "No logs need archiving");
@@ -397,7 +397,6 @@ import { format } from "date-fns";
 
   // Helper to format action text for display
   const formatActionText = (action) => {
-    // Convert "CREATE_PRODUCT" to "Create Product"
     return action
       .toLowerCase()
       .split("_")
@@ -701,7 +700,7 @@ import { format } from "date-fns";
 
       {/* Filters Section */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6 no-scroll">
-        {/* Top Row: Search + Buttons */}
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           {/* Search Input - Full width on mobile */}
           <div className="w-full md:flex-1">
@@ -759,7 +758,7 @@ import { format } from "date-fns";
           </div>
         </div>
 
-        {/* Filters Section - Horizontal scroll when open on mobile */}
+  
         {showFilters && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -767,7 +766,7 @@ import { format } from "date-fns";
             exit={{ opacity: 0, height: 0 }}
             className="mt-4 pt-4 border-t border-gray-200"
           >
-            {/* Filter Grid - Horizontal scroll on mobile */}
+           
             <div className="overflow-x-auto pb-4">
               <div className="flex space-x-4 min-w-max md:min-w-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-4 md:space-x-0">
                 {/* Start Date */}
@@ -1085,7 +1084,6 @@ import { format } from "date-fns";
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {logs.map((log) => {
-                        // Check if log is older than 60 days (eligible for archive)
                         const logDate = new Date(log.timestamp);
                         const sixtyDaysAgo = new Date();
                         sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);

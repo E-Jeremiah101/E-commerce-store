@@ -56,7 +56,7 @@ export default function AdminCoupons() {
     note: "",
   });
 
-  // ================= FETCH COUPONS =================
+  //  FETCH COUPONS 
   const fetchCoupons = async () => {
     try {
       setLoading(true);
@@ -96,7 +96,7 @@ export default function AdminCoupons() {
     fetchCoupons();
   }, []);
 
-  // ================= CREATE COUPON =================
+  //  CREATE COUPON 
   const handleCreate = async () => {
     if (!form.expirationDate) {
       toast.error("Expiration date is required");
@@ -112,7 +112,7 @@ export default function AdminCoupons() {
         couponReason: form.couponReason,
         userId: form.userId || null,
         note: form.note,
-        sendToAllUsers: form.sendToAllUsers, // Add this
+        sendToAllUsers: form.sendToAllUsers, 
       };
 
       const response = await axios.post("/admin/coupons", payload);
@@ -155,7 +155,7 @@ export default function AdminCoupons() {
     }
   };
 
-  // ================= TOGGLE COUPON =================
+  //  TOGGLE COUPON 
   const toggleCoupon = async (id) => {
     try {
       await axios.patch(`/admin/coupons/${id}/toggle`);
@@ -166,7 +166,7 @@ export default function AdminCoupons() {
     }
   };
 
-  // ================= DELETE COUPON =================
+  //  DELETE COUPON 
   const deleteCoupon = async (id) => {
     if (window.confirm("Are you sure you want to delete this coupon?")) {
       try {
@@ -179,7 +179,7 @@ export default function AdminCoupons() {
     }
   };
 
-  // ================= FILTER COUPONS =================
+  //  FILTER COUPONS 
   const filteredCoupons = coupons.filter((coupon) => {
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
@@ -207,7 +207,7 @@ export default function AdminCoupons() {
     return true;
   });
 
-  // ================= PAGINATION LOGIC =================
+  //  PAGINATION LOGIC 
   const getCurrentPageData = () => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -287,17 +287,6 @@ export default function AdminCoupons() {
       .join(" ");
   };
 
-  // if (loading && coupons.length === 0) {
-  //   return (
-  //     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-6">
-  //       <div className="flex items-center justify-center h-96">
-  //         <div className="text-center">
-  //           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // }
    if (loading)
            return (
              <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-8">
@@ -766,7 +755,6 @@ export default function AdminCoupons() {
 
               {/* Modal Body */}
               <div className="p-6 space-y-5 h-100 overflow-y-auto">
-                {/* Auto-generated code preview */}
                 <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200 ">
                   <div className="flex items-center justify-between">
                     <div>
@@ -831,7 +819,6 @@ export default function AdminCoupons() {
                   />
                 </div>
 
-                {/* Coupon Type */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <div className="flex items-center">
@@ -887,7 +874,6 @@ export default function AdminCoupons() {
                   </div>
                 </div>
 
-                {/* User ID (Optional) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     <div className="flex items-center">
@@ -906,7 +892,7 @@ export default function AdminCoupons() {
                   />
                 </div>
 
-                {/* Note (Optional) */}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Add Note (Optional)
@@ -941,7 +927,6 @@ export default function AdminCoupons() {
                 )}
               </div>
 
-              {/* Modal Footer */}
               <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
                 <div className="flex justify-end space-x-3">
                   <button
@@ -974,7 +959,7 @@ export default function AdminCoupons() {
         </>
       )}
 
-      {/* Add some custom animation */}
+      
       <style jsx>{`
         @keyframes slideUp {
           from {

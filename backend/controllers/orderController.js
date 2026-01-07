@@ -97,7 +97,7 @@ export const getUserOrders = async (req, res) => {
           color: p.selectedColor || null,
           selectedCategory: p.selectedCategory || null,
           name: p.name || p.product?.name || "Unknown Product",
-          image: p.image  || "/placeholder.png", //changes made here
+          image: p.image  || "/placeholder.png", 
           refundStatus: refund?.status || null,
         };
       });
@@ -129,7 +129,7 @@ export const getUserOrders = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-// Helper function for stock deduction during recovery
+
 const deductStockForRecoveredItem = async (item) => {
   try {
     if (!item.product) {
@@ -153,13 +153,13 @@ const deductStockForRecoveredItem = async (item) => {
 
     // For products with variants
     if (product.variants && product.variants.length > 0) {
-      // If no specific variant selected, try to find any available variant
+      
       if (!item.selectedSize && !item.selectedColor) {
-        // Find first variant with sufficient stock
+        
         const availableVariant = product.variants.find(v => v.countInStock >= item.quantity);
         
         if (availableVariant) {
-          // Update item with the variant details we found
+          
           item.selectedSize = availableVariant.size;
           item.selectedColor = availableVariant.color;
           availableVariant.countInStock -= item.quantity;
@@ -167,7 +167,7 @@ const deductStockForRecoveredItem = async (item) => {
           
           return {
             status: 'DEDUCTED',
-            message: `✅ Stock deducted from variant ${availableVariant.size || 'N/A'}/${availableVariant.color || 'N/A'} for ${item.name}: ${item.quantity} units`,
+            message: ` Stock deducted from variant ${availableVariant.size || 'N/A'}/${availableVariant.color || 'N/A'} for ${item.name}: ${item.quantity} units`,
             productName: item.name,
             quantity: item.quantity,
             variantSize: availableVariant.size,
@@ -175,11 +175,11 @@ const deductStockForRecoveredItem = async (item) => {
             remainingStock: availableVariant.countInStock
           };
         } else {
-          // Try to find any variant with at least some stock
+          
           const totalVariantStock = product.variants.reduce((sum, v) => sum + v.countInStock, 0);
           return {
             status: 'OUT_OF_STOCK',
-            message: `❌ No variant has sufficient stock for ${item.name}. Total variant stock: ${totalVariantStock}, Required: ${item.quantity}`,
+            message: ` No variant has sufficient stock for ${item.name}. Total variant stock: ${totalVariantStock}, Required: ${item.quantity}`,
             productName: item.name,
             quantity: item.quantity,
             availableStock: totalVariantStock
@@ -187,14 +187,13 @@ const deductStockForRecoveredItem = async (item) => {
         }
       }
       
-      // Specific variant requested
       const variant = product.variants.find(v => 
         v.size === (item.selectedSize || '') && 
         v.color === (item.selectedColor || '')
       );
       
       if (!variant) {
-        // Try fuzzy matching
+       
         const fuzzyVariant = product.variants.find(v => {
           const sizeMatch = !item.selectedSize || v.size === item.selectedSize || 
                            v.size === '' || v.size === 'Standard';
@@ -213,7 +212,7 @@ const deductStockForRecoveredItem = async (item) => {
             
             return {
               status: 'DEDUCTED',
-              message: `✅ Stock deducted from variant ${fuzzyVariant.size || 'N/A'}/${fuzzyVariant.color || 'N/A'} for ${item.name}: ${item.quantity} units`,
+              message: ` Stock deducted from variant ${fuzzyVariant.size || 'N/A'}/${fuzzyVariant.color || 'N/A'} for ${item.name}: ${item.quantity} units`,
               productName: item.name,
               quantity: item.quantity,
               variantSize: fuzzyVariant.size,
@@ -223,7 +222,7 @@ const deductStockForRecoveredItem = async (item) => {
           } else {
             return {
               status: 'OUT_OF_STOCK',
-              message: `❌ Insufficient stock for ${item.name} ${fuzzyVariant.size || ''}/${fuzzyVariant.color || ''}. Available: ${fuzzyVariant.countInStock}, Required: ${item.quantity}`,
+              message: ` Insufficient stock for ${item.name} ${fuzzyVariant.size || ''}/${fuzzyVariant.color || ''}. Available: ${fuzzyVariant.countInStock}, Required: ${item.quantity}`,
               productName: item.name,
               quantity: item.quantity,
               availableStock: fuzzyVariant.countInStock
@@ -233,7 +232,7 @@ const deductStockForRecoveredItem = async (item) => {
         
         return {
           status: 'VARIANT_NOT_FOUND',
-          message: `❌ Variant not found for ${item.name} (Size: ${item.selectedSize || 'Any'}, Color: ${item.selectedColor || 'Any'})`,
+          message: ` Variant not found for ${item.name} (Size: ${item.selectedSize || 'Any'}, Color: ${item.selectedColor || 'Any'})`,
           productName: item.name,
           quantity: item.quantity
         };
@@ -246,7 +245,7 @@ const deductStockForRecoveredItem = async (item) => {
         
         return {
           status: 'DEDUCTED',
-          message: `✅ Stock deducted from variant ${variant.size || 'N/A'}/${variant.color || 'N/A'} for ${item.name}: ${item.quantity} units`,
+          message: ` Stock deducted from variant ${variant.size || 'N/A'}/${variant.color || 'N/A'} for ${item.name}: ${item.quantity} units`,
           productName: item.name,
           quantity: item.quantity,
           variantSize: variant.size,
@@ -256,7 +255,7 @@ const deductStockForRecoveredItem = async (item) => {
       } else {
         return {
           status: 'OUT_OF_STOCK',
-          message: `❌ Insufficient stock for ${item.name} ${variant.size || ''}/${variant.color || ''}. Available: ${variant.countInStock}, Required: ${item.quantity}`,
+          message: ` Insufficient stock for ${item.name} ${variant.size || ''}/${variant.color || ''}. Available: ${variant.countInStock}, Required: ${item.quantity}`,
           productName: item.name,
           quantity: item.quantity,
           availableStock: variant.countInStock
@@ -271,7 +270,7 @@ const deductStockForRecoveredItem = async (item) => {
         
         return {
           status: 'DEDUCTED',
-          message: `✅ Stock deducted for ${item.name}: ${item.quantity} units`,
+          message: ` Stock deducted for ${item.name}: ${item.quantity} units`,
           productName: item.name,
           quantity: item.quantity,
           remainingStock: product.countInStock
@@ -279,7 +278,7 @@ const deductStockForRecoveredItem = async (item) => {
       } else {
         return {
           status: 'OUT_OF_STOCK',
-          message: `❌ Insufficient stock for ${item.name}. Available: ${product.countInStock}, Required: ${item.quantity}`,
+          message: ` Insufficient stock for ${item.name}. Available: ${product.countInStock}, Required: ${item.quantity}`,
           productName: item.name,
           quantity: item.quantity,
           availableStock: product.countInStock
@@ -287,7 +286,7 @@ const deductStockForRecoveredItem = async (item) => {
       }
     }
   } catch (error) {
-    console.error(`❌ Error deducting stock for ${item.name}:`, error);
+    console.error(` Error deducting stock for ${item.name}:`, error);
     return {
       status: 'ERROR',
       message: `Error deducting stock for ${item.name}: ${error.message}`,
@@ -298,7 +297,7 @@ const deductStockForRecoveredItem = async (item) => {
   }
 };
 
-// Original reduceVariantStock function (for regular orders)
+
 export const supportRecoverOrder = async (req, res) => {
   function generateOrderNumber() {
     return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -331,10 +330,9 @@ export const supportRecoverOrder = async (req, res) => {
     let searchMethod = "";
     let referenceUsed = "";
 
-    // [Keep all your existing search logic here - it's already correct]
-    // STRATEGY 1: Search by Transaction Reference
+   
     if (transaction_ref && transaction_ref.trim() !== "") {
-      console.log("🔍 Searching by Transaction Reference:", transaction_ref);
+      console.log("Searching by Transaction Reference:", transaction_ref);
       searchMethod = "transaction_reference";
       referenceUsed = transaction_ref;
 
@@ -350,7 +348,7 @@ export const supportRecoverOrder = async (req, res) => {
 
           if (successfulPayments.length > 0) {
             payment = successfulPayments[0];
-            console.log("✅ Found payment via Transaction Reference:", payment.id);
+            console.log(" Found payment via Transaction Reference:", payment.id);
           }
         }
       } catch (error) {
@@ -358,14 +356,14 @@ export const supportRecoverOrder = async (req, res) => {
       }
     }
 
-    // STRATEGY 2: Search by Flutterwave Reference
+    //  Search by Flutterwave Reference
     if (!payment && flutterwave_ref && flutterwave_ref.trim() !== "") {
-      console.log("🔍 Searching by Flutterwave Reference:", flutterwave_ref);
+      console.log("Searching by Flutterwave Reference:", flutterwave_ref);
       searchMethod = "flutterwave_reference";
       referenceUsed = flutterwave_ref;
 
       try {
-        // Try different verification methods
+        
         if (flutterwave_ref.startsWith("JayyTech_")) {
           try {
             const verificationResponse = await flw.Transaction.verify({
@@ -401,7 +399,7 @@ export const supportRecoverOrder = async (req, res) => {
       });
     }
 
-    // ✅ Check if order already exists
+    //  Check if order already exists
     const existingOrder = await Order.findOne({
       $or: [
         { flutterwaveTransactionId: payment.id },
@@ -410,7 +408,7 @@ export const supportRecoverOrder = async (req, res) => {
     });
 
     if (existingOrder) {
-      console.log("🔄 Order already exists:", existingOrder.orderNumber);
+      console.log(" Order already exists:", existingOrder.orderNumber);
       const user = await User.findById(existingOrder.user);
 
       await logOrderAction(
@@ -439,42 +437,42 @@ export const supportRecoverOrder = async (req, res) => {
       });
     }
 
-    // ✅ EXTRACT PRODUCT INFORMATION
+    // EXTRACT PRODUCT INFORMATION
     let recoveredProducts = [];
 
-    console.log("📦 Payment metadata:", payment.meta);
+    console.log(" Payment metadata:", payment.meta);
 
     // Process products from metadata
     if (payment.meta) {
-      console.log("🔍 Processing payment metadata...");
+      console.log(" Processing payment metadata...");
 
       let productsData = null;
 
       if (payment.meta.products) {
-        console.log("📦 Found products in payment.meta.products");
-        console.log("📦 Type of products:", typeof payment.meta.products);
+        console.log(" Found products in payment.meta.products");
+        console.log(" Type of products:", typeof payment.meta.products);
 
         try {
           if (typeof payment.meta.products === "string") {
-            console.log("🔄 Parsing products as JSON string...");
+            console.log("Parsing products as JSON string...");
             productsData = JSON.parse(payment.meta.products);
           } else if (Array.isArray(payment.meta.products)) {
-            console.log("🔄 Products is already an array");
+            console.log(" Products is already an array");
             productsData = payment.meta.products;
           } else if (typeof payment.meta.products === "object") {
-            console.log("🔄 Products is an object, converting to array");
+            console.log(" Products is an object, converting to array");
             productsData = [payment.meta.products];
           }
         } catch (parseError) {
-          console.error("❌ Error parsing products:", parseError.message);
+          console.error(" Error parsing products:", parseError.message);
         }
       }
 
       if (!productsData && Array.isArray(payment.meta)) {
-        console.log("📦 Payment.meta is an array, searching for products...");
+        console.log(" Payment.meta is an array, searching for products...");
         const productsMeta = payment.meta.find((item) => item.products);
         if (productsMeta && productsMeta.products) {
-          console.log("📦 Found products in meta array");
+          console.log(" Found products in meta array");
           try {
             if (typeof productsMeta.products === "string") {
               productsData = JSON.parse(productsMeta.products);
@@ -482,17 +480,17 @@ export const supportRecoverOrder = async (req, res) => {
               productsData = productsMeta.products;
             }
           } catch (parseError) {
-            console.error("❌ Error parsing products from meta array:", parseError.message);
+            console.error(" Error parsing products from meta array:", parseError.message);
           }
         }
       }
 
       if (productsData) {
-        console.log("✅ Products data to process:", productsData);
+        console.log(" Products data to process:", productsData);
 
         if (Array.isArray(productsData) && productsData.length > 0) {
           recoveredProducts = productsData.map((product, index) => {
-            console.log(`📦 Processing product ${index + 1}:`, product);
+            console.log(` Processing product ${index + 1}:`, product);
             return {
               product: product._id || product.productId || null,
               name: product.name || "Recovered Product",
@@ -504,7 +502,7 @@ export const supportRecoverOrder = async (req, res) => {
               selectedCategory: product.category || null,
             };
           });
-          console.log(`✅ Successfully recovered ${recoveredProducts.length} products`);
+          console.log(` Successfully recovered ${recoveredProducts.length} products`);
         }
       }
     }
@@ -778,7 +776,7 @@ export const getAllOrders = async (req, res) => {
     } else if (showArchived === "false") {
       query.isArchived = false; // Show only active orders
     } else {
-      query.isArchived = { $ne: true }; // Default: exclude archived (for backward compatibility)
+      query.isArchived = { $ne: true }; 
     }
 
     // Get date parameters safely with default values
@@ -805,9 +803,10 @@ export const getAllOrders = async (req, res) => {
       (startDate && startDate.trim() !== "") ||
       (endDate && endDate.trim() !== "")
     ) {
-      console.log("Processing date filter...");
+      
       const dateFilter = {};
-      // Add date range filter if provided
+
+      //date range filter 
       if (startDate && startDate.trim() !== "") {
         const start = new Date(startDate);
         console.log("Parsed start date:", start);
@@ -822,11 +821,11 @@ export const getAllOrders = async (req, res) => {
 
       if (endDate && endDate.trim() !== "") {
         const end = new Date(endDate);
-        console.log("Parsed end date:", end);
+        
         if (!isNaN(end.getTime())) {
           end.setHours(23, 59, 59, 999);
           dateFilter.$lte = end;
-          console.log("Valid end date:", dateFilter.$lte);
+          
         } else {
           console.log("Invalid end date format:", endDate);
         }
@@ -835,14 +834,14 @@ export const getAllOrders = async (req, res) => {
       // Only add date filter if we have valid dates
       if (Object.keys(dateFilter).length > 0) {
         searchFilter.createdAt = dateFilter;
-        console.log("Final date filter applied:", dateFilter);
+       
       } else {
         console.log("No valid dates for filter");
       }
     } else {
       console.log("No date parameters provided");
     }
-console.log("Final search filter:", searchFilter);
+
 const finalQuery = { ...query };
 if (searchFilter.$or) {
   finalQuery.$or = searchFilter.$or;
@@ -857,9 +856,9 @@ if (searchFilter.createdAt) {
       .sort({ createdAt: -1 })
       .populate("refunds.product", "name image")
       .lean();
-      console.log(`Found ${orders.length} orders with filter`);
+      
 
-    // Define priority: Pending orders always first, then sort by other criteria
+    //  Pending orders always first, then sort by other criteria
     const statusOrder = [
       "Pending",
       "Processing",
@@ -900,7 +899,7 @@ if (searchFilter.createdAt) {
         return sortOrder === "asc" ? indexA - indexB : indexB - indexA;
       }
 
-      // Default: newest non-Pending orders first
+      //  newest non-Pending orders first
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
 
@@ -909,6 +908,7 @@ if (searchFilter.createdAt) {
       success: true,
       count: orders.length,
       orders: orders.map((order) => {
+
         // Compute refund status
         const totalProducts = order.products?.length || 0;
         const approvedCount =
@@ -933,7 +933,7 @@ if (searchFilter.createdAt) {
           totalAmount: order.totalAmount,
           subtotal: order.subtotal,
           discount: order.discount,
-          couponCode: order.coupon?.code || order.couponCode, // Use couponCode
+          couponCode: order.coupon?.code || order.couponCode, 
           deliveryAddress: order.deliveryAddress,
           phone: order.phone,
           createdAt: order.createdAt,
@@ -971,10 +971,11 @@ export const updateOrderStatus = async (req, res) => {
 
 
      if (status === "Cancelled" && oldStatus !== "Cancelled") {
+
        // RESTORE STOCK BEFORE UPDATING ORDER STATUS
        try {
          console.log(
-           `🔄 Restoring stock for cancelled order #${order.orderNumber}`
+           ` Restoring stock for cancelled order #${order.orderNumber}`
          );
          const restorationResults = await restoreStockForCancelledOrder(order);
 
@@ -998,10 +999,11 @@ export const updateOrderStatus = async (req, res) => {
          );
        } catch (restoreError) {
          console.error(
-           "❌ Failed to restore stock for cancelled order:",
+           " Failed to restore stock for cancelled order:",
            restoreError
          );
-         // Continue with cancellation but log the error
+
+       
          await logOrderAction(
            req,
            "ORDER_CANCELLED_STOCK_RESTORE_FAILED",
@@ -1092,7 +1094,6 @@ export const updateOrderStatus = async (req, res) => {
       </html>
     `;
 
-    // Respond immediately so the client receives the update without waiting for email delivery
     console.log(" Order updated:", order);
      res.status(200).json({
        success: true,
@@ -1106,7 +1107,6 @@ export const updateOrderStatus = async (req, res) => {
          : {}),
      });
 
-    // Send notification email in background (fire-and-forget)
     (async () => {
       try {
         await sendEmail({
@@ -1128,7 +1128,7 @@ export const updateOrderStatus = async (req, res) => {
 };
  
 
-// Add this function to reduce variant stock when order is placed
+
 const reduceVariantStock = async (orderItems) => {
   try {
     for (const item of orderItems) {
@@ -1162,8 +1162,6 @@ const reduceVariantStock = async (orderItems) => {
   }
 };
 
-// Create new order
-
 export const createOrder = async (req, res) => {
   try {
     const user = await User.findById(req.user._id).populate(
@@ -1174,12 +1172,11 @@ export const createOrder = async (req, res) => {
       return res.status(400).json({ message: "Cart is empty" });
     }
 
-    // Get default phone & address
+
     const defaultPhone = user.phones.find((p) => p.isDefault) || user.phones[0];
     const defaultAddress =
       user.addresses.find((a) => a.isDefault) || user.addresses[0];
 
-    // Build order items
     const orderItems = user.cartItems.map((item) => ({
       product: item.product._id,
       name: item.product.name,
@@ -1243,7 +1240,7 @@ export const createOrder = async (req, res) => {
 
      await logUserAction(
        req,
-       ACTIONS.CREATE_ORDER, // This should be in the enum
+       ACTIONS.CREATE_ORDER,
        ENTITY_TYPES.ORDER,
        order._id,
        `Order #${order.orderNumber}`,
@@ -1286,7 +1283,6 @@ export const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // ✅ Prevent CastError if "id" is not a valid ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: "Invalid order ID" });
     }
@@ -1356,7 +1352,6 @@ export const getOrderById = async (req, res) => {
 };
   
 
-// Add this function near the top or with other helper functions
 const sendRecoveryOrderEmail = async (to, order, recoveryInfo) => {
   if (!to || !order) return;
 

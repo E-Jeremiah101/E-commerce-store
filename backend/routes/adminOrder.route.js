@@ -21,7 +21,7 @@ router.get(
   "/archived",
   protectRoute,
   adminRoute,
-  // requirePermission("order:read"),
+  requirePermission("order:read"),
   getArchivedOrders
 ); 
 router.post(
@@ -48,9 +48,7 @@ router.put(
   updateOrderStatus
 );
 
-
-
-//Im forcing th days orders to archive
+//forcing the days order to archive
 router.post("/force-archive", async (req, res) => {
   const result = await archiveOldOrders({ olderThanMonths: 0.03 });
   res.json(result);
@@ -84,7 +82,6 @@ router.post("/unarchive/by-ids", protectRoute, adminRoute, async (req, res) => {
   }
 });
 
-// Recover single order from archive
 router.post(
   "/recover/:archiveId",
   protectRoute,
@@ -100,7 +97,6 @@ router.post(
   }
 );
 
-// Search archived orders (for admin UI)
 router.get(
   "/:id",
   protectRoute,

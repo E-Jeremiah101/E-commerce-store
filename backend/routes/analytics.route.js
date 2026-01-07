@@ -23,7 +23,6 @@ router.get("/", async (req, res) => {
 
 router.get("/export", protectRoute, adminRoute, exportAnalytics);
 
-// ⚡ Cache invalidation endpoint - called after order updates
 router.post("/invalidate-cache", protectRoute, adminRoute, async (req, res) => {
   try {
     const ranges = ["daily", "weekly", "monthly", "yearly", "all"];
@@ -38,4 +37,4 @@ router.post("/invalidate-cache", protectRoute, adminRoute, async (req, res) => {
 });
 
 export default router;
-// requirePermission("product:read"),
+

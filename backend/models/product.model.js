@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 const reviewSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-    firstname: { type: String, required: true }, // store author name for convenience
-    lastname: { type: String, required: true }, // store author name for convenience
+    firstname: { type: String, required: true }, 
+    lastname: { type: String, required: true }, 
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String },
   },
@@ -15,7 +15,7 @@ const productVariantSchema = new mongoose.Schema({
   size: { type: String, default: "" },
   color: { type: String, default: "" },
   countInStock: { type: Number, required: true, default: 0, min: 0 },
-  reserved: { type: Number, default: 0 }, // For variants - ADDED THIS
+  reserved: { type: Number, default: 0 }, 
   sku: { type: String, unique: true, sparse: true },
   price: { type: Number, min: 0 },
 });
@@ -93,7 +93,7 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-//  index for better performance on variant searches
+
 productSchema.index({ "variants.size": 1, "variants.color": 1 });
 
 const Product = mongoose.model("Product", productSchema);

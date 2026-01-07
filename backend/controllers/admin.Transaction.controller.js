@@ -4,7 +4,7 @@ export const getAllTransactions = async (req, res) => {
   try {
     const { search = "", sortBy = "date", sortOrder = "desc" } = req.query;
 
-    // Find ALL payment orders (including refunded ones)
+    // Find ALL payment orders 
     const orders = await Order.find({
       $or: [
         { flutterwaveTransactionId: { $exists: true, $ne: null } },
@@ -139,7 +139,7 @@ export const getAllTransactions = async (req, res) => {
         if (sortOrder === "asc") return (a.amount || 0) - (b.amount || 0);
         return (b.amount || 0) - (a.amount || 0);
       } else {
-        // Default: date
+        //  date
         return sortOrder === "asc"
           ? new Date(a.date) - new Date(b.date)
           : new Date(b.date) - new Date(a.date);

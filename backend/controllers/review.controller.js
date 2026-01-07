@@ -1,13 +1,10 @@
 import Product from "../models/product.model.js";
 import Order from "../models/order.model.js";
 
-// Add or update a review
 export const addReview = async (req, res) => {
   try {
     const { productId, rating, comment } = req.body;
     const userId = req.user._id;
-
-    //  Check if product exists
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
@@ -31,7 +28,6 @@ export const addReview = async (req, res) => {
     );
 
     if (existingReviewIndex >= 0) {
-      // Update existing review
       product.reviews[existingReviewIndex].rating = rating;
       product.reviews[existingReviewIndex].comment = comment;
       product.reviews[existingReviewIndex].createdAt = Date.now();
@@ -65,7 +61,7 @@ export const addReview = async (req, res) => {
   }
 };
 
-// Check if user can review a product
+
 export const canReviewProduct = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -84,7 +80,7 @@ export const canReviewProduct = async (req, res) => {
   }
 };
 
-// Get all reviews for a product
+
 export const getProductReviews = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -101,7 +97,7 @@ export const getProductReviews = async (req, res) => {
   }
 };
 
-// Delete a review
+
 export const deleteReview = async (req, res) => {
   try {
     const { productId, userId } = req.params;

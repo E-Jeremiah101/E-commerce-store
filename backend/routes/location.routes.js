@@ -3,7 +3,6 @@ import { NIGERIAN_STATES,getAllStates, getLGAsByState } from "../service/deliver
 
 const router = express.Router();
 
-// Get all Nigerian states
 router.get("/states", (req, res) => {
   try {
     const states = getAllStates();
@@ -13,7 +12,6 @@ router.get("/states", (req, res) => {
   }
 });
 
-// Get LGAs by state
 router.get("/lgas/:state", (req, res) => {
   try {
     const { state } = req.params;

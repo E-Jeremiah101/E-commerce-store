@@ -5,7 +5,7 @@ import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
 import storeSettings from "../models/storeSettings.model.js"
 
-// Helper for variant-specific inventory logging
+
 const logVariantInventoryAction = async (
   req,
   action,
@@ -46,7 +46,7 @@ const logVariantInventoryAction = async (
   }
 };
 
-// Helper function to restore stock when order is cancelled
+
 export const restoreStockForCancelledOrder = async (order) => {
   try {
     const stockRestorationResults = [];
@@ -104,7 +104,7 @@ export const restoreStockForCancelledOrder = async (order) => {
           
           stockRestorationResults.push({
             status: 'RESTORED',
-            message: `✅ Stock restored for ${item.name}: ${item.quantity} units added back to ${variant.size || 'N/A'}/${variant.color || 'N/A'}`,
+            message: ` Stock restored for ${item.name}: ${item.quantity} units added back to ${variant.size || 'N/A'}/${variant.color || 'N/A'}`,
             productName: item.name,
             quantity: item.quantity,
             variantSize: variant.size,
@@ -145,7 +145,7 @@ export const restoreStockForCancelledOrder = async (order) => {
             
             stockRestorationResults.push({
               status: 'RESTORED_FUZZY',
-              message: `✅ Stock restored (fuzzy match) for ${item.name}: ${item.quantity} units added back to ${fuzzyVariant.size || 'N/A'}/${fuzzyVariant.color || 'N/A'}`,
+              message: ` Stock restored (fuzzy match) for ${item.name}: ${item.quantity} units added back to ${fuzzyVariant.size || 'N/A'}/${fuzzyVariant.color || 'N/A'}`,
               productName: item.name,
               quantity: item.quantity,
               variantSize: fuzzyVariant.size,
@@ -156,7 +156,7 @@ export const restoreStockForCancelledOrder = async (order) => {
           } else {
             stockRestorationResults.push({
               status: 'VARIANT_NOT_FOUND',
-              message: `❌ Could not find variant for ${item.name} (Size: ${item.selectedSize || 'Any'}, Color: ${item.selectedColor || 'Any'})`,
+              message: ` Could not find variant for ${item.name} (Size: ${item.selectedSize || 'Any'}, Color: ${item.selectedColor || 'Any'})`,
               productName: item.name,
               quantity: item.quantity
             });
@@ -186,7 +186,7 @@ export const restoreStockForCancelledOrder = async (order) => {
         
         stockRestorationResults.push({
           status: 'RESTORED',
-          message: `✅ Stock restored for ${item.name}: ${item.quantity} units added back`,
+          message: ` Stock restored for ${item.name}: ${item.quantity} units added back`,
           productName: item.name,
           quantity: item.quantity,
           oldStock,
@@ -197,11 +197,11 @@ export const restoreStockForCancelledOrder = async (order) => {
       await product.save();
     }
     
-    console.log("📊 Stock restoration results:", stockRestorationResults);
+
     return stockRestorationResults;
     
   } catch (error) {
-    console.error("❌ Error restoring stock for cancelled order:", error);
+    console.error("Error restoring stock for cancelled order:", error);
     throw error;
   }
 };
@@ -210,7 +210,7 @@ const getTopSellingProducts = async (
   limit = 10,
 ) => {
   try {
-    console.log("🔍 Getting top selling products for inventory dashboard...");
+    
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const today = new Date();
 
@@ -218,8 +218,6 @@ const getTopSellingProducts = async (
       status: { $nin: ["Cancelled"] },
       createdAt: { $gte: thirtyDaysAgo, $lte: today },
     };
-
-    console.log("📊 Looking for orders in last 30 days");
 
     const topProducts = await Order.aggregate([
       { $match: matchStage },
@@ -283,23 +281,20 @@ const getTopSellingProducts = async (
       },
     ]);
 
-    console.log(`✅ Found ${topProducts.length} top selling products`);
     return topProducts;
   } catch (error) {
-    console.error("❌ Error getting top selling products:", error);
+    console.error(" Error getting top selling products:", error);
     return []; // Return empty array on error
   }
 };
 
-// Helper to sync inventory when orders are delivered
 export const syncInventoryWithStoreOrders = async () => {
   try {
-    console.log("🔄 Syncing inventory with store orders...");
     
     // Find orders that are delivered but not synced
     const deliveredOrders = await Order.find({
       status: "Pending",
-      isProcessed: false // Assuming this tracks if inventory was updated
+      isProcessed: false 
     }).limit(50); // Process in batches
 
     let updatedCount = 0; 
@@ -357,15 +352,14 @@ export const syncInventoryWithStoreOrders = async () => {
       }
     }
 
-    console.log(`✅ Synced ${updatedCount} orders with inventory`);
     return { synced: updatedCount };
   } catch (error) {
-    console.error("❌ Error syncing inventory with orders:", error);
+    console.error("Error syncing inventory with orders:", error);
     throw error;
   }
 };
 
-// 1. STOCK DASHBOARD - VARIANT-ONLY VERSION
+
 export const getInventoryDashboard = async (req, res) => {
   try {
     // Fetch products WITH variants ONLY
@@ -373,8 +367,6 @@ export const getInventoryDashboard = async (req, res) => {
       archived: { $ne: true },
       "variants.0": { $exists: true } // Only products with variants
     }).select("name price category images variants");
-
-    console.log(`📊 Found ${products.length} products with variants for dashboard`);
 
     // Calculate totals from VARIANTS ONLY
     let totalStockValue = 0;
@@ -443,10 +435,6 @@ export const getInventoryDashboard = async (req, res) => {
 
     // Get top selling products from orders (LAST 30 DAYS)
     const topSellingProducts = await getTopSellingProducts(5);
-    console.log(
-      "🛒 Top selling products from orders:",
-      topSellingProducts.length
-    );
 
     // Get order stats for dashboard
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -483,9 +471,7 @@ export const getInventoryDashboard = async (req, res) => {
       0
     );
 
-    // For demo - you'll need actual order data for real turnover
-    // const inventoryTurnover = totalVariantStock > 0 ? 
-    //   (totalUnitsSoldLast30Days / totalVariantStock).toFixed(2) : 0;
+  
 
     // Prepare fast moving products 
     let fastMovingProducts = [];
@@ -507,7 +493,7 @@ export const getInventoryDashboard = async (req, res) => {
         source: "orders",
       }));
     } else {
-      // Fallback: Find products with the most variant stock
+      //  Find products with the most variant stock
       const productsWithStock = products
         .map(product => {
           const productStock = product.variants.reduce(
@@ -543,14 +529,13 @@ export const getInventoryDashboard = async (req, res) => {
         totalStockValue,
         lowStockCount: lowStockProducts.length,
         outOfStockCount: outOfStockProducts.length,
-        // inventoryTurnover,
         // ORDER STATS - FROM ACTUAL ORDERS
         totalOrdersLast30Days: stats.totalOrders,
         deliveredOrdersLast30Days: stats.deliveredOrders,
         totalRevenueLast30Days: stats.totalRevenue,
         totalSalesLast30Days: totalUnitsSoldLast30Days,
         hasOrderData: hasOrderData,
-        totalVariantStock, // Added this for debugging
+        totalVariantStock,
       },
       fastMovingProducts,
       alerts: {
@@ -619,8 +604,6 @@ export const getStockLevels = async (req, res) => {
       lowStock = false,
     } = req.query;
 
-    console.log("📡 [BACKEND] getStockLevels called");
-
     const skip = (page - 1) * limit;
 
     let filter = {
@@ -641,7 +624,7 @@ export const getStockLevels = async (req, res) => {
     // Build query
     let query = Product.find(filter);
 
-    // ✅ FIXED: Select ALL price fields including slash data
+    // Select ALL price fields including slash data
     query = query.select(
       "name price category images variants previousPrice isPriceSlashed priceHistory"
     );
@@ -652,7 +635,7 @@ export const getStockLevels = async (req, res) => {
     const products = await query;
     const total = await Product.countDocuments(filter);
 
-    console.log(`✅ Found ${products.length} products with variants`);
+    console.log(`Found ${products.length} products with variants`);
 
     // Transform data for VARIANT-ONLY SYSTEM
     const stockLevels = products.map((product) => {
@@ -682,7 +665,7 @@ export const getStockLevels = async (req, res) => {
         status = "low";
       }
 
-      // ✅ ADD: Calculate discount percentage if price is slashed
+      //  Calculate discount percentage if price is slashed
       let discountPercentage = null;
       if (product.isPriceSlashed && product.previousPrice) {
         discountPercentage = (
@@ -706,17 +689,16 @@ export const getStockLevels = async (req, res) => {
 
       return {
         id: product._id,
-        _id: product._id, // Also include _id for consistency
+        _id: product._id, 
         name: product.name,
         image: product.images?.[0] || "",
         category: product.category,
         price: product.price,
-        // ✅ ADD: Price slash data
         previousPrice: product.previousPrice || null,
         isPriceSlashed: product.isPriceSlashed || false,
         discountPercentage: discountPercentage,
         variantsStock: variantsStock,
-        totalStock: variantsStock, // Same as variantsStock
+        totalStock: variantsStock, 
         status: status,
         variantsCount: product.variants.length,
         variants: transformedVariants,
@@ -725,15 +707,9 @@ export const getStockLevels = async (req, res) => {
       };
     });
 
-    // Log for debugging
-    const totalStockInResponse = stockLevels.reduce(
-      (sum, p) => sum + p.totalStock,
-      0
-    );
-
     // Log sample product with price data
     if (stockLevels.length > 0) {
-      console.log(`🔍 Sample product price data:`, {
+      console.log(`Sample product price data:`, {
         name: stockLevels[0].name,
         price: stockLevels[0].price,
         previousPrice: stockLevels[0].previousPrice,
@@ -753,27 +729,21 @@ export const getStockLevels = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error getting stock levels:", error);
+    console.error(" Error getting stock levels:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
-
 
 
 export const getLowStockAlerts = async (req, res) => {
   try {
     const lowStockThreshold = req.query.threshold || 10;
 
-    // Find ALL products with variants (not just those with low stock)
+    // Find ALL products with variants 
     const products = await Product.find({
       archived: { $ne: true },
-      "variants.0": { $exists: true }, // Has variants
+      "variants.0": { $exists: true }, 
     }).select("name price category images variants");
-
-    console.log(
-      `📊 Found ${products.length} products with variants for low stock alerts`
-    );
 
     const alerts = [];
     let totalOutOfStock = 0;
@@ -836,10 +806,6 @@ export const getLowStockAlerts = async (req, res) => {
         }
       });
     });
-
-    console.log(
-      `🚨 Found ${totalOutOfStock} out of stock variants and ${totalLowStock} low stock variants`
-    );
 
     // Sort by urgency
     alerts.sort((a, b) => {
@@ -994,7 +960,7 @@ export const adjustStock = async (req, res) => {
   }
 };
 
-// 6. MULTI-LOCATION INVENTORY (Simplified)
+
 export const getInventoryByLocation = async (req, res) => {
   try {
     const settings = await storeSettings.findOne();
@@ -1005,9 +971,7 @@ export const getInventoryByLocation = async (req, res) => {
       "variants.0": { $exists: true }, // Only products with variants
     }).select("name price category variants images");
 
-    console.log(
-      `📊 Found ${products.length} products with variants for location view`
-    );
+   
 
     // Main warehouse location
     const locations = [
@@ -1090,10 +1054,7 @@ export const getInventoryByLocation = async (req, res) => {
       products: locationProducts.slice(0, 10), // Top 10 products
     }));
 
-    console.log(
-      `✅ Location data: ${totalLocationItems} total items, ${totalLocationValue} total value`
-    );
-
+ 
     res.json({
       locations: inventoryByLocation,
       summary: {
@@ -1122,9 +1083,7 @@ export const getInventoryValuation = async (req, res) => {
       "variants.0": { $exists: true }, // Only products with variants
     }).select("name price category variants");
 
-    console.log(
-      `📊 Found ${products.length} products with variants for valuation`
-    );
+ 
 
     // DEBUG: Calculate total variant stock
     let totalVariantStockDebug = 0;
@@ -1134,9 +1093,7 @@ export const getInventoryValuation = async (req, res) => {
       }, 0);
       totalVariantStockDebug += productVariantStock;
     });
-    console.log(
-      `🔍 DEBUG: Total variant stock from all products: ${totalVariantStockDebug}`
-    );
+ 
 
     if (groupBy === "category") {
       // Group by category - VARIANT-ONLY SYSTEM
@@ -1217,12 +1174,7 @@ export const getInventoryValuation = async (req, res) => {
         0
       );
 
-      console.log("✅ FINAL CALCULATION:", {
-        totalStockCalculated: totalStock,
-        totalValueCalculated: totalValue,
-        averageValue: totalStock > 0 ? totalValue / totalStock : 0,
-      });
-
+   
       res.json({
         valuation: {
           summary: {
@@ -1308,7 +1260,6 @@ export const getInventoryValuation = async (req, res) => {
   }
 }; 
 
-// SEARCH INVENTORY
 export const searchInventory = async (req, res) => {
   try {
     const { q: query } = req.query;
@@ -1440,7 +1391,7 @@ export const getInventoryAgingReport = async (req, res) => {
   }
 };
 
-// Helper function for aging  recommendations
+
 const generateAgingRecommendations = (buckets, totalValue) => {
   const recommendations = [];
   const staleOldValue = buckets.stale.totalValue + buckets.old.totalValue;
@@ -1487,7 +1438,6 @@ const generateAgingRecommendations = (buckets, totalValue) => {
 
 export const exportInventoryCSV = async (req, res) => {
   try {
-    console.log("📊 Generating CSV export...");
     
     // Fetch all products with variants
     const products = await Product.find({
@@ -1659,10 +1609,10 @@ export const exportInventoryCSV = async (req, res) => {
     });
 
     res.send(csvContent);
-    console.log(`✅ CSV export generated: ${filename} (${totalProducts} products, ${totalVariants} variants)`);
+    console.log(`CSV export generated: ${filename} (${totalProducts} products, ${totalVariants} variants)`);
 
   } catch (error) {
-    console.error("❌ Error exporting inventory to CSV:", error);
+    console.error(" Error exporting inventory to CSV:", error);
     
     // Log error
     await AuditLogger.log({

@@ -16,14 +16,14 @@ export const protectRoute = async (req, res, next) => {
     try {
       const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
 
-      // ✅ KEEP MONGOOSE DOCUMENT
       const user = await User.findById(decoded.userId).select("-password");
 
       if (!user) {
+        console.error(`User not found for valid token: ${decoded.userId}`);
         return res.status(401).json({ message: "User not found" });
       }
 
-      // ✅ ATTACH PERMISSIONS WITHOUT CONVERSION
+    
       if (user.role === "admin" && user.adminType) {
         if (user.adminType === "super_admin") {
           user.permissions = Object.values(PERMISSIONS);
@@ -34,7 +34,6 @@ export const protectRoute = async (req, res, next) => {
         user.permissions = [];
       }
 
-      // ✅ req.user IS STILL A MONGOOSE DOCUMENT
       req.user = user;
 
       next();
@@ -47,7 +46,6 @@ export const protectRoute = async (req, res, next) => {
       throw error;
     }
   } catch (error) {
-    console.log("Error in protectRoute middleware", error.message);
     return res.status(500).json({ message: "Internal server error" });
   }
 };

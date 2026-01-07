@@ -9,7 +9,7 @@ import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// All routes require authentication
+
 router.use(protectRoute);
 
 router.post("/", saveProduct);

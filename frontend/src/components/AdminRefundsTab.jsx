@@ -17,7 +17,7 @@ const AdminRefundsTab = () => {
   const [dateFilter, setDateFilter] = useState("");
   const [selectedReason, setSelectedReason] = useState(null);
   const [loadingStates, setLoadingStates] = useState({});
-  const [showRejectModal, setShowRejectModal] = useState(null); // { orderId, refundId }
+  const [showRejectModal, setShowRejectModal] = useState(null); 
   const [rejectionReason, setRejectionReason] = useState("");
 
   // Pagination state
@@ -30,7 +30,6 @@ const AdminRefundsTab = () => {
     const fetchRefunds = async () => {
       try {
         setLoading(true);
-        // Use shared axios instance (baseURL already set to /api in production)
         const res = await axios.get("/refunds");
         setRefunds(res.data || []);
         setFilteredRefunds(res.data || []);
@@ -116,7 +115,7 @@ const AdminRefundsTab = () => {
           r.refundId === refundId
             ? {
                 ...r,
-                status: response.data.currentStatus, // Use the status from response
+                status: response.data.currentStatus, 
                 processedAt: new Date().toISOString(),
                 flutterwaveRefundId: response.data.flutterwaveRefundId,
               }
@@ -124,7 +123,6 @@ const AdminRefundsTab = () => {
         )
       );
 
-      // If status is still Processing, start polling
       if (response.data.currentStatus === "Processing") {
         // Poll for status updates
         const pollInterval = setInterval(async () => {
@@ -254,7 +252,7 @@ const AdminRefundsTab = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        {/* <ToastContainer position="top-center" autoClose={3000} /> */}
+       
         <h2 className="text-lg font-semibold mb-4">Refund Requests</h2>
 
         {/* Filters */}
@@ -384,18 +382,6 @@ const AdminRefundsTab = () => {
                         ? new Date(r.processedAt).toLocaleString()
                         : "—"}
                     </td>
-
-                    {/* <td
-                      className={`px-4 py-2 border font-medium ${
-                        r.status === "Approved"
-                          ? "text-green-600"
-                          : r.status === "Rejected"
-                          ? "text-red-600"
-                          : "text-yellow-600"
-                      }`}
-                    >
-                      {r.status}
-                    </td> */}
                     <td className="px-4 py-2 border">
                       {/* Status Badge */}
                       <span
@@ -405,7 +391,7 @@ const AdminRefundsTab = () => {
                             : r.status === "Rejected"
                             ? "bg-red-100 text-red-800"
                             : r.status === "Processing"
-                            ? "bg-blue-100 text-blue-800 animate-pulse" // New state
+                            ? "bg-blue-100 text-blue-800 animate-pulse" 
                             : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
@@ -455,23 +441,9 @@ const AdminRefundsTab = () => {
                       )}
 
                       {/* Show info message for Processing refunds */}
-                      {r.status === "Processing" && (
-                        <div className="text-blue-600 text-sm bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
-                          <div className="flex items-center gap-2">
-                            <span className="inline-block w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                            Refund is being processed...
-                          </div>
-                        </div>
-                      )}
 
                       {r.status === "Processing" && (
                         <div className="flex gap-2">
-                          <div className="text-blue-600 text-sm bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
-                            <div className="flex items-center gap-2">
-                              <span className="inline-block w-3 h-3 bg-blue-500 rounded-full animate-pulse"></span>
-                              Processing...
-                            </div>
-                          </div>
                           <button
                             onClick={() =>
                               handleSyncRefund(r.orderId, r.refundId)
@@ -586,7 +558,7 @@ const AdminRefundsTab = () => {
           </div>
         )}
 
-        {/* ✅ Product Preview Modal */}
+        {/*  Product Preview Modal */}
         {selectedProduct && (
           <div
             className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50"

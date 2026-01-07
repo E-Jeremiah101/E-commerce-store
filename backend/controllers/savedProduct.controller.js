@@ -1,7 +1,5 @@
 import SavedProduct from "../models/savedProduct.model.js";
-import Product from "../models/product.model.js";
 
-// Save a product
 export const saveProduct = async (req, res) => {
   try {
     const { productId } = req.body;
@@ -40,7 +38,7 @@ export const saveProduct = async (req, res) => {
   }
 };
 
-// Remove saved product
+
 export const unsaveProduct = async (req, res) => {
   try {
     const { productId } = req.params;
@@ -69,7 +67,7 @@ export const unsaveProduct = async (req, res) => {
   }
 };
 
-// Get user's saved products
+
 export const getSavedProducts = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -77,12 +75,11 @@ export const getSavedProducts = async (req, res) => {
     const savedProducts = await SavedProduct.find({ user: userId })
       .populate({
         path: "product",
-        match: { archived: { $ne: true } }, // Don't show archived products
+        match: { archived: { $ne: true } }, 
         select: "name price images category countInStock",
       })
       .sort({ savedAt: -1 });
 
-    // Filter out any where product is null (archived)
     const validSavedProducts = savedProducts.filter(
       (sp) => sp.product !== null
     );
@@ -100,7 +97,7 @@ export const getSavedProducts = async (req, res) => {
   }
 };
 
-// Check if product is saved by user
+
 export const checkProductSaved = async (req, res) => {
   try {
     const { productId } = req.params;

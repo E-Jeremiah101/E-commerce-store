@@ -2,9 +2,9 @@ import express from "express";
 
 const router = express.Router();
 
-/**
- * Dynamic robots.txt that uses actual domain from request
- */
+
+//  Dynamic robots.txt that uses actual domain from request
+
 router.get("/robots.txt", (req, res) => {
   const host = req.get("host") || "yourdomain.com";
   const protocol = req.protocol || "https";
@@ -38,9 +38,9 @@ Sitemap: ${baseUrl}/sitemap-products.xml`;
   res.send(robotsTxt);
 });
 
-/**
- * Dynamic sitemap.xml - lists all products
- */
+
+//  Dynamic sitemap.xml - lists all products
+ 
 router.get("/sitemap.xml", async (req, res) => {
   try {
     const host = req.get("host") || "yourdomain.com";
@@ -74,16 +74,15 @@ router.get("/sitemap.xml", async (req, res) => {
   }
 });
 
-/**
- * Dynamic sitemap for products - includes all products
- */
+
+//   Dynamic sitemap for products - includes all products
+ 
 router.get("/sitemap-products.xml", async (req, res) => {
   try {
     const host = req.get("host") || "yourdomain.com";
     const protocol = req.protocol || "https";
     const baseUrl = `${protocol}://${host}`;
 
-    // Import Product model
     const { default: Product } = await import("../models/product.model.js");
 
     const products = await Product.find()

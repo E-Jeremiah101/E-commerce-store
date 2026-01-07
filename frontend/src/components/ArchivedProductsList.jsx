@@ -12,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import { useProductStore } from "../stores/useProductStore.js";
 import { formatPrice } from "../utils/currency.js";
 import { useStoreSettings } from "./StoreSettingsContext.jsx";
 import toast from "react-hot-toast";
@@ -182,24 +181,35 @@ const ArchivedProductsList = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Archived Products
-              </h1>
-              <p className="text-gray-600 mt-2">
-                Products that have been archived and can be restored or
-                permanently deleted.
-              </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm font-medium">
-                {totalProducts} archived products
-              </span>
-            </div>
+       <div className="mb-10">
+  <div className="relative">
+    <div className="absolute inset-0 bg-gradient-to-r from-gray-50/50 to-white rounded-2xl"></div>
+    <div className="relative p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <h1 className="text-3xl font-bold text-gray-900 mb-3">
+            Archived Products
+          </h1>
+          <p className="text-gray-600">
+            These products have been removed from active listings but are preserved here.
+            You can restore them to your catalog or delete them permanently.
+          </p>
+        </div>
+        <div className="bg-gray-900 rounded-xl p-5 text-center shadow-lg">
+          <div className="text-4xl font-bold text-white mb-1">
+            {totalProducts}
+          </div>
+          <div className="text-gray-300 text-sm font-medium">
+            Archived Products
+          </div>
+          <div className="text-gray-400 text-xs mt-2">
+            Hidden from customers
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
 
         {/* Empty State */}
         {archivedProducts.length === 0 ? (

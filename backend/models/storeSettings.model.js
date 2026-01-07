@@ -20,7 +20,7 @@ const storeSettingsSchema = new mongoose.Schema(
       type: String,
       default: "NGN",
     },
-    // Updated warehouse location (admin configurable)
+ 
     warehouseLocation: {
       state: {
         type: String,
@@ -59,7 +59,7 @@ const storeSettingsSchema = new mongoose.Schema(
     nigeriaConfig: {
       regions: {
         type: Map,
-        of: [String], // Region name -> array of states
+        of: [String], 
         default: () =>
           new Map([
             [

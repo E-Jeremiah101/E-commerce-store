@@ -57,6 +57,7 @@ const auditLogSchema = new mongoose.Schema(
         "FLUTTERWAVE_NETWORK_ERROR",
         "REFUND_WEBHOOK_APPROVED",
         "REFUND_WEBHOOK_REJECTED",
+        
 
         // Auth actions
         "LOGIN",

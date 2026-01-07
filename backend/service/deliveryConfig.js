@@ -1085,7 +1085,7 @@ async function getDeliveryZone(deliveryAddress, storeSettings) {
   const customerCity = deliveryAddress.city;
   const customerLGA = deliveryAddress.lga;
 
-  // 1. Same City (same LGA or neighboring LGAs)
+  //  Same City
   if (
     customerState === adminState &&
     customerCity?.toLowerCase() === adminCity?.toLowerCase()
@@ -1093,17 +1093,17 @@ async function getDeliveryZone(deliveryAddress, storeSettings) {
     return "sameCity";
   }
 
-  // 2. Same LGA (different city but same LGA - for metropolitan areas)
+  //  Same LGA 
   if (customerState === adminState && customerLGA === adminLGA) {
     return "sameLGA";
   }
 
-  // 3. Same State (different LGA)
+  //  Same State
   if (customerState === adminState) {
     return "sameState";
   }
 
-  // 4. Check if in same region
+  //   same region
   const adminRegion = getRegionByStateName(adminState, nigeriaConfig);
   const customerRegion = getRegionByStateName(customerState, nigeriaConfig);
 
@@ -1111,13 +1111,13 @@ async function getDeliveryZone(deliveryAddress, storeSettings) {
     return "sameRegion";
   }
 
-  // 5. Check if southern states
+  //   southern states
   const southernRegions = ["SOUTH_SOUTH", "SOUTH_EAST", "SOUTH_WEST"];
   if (customerRegion && southernRegions.includes(customerRegion)) {
     return "southern";
   }
 
-  // 6. Default to northern
+  // Default to northern
   return "northern";
 }
 
@@ -1173,9 +1173,7 @@ export async function calculateDeliveryFee(deliveryAddress) {
   }
 }
 
-// Export the old calculateDeliveryFee for backward compatibility
 export function calculateDeliveryFeeOld(addressState, addressCity, addressLGA) {
-  // This is the old function signature for backward compatibility
   return calculateDeliveryFee({
     state: addressState,
     city: addressCity,

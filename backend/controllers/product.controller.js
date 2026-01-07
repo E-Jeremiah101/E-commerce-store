@@ -5,7 +5,6 @@ import {optimizeCloudinaryUrl} from "../lib/optimizeCloudinaryUrl.js";
 import Category from "../models/categoy.model.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
-import { addToRecentlyViewed } from "../lib/recentlyViewed.js";
 export const clearFeaturedCache = async (req, res) => {
   try {
     await redis.del("featured_products");
@@ -16,18 +15,11 @@ export const clearFeaturedCache = async (req, res) => {
   }
 };
 
-// Check variant availability - VARIANT-ONLY VERSION
 export const checkVariantAvailability = async (req, res) => {
   try {
     const { productId } = req.params;
     const { size, color, quantity = 1 } = req.query;
 
-    console.log("🔍 checkVariantAvailability called:", {
-      productId,
-      size,
-      color,
-      quantity,
-    });
 
     const product = await Product.findById(productId);
     if (!product) {
@@ -38,7 +30,7 @@ export const checkVariantAvailability = async (req, res) => {
       });
     }
 
-    // VARIANT-ONLY: Only check variant stock
+    //  Only check variant stock
     let availableStock = 0;
 
     if (product.variants?.length > 0) {
@@ -82,53 +74,13 @@ export const checkVariantAvailability = async (req, res) => {
   }
 };
 
-// Debug function - VARIANT-ONLY
-export const debugProductStock = async (req, res) => {
-  try {
-    const { productId } = req.params;
 
-    console.log("🔍 Debugging product stock for:", productId);
-
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ error: "Product not found" });
-    }
-
-    const debugInfo = {
-      id: product._id,
-      name: product.name,
-      // REMOVED: mainStock: product.countInStock,
-      variants:
-        product.variants?.map((v) => ({
-          size: v.size,
-          color: v.color,
-          stock: v.countInStock,
-        })) || [],
-      totalVariants: product.variants?.length || 0,
-      totalVariantStock:
-        product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
-        0,
-    };
-
-    console.log("📊 Product debug info:", debugInfo);
-    res.json(debugInfo);
-  } catch (error) {
-    console.error("Debug error:", error);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Check cart availability - VARIANT-ONLY
 export const checkCartAvailability = async (req, res) => {
   try {
     const { cartItems } = req.body;
 
-    console.log("🔍 [START] Checking cart availability");
-    console.log("📦 Cart items received:", JSON.stringify(cartItems, null, 2));
-
     // If cart is empty, return all available
     if (!cartItems || cartItems.length === 0) {
-      console.log("🛒 Cart is empty, returning all available");
       return res.json({
         allAvailable: true,
         unavailableItems: [],
@@ -141,17 +93,10 @@ export const checkCartAvailability = async (req, res) => {
     const unavailableItems = [];
 
     for (const [index, item] of cartItems.entries()) {
-      console.log(`\n📦 [Item ${index + 1}/${cartItems.length}] Checking:`, {
-        id: item._id,
-        name: item.name,
-        quantity: item.quantity,
-        size: item.size,
-        color: item.color,
-      });
 
       const product = await Product.findById(item._id);
       if (!product) {
-        console.log(`❌ Product not found in database: ${item._id}`);
+        console.log(` Product not found in database: ${item._id}`);
         availabilityResults.push({
           productId: item._id,
           available: false,
@@ -167,14 +112,12 @@ export const checkCartAvailability = async (req, res) => {
         continue;
       }
 
-      console.log(`✅ Product found: ${product.name}`);
-      console.log(`📊 Product variants:`, product.variants);
 
       let availableStock = 0;
 
-      // VARIANT-ONLY: Only check variant stock
+
       if (product.variants?.length === 0) {
-        console.log(`❌ Product has no variants: ${product.name}`);
+
         availabilityResults.push({
           productId: item._id,
           available: false,
@@ -199,11 +142,8 @@ export const checkCartAvailability = async (req, res) => {
 
       if (variant) {
         availableStock = variant.countInStock;
-        console.log(
-          `✅ Found variant: ${item.size}/${item.color}, Stock: ${availableStock}`
-        );
       } else {
-        console.log(`❌ Variant not found: ${item.size}/${item.color}`);
+        console.log(`Variant not found: ${item.size}/${item.color}`);
         availabilityResults.push({
           productId: item._id,
           available: false,
@@ -222,11 +162,7 @@ export const checkCartAvailability = async (req, res) => {
       }
 
       const isAvailable = availableStock >= item.quantity;
-      console.log(
-        `📋 Availability check: ${
-          isAvailable ? "✅ AVAILABLE" : "❌ UNAVAILABLE"
-        } (Requested: ${item.quantity}, Available: ${availableStock})`
-      );
+      
 
       availabilityResults.push({
         productId: item._id,
@@ -245,24 +181,10 @@ export const checkCartAvailability = async (req, res) => {
           availableStock,
           message: `Only ${availableStock} available`,
         });
-        console.log(`🚫 Marking as unavailable: ${product.name}`);
       } else {
-        console.log(`✅ Marking as available: ${product.name}`);
+        console.log(` Marking as available: ${product.name}`);
       }
     }
-
-    console.log(`\n🎯 [FINAL RESULT]`, {
-      allAvailable,
-      unavailableItemsCount: unavailableItems.length,
-      unavailableItems: unavailableItems.map((item) => ({
-        name: item.name,
-        requested: item.quantity,
-        available: item.availableStock,
-      })),
-      totalItems: cartItems.length,
-    });
-
-    console.log("🔍 [END] Availability check complete\n");
 
     res.json({
       allAvailable,
@@ -270,7 +192,7 @@ export const checkCartAvailability = async (req, res) => {
       availabilityResults,
     });
   } catch (error) {
-    console.error("❌ [ERROR] Checking cart availability:", error);
+    console.error(" [ERROR] Checking cart availability:", error);
     res.json({
       allAvailable: true,
       unavailableItems: [],
@@ -280,7 +202,6 @@ export const checkCartAvailability = async (req, res) => {
   }
 };
 
-// Get product variants
 export const getProductVariants = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -301,7 +222,6 @@ export const getProductVariants = async (req, res) => {
   }
 };
 
-// Update variant stock - VARIANT-ONLY
 export const updateVariantStock = async (req, res) => {
   try {
     const { variants } = req.body;
@@ -315,9 +235,7 @@ export const updateVariantStock = async (req, res) => {
     if (variants && Array.isArray(variants)) {
       product.variants = variants;
 
-      // In variant-only system, main product stock is always 0
-      // Or you can remove countInStock from Product model entirely
-      product.countInStock = 0; // Set to 0 for variant-only system
+      product.countInStock = 0;
     }
 
     await product.save();
@@ -328,7 +246,6 @@ export const updateVariantStock = async (req, res) => {
   }
 };
 
-// Update variant inventory - VARIANT-ONLY
 export const updateVariantInventory = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
@@ -374,15 +291,15 @@ export const updateVariantInventory = async (req, res) => {
 
     variant.countInStock = newStock;
 
-    // In variant-only system, main product stock is 0
-    product.countInStock = 0; // Always 0
+   
+    product.countInStock = 0;
 
     await product.save();
 
     res.json({
       message: "Variant stock updated successfully",
       countInStock: variant.countInStock,
-      // productStock: product.countInStock // Always 0
+      
     });
   } catch (error) {
     console.error("Error updating variant inventory:", error);
@@ -390,20 +307,17 @@ export const updateVariantInventory = async (req, res) => {
   }
 };
 
-// Get variant stock specifically - VARIANT-ONLY
 export const getVariantStock = async (req, res) => {
   try {
     const { productId } = req.params;
     const { size, color } = req.query;
-
-    console.log("🔍 getVariantStock called:", { productId, size, color });
 
     const product = await Product.findById(productId);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    let stock = 0; // Always 0 for main product in variant-only system
+    let stock = 0;
 
     // If variants exist, find specific variant with FLEXIBLE matching
     if (product.variants && product.variants.length > 0) {
@@ -417,11 +331,11 @@ export const getVariantStock = async (req, res) => {
         return sizeMatches && colorMatches;
       });
 
-      console.log("📊 Found variant:", variant);
+      console.log(" Found variant:", variant);
       stock = variant ? variant.countInStock : 0;
     }
 
-    console.log("✅ Final stock:", stock);
+    console.log(" Final stock:", stock);
     res.json({ stock, productId, size, color });
   } catch (error) {
     console.log("Error in getVariantStock controller", error.message);
@@ -476,7 +390,6 @@ export const getFeaturedProducts = async (req, res) => {
   try {
     let featuredProducts = await redis.get("featured_products");
     if (featuredProducts) {
-      console.log("✅ Loading featured products from cache");
       const parsed = JSON.parse(featuredProducts);
       return res.json(parsed);
     }
@@ -495,7 +408,7 @@ export const getFeaturedProducts = async (req, res) => {
       return res.status(404).json({ message: "No featured products found" });
     }
 
-    // Transform for variant-only system
+  
     const transformedFeatured = featuredProducts.map((product) => {
       const totalVariantStock =
         product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
@@ -537,8 +450,8 @@ export const createProduct = async (req, res) => {
       category,
       sizes,
       colors,
-      countInStock, // This should be ignored in variant-only system
-      variants, // All stock comes from variants
+      countInStock,
+      variants, 
     } = req.body;
 
     let uploadedImages = [];
@@ -564,10 +477,10 @@ export const createProduct = async (req, res) => {
       price,
       images: uploadedImages,
       category,
-      sizes: sizes || [],
+      sizes: sizes || [], 
       colors: colors || [],
-      countInStock: 0, // Always 0 in variant-only system
-      variants: variants || [], // All stock is in variants
+      countInStock: 0, 
+      variants: variants || [],
     });
 
     const requestInfo = AuditLogger.getRequestInfo(req);
@@ -621,8 +534,6 @@ export const reduceProduct = async (req, res) => {
     const product = await Product.findById(id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    // In variant-only system, main product should not have stock
-    // This function should not be used
     return res.status(400).json({
       message:
         "This function is disabled in variant-only system. Use variant-specific endpoints instead.",
@@ -663,12 +574,12 @@ export const deleteProduct = async (req, res) => {
     product.isActive = false;
     await product.save();
 
-    // Just mark as archived (soft delete)
+    //mark as archived (soft delete)
     product.archived = true;
     product.isActive = false;
     await product.save();
 
-    // Optional: Remove from featured cache if it was featured
+    // Remove from featured cache if it was featured
     if (product.isFeatured) {
       product.isFeatured = false;
       await product.save();
@@ -693,7 +604,6 @@ export const getRecommendedProducts = async (req, res) => {
         $match: {
           archived: { $ne: true },
           isActive: { $ne: false },
-          // Check if any variant has stock > 0
           "variants.countInStock": { $gt: 0 },
         },
       },
@@ -790,9 +700,8 @@ export const toggleFeaturedProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (product) {
-      const wasFeatured = product.isFeatured; // Define here before using
+      const wasFeatured = product.isFeatured; 
 
-      // Log before toggling
       const requestInfo = AuditLogger.getRequestInfo(req);
       await AuditLogger.log({
         adminId: req.user._id,
@@ -845,9 +754,9 @@ async function updateFeaturedProductsCache() {
 
     // Set with expiration to prevent stale data
     await redis.set("featured_products", JSON.stringify(transformedFeatured), {
-      EX: 3600, // Set expiration in seconds (1 hour)
+      EX: 3600, 
     });
-    console.log("✅ Featured products cache updated");
+  
   } catch (error) {
     console.log("Error updating featured products cache:", error.message);
   }
@@ -860,14 +769,15 @@ export const searchProducts = async (req, res) => {
   }
 
   try {
-    // Split the query into separate words
+  
     const keywords = query.split(/\s+/).filter(Boolean);
 
     const textConditions = [];
     const numberConditions = [];
 
     // Loop through each keyword to build search conditions
-    keywords.forEach((word, i) => {
+
+      keywords.forEach((word, i) => {
       const lowerWord = word.toLowerCase();
 
       // Handle "under" and "above" for price filtering
@@ -876,11 +786,11 @@ export const searchProducts = async (req, res) => {
         const prevWord = keywords[i - 1]?.toLowerCase();
 
         if (prevWord === "under") {
-          numberConditions.push({ amount: { $lte: amount } }); // price ≤ value
+          numberConditions.push({ amount: { $lte: amount } }); 
         } else if (prevWord === "above") {
-          numberConditions.push({ amount: { $gte: amount } }); // price ≥ value
+          numberConditions.push({ amount: { $gte: amount } }); 
         } else {
-          numberConditions.push({ amount }); // exact price match
+          numberConditions.push({ amount }); 
         }
       } else if (lowerWord !== "under" && lowerWord !== "above") {
         // Build regex for text fields
@@ -1026,16 +936,8 @@ export const getArchivedProducts = async (req, res) => {
 
 export const trackProductView = async (req, res, next) => {
   try {
-    console.log("🔍 trackProductView called:", {
-      userId: req.user?._id,
-      userEmail: req.user?.email,
-      isGuest: !req.user,
-      productId: req.params.id,
-      hasUser: !!req.user,
-    });
 
     if (!req.params.id) {
-      console.log("⚠️ Skipping tracking - no product ID");
       return next();
     }
 
@@ -1047,11 +949,9 @@ export const trackProductView = async (req, res, next) => {
       .lean();
 
     if (!product) {
-      console.log("⚠️ Product not found for tracking");
       return next();
     }
 
-    console.log("📦 Product found:", product.name);
 
     // Calculate total variant stock
     const totalVariantStock =
@@ -1066,9 +966,9 @@ export const trackProductView = async (req, res, next) => {
           ).toFixed(1)
         : null;
 
-    // Create a standardized product object with consistent ID format
+
     const productWithStock = {
-      _id: product._id.toString(), // Always string
+      _id: product._id.toString(),
       name: product.name,
       price: product.price,
       images: product.images,
@@ -1078,39 +978,36 @@ export const trackProductView = async (req, res, next) => {
       discountPercentage,
       previousPrice: product.previousPrice,
       isPriceSlashed: product.isPriceSlashed,
-      // Add any other fields you want to store
+     
     };
 
-    // Import dynamically
     const { addToRecentlyViewed } = await import("../lib/recentlyViewed.js");
 
-    // For logged-in users: use their user ID
+    // For logged-in users
     if (req.user?._id) {
       console.log(
-        "📝 Adding to recently viewed for logged-in user:",
+        "Adding to recently viewed for logged-in user:",
         req.user._id
       );
       await addToRecentlyViewed(req.user._id.toString(), productWithStock);
-      console.log("✅ Added to recently viewed (user)");
     }
     // For guests: generate a unique ID
     else {
       const guestIdentifier = generateGuestIdentifier(req);
-      console.log("📝 Adding to recently viewed for guest:", guestIdentifier);
+      console.log(" Adding to recently viewed for guest:", guestIdentifier);
       await addToRecentlyViewed(`guest:${guestIdentifier}`, productWithStock);
-      console.log("✅ Added to recently viewed (guest)");
     }
 
     next();
   } catch (error) {
-    console.error("❌ Error tracking product view:", error);
+    console.error("Error tracking product view:", error);
     next();
   }
 };
 
-// Helper function to generate guest identifier
+
 const generateGuestIdentifier = (req) => {
-  // Use IP + User-Agent as identifier
+  //IP + User-Agent as identifier
   const ip = req.ip || req.connection.remoteAddress || "unknown";
   const userAgent = req.headers["user-agent"] || "unknown";
 
@@ -1121,50 +1018,37 @@ const generateGuestIdentifier = (req) => {
   for (let i = 0; i < combined.length; i++) {
     const char = combined.charCodeAt(i);
     hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash = hash & hash; 
   }
 
   return Math.abs(hash).toString(16).slice(0, 12);
 };
 
-// Get recently viewed products for the current user
 export const getRecentlyViewedProducts = async (req, res) => {
   try {
-    console.log("🔍 getRecentlyViewedProducts called:", {
-      userId: req.user?._id,
-      userEmail: req.user?.email,
-      isGuest: !req.user,
-      hasUser: !!req.user,
-    });
 
-    // Import dynamically
     const { getRecentlyViewed } = await import("../lib/recentlyViewed.js");
     let recentlyViewed = [];
 
-    // For logged-in users
+
     if (req.user?._id) {
-      console.log("📊 Fetching recently viewed for user:", req.user._id);
       recentlyViewed = await getRecentlyViewed(req.user._id.toString(), 12);
     }
-    // For guests
+ 
     else {
       const guestIdentifier = generateGuestIdentifier(req);
-      console.log("📊 Fetching recently viewed for guest:", guestIdentifier);
+      console.log("Fetching recently viewed for guest:", guestIdentifier);
       recentlyViewed = await getRecentlyViewed(`guest:${guestIdentifier}`, 8);
     }
 
-    console.log("📦 Recently viewed found:", recentlyViewed.length);
-
-    // Return what we have (could be empty array)
     res.json({ products: recentlyViewed });
   } catch (error) {
-    console.error("❌ Error getting recently viewed products:", error);
+    console.error("Error getting recently viewed products:", error);
     // Return empty array on error (NO FALLBACK)
     res.json({ products: [] });
   }
 };
 
-// Restore archived product
 export const restoreProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -1203,7 +1087,6 @@ export const restoreProduct = async (req, res) => {
   }
 };
 
-// Permanent delete (if really needed)
 export const permanentDeleteProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -1246,13 +1129,11 @@ export const permanentDeleteProduct = async (req, res) => {
   }
 };
 
-// Helper function to strip HTML tags
 const stripHtmlTags = (html) => {
   if (!html) return '';
   return html.replace(/<[^>]*>/g, '').trim();
 };
 
-// Export products to CSV 
 export const exportProductsCSV = async (req, res) => {
   try {
     const products = await Product.find({
@@ -1347,7 +1228,6 @@ export const exportProductsCSV = async (req, res) => {
 };
 
 
-// Export products with variants in separate rows (detailed export)
 export const exportProductsDetailedCSV = async (req, res) => {
   try {
     const products = await Product.find({

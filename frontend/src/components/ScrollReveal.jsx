@@ -9,13 +9,13 @@ const ScrollReveal = ({
   direction = "up",
   duration = 0.8,
   distance = 30,
-  easing = [0.25, 0.1, 0.25, 1], // Custom easing curve for smoothness
+  easing = [0.25, 0.1, 0.25, 1], 
 }) => {
   const ref = useRef(null);
   const isInView = useInView(ref, {
     once: true,
     threshold: 0.1,
-    margin: "-50px", // Starts animation slightly before element is fully in view
+    margin: "-50px",
   });
 
   const getInitialState = () => {

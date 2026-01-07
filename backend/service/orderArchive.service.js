@@ -11,36 +11,25 @@ export const archiveOldOrders = async ({
   limit = 5000,
 }) => {
   try {
-    console.log("🔄 Starting archive process...");
 
     const cutoffDate = new Date();
     cutoffDate.setMonth(cutoffDate.getMonth() - olderThanMonths);
 
-    console.log("📅 Cutoff date:", cutoffDate.toISOString());
-    console.log("📊 Looking for orders older than:", olderThanMonths, "months");
-
     const query = {
       status: { $in: ["Delivered", "Cancelled", "Refunded", "Fully Refunded"] },
       createdAt: { $lt: cutoffDate },
-      isArchived: { $ne: true }, // Don't archive already archived orders
+      isArchived: { $ne: true },
     };
 
-    console.log("🔍 Query criteria:", JSON.stringify(query, null, 2));
 
     const orders = await Order.find(query).limit(limit);
 
-    console.log(`✅ Found ${orders.length} orders to archive`);
+    console.log(`Found ${orders.length} orders to archive`);
 
     if (!orders.length) {
-      console.log("📭 No orders found matching criteria");
+      console.log("No orders found matching criteria");
       return { archived: 0 };
     }
-
-    // Log sample order details for debugging
-    console.log("Sample order to archive:");
-    console.log("- Status:", orders[0].status);
-    console.log("- Created:", orders[0].createdAt);
-    console.log("- ID:", orders[0]._id);
 
     // Prepare archived documents
     const archivedDocs = orders.map((order) => ({
@@ -50,7 +39,7 @@ export const archiveOldOrders = async ({
       originalId: order._id,
     }));
 
-    console.log("📝 Inserting into archive collection...");
+    console.log("Inserting into archive collection...");
 
     // Use session for atomic operation
     const session = await mongoose.startSession();
@@ -60,8 +49,7 @@ export const archiveOldOrders = async ({
       // Insert into archive collection
       await OrderArchive.insertMany(archivedDocs, { session });
 
-      // DO NOT DELETE from main collection!
-      // Instead, mark them as archived in the main collection
+      //  mark them as archived in the main collection
       const ids = orders.map((o) => o._id);
       await Order.updateMany(
         { _id: { $in: ids } },
@@ -76,20 +64,17 @@ export const archiveOldOrders = async ({
       );
 
       await session.commitTransaction();
-      console.log(
-        `✅ Successfully archived ${orders.length} orders (marked as archived)`
-      );
 
       return { archived: orders.length };
     } catch (transactionError) {
       await session.abortTransaction();
-      console.error("❌ Transaction failed:", transactionError.message);
+      console.error("Transaction failed:", transactionError.message);
       throw transactionError;
     } finally {
       session.endSession();
     }
   } catch (error) {
-    console.error("❌ Archive function error:", error.message);
+    console.error("Archive function error:", error.message);
     throw error;
   }
 };
@@ -104,40 +89,37 @@ export const startOrderArchiveCron = () => {
       console.log("=".repeat(50));
 
       const result = await archiveOldOrders({
-        olderThanMonths: 6, // Archive orders older than 6 months
+        olderThanMonths: 6,
       });
-
-      console.log(`✅ Monthly archive completed. Archived: ${result.archived}`);
-      console.log("=".repeat(50));
 
       if (result.archived > 0) {
         try {
           await AuditLogger.log({
-            adminId: SYSTEM_USER.id, // Use the system ObjectId
+            adminId: SYSTEM_USER.id, 
             adminName: SYSTEM_USER.name,
             action: "AUTO_ORDER_ARCHIVE",
             entityType: ENTITY_TYPES.ORDER,
             entityId: null,
             entityName: "Monthly Order Archive",
             changes: result,
-            ipAddress: "127.0.0.1", // Add IP for system
+            ipAddress: "127.0.0.1",
             userAgent: "node-cron/system",
             additionalInfo: `Automatically archived ${result.archived} orders older than 6 months`,
           });
-          console.log("📝 Audit log created");
+          
         } catch (auditError) {
-          console.warn("⚠️ Audit log not created:", auditError.message);
-          // Don't fail the whole process if audit logging fails
+          console.warn(" Audit log not created:", auditError.message);
+          
         }
       }
     } catch (error) {
-      console.error("❌ Monthly archive failed:", error.message);
+      console.error("Monthly archive failed:", error.message);
     }
   });
 
-  console.log("📅 Monthly archive cron scheduled (2AM on 1st of every month)");
+  console.log("Monthly archive cron scheduled (2AM on 1st of every month)");
 };
-
+  
 export const getArchivedOrders = async (req, res) => {
   try {
     const {
@@ -151,9 +133,7 @@ export const getArchivedOrders = async (req, res) => {
       limit = 50,
     } = req.query;
 
-    console.log("📥 Archive request query:", req.query);
-
-    // Build query for archived orders
+    
     const query = {};
 
     // Search functionality
@@ -203,7 +183,6 @@ export const getArchivedOrders = async (req, res) => {
       query.archivedAt = dateFilter;
     }
 
-    console.log("🔍 Archive query:", JSON.stringify(query, null, 2));
 
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -248,7 +227,7 @@ export const getArchivedOrders = async (req, res) => {
           })) || [],
         deliveryAddress: order.deliveryAddress,
         phone: order.phone,
-        isArchived: true, // Explicitly mark as archived
+        isArchived: true, 
       })),
       pagination: {
         page: parseInt(page),
@@ -264,15 +243,8 @@ export const getArchivedOrders = async (req, res) => {
 
 export const unarchiveOrders = async ({ daysAgo = 1, limit = 5000 }) => {
   try {
-    console.log("🔄 Starting unarchive process...");
-
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
-
-    console.log(
-      "📅 Looking for orders archived after:",
-      cutoffDate.toISOString()
-    );
 
     // Find orders in archive
     const archivedOrders = await OrderArchive.find({
@@ -280,53 +252,43 @@ export const unarchiveOrders = async ({ daysAgo = 1, limit = 5000 }) => {
       archivedReason: "AUTO_ARCHIVE",
     }).limit(limit);
 
-    console.log(`✅ Found ${archivedOrders.length} orders to unarchive`);
+    console.log(` Found ${archivedOrders.length} orders to unarchive`);
 
     if (!archivedOrders.length) {
-      console.log("📭 No orders found matching criteria");
+      console.log(" No orders found matching criteria");
       return { unarchived: 0 };
     }
-
-    // Log sample order details
-    console.log("Sample order to unarchive:");
-    console.log("- Order Number:", archivedOrders[0].orderNumber);
-    console.log("- Archived At:", archivedOrders[0].archivedAt);
-    console.log("- Status:", archivedOrders[0].status);
-    console.log("- Original ID:", archivedOrders[0].originalId);
 
     // Check which orders actually need to be unarchived
     const idsToCheck = archivedOrders.map((o) => o.originalId || o._id);
 
-    // Find which orders already exist in main collection
+    
     const existingOrders = await Order.find({
       _id: { $in: idsToCheck },
     }).select("_id");
 
     const existingIds = existingOrders.map((o) => o._id.toString());
-    console.log(
-      `📊 Found ${existingIds.length} orders already in main collection`
-    );
 
-    // For orders that already exist, just remove the archived flag
+
     const ordersToUpdate = archivedOrders.filter((o) =>
       existingIds.includes((o.originalId || o._id).toString())
     );
 
-    // For orders that don't exist, we need to create them
+   
     const ordersToCreate = archivedOrders.filter(
       (o) => !existingIds.includes((o.originalId || o._id).toString())
     );
 
     console.log(
-      `📝 ${ordersToUpdate.length} orders to update (remove archived flag)`
+      ` ${ordersToUpdate.length} orders to update (remove archived flag)`
     );
-    console.log(`📝 ${ordersToCreate.length} orders to create (insert new)`);
+    console.log(` ${ordersToCreate.length} orders to create (insert new)`);
 
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      // 1. Update existing orders: remove archived flag
+      //  Update existing orders: remove archived flag
       if (ordersToUpdate.length > 0) {
         const updateIds = ordersToUpdate.map((o) => o.originalId || o._id);
         await Order.updateMany(
@@ -340,10 +302,10 @@ export const unarchiveOrders = async ({ daysAgo = 1, limit = 5000 }) => {
           },
           { session }
         );
-        console.log(`✅ Updated ${ordersToUpdate.length} existing orders`);
+        console.log(` Updated ${ordersToUpdate.length} existing orders`);
       }
 
-      // 2. Create orders that don't exist
+      // Create orders that don't exist
       if (ordersToCreate.length > 0) {
         const ordersToInsert = ordersToCreate.map((order) => {
           const orderObj = order.toObject();
@@ -366,11 +328,11 @@ export const unarchiveOrders = async ({ daysAgo = 1, limit = 5000 }) => {
       );
 
       console.log(
-        `🗑️  Deleted ${allArchiveIds.length} orders from archive collection`
+        `  Deleted ${allArchiveIds.length} orders from archive collection`
       );
 
       await session.commitTransaction();
-      console.log(`✅ Successfully unarchived ${archivedOrders.length} orders`);
+      console.log(`Successfully unarchived ${archivedOrders.length} orders`);
 
       return {
         unarchived: archivedOrders.length,
@@ -379,27 +341,27 @@ export const unarchiveOrders = async ({ daysAgo = 1, limit = 5000 }) => {
       };
     } catch (transactionError) {
       await session.abortTransaction();
-      console.error("❌ Transaction failed:", transactionError.message);
+      console.error("Transaction failed:", transactionError.message);
       throw transactionError;
     } finally {
       session.endSession();
     }
   } catch (error) {
-    console.error("❌ Unarchive function error:", error.message);
+    console.error(" Unarchive function error:", error.message);
     throw error;
   }
 };
 // More specific unarchive function by order IDs
 export const unarchiveOrdersByIds = async (orderIds) => {
   try {
-    console.log("🔄 Unarchiving specific orders...");
+    console.log(" Unarchiving specific orders...");
 
     // Find orders in archive by IDs
     const archivedOrders = await OrderArchive.find({
       _id: { $in: orderIds },
     });
 
-    console.log(`✅ Found ${archivedOrders.length} orders to unarchive`);
+    console.log(`Found ${archivedOrders.length} orders to unarchive`);
 
     if (!archivedOrders.length) {
       return { unarchived: 0, message: "No orders found with given IDs" };
@@ -423,21 +385,20 @@ export const unarchiveOrdersByIds = async (orderIds) => {
     // Delete from archive
     await OrderArchive.deleteMany({ _id: { $in: orderIds } });
 
-    console.log(`✅ Successfully unarchived ${archivedOrders.length} orders`);
+    console.log(`Successfully unarchived ${archivedOrders.length} orders`);
 
     return {
       unarchived: archivedOrders.length,
       orderNumbers: archivedOrders.map((o) => o.orderNumber),
     };
   } catch (error) {
-    console.error("❌ Unarchive by IDs error:", error.message);
+    console.error("Unarchive by IDs error:", error.message);
     throw error;
   }
 };
 
 export const recoverSingleOrder = async (archiveId) => {
   try {
-    console.log(`🔄 Recovering order from archive ID: ${archiveId}`);
 
     const archivedOrder = await OrderArchive.findById(archiveId);
 
@@ -460,10 +421,10 @@ export const recoverSingleOrder = async (archiveId) => {
         },
       });
       console.log(
-        `✅ Removed archived flag from existing order: ${archivedOrder.orderNumber}`
+        `Removed archived flag from existing order: ${archivedOrder.orderNumber}`
       );
     } else {
-      // Order doesn't exist, create it
+    
       const orderToRestore = archivedOrder.toObject();
       delete orderToRestore.archivedAt;
       delete orderToRestore.archivedReason;
@@ -472,12 +433,12 @@ export const recoverSingleOrder = async (archiveId) => {
 
       const restoredOrder = new Order(orderToRestore);
       await restoredOrder.save();
-      console.log(`✅ Created new order: ${archivedOrder.orderNumber}`);
+      console.log(` Created new order: ${archivedOrder.orderNumber}`);
     }
 
     // Delete from archive collection
     await OrderArchive.findByIdAndDelete(archiveId);
-    console.log(`🗑️  Deleted from archive: ${archivedOrder.orderNumber}`);
+    console.log(`  Deleted from archive: ${archivedOrder.orderNumber}`);
 
     return {
       success: true,
@@ -485,7 +446,7 @@ export const recoverSingleOrder = async (archiveId) => {
       message: "Order restored successfully",
     };
   } catch (error) {
-    console.error("❌ Recover order error:", error.message);
+    console.error(" Recover order error:", error.message);
     throw error;
   }
 };

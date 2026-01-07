@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
   ShoppingCart,
-  UserPlus,
   LogOut,
   Lock,
   Home,
@@ -162,12 +161,12 @@ const Navbar = () => {
               ) : (
                 <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
                   <span className="text-white font-bold text-lg">
-                    {settings?.storeName?.charAt(0) || "S"}
+                    {settings?.storeName?.charAt(0) || ""}
                   </span>
                 </div>
               )}
               <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                {settings?.storeName || "Store"}
+                {settings?.storeName || ""}
               </span>
             </Link>
 
@@ -247,7 +246,7 @@ const Navbar = () => {
 
             {/* Right Actions */}
             <div className="flex items-center gap-3">
-              {/* Search - FIXED: Now works on desktop */}
+              {/* Search */}
               <button
                 onClick={handleSearchToggle}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors relative"
@@ -260,7 +259,7 @@ const Navbar = () => {
               </button>
 
               {/* Cart */}
-              <Link
+              <Link 
                 to="/cart"
                 className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                 aria-label="Shopping Cart"
@@ -352,14 +351,14 @@ const Navbar = () => {
                     className="h-8 w-auto"
                   />
                 ) : (
-                  <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
+                  <div className="h-8 w-8  rounded-lg flex items-center justify-center">
                     <span className="text-white font-bold">
-                      {settings?.storeName?.charAt(0) || "S"}
+                      {settings?.storeName?.charAt(0)  || ""}
                     </span>
                   </div>
                 )}
                 <span className="font-bold text-gray-900">
-                  {settings?.storeName || "Store"}
+                  {settings?.storeName || "" }
                 </span>
               </Link>
 
@@ -405,7 +404,7 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Desktop Search Bar - FIXED: Now opens properly */}
+        {/* Desktop Search Bar - Now opens properly */}
         {isSearchOpen && (
           <div className="hidden lg:block animate-in slide-in-from-top duration-200">
             <div className="container mx-auto px-4 py-4 bg-white border-t border-gray-100 shadow-sm">

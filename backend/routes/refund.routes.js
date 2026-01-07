@@ -1,4 +1,4 @@
-// routes/refund.routes.js
+
 import express from "express";
 import {
   requestRefund,
@@ -8,7 +8,6 @@ import {
   retryWebhook,
   checkRefundStatus,
   pollRefundStatus,
-  fixStuckRefunds,
 } from "../controllers/refund.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
@@ -16,10 +15,8 @@ import { requirePermission } from "../middleware/permission.middleware.js";
 requirePermission
 const router = express.Router();
 
-// User — request refund
 router.post("/:orderId/request", protectRoute, requestRefund);
 
-// Admin — view + approve + reject
 router.get(
   "/",
   protectRoute,
@@ -53,6 +50,5 @@ router.get(
   adminRoute,
   pollRefundStatus
 );
-router.post("/fix-stuck", protectRoute, adminRoute, fixStuckRefunds);
 
 export default router;

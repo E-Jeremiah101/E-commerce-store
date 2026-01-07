@@ -33,7 +33,7 @@ import auditLogArchiveJob from "./jobs/auditLogArchive.job.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
-await connectRedis(); //connect once at startup
+await connectRedis();
 
 try {
   await connectDB();
@@ -43,15 +43,14 @@ try {
   process.exit(1);
 }
 
-// const __dirname = path.resolve();
 app.use(
   cors({
-    origin: process.env.CLIENT_URL, // allowed frontend
-    credentials: true, // allow cookies/tokens
+    origin: process.env.CLIENT_URL, 
+    credentials: true,
   })
 );
 app.set("trust proxy", true);
-app.use(express.json({ limit: "10mb" })); // allow to parse the body of the request
+app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
 // SEO-friendly headers
@@ -71,19 +70,14 @@ app.use((req, res, next) => {
   res.set("Referrer-Policy", "strict-origin-when-cross-origin");
   next();
 });
+
 const startAuditArchiveJob = () => {
   auditLogArchiveJob.scheduleMonthlyArchive();
-
-  // Optional: Run immediately on startup to check for overdue archives
-  setTimeout(() => {
-    auditLogArchiveJob.runArchiveJob().catch(console.error);
-  }, 60000); // Wait 1 minute after startup
 };
 
-// Call this function when your app starts
 startAuditArchiveJob();
 startOrderArchiveCron();
-// Sitemap and robots.txt routes (should be before static files)
+
 app.use("/", sitemapRoutes);
 
 app.use("/api/locations", locationRoutes);

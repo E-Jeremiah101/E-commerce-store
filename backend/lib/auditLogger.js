@@ -1,6 +1,5 @@
 import AuditLog from "../models/auditLog.model.js";
 import { ENTITY_TYPES } from "../constants/auditLog.constants.js";
-import { SYSTEM_USER, isSystemId } from "../utils/systemUtils.js";
 
 
 class AuditLogger {
@@ -35,7 +34,7 @@ class AuditLogger {
         additionalInfo: additionalInfo || "",
       });
 
-      console.log(`📝 Audit logged: ${action} by ${adminName}`);
+      console.log(` Audit logged: ${action} by ${adminName}`);
       return logEntry;
     } catch (error) {
       console.error("Failed to create audit log:", error);

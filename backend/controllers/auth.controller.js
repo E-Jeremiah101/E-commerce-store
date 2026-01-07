@@ -22,7 +22,7 @@ const generateTokens = (userId) => {
 
   return { accessToken, refreshToken };
 };
-//save token to redis database
+
 const storeRefreshToken = async (userId, refreshToken) => {
   await redis.set(
     `refresh_token:${userId}`,
@@ -49,7 +49,6 @@ const setCookies = (res, accessToken, refreshToken) => {
   });
 };
 
-// Helper for auth audit logging
 const logAuthAction = async (req, action, userId = null, changes = {}, additionalInfo = "") => {
   try {
     let user = null;
@@ -97,7 +96,7 @@ const logAuthAction = async (req, action, userId = null, changes = {}, additiona
   }
 };
 
-// Helper for failed login attempts
+
 const logFailedLogin = async (req, email, reason) => {
   try {
     // NEW: Check if the user exists and is admin
@@ -264,7 +263,6 @@ export const signup = async (req, res) => {
       });
     }
   } catch (error) {
-    console.log("Error in signup controller", error.message);
     res.status(400).json({ message: error.message });
   }
 };
@@ -446,11 +444,7 @@ export const refreshToken = async (req, res) => {
     setCookies(res, newAccessToken, newRefreshToken);
 
     res.json({ message: "Tokens refreshed successfully" });
-    console.log(
-      `Refreshed tokens for user ${
-        decoded.userId
-      } at ${new Date().toISOString()}`
-    );
+  
   } catch (error) {
     console.error("Error in refreshToken controller:", error.message);
     res.status(401).json({ message: "Invalid or expired refresh token" });
@@ -459,7 +453,6 @@ export const refreshToken = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    console.log("🔍 Auth getProfile called for:", req.user?.email);
 
     if (!req.user) {
       return res.status(404).json({ message: "User not found" });
@@ -472,7 +465,6 @@ export const getProfile = async (req, res) => {
     if (!user.permissions) {
       let permissions = [];
       if (user.role === "admin" && user.adminType) {
-        console.log("Calculating permissions for admin type:", user.adminType);
         if (user.adminType === "super_admin") {
           permissions = Object.values(PERMISSIONS);
         } else {
@@ -481,14 +473,6 @@ export const getProfile = async (req, res) => {
       }
       user.permissions = permissions;
     }
-
-    console.log("✅ Auth getProfile returning user with permissions:", {
-      email: user.email,
-      role: user.role,
-      adminType: user.adminType,
-      permissions: user.permissions,
-      permissionsLength: user.permissions?.length || 0,
-    });
 
     res.json(user);
   } catch (error) {
@@ -502,6 +486,8 @@ export const forgotPassword = async (req, res) => {
     const { email } = req.body;
 
     const user = await User.findOne({ email });
+
+    const settings = await storeSettings.findOne();
 
     // Generate reset token
     const resetToken = crypto.randomBytes(20).toString("hex");
@@ -550,7 +536,7 @@ export const forgotPassword = async (req, res) => {
       <p>If you didn’t request a password reset, you can safely ignore this email. 
       Your account will remain secure.</p>
 
-      <p style="margin-top: 30px;">Best regards,<br><strong>Eco-Store</strong></p>
+      <p style="margin-top: 30px;">Best regards,<br><strong> ${settings.storeName}</strong></p>
     </div>
   `,
     });
@@ -593,6 +579,7 @@ export const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
+    const settings = await storeSettings.findOne();
 
     const resetTokenHash = crypto
       .createHash("sha256")
@@ -659,7 +646,7 @@ export const resetPassword = async (req, res) => {
               <p>Hello ${user.firstname},</p>
               <p>Your password has been successfully reset.</p>
               <p>If you did not initiate this password reset, please contact our support team immediately.</p>
-              <p>Best regards,<br><strong>Eco-Store Security Team</strong></p>
+              <p>Best regards,<br><strong>${settings.storeName} Security Team</strong></p>
             </div>
           `,
         });

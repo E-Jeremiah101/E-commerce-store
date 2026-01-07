@@ -4,27 +4,23 @@ import User from "../models/user.model.js";
 import Visitor from "../models/visitors.model.js";
 import redis from "../lib/redis.js";
 
-// MAIN FUNCTION
+
 export const getAnalytics = async (range = "weekly") => {
-  // ⚡ OPTIMIZATION: Check cache first
+
   const cacheKey = `analytics:${range}`;
   try {
     const cached = await redis.get(cacheKey);
     if (cached) {
-      console.log("✅ Returning cached analytics data");
       return JSON.parse(cached);
     }
   } catch (cacheError) {
-    console.log("⚠️ Cache read failed, proceeding with DB query");
   }
 
   const endDate = new Date();
   endDate.setHours(23, 59, 59, 999);
   const startDate = getStartDate(range, endDate);
 
-  console.log("📅 Range:", range);
-  console.log("📅 Current Period Start:", startDate);
-  console.log("📅 Current Period End:", endDate);
+  
 
   const dateFilter = {};
   if (startDate && endDate) {
@@ -35,7 +31,6 @@ export const getAnalytics = async (range = "weekly") => {
 
   // Get current period data
   const analyticsData = await getAnalyticsData(startDate, endDate);
-  console.log("📊 Current Period Data:", analyticsData);
 
   // Get previous period data for comparison
   let prevAnalyticsData = {
@@ -70,25 +65,14 @@ export const getAnalytics = async (range = "weekly") => {
     const prevEndDate = new Date(startDate.getTime() - 1);
     const prevStartDate = new Date(prevEndDate.getTime() - durationMs + 1);
 
-    console.log("📅 Previous Period Start:", prevStartDate);
-    console.log("📅 Previous Period End:", prevEndDate);
-
     prevAnalyticsData = await getAnalyticsData(prevStartDate, prevEndDate);
   }
 
   const calculateChange = (current, previous, metricType = "default") => {
-    console.log(
-      `🔢 Calculate change - Current: ${current}, Previous: ${previous}, Metric: ${metricType}`
-    );
 
     // Handle the case where previous is 0 but current is positive
     if (previous === 0 && current > 0) {
-      // Instead of showing 100% for any increase from 0,
-      // we can show a more meaningful percentage based on overall growth
-      // or use a fixed growth percentage for new stores
-      console.log(
-        `🔢 Previous is 0, current is ${current} - showing custom growth`
-      );
+  
       return getRealisticGrowthPercentage(current, metricType);
     }
 
@@ -103,7 +87,6 @@ export const getAnalytics = async (range = "weekly") => {
     }
 
     const change = ((current - previous) / previous) * 100;
-    console.log(`🔢 Calculated change: ${change.toFixed(2)}%`);
     return change;
   };
 
@@ -211,7 +194,7 @@ export const getAnalytics = async (range = "weekly") => {
   analyticsData.auv = currentAUV;
   analyticsData.auvChange = calculateChange(currentAUV, prevAUV, "auv");
 
-  console.log("📈 Value Metrics:", {
+  console.log(" Value Metrics:", {
     averageUnitValue: analyticsData.averageUnitValue,
     auv: analyticsData.auv,
     auvChange: analyticsData.auvChange,
@@ -392,23 +375,19 @@ export const getAnalytics = async (range = "weekly") => {
     couponPerformance,
   };
 
-  // ⚡ OPTIMIZATION: Cache results for 5 minutes
+  //  Cache results for 5 minutes
   try {
     const cacheKey = `analytics:${range}`;
     await redis.setEx(cacheKey, 300, JSON.stringify(result)); // 5 minute cache
-    console.log("✅ Analytics cached for 5 minutes");
+    console.log(" Analytics cached for 5 minutes");
   } catch (cacheError) {
-    console.log("⚠️ Cache write failed, but returning fresh data");
+    console.log("Cache write failed, but returning fresh data");
   }
 
   return result;
 };
 
-// MAIN ANALYTIC STATS - UPDATED WITH DATE FILTERING
-// -----------------------------
 
-// MAIN ANALYTIC STATS - UPDATED WITH DATE FILTERING
-// -----------------------------
 async function getAnalyticsData(startDate, endDate) {
   // Create proper date filter - IMPORTANT FIX!
   const dateFilter = {};
@@ -416,9 +395,7 @@ async function getAnalyticsData(startDate, endDate) {
     dateFilter.createdAt = { $gte: startDate, $lte: endDate };
   }
 
-  // ⚡ OPTIMIZATION: Use Promise.all() to parallelize all count operations
-  // Previously: 15+ sequential countDocuments queries
-  // Now: All counts done in parallel (4 queries instead of 15+)
+  //  Promise.all() to parallelize all count operations
   const [
     totalUsersResult,
     totalProductsResult,
@@ -438,8 +415,6 @@ async function getAnalyticsData(startDate, endDate) {
     // Count visitors
     Visitor.countDocuments(dateFilter),
 
-    // ⚡ OPTIMIZATION: Get all order status counts in ONE aggregation pipeline
-    // Instead of 7 separate countDocuments calls, use single aggregation
     Order.aggregate([
       { $match: dateFilter },
       {
@@ -471,63 +446,6 @@ async function getAnalyticsData(startDate, endDate) {
   const refundedOrders = statusCountMap["Refunded"] || 0;
   const partiallyRefundedOrders = statusCountMap["Partially Refunded"] || 0;
 
-  // const revenue = await Order.aggregate([
-  //   {
-  //     $match: {
-  //       ...dateFilter,
-  //       status: { $nin: ["Cancelled"] },
-  //     },
-  //   },
-  //   {
-  //     $group: {
-  //       _id: null,
-
-  //       grossRevenue: {
-  //         $sum: {
-  //           $cond: [
-  //             // ✅ subTotal already excludes delivery
-  //             { $gt: ["$subTotal", 0] },
-  //             {
-  //               $subtract: [
-  //                 "$subTotal",
-  //                 {
-  //                   $cond: [
-  //                     { $gt: ["$discount", 0] },
-  //                     "$discount",
-  //                     { $ifNull: ["$coupon.discount", 0] },
-  //                   ],
-  //                 },
-  //               ],
-  //             },
-
-  //             // ✅ totalAmount includes delivery → remove it
-  //             {
-  //               $subtract: [
-  //                 { $ifNull: ["$totalAmount", 0] },
-  //                 {
-  //                   $add: [
-  //                     { $ifNull: ["$deliveryFee", 0] },
-  //                     {
-  //                       $cond: [
-  //                         { $gt: ["$discount", 0] },
-  //                         "$discount",
-  //                         { $ifNull: ["$coupon.discount", 0] },
-  //                       ],
-  //                     },
-  //                   ],
-  //                 },
-  //               ],
-  //             },
-  //           ],
-  //         },
-  //       },
-
-  //       totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } },
-  //       totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
-  //     },
-  //   },
-  // ]);
-
   const revenue = await Order.aggregate([
     {
       $match: {
@@ -538,13 +456,12 @@ async function getAnalyticsData(startDate, endDate) {
     {
       $group: {
         _id: null,
-        // If subtotal exists, use it (it should already exclude discount)
-        // If not, calculate from totalAmount
+
         grossRevenue: {
           $sum: {
             $cond: [
               { $gt: ["$subTotal", 0] },
-              "$subTotal", // subtotal should already exclude discount
+              "$subTotal", // subtotal already exclude discount
               {
                 $subtract: [
                   { $ifNull: ["$totalAmount", 0] },
@@ -676,8 +593,6 @@ async function getAnalyticsData(startDate, endDate) {
     uniqueCouponsUsed: 0,
   };
 
-  console.log("📊 Coupon Data:", couponData);
-
   const grossRevenue = revenue[0]?.grossRevenue || 0;
   const totalRefunded = revenue[0]?.totalRefunded || 0;
   const netRevenue = grossRevenue - totalRefunded;
@@ -713,7 +628,6 @@ async function getAnalyticsData(startDate, endDate) {
     refundsProcessing: refundSummary.Processing,
     averageUnitValue: Math.round(averageUnitValue),
     totalUnitsSold: totalUnits,
-    // COUPON METRICS:
     couponsUsed: couponData.couponsUsed,
     totalCouponDiscount: couponData.totalCouponDiscount,
     uniqueCouponsUsed: couponData.uniqueCouponsUsed,
@@ -721,19 +635,12 @@ async function getAnalyticsData(startDate, endDate) {
       allOrders > 0 ? (couponData.couponsUsed / allOrders) * 100 : 0,
   };
 
-  console.log("📊 getAnalyticsData result - Coupons:", {
-    couponsUsed: result.couponsUsed,
-    totalCouponDiscount: result.totalCouponDiscount,
-    uniqueCouponsUsed: result.uniqueCouponsUsed,
-    couponDiscountRate: result.couponDiscountRate,
-  });
-
   return result;
 }
 
-// -----------------------------
-// SALES DATA (Main Chart)
-// -----------------------------
+
+
+
 
 async function getSalesDataByRange(range, startDate, endDate) {
   const matchStage = {
@@ -822,9 +729,9 @@ async function getSalesDataByRange(range, startDate, endDate) {
   }));
 }
 
-// -----------------------------
-// STATUS CHARTS FOR EACH TYPE
-// -----------------------------
+
+
+
 async function getStatusTrendsByRange(range, startDate, endDate) {
   const statuses = [
     "Pending",
@@ -870,9 +777,8 @@ async function getStatusTrendsByRange(range, startDate, endDate) {
   return charts;
 }
 
-// -----------------------------
-// RANGE HELPER
-// -----------------------------
+
+
 function getStartDate(range, endDate) {
   if (range === "all") return null;
 
@@ -895,21 +801,19 @@ function getStartDate(range, endDate) {
       start.setDate(endDate.getDate() - 7);
   }
 
-  // IMPORTANT: Set to start of day for consistent comparisons
+  //  Set to start of day for consistent comparisons
   start.setHours(0, 0, 0, 0);
   return start;
 }
 
 async function getTopSellingProducts(limit = 7, startDate, endDate) {
   try {
-    console.log("🔍 Getting top selling products...");
+    
 
     const matchStage = {
       status: { $nin: ["Cancelled"] },
       ...(startDate ? { createdAt: { $gte: startDate, $lte: endDate } } : {}),
     };
-
-    console.log("📊 Match stage:", matchStage);
 
     const topProducts = await Order.aggregate([
       { $match: matchStage },
@@ -968,12 +872,10 @@ async function getTopSellingProducts(limit = 7, startDate, endDate) {
       },
     ]);
 
-    console.log("✅ Found top products:", topProducts.length);
-    console.log("📦 Top products data:", JSON.stringify(topProducts, null, 2));
 
     return topProducts;
   } catch (error) {
-    console.error("❌ Error getting top selling products:", error);
+    console.error(" Error getting top selling products:", error);
     console.error("Error stack:", error.stack);
     return []; // Return empty array on error
   }
@@ -1133,7 +1035,7 @@ export const exportAnalytics = async (req, res) => {
     csvRows.push(["Generated", new Date().toLocaleString()]);
     csvRows.push([]);
 
-    // ===== KEY METRICS SECTION =====
+    //  KEY METRICS SECTION 
     csvRows.push(["KEY METRICS"]);
     csvRows.push(["Metric", "Current", "Previous Period", "Change %"]);
 
@@ -1200,7 +1102,7 @@ export const exportAnalytics = async (req, res) => {
       ]);
     }
 
-    // ===== ORDER STATUS BREAKDOWN =====
+    //  ORDER STATUS BREAKDOWN 
     csvRows.push([]);
     csvRows.push(["ORDER STATUS BREAKDOWN"]);
     csvRows.push(["Status", "Count"]);
@@ -1212,7 +1114,7 @@ export const exportAnalytics = async (req, res) => {
       csvRows.push(["Cancelled Orders", analyticsData.canceledOrders || 0]);
     }
 
-    // ===== REFUND STATUS BREAKDOWN =====
+    //  REFUND STATUS BREAKDOWN 
     csvRows.push([]);
     csvRows.push(["REFUND STATUS BREAKDOWN"]);
     csvRows.push(["Status", "Count"]);
@@ -1226,7 +1128,7 @@ export const exportAnalytics = async (req, res) => {
       ]);
     }
 
-    // ===== SALES TREND DATA =====
+    //  SALES TREND DATA 
     csvRows.push([]);
     csvRows.push(["SALES TREND DATA BY DATE"]);
     if (salesData && salesData.length > 0) {
@@ -1258,7 +1160,7 @@ export const exportAnalytics = async (req, res) => {
       });
     }
 
-    // ===== TOP PRODUCTS =====
+    //  TOP PRODUCTS 
     csvRows.push([]);
     csvRows.push(["TOP PRODUCTS"]);
     if (topProducts && topProducts.length > 0) {
@@ -1278,7 +1180,7 @@ export const exportAnalytics = async (req, res) => {
       });
     }
 
-    // ===== PRODUCT SALES DATA =====
+    //  PRODUCT SALES DATA 
     csvRows.push([]);
     csvRows.push(["PRODUCT SALES DATA"]);
     if (
@@ -1306,7 +1208,7 @@ export const exportAnalytics = async (req, res) => {
       });
     }
 
-    // ===== PRODUCT SALES SUMMARY =====
+    //  PRODUCT SALES SUMMARY 
     csvRows.push([]);
     csvRows.push(["PRODUCT SALES SUMMARY"]);
     csvRows.push(["Metric", "Value"]);
@@ -1330,7 +1232,7 @@ export const exportAnalytics = async (req, res) => {
       csvRows.push(["Total Orders", productSalesData.summary.totalOrders || 0]);
     }
 
-    // ===== COUPON TREND DATA =====
+    //  COUPON TREND DATA 
     csvRows.push([]);
     csvRows.push(["COUPON TREND DATA"]);
     if (couponTrend && Array.isArray(couponTrend) && couponTrend.length > 0) {
@@ -1344,7 +1246,7 @@ export const exportAnalytics = async (req, res) => {
       });
     }
 
-    // ===== COUPON PERFORMANCE =====
+    //  COUPON PERFORMANCE 
     csvRows.push([]);
     csvRows.push(["COUPON PERFORMANCE"]);
     if (

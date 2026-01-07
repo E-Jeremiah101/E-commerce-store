@@ -195,14 +195,14 @@ function App() {
   const { getCartItems } = useCartStore();
   const location = useLocation();
   useEffect(() => {
-    // don't run auth check on reset/forgot password, login, or signup routes
+
     if (
       location.pathname.startsWith("/reset-password") ||
       location.pathname === "/forgot-password" ||
       location.pathname === "/login" ||
       location.pathname === "/signup" 
     ) {
-      // Set checkingAuth to false so spinner doesn't show
+
       useUserStore.setState({ checkingAuth: false });
       return;
     }
@@ -212,7 +212,6 @@ function App() {
    const { validateCartItems } = useCartStore();
 
    useEffect(() => {
-     // Validate cart when app loads
      validateCartItems();
    }, [validateCartItems]);
 
@@ -233,7 +232,7 @@ function App() {
     getCartItems();
   }, [getCartItems, user]);
 
-  if (checkingAuth)
+  if (checkingAuth && !OrderHistoryPage && !HomePage)
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="w-12 h-12 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>

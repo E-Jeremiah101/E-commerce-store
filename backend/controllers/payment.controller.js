@@ -35,12 +35,11 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
       for (const item of products) {
         if (!item._id) continue;
 
-        console.log(`🔄 Reserving ${item.quantity} of ${item.name}`);
+        
 
         const product = await Product.findById(item._id).session(session);
         if (!product) throw new Error(`Product ${item.name} not found`);
 
-        // FIXED: Use flexible matching for variants (same as frontend)
         if (item.size || item.color) {
           const variantIndex = product.variants.findIndex((v) => {
             const sizeMatches = item.size
@@ -61,11 +60,7 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
           }
 
           const variant = product.variants[variantIndex];
-          console.log(
-            `📦 BEFORE - ${item.name} ${item.size || ""}/${
-              item.color || ""
-            }: Stock=${variant.countInStock}, Reserved=${variant.reserved || 0}`
-          );
+          
 
           // Check stock
           if (variant.countInStock < item.quantity) {
@@ -78,12 +73,6 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
           variant.countInStock -= item.quantity;
           variant.reserved = (variant.reserved || 0) + item.quantity;
 
-          console.log(
-            `📦 AFTER - ${item.name} ${item.size || ""}/${
-              item.color || ""
-            }: Stock=${variant.countInStock}, Reserved=${variant.reserved}`
-          );
-
           // Update total product stock
           product.countInStock = product.variants.reduce(
             (total, v) => total + v.countInStock,
@@ -92,11 +81,6 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
         }
         // Handle simple products (no variants)
         else {
-          console.log(
-            `📦 BEFORE - ${item.name}: Stock=${
-              product.countInStock
-            }, Reserved=${product.reserved || 0}`
-          );
 
           if (product.countInStock < item.quantity) {
             throw new Error(
@@ -108,15 +92,9 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
           product.countInStock -= item.quantity;
           product.reserved = (product.reserved || 0) + item.quantity;
 
-          console.log(
-            `📦 AFTER - ${item.name}: Stock=${product.countInStock}, Reserved=${product.reserved}`
-          );
         }
 
         await product.save({ session });
-        console.log(
-          `✅ Successfully reserved ${item.quantity} of ${item.name}`
-        );
       }
     });
 
@@ -128,10 +106,10 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
       timeoutMinutes: timeoutMinutes,
     });
 
-    console.log(`🎉 ALL inventory reserved successfully: ${reservationId}`);
+    
     return true;
   } catch (error) {
-    console.error("❌ Reservation failed:", error);
+    console.error("Reservation failed:", error);
 
     // Release any partial reservations
     try {
@@ -147,23 +125,20 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
 }
 
 async function releaseInventory(reservationId) {
-  // Check if we've already processed this release
+
+  // Checking if we've already processed this release
   const alreadyReleased = await getReleasedReservation(reservationId);
   if (alreadyReleased) {
-    console.log(`🔄 Release already processed for: ${reservationId}`);
     return;
   }
 
-  //add this, might chang later
+
   await releaseCoupon(reservationId);
 
   const reservation = await getReservation(reservationId);
   if (!reservation) {
-    console.log(`No reservation found: ${reservationId}`);
     return;
   }
-
-  console.log(`🔄 Releasing reservation: ${reservationId}`);
 
   const session = await mongoose.startSession();
   try {
@@ -173,11 +148,10 @@ async function releaseInventory(reservationId) {
 
         const product = await Product.findById(item._id).session(session);
         if (!product) {
-          console.log(`Product not found for ID: ${item._id}`);
+          
           continue;
         }
 
-        // FIXED: Use flexible matching for variants
         if (item.size || item.color) {
           const variantIndex = product.variants.findIndex((v) => {
             const sizeMatches = item.size
@@ -192,7 +166,6 @@ async function releaseInventory(reservationId) {
           if (variantIndex !== -1) {
             const variant = product.variants[variantIndex];
 
-            // ✅ FIXED: Add safety check - only release if we have enough reserved
             const reservedToRelease = Math.min(
               item.quantity,
               variant.reserved || 0
@@ -205,12 +178,9 @@ async function releaseInventory(reservationId) {
                 (variant.reserved || 0) - reservedToRelease
               );
 
-              console.log(
-                `✅ Released ${reservedToRelease} of ${item.name} variant - Stock now: ${variant.countInStock}, Reserved: ${variant.reserved}`
-              );
             } else {
               console.log(
-                `⚠️ No reserved stock to release for ${item.name} ${
+                ` No reserved stock to release for ${item.name} ${
                   item.size || ""
                 }/${item.color || ""}`
               );
@@ -235,11 +205,9 @@ async function releaseInventory(reservationId) {
               0,
               (product.reserved || 0) - reservedToRelease
             );
-            console.log(
-              `✅ Released ${reservedToRelease} of ${item.name} - Stock now: ${product.countInStock}, Reserved: ${product.reserved}`
-            );
+           
           } else {
-            console.log(`⚠️ No reserved stock to release for ${item.name}`);
+            console.log(`No reserved stock to release for ${item.name}`);
           }
         }
 
@@ -247,7 +215,7 @@ async function releaseInventory(reservationId) {
       }
     });
 
-    // ✅ Mark this reservation as released to prevent duplicate processing
+    //  Mark this reservation as released to prevent duplicate processing
     await storeReleasedReservation(reservationId, {
       releasedAt: new Date(),
       originalReservation: reservation,
@@ -256,9 +224,9 @@ async function releaseInventory(reservationId) {
     // Remove the original reservation
     await deleteReservation(reservationId);
 
-    console.log(`🎉 Successfully released reservation: ${reservationId}`);
+    console.log(` Successfully released reservation: ${reservationId}`);
   } catch (error) {
-    console.error("❌ Release failed:", error);
+    console.error(" Release failed:", error);
   } finally {
     await session.endSession();
   }
@@ -271,7 +239,7 @@ async function confirmInventory(reservationId) {
     return;
   }
 
-  console.log(`🔄 Confirming reservation: ${reservationId}`);
+  
 
   const session = await mongoose.startSession();
   try {
@@ -282,7 +250,7 @@ async function confirmInventory(reservationId) {
         const product = await Product.findById(item._id).session(session);
         if (!product) continue;
 
-        // FIXED: Use flexible matching for variants
+        //  Use flexible matching for variants
         if (item.size || item.color) {
           const variantIndex = product.variants.findIndex((v) => {
             const sizeMatches = item.size
@@ -297,60 +265,26 @@ async function confirmInventory(reservationId) {
           if (variantIndex !== -1) {
             const variant = product.variants[variantIndex];
 
-            console.log(
-              `📊 BEFORE CONFIRMATION - ${item.name} ${item.size || ""}/${
-                item.color || ""
-              }: Stock=${variant.countInStock}, Reserved=${
-                variant.reserved || 0
-              }`
-            );
-
-            // Remove reservation flag - stock is already at the reduced level from reservation
+          
             variant.reserved = Math.max(
               0,
               (variant.reserved || 0) - item.quantity
             );
 
-            console.log(
-              `✅ CONFIRMED ${item.name} ${item.size || ""}/${
-                item.color || ""
-              } - Final: Stock=${variant.countInStock}, Reserved=${
-                variant.reserved
-              }`
-            );
-
-            console.log(
-              `📊 INVENTORY REDUCTION: ${item.name} ${item.size || ""}/${
-                item.color || ""
-              } - Stock permanently reduced by ${item.quantity} units`
-            );
           } else {
             console.log(
-              `❌ Variant not found for confirmation: ${item.name} ${
+              ` Variant not found for confirmation: ${item.name} ${
                 item.size || ""
               }/${item.color || ""}`
             );
           }
         } else {
-          // Simple product - remove reservation flag only (stock already reduced)
-          console.log(
-            `📊 BEFORE CONFIRMATION - ${item.name}: Stock=${
-              product.countInStock
-            }, Reserved=${product.reserved || 0}`
-          );
 
           product.reserved = Math.max(
             0,
             (product.reserved || 0) - item.quantity
           );
 
-          console.log(
-            `✅ CONFIRMED ${item.name} - Final: Stock=${product.countInStock}, Reserved=${product.reserved}`
-          );
-
-          console.log(
-            `📊 INVENTORY REDUCTION: ${item.name} - Stock permanently reduced by ${item.quantity} units`
-          );
         }
 
         await product.save({ session });
@@ -358,45 +292,39 @@ async function confirmInventory(reservationId) {
     });
 
     await deleteReservation(reservationId);
-    console.log(`🎉 Successfully CONFIRMED reservation: ${reservationId}`);
   } catch (error) {
-    console.error("❌ Confirmation failed:", error);
+    console.error(" Confirmation failed:", error);
     throw error;
   } finally {
     await session.endSession();
   }
 }
 
-// Helper function to release both inventory and coupon together
 async function releaseCheckoutResources(reservationId) {
   if (!reservationId) return;
 
   try {
     console.log(`🔄 Releasing checkout resources for: ${reservationId}`);
 
-    // Release coupon first
+
     await releaseCoupon(reservationId);
 
-    // Then release inventory (which already calls releaseCoupon, but that's okay - it will handle duplicates)
     await releaseInventory(reservationId);
 
-    console.log(`✅ Successfully released all resources for: ${reservationId}`);
+    console.log(` Successfully released all resources for: ${reservationId}`);
   } catch (error) {
-    console.error("❌ Error releasing checkout resources:", error);
+    console.error(" Error releasing checkout resources:", error);
   }
 }
 setInterval(async () => {
-  console.log("🕒 Running Redis reservation cleanup...");
 
   try {
     // Get all Redis reservation keys
     const keys = await redis.keys("reservation:*");
-    console.log(`📊 Found ${keys.length} Redis reservations`);
 
     let releasedCount = 0;
     let expiredButStuckCount = 0;
 
-    // Get all active reservation IDs from Redis
     const activeReservationIds = new Set();
     for (const key of keys) {
       const reservationId = key.replace("reservation:", "");
@@ -409,16 +337,15 @@ setInterval(async () => {
 
         // If reservation has expired, release it
         if (now > expiresAt) {
-          console.log(`⏰ Releasing expired reservation: ${reservationId}`);
+          
           try {
             await releaseInventory(reservationId);
             releasedCount++;
           } catch (error) {
-            console.error(`❌ Failed to release ${reservationId}:`, error);
+            console.error(` Failed to release ${reservationId}:`, error);
           }
         } else {
           const ttl = Math.floor((expiresAt - now) / 1000);
-          console.log(`⏰ ${reservationId}: ${ttl} seconds remaining`);
         }
       }
     }
@@ -431,7 +358,7 @@ setInterval(async () => {
     for (const product of stuckProducts) {
       let needsFix = false;
 
-      // Check if this product has any active Redis reservations
+      // Check if  product has any active Redis reservations
       const hasActiveReservation = await checkProductHasActiveReservation(
         product,
         activeReservationIds
@@ -440,9 +367,7 @@ setInterval(async () => {
       if (!hasActiveReservation) {
         // Only fix reservations that don't have active Redis entries
         if (product.reserved > 0) {
-          console.log(
-            `🔄 Found STUCK main reservation for ${product.name}: ${product.reserved} units (no active Redis reservation)`
-          );
+
           product.countInStock += product.reserved;
           product.reserved = 0;
           needsFix = true;
@@ -452,9 +377,6 @@ setInterval(async () => {
         if (product.variants && product.variants.length > 0) {
           product.variants.forEach((variant, index) => {
             if (variant.reserved > 0) {
-              console.log(
-                `🔄 Found STUCK variant reservation for ${product.name} ${variant.size}/${variant.color}: ${variant.reserved} units (no active Redis reservation)`
-              );
               product.variants[index].countInStock += variant.reserved;
               product.variants[index].reserved = 0;
               needsFix = true;
@@ -466,19 +388,15 @@ setInterval(async () => {
       if (needsFix) {
         await product.save();
         expiredButStuckCount++;
-        console.log(`✅ Fixed STUCK reservations for ${product.name}`);
+        console.log(`Fixed STUCK reservations for ${product.name}`);
       }
     }
 
     if (releasedCount > 0 || expiredButStuckCount > 0) {
-      console.log(
-        `✅ Released ${releasedCount} expired reservations and fixed ${expiredButStuckCount} stuck reservations`
-      );
     } else {
-      console.log("✅ No expired or stuck reservations found");
+      console.log(" No expired or stuck reservations found");
     }
 
-    //add this, might change later
     const expiredCoupons = await Coupon.updateMany(
       {
         isReserved: true,
@@ -494,11 +412,11 @@ setInterval(async () => {
 
     if (expiredCoupons.modifiedCount > 0) {
       console.log(
-        `✅ Released ${expiredCoupons.modifiedCount} expired coupon reservations`
+        ` Released ${expiredCoupons.modifiedCount} expired coupon reservations`
       );
     }
   } catch (error) {
-    console.error("❌ Error in reservation cleanup:", error);
+    console.error(" Error in reservation cleanup:", error);
   }
 }, 300000);
 async function reserveCoupon(
@@ -520,7 +438,7 @@ async function reserveCoupon(
         isActive: true,
         expirationDate: { $gt: new Date() },
         usedAt: null,
-        isReserved: false, // Not already reserved
+        isReserved: false, 
       }).session(session);
 
       if (!coupon) {
@@ -535,14 +453,11 @@ async function reserveCoupon(
       );
 
       await coupon.save({ session });
-      console.log(
-        `✅ Coupon ${couponCode} reserved for reservation ${reservationId}`
-      );
     });
 
     return true;
   } catch (error) {
-    console.error("❌ Coupon reservation failed:", error);
+    console.error(" Coupon reservation failed:", error);
     throw error;
   } finally {
     await session.endSession();
@@ -567,11 +482,11 @@ async function releaseCoupon(reservationId) {
 
     if (coupon) {
       console.log(
-        `✅ Coupon ${coupon.code} released from reservation ${reservationId}`
+        ` Coupon ${coupon.code} released from reservation `
       );
     }
   } catch (error) {
-    console.error("❌ Error releasing coupon:", error);
+    console.error(" Error releasing coupon:", error);
   }
 }
 
@@ -602,27 +517,23 @@ async function confirmCouponUsage(userId, couponCode, orderNumber) {
 
     if (usedCoupon) {
       console.log(
-        `✅ Coupon ${couponCode} confirmed as used for order ${orderNumber}`
+        ` Coupon ${couponCode} confirmed as used for order ${orderNumber}`
       );
       return usedCoupon;
     }
     return null;
   } catch (error) {
-    console.error("❌ Error confirming coupon usage:", error);
+    console.error(" Error confirming coupon usage:", error);
     return null;
   }
 }
-// Helper function to check if a product has active Redis reservations
+
 async function checkProductHasActiveReservation(product, activeReservationIds) {
   return activeReservationIds.size > 0;
 }
 
 async function checkCouponEligibility(userId, orderAmount) {
   try {
-    console.log(
-      `🔍 Checking coupon eligibility for user ${userId}, order amount: ${orderAmount}`
-    );
-
     // Check if user has any unused, active, non-expired coupons
     const existingActiveCoupons = await Coupon.find({
       userId: userId,
@@ -632,10 +543,7 @@ async function checkCouponEligibility(userId, orderAmount) {
     });
 
     if (existingActiveCoupons.length > 0) {
-      console.log(
-        `❌ User ${userId} already has active coupons:`,
-        existingActiveCoupons.map((c) => c.code).join(", ")
-      );
+     
       return null;
     }
 
@@ -645,7 +553,6 @@ async function checkCouponEligibility(userId, orderAmount) {
       flutterwaveTransactionId: { $exists: true, $ne: null },
     });
 
-    console.log(`📊 User ${userId} has ${orderCount} previous paid orders`);
 
     // Check if user has ever received a first order coupon
     const hasReceivedFirstOrderCoupon = await Coupon.exists({
@@ -653,11 +560,9 @@ async function checkCouponEligibility(userId, orderAmount) {
       couponReason: "first_order",
     });
 
-    // FIRST ORDER COUPON: User has never ordered before AND never received first order coupon
+   
     if (orderCount === 0 && !hasReceivedFirstOrderCoupon) {
-      console.log(
-        `✅ User ${userId} eligible for FIRST ORDER coupon (first time customer)`
-      );
+      
       return {
         discountPercentage: 2,
         codePrefix: "WELCOME",
@@ -669,9 +574,7 @@ async function checkCouponEligibility(userId, orderAmount) {
     const highValueThreshold = 300000;
 
     if (orderAmount > highValueThreshold) {
-      console.log(
-        `✅ User ${userId} eligible for HIGH VALUE ORDER coupon (order > ${highValueThreshold})`
-      );
+      
       return {
         discountPercentage: 10,
         codePrefix: "BIGSPEND",
@@ -680,10 +583,9 @@ async function checkCouponEligibility(userId, orderAmount) {
       };
     }
 
-    console.log(`❌ User ${userId} not eligible for any coupon`);
     return null;
   } catch (error) {
-    console.error("❌ Error checking coupon eligibility:", error);
+    console.error(" Error checking coupon eligibility:", error);
     return null;
   }
 }
@@ -696,14 +598,14 @@ async function createNewCoupon(userId, options = {}) {
   } = options;
 
   try {
-    console.log(`🎫 Creating coupon for user ${userId}, reason: ${reason}`);
+    console.log(` Creating coupon, reason: ${reason}`);
 
     // First, deactivate any existing active coupon for this user
     await Coupon.updateMany(
       {
         userId: userId,
         isActive: true,
-        usedAt: null, // Only deactivate unused coupons
+        usedAt: null, 
       },
       {
         isActive: false,
@@ -746,7 +648,7 @@ async function createNewCoupon(userId, options = {}) {
       }
     }
 
-    console.log(`📝 Generated coupon code: ${newCode} for ${reason}`);
+    console.log(` Generated coupon code: ${newCode} for ${reason}`);
 
     // Create the coupon
     const coupon = new Coupon({
@@ -761,11 +663,11 @@ async function createNewCoupon(userId, options = {}) {
     await coupon.save();
 
     console.log(
-      `✅ Successfully created coupon: ${coupon.code} for user ${userId}`
+      ` Successfully created coupon: ${coupon.code} `
     );
     return coupon;
   } catch (error) {
-    console.error("❌ Failed to create coupon:", error);
+    console.error(" Failed to create coupon:", error);
     return null;
   }
 }
@@ -803,9 +705,7 @@ async function processOrderCreation(transactionData) {
     reservationId,
   } = transactionData;
 
-  console.log(` STARTING order processing for: ${tx_ref}`);
-
-  // 1. IMMEDIATE DUPLICATE CHECK
+  //  IMMEDIATE DUPLICATE CHECK
   const existingOrder = await Order.findOne({
     $or: [
       { flutterwaveTransactionId: transaction_id },
@@ -818,9 +718,9 @@ async function processOrderCreation(transactionData) {
     return { order: existingOrder, isNew: false };
   }
 
-  // 2. CREATE ORDER (inventory already reserved)
+  //  CREATE ORDER (inventory already reserved)
   try {
-    console.log(` CREATING NEW ORDER for user: ${userId}`);
+  
 
     const user = await User.findById(userId);
     if (!user) throw new Error("User not found");
@@ -866,25 +766,24 @@ async function processOrderCreation(transactionData) {
     });
 
     await order.save();
-    console.log(` SUCCESS: Created order ${order.orderNumber}`);
 
-    // 3. CONFIRM INVENTORY (convert reservation to permanent)
+    //  CONFIRM INVENTORY (convert reservation to permanent)
     if (reservationId) {
       await confirmInventory(reservationId);
     }
 
-    //Chane this, might change later
     if (couponCode?.trim()) {
       await confirmCouponUsage(userId, couponCode, order.orderNumber);
     }
-    // 4. CLEAR CART
+    //  CLEAR CART
     await User.findByIdAndUpdate(userId, { cartItems: [] });
 
     return { order, isNew: true };
   } catch (error) {
+
     // Handle duplicate order error
     if (error.code === 11000) {
-      console.log(`🔄 Duplicate key error - finding existing order...`);
+
       const existingOrder = await Order.findOne({
         $or: [
           { flutterwaveTransactionId: transaction_id },
@@ -898,7 +797,7 @@ async function processOrderCreation(transactionData) {
       }
     }
 
-    console.error(`❌ ORDER CREATION FAILED:`, error);
+    console.error(` ORDER CREATION FAILED:`, error);
     throw error;
   }
 }
@@ -936,8 +835,8 @@ export const createCheckoutSession = async (req, res) => {
       });
     }
 
-    // === CHECK AVAILABILITY BEFORE RESERVATION ===
-    console.log("🔍 Checking availability before reservation...");
+    //  CHECK AVAILABILITY BEFORE RESERVATION 
+
     try {
       for (const item of products) {
         if (!item._id) continue;
@@ -968,11 +867,6 @@ export const createCheckoutSession = async (req, res) => {
           }
 
           const variant = product.variants[variantIndex];
-          console.log(
-            ` Availability check - ${item.name} ${item.size || ""}/${
-              item.color || ""
-            }: Stock=${variant.countInStock}, Requested=${item.quantity}`
-          );
 
           if (variant.countInStock < item.quantity) {
             throw new Error(
@@ -984,9 +878,6 @@ export const createCheckoutSession = async (req, res) => {
         }
         // Handle simple products
         else {
-          console.log(
-            `📊 Availability check - ${item.name}: Stock=${product.countInStock}, Requested=${item.quantity}`
-          );
 
           if (product.countInStock < item.quantity) {
             throw new Error(
@@ -995,9 +886,8 @@ export const createCheckoutSession = async (req, res) => {
           }
         }
       }
-      console.log("✅ All items available for reservation");
     } catch (availabilityError) {
-      console.error("❌ Availability check failed:", availabilityError.message);
+      console.error(" Availability check failed:", availabilityError.message);
       return res.status(400).json({
         error: availabilityError.message,
       });
@@ -1006,20 +896,16 @@ export const createCheckoutSession = async (req, res) => {
     let finalDeliveryFee = 0;
 
     if (deliveryAddress && deliveryAddress.state) {
-      // Use frontend-provided fee if available, otherwise calculate
+
       if (deliveryFee !== undefined && deliveryFee !== null) {
         calculatedDeliveryFee = Number(deliveryFee);
-        console.log("✅ Using frontend delivery fee:", calculatedDeliveryFee);
       } else {
-        // Fallback: calculate on backend
+        
+        //  calculate on backend for delivery fee
         calculatedDeliveryFee = calculateDeliveryFee(
           deliveryAddress.state,
           deliveryAddress.city || "",
           deliveryAddress.lga || ""
-        );
-        console.log(
-          "🔄 Calculated delivery fee on backend:",
-          calculatedDeliveryFee
         );
       }
     }
@@ -1044,18 +930,16 @@ export const createCheckoutSession = async (req, res) => {
           isActive: true,
           expirationDate: { $gt: new Date() },
           usedAt: null,
-          isReserved: false, // Not already reserved
+          isReserved: false, 
         });
 
         if (validCoupon) {
           discountAmount = Math.round(
             (originalTotal * validCoupon.discountPercentage) / 100
           );
-          console.log(
-            `✅ Valid coupon applied: ${couponCode} - ${validCoupon.discountPercentage}% off = ${discountAmount}`
-          );
+
         } else {
-          console.log(`❌ Invalid or expired coupon: ${couponCode}`);
+
         }
       } catch (error) {
         console.error("Error validating coupon:", error);
@@ -1063,11 +947,6 @@ export const createCheckoutSession = async (req, res) => {
     }
     finalDeliveryFee = calculatedDeliveryFee;
 
-    console.log(
-      "Final delivery fee after free delivery check:",
-      finalDeliveryFee
-    );
-    console.log("🛒 Original total:", originalTotal);
 
     const finalTotal = Math.max(
       0,
@@ -1078,16 +957,15 @@ export const createCheckoutSession = async (req, res) => {
     const reservationId = `res_${tx_ref}`;
     try {
       await reserveInventory(products, reservationId, 25);
-      console.log(`✅ Inventory reserved: ${reservationId}`);
 
-      //add this can change later
+
       if (validCoupon) {
         await reserveCoupon(userId, couponCode, reservationId, 25);
       }
     } catch (reservationError) {
-      console.error("❌ Inventory reservation failed:", reservationError);
+      console.error(" Inventory reservation failed:", reservationError);
 
-      //add this, can change later
+      
       try {
         await releaseInventory(reservationId);
         await releaseCoupon(reservationId);
@@ -1101,14 +979,6 @@ export const createCheckoutSession = async (req, res) => {
       });
     }
 
-    console.log("💰 FINAL CALCULATION:");
-    console.log(`   Original Total: ${originalTotal} NGN`);
-    console.log(`   Discount Amount: ${discountAmount} NGN`);
-    console.log(`   Delivery Fee: ${finalDeliveryFee} NGN`);
-    console.log(`   Final Total (Naira): ${finalTotal} NGN`);
-    console.log(`   Amount to Flutterwave (kobo): ${finalTotal * 100} kobo`);
-    console.log(`   Coupon Code: ${couponCode || "None"}`);
-    console.log(`   Valid Coupon: ${validCoupon ? "Yes" : "No"}`);
     if (validCoupon) {
       console.log(`   Coupon Details: ${validCoupon.discountPercentage}% off`);
     }
@@ -1149,7 +1019,7 @@ export const createCheckoutSession = async (req, res) => {
         finalTotal,
         deliveryAddress: addressString || "",
         phoneNumber: defaultPhone.number || "",
-        reservationId: reservationId, // Include reservation ID
+        reservationId: reservationId,
       },
       customizations: {
         title: "EcoStore Purchase",
@@ -1180,7 +1050,6 @@ export const createCheckoutSession = async (req, res) => {
       return res.status(500).json({ message: "Failed to initialize payment" });
     }
 
-    console.log("Flutterwave payment initialized:", tx_ref, "link:", link);
     return res.status(200).json({ link, tx_ref });
   } catch (err) {
     console.error("Error initializing Flutterwave payment:", err);
@@ -1192,20 +1061,15 @@ export const createCheckoutSession = async (req, res) => {
 };
 
 export const handleFlutterwaveWebhook = async (req, res) => {
-  console.log("🔔 WEBHOOK CALLED - LIVE MODE");
-  console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
-  console.log("🔐 Headers:", req.headers);
 
   const signature = req.headers["verif-hash"];
-  console.log("Signature received:", signature ? "YES" : "NO");
 
-  let transaction_id; // DECLARE IT HERE
+  let transaction_id;
   let lockAcquired = false;
   let reservationId;
 
   try {
     const signature = req.headers["verif-hash"];
-    console.log("Signature received:", signature);
 
     if (!signature) {
       console.warn("Missing verif-hash header");
@@ -1217,7 +1081,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       return res.status(401).send("Invalid signature");
     }
 
-    console.log("Webhook signature validated successfully");
 
     const event = req.body;
     if (!event) {
@@ -1225,7 +1088,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       return res.status(400).send("No event body");
     }
 
-    console.log(`Webhook received: ${event.event} for ${event.data?.tx_ref}`);
 
     const paymentCompletionEvents = [
       "charge.completed",
@@ -1240,16 +1102,15 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       return res.status(200).send("Ignored event type");
     }
 
-    // MOVE THIS OUTSIDE OF NESTED TRY
-    transaction_id = event.data?.id; // ASSIGN VALUE HERE
+    
+    transaction_id = event.data?.id; 
     const tx_ref = event.data?.tx_ref;
     const status = event.data?.status;
     const paymentType = event.data?.payment_type;
     reservationId = event.data?.meta?.reservationId;
 
-    console.log(`🔄 Processing webhook for reservation: ${reservationId}`);
 
-    // For bank transfers, be more flexible with status values
+    // payment validation
     if (paymentType === "banktransfer" || paymentType === "bank_transfer") {
       const isBankTransferSuccessful =
         status === "successful" ||
@@ -1270,10 +1131,10 @@ export const handleFlutterwaveWebhook = async (req, res) => {
         return res.status(200).send("Bank transfer not completed");
       }
     } else {
-      // For other payment types, use strict checking
+      
       if (status !== "successful") {
         console.log(
-          `Payment not successful: ${status} for ${event.data?.tx_ref}`
+          `Payment failed: ${status} for ${event.data?.tx_ref}`
         );
 
         const reservationId = event.data?.meta?.reservationId;
@@ -1298,17 +1159,16 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     console.log(`Processing transaction: ${transaction_id}, status: ${status}`);
 
-    // === REDIS-BASED DISTRIBUTED LOCKING ===
-    console.log(`🔒 Attempting to acquire Redis lock for: ${transaction_id}`);
+    //  REDIS-BASED DISTRIBUTED LOCKING 
     lockAcquired = await acquireWebhookLock(transaction_id, 45000);
 
     if (!lockAcquired) {
-      console.log(`⏳ Webhook already being processed: ${transaction_id}`);
+      console.log(`Webhook already being processed: ${transaction_id}`);
       return res.status(200).send("Webhook already being processed");
     }
-    console.log(`✅ Acquired Redis lock for: ${transaction_id}`);
+   
 
-    // === ENHANCED DUPLICATE PROTECTION ===
+    //   DUPLICATE PROTECTION / CHECK
     const existingOrder = await Order.findOne({
       $or: [
         { flutterwaveTransactionId: transaction_id },
@@ -1318,7 +1178,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     if (existingOrder) {
       console.log(
-        `🔄 DUPLICATE: Order ${existingOrder.orderNumber} already exists`
+        ` DUPLICATE: Order ${existingOrder.orderNumber} already exists`
       );
 
       // Release any reserved inventory
@@ -1346,9 +1206,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     let data;
 
-    console.log(
-      `Verifying real transaction with Flutterwave: ${transaction_id}`
-    );
+   //verify with flutterwave
     const verifyResp = await flw.Transaction.verify({ id: transaction_id });
 
     if (!verifyResp?.data || verifyResp.data.status !== "successful") {
@@ -1363,7 +1221,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     }
 
     data = verifyResp.data;
-    console.log("Real transaction verified successfully");
+ 
 
     const meta_data = data.meta || event.meta_data || {};
 
@@ -1404,9 +1262,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     const deliveryAddress = meta_data.deliveryAddress || "";
     const phoneNumber = data.customer?.phone_number || "";
 
-    console.log("UserId from meta_data:", userId);
-    console.log("Reservation ID:", reservationId);
-    console.log("Parsed products count:", parsedProducts.length);
 
     if (!userId) {
       console.error("Missing userId in webhook data");
@@ -1419,7 +1274,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       return res.status(400).send("Missing userId");
     }
 
-    // 2. FINAL DUPLICATE CHECK (in case order was created between first check and now)
+    //  FINAL DUPLICATE CHECK (in case order was created between first check and now)
     const finalDuplicateCheck = await Order.findOne({
       $or: [
         { flutterwaveTransactionId: transaction_id },
@@ -1429,7 +1284,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     if (finalDuplicateCheck) {
       console.log(
-        `🔄 LATE DUPLICATE: Order ${finalDuplicateCheck.orderNumber} created during processing`
+        `LATE DUPLICATE: Order ${finalDuplicateCheck.orderNumber} created during processing`
       );
 
       // Release inventory
@@ -1440,7 +1295,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       return res.status(200).send("Order already processed");
     }
 
-    console.log("Starting database transaction...");
     const session = await mongoose.startSession();
 
     try {
@@ -1468,7 +1322,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
           reservationId,
         };
 
-        console.log("Processing order creation...");
         const { order, isNew } = await processOrderCreation(transactionData);
 
         console.log(
@@ -1530,21 +1383,13 @@ export const handleFlutterwaveWebhook = async (req, res) => {
                 order,
                 flutterwaveData: data,
               });
-              console.log(
-                `✅ Confirmation email sent for NEW order: ${order.orderNumber}`
-              );
             }
           } catch (emailErr) {
             console.error("Email send failed (webhook):", emailErr);
           }
-        } else {
-          console.log(
-            `📧 Skipping email and coupons for existing order: ${order.orderNumber}`
-          );
-        }
+        } 
       });
 
-      console.log("Database transaction committed successfully");
     } catch (transactionError) {
       console.error("Transaction failed:", transactionError);
 
@@ -1558,7 +1403,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       await session.endSession();
     }
 
-    console.log(`Webhook processing completed successfully`);
     return res.status(200).send("Order processed successfully");
   } catch (err) {
     console.error(`Webhook processing error:`, err);
@@ -1573,7 +1417,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     // Always release lock if we acquired it
     if (lockAcquired && transaction_id) {
       await releaseWebhookLock(transaction_id);
-      console.log(`🔓 Webhook lock released for: ${transaction_id}`);
+      
     }
   }
 };
@@ -1602,11 +1446,6 @@ export const checkoutSuccess = async (req, res) => {
   let lockAcquired = false;
   const { tx_ref, transaction_id } = req.body;
 
-  console.log(
-    ` ENTERING ORDER PROCESSING - Source: ${
-      req.path
-    }, TX: ${transaction_id}, Time: ${new Date().toISOString()}`
-  );
 
   // ADD VALIDATION
   if (!transaction_id) {
@@ -1616,7 +1455,6 @@ export const checkoutSuccess = async (req, res) => {
     });
   }
 
-  console.log(`🔄 checkoutSuccess called for transaction: ${transaction_id}`);
 
   try {
     // Duplicate protection
@@ -1630,7 +1468,7 @@ export const checkoutSuccess = async (req, res) => {
 
     if (existingPaidOrder) {
       console.log(
-        `🔄 CheckoutSuccess: Order already processed: ${existingPaidOrder.orderNumber}`
+        `CheckoutSuccess: Order already processed: ${existingPaidOrder.orderNumber}`
       );
       return res.status(200).json({
         success: true,
@@ -1712,11 +1550,11 @@ export const checkoutSuccess = async (req, res) => {
 
           const { order, isNew } = await processOrderCreation(transactionData);
           finalOrder = order;
-          isNewOrder = isNew; // Store whether this is a new order
+          isNewOrder = isNew; 
 
           // ONLY process coupons and send emails for NEW orders
           if (isNew) {    
-            // Handle coupon eligibility
+            
             const couponEligibility = await checkCouponEligibility(
               userId,
               finalOrder.totalAmount
@@ -1730,9 +1568,6 @@ export const checkoutSuccess = async (req, res) => {
               }); 
 
               if (newCoupon) {
-                console.log(
-                  `Created ${couponEligibility.reason} coupon: ${newCoupon.code}`
-                );
                 try {
                   const user = await User.findById(userId);
                   if (user && user.email) {
@@ -1760,15 +1595,12 @@ export const checkoutSuccess = async (req, res) => {
                 order,
                 flutterwaveData: data,
               });
-              console.log(
-                `✅ Confirmation email sent for NEW order: ${order.orderNumber}`
-              );
             } catch (emailErr) {
               console.error("Email send failed (checkoutSuccess):", emailErr);
             }
           } else {
             console.log(
-              `📧 Skipping email for existing order: ${order.orderNumber}`
+              `Skipping email for existing order: ${order.orderNumber}`
             );
           }
         });
@@ -1966,7 +1798,7 @@ export const sendDetailedOrderEmail = async ({ to, order }) => {
     </div>
   `;
 
-  // Plain text fallback
+  
   const text = [
     `EcoStore — Order Confirmation`,
     ` ${order.orderNumber || "N/A"}`,
@@ -1990,7 +1822,7 @@ export const sendDetailedOrderEmail = async ({ to, order }) => {
     `Thanks for shopping with  ${settings?.storeName}!`,
   ].join("\n");
 
-  // Send email
+
   await sendEmail({
     to,
     subject: ` ${settings?.storeName} — Order Confirmation ${
@@ -2004,7 +1836,7 @@ export const sendDetailedOrderEmail = async ({ to, order }) => {
 export const sendCouponEmail = async ({
   to,
   coupon,
-  couponType = "welcome_coupon", // Only two values now: "welcome_coupon" or "bigspender_coupon"
+  couponType = "welcome_coupon", 
 }) => {
   if (!to || !coupon) return;
   const settings = await storeSettings.findOne();

@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import {
   Search,
   Filter,
-  Calendar,
   Download,
   ChevronLeft,
   ChevronRight,
@@ -17,16 +16,12 @@ import {
   Archive,
   Trash2,
   RefreshCw,
-  FileText,
   Database,
   HardDrive,
   Zap,
   RotateCcw,
-  FileDown,
   Calendar as CalendarIcon,
-  PieChart,
   Layers,
-  Shield,
 } from "lucide-react";
 import { format } from "date-fns";
 

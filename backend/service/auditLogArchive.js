@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const gzip = promisify(zlib.gzip);
 const writeFile = promisify(fs.writeFile);
-const unlink = promisify(fs.unlink);
+const unlink = promisify(fs.unlink);  
 const mkdir = promisify(fs.mkdir);
 
 class AuditLogArchiveService {
@@ -29,9 +29,6 @@ class AuditLogArchiveService {
     }
   }
 
-  /**
-   * Calculate date range for archive period
-   */
   getArchivePeriod() {
     const now = new Date();
     const periodEnd = new Date(now);
@@ -46,15 +43,15 @@ class AuditLogArchiveService {
 
     // Set period end to end of previous month
     periodEnd.setMonth(periodEnd.getMonth() - 1);
-    periodEnd.setDate(0); // Last day of previous month
+    periodEnd.setDate(0); 
     periodEnd.setHours(23, 59, 59, 999);
 
     return { periodStart, periodEnd };
   }
 
-  /**
-   * Archive logs older than 2 months
-   */
+  
+  //  Archive logs older than 2 months
+   
   async archiveOldLogs(autoArchive = false) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -167,9 +164,9 @@ class AuditLogArchiveService {
     }
   }
 
-  /**
-   * Count actions for metadata
-   */
+ 
+    // Count actions for metadata
+ 
   countActions(logs) {
     return logs.reduce((acc, log) => {
       acc[log.action] = (acc[log.action] || 0) + 1;
@@ -177,9 +174,8 @@ class AuditLogArchiveService {
     }, {});
   }
 
-  /**
-   * Count entity types for metadata
-   */
+  // Count entity types for metadata
+   
   countEntityTypes(logs) {
     return logs.reduce((acc, log) => {
       acc[log.entityType] = (acc[log.entityType] || 0) + 1;
@@ -187,9 +183,8 @@ class AuditLogArchiveService {
     }, {});
   }
 
-  /**
-   * Format file size
-   */
+  // Format file size
+  
   formatFileSize(bytes) {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
@@ -198,9 +193,8 @@ class AuditLogArchiveService {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   }
 
-  /**
-   * Get all archives
-   */
+  //Get all archives
+
   async getArchives(page = 1, limit = 20) {
     const skip = (page - 1) * limit;
 
@@ -224,18 +218,13 @@ class AuditLogArchiveService {
     };
   }
 
-  /**
-   * Get single archive with details
-   */
+
   async getArchiveById(id) {
     return await AuditLogArchive.findById(id)
       .populate("archivedBy", "firstname lastname email")
       .lean();
   }
 
-  /**
-   * Download archive file
-   */
   async downloadArchive(archiveId) {
     const archive = await AuditLogArchive.findById(archiveId);
     if (!archive) {
@@ -258,9 +247,6 @@ class AuditLogArchiveService {
     };
   }
 
-  /**
-   * Delete archive (manual cleanup)
-   */
   async deleteArchive(archiveId) {
     const archive = await AuditLogArchive.findById(archiveId);
     if (!archive) {
@@ -283,9 +269,7 @@ class AuditLogArchiveService {
     return { success: true, message: "Archive deleted" };
   }
 
-  /**
-   * Restore archive to main collection
-   */
+
   async restoreArchive(archiveId) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -335,9 +319,6 @@ class AuditLogArchiveService {
     }
   }
 
-  /**
-   * Get archive statistics
-   */
   async getArchiveStats() {
     const [totalArchives, totalArchivedLogs, pendingCount, lastArchive] =
       await Promise.all([
@@ -376,9 +357,7 @@ class AuditLogArchiveService {
     };
   }
 
-  /**
-   * Get count of pending archive operations
-   */
+
   async getPendingArchiveCount() {
     const { periodStart, periodEnd } = this.getArchivePeriod();
     return await AuditLog.countDocuments({
@@ -389,14 +368,11 @@ class AuditLogArchiveService {
     });
   }
 
-  /**
-   * Check archive status
-   */
+
   async checkArchiveStatus() {
     return await this.getArchiveStats();
   }
 }
 
-// Export the class directly
 export  { AuditLogArchiveService };
 

@@ -16,14 +16,14 @@ export const createCoupon = async (req, res) => {
       sendToAllUsers,
     } = req.body;
 
-    // 1️⃣ Required field checks
+    //  Required field checks
     if (!discountPercentage || !expirationDate || !couponReason) {
       return res.status(400).json({
         message: "Missing required fields",
       });
     }
 
-    // 2️⃣ Prevent manual creation of system coupons
+    // Prevent manual creation of system coupons
     if (["first_order", "high_value_order"].includes(couponReason)) {
       return res.status(400).json({
         message: "System coupons are auto-generated",
@@ -31,9 +31,9 @@ export const createCoupon = async (req, res) => {
     }
     
 
-    // 3️⃣ Create coupon safely
+    // Create coupon safely
     const coupon = await Coupon.create({
-      code: generateCouponCode(couponReason), // ✅ backend-only
+      code: generateCouponCode(couponReason), // backend-only
       discountPercentage,
       expirationDate,
       couponReason,
@@ -318,14 +318,14 @@ export const sendGlobalCouponToAllUsers = async (coupon) => {
       return { success: false, message: "Store settings not found" };
     }
 
-    // Get ALL users with email addresses (excluding admin emails if needed)
+ 
     const users = await User.find({
       email: {
         $exists: true,
         $ne: null,
-        $ne: "", // Exclude empty emails
+        $ne: "", 
       },
-      role: { $ne: "admin" }, // Optional: exclude admin users
+      role: { $ne: "admin" }, 
     }).select("email firstname lastname");
 
     console.log(`Found ${users.length} users with emails`);
@@ -342,8 +342,8 @@ export const sendGlobalCouponToAllUsers = async (coupon) => {
     let failedCount = 0;
     const failedEmails = [];
 
-    // Send in small batches to avoid overwhelming
-    const BATCH_SIZE = 20; // Adjust based on your email service limits
+  
+    const BATCH_SIZE = 20;
 
     for (let i = 0; i < users.length; i += BATCH_SIZE) {
       const batch = users.slice(i, i + BATCH_SIZE);
@@ -387,7 +387,7 @@ export const sendGlobalCouponToAllUsers = async (coupon) => {
       sentCount,
       failedCount,
       totalUsers: users.length,
-      failedEmails: failedEmails.slice(0, 10), // Return first 10 failures only
+      failedEmails: failedEmails.slice(0, 10), 
       message: `Sent to ${sentCount} of ${users.length} users`,
     };
   } catch (error) {

@@ -31,7 +31,7 @@ export const getAuditLogs = async (req, res) => {
 
     // Filter by entity type (map frontend to backend)
     if (entityType && entityType !== "ALL") {
-      // Frontend sends uppercase, we need proper model name
+      // Frontend sends uppercase,  need proper model name
       const entityTypeMap = {
         PRODUCT: ENTITY_TYPES.PRODUCT,
         ORDER: ENTITY_TYPES.ORDER,
@@ -246,7 +246,7 @@ export const getPriceHistory = async (req, res) => {
           ACTIONS.PRICE_SLASH, 
           ACTIONS.PRICE_UPDATE, 
           ACTIONS.PRICE_RESET,
-          ACTIONS.UPDATE_PRODUCT // If regular product updates include price changes
+          ACTIONS.UPDATE_PRODUCT
         ] 
       }
     })

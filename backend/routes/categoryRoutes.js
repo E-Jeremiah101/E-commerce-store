@@ -4,17 +4,12 @@ import { protectRoute, adminRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-/**
- * GET /api/categories-with-images
- * Returns a list of categories with one random product image each.
- */
 router.get("/categories-with-images", categoryImage);
 
 router.post("/", protectRoute,adminRoute, createCategory);
 
 router.get("/", getCategory);
 
-// POST /api/categories
 router.post("/", getNewCategory);
 
 router.delete("/delete/:id", protectRoute, adminRoute, deleteCategory);

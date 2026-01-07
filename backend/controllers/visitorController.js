@@ -2,16 +2,12 @@ import Visitor from "../models/visitors.model.js";
 
 export const visitorsTracker = async (req, res) => {
   try {
-    //  Define the IP address properly
     const ipAddress =
       req.headers["x-forwarded-for"] ||
       req.connection.remoteAddress ||
       req.socket.remoteAddress;
 
-    //  You can also include user-agent or other metadata
     const userAgent = req.headers["user-agent"];
-
-    // Save to database
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);

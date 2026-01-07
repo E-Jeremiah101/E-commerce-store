@@ -7,10 +7,10 @@ import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
 
 export const categoryImage = async (req, res) => {
   try {
-    // Step 1: Get all distinct category names from products
+
     const categoryNames = await Product.distinct("category");
 
-    // Step 2: For each category, get one random product image
+    //  For each category, get one random product image
     const categoriesWithImages = await Promise.all(
       categoryNames.map(async (catName) => {
         const randomProduct = await Product.aggregate([
@@ -91,17 +91,17 @@ export const deleteCategory = async (req, res) => {
 
     if (productsInCategory.length > 0) {
       if (deleteType === "archive") {
-        // SOFT DELETE: Archive all products
-        const updateResult = await Product.updateMany(
-          { _id: { $in: productsInCategory.map((p) => p._id) } },
-          {
-            $set: {
-              archived: true,
-              isActive: false,
-              archivedAt: new Date(),
-            },
-          }
-        );
+        // // SOFT DELETE: Archive all products
+        // const updateResult = await Product.updateMany(
+        //   { _id: { $in: productsInCategory.map((p) => p._id) } },
+        //   {
+        //     $set: {
+        //       archived: true,
+        //       isActive: false,
+        //       archivedAt: new Date(),
+        //     },
+        //   }
+        // );
 
         // Log product archiving
         for (const product of productsInCategory) {
@@ -147,7 +147,7 @@ export const deleteCategory = async (req, res) => {
                   `Error deleting image for product ${product._id}:`,
                   cloudinaryError
                 );
-                // Continue with deletion even if image deletion fails
+                
               }
             }
           }
@@ -183,7 +183,7 @@ export const deleteCategory = async (req, res) => {
       }
     }
 
-    // NOW delete the category - this comes after processing products
+    // NOW delete the category
     const deletedCategory = await Category.findByIdAndDelete(id);
 
     if (!deletedCategory) {
@@ -199,8 +199,8 @@ export const deleteCategory = async (req, res) => {
       adminName: `${req.user.firstname} ${req.user.lastname}`,
       action: ACTIONS.DELETE_CATEGORY,
       entityType: ENTITY_TYPES.CATEGORY,
-      entityId: categoryInfo._id, // Use saved ID
-      entityName: categoryInfo.name, // Use saved name
+      entityId: categoryInfo._id, 
+      entityName: categoryInfo.name,
       ...requestInfo,
       additionalInfo: `Category deleted. ${actionMessage}`,
     });

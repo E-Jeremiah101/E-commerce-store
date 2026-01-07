@@ -57,14 +57,14 @@ const inventoryLogSchema = new mongoose.Schema(
       required: true,
     },
     referenceId: {
-      type: String, // Could be orderId, transferId, etc.
+      type: String, 
       default: null,
     },
   },
   { timestamps: true }
 );
 
-// Indexes for faster queries
+
 inventoryLogSchema.index({ productId: 1, createdAt: -1 });
 inventoryLogSchema.index({ adjustedBy: 1 });
 inventoryLogSchema.index({ createdAt: -1 });

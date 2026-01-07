@@ -2,7 +2,7 @@ import Product from "../models/product.model.js";
 
 export const getCartProducts = async (req, res) => {
   try {
-    // ✅ Use the updated helper function
+   
     const validCartItems = await getValidatedCartItems(req.user.cartItems);
 
     // Clean up user's cart if needed
@@ -30,24 +30,24 @@ export const addToCart = async (req, res) => {
     const { productId, size, color } = req.body;
     const user = req.user;
 
-    console.log("🛒 Backend addToCart received:", { productId, size, color });
+    console.log("Backend addToCart received:", { productId, size, color });
 
     const product = await Product.findById(productId);
     if (!product || product.archived || product.isActive === false) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // ✅ FIXED: Normalize size and color to empty strings if not provided
+    // size and color to empty strings if not provided
     const normalizedSize = size || "";
     const normalizedColor = color || "";
 
-    // Find variant stock - FIXED LOGIC
+    
     let availableStock = product.countInStock;
     let variant = null;
 
     if (product.variants && product.variants.length > 0) {
       variant = product.variants.find((v) => {
-        // FIXED: Use normalized values
+        
         const variantSize = v.size || "";
         const variantColor = v.color || "";
 
@@ -69,7 +69,7 @@ export const addToCart = async (req, res) => {
       return res.status(400).json({ message: "Out of stock" });
     }
 
-    // ✅ FIXED: Look for existing item with normalized matching
+ 
     const existingItem = user.cartItems.find((item) => {
       const productMatch = item.product?.toString() === productId;
       const itemSize = item.size || "";
@@ -93,8 +93,8 @@ export const addToCart = async (req, res) => {
       const newItem = {
         product: productId,
         quantity: 1,
-        size: normalizedSize, // Store normalized values
-        color: normalizedColor, // Store normalized values
+        size: normalizedSize, 
+        color: normalizedColor, 
       };
 
       user.cartItems.push(newItem);
@@ -114,8 +114,8 @@ export const addToCart = async (req, res) => {
         return {
           ...product.toJSON(),
           quantity: cartItem.quantity,
-          size: cartItem.size || "", // Ensure consistency
-          color: cartItem.color || "", // Ensure consistency
+          size: cartItem.size || "", 
+          color: cartItem.color || "", 
         };
       })
     );
@@ -132,7 +132,7 @@ export const removeFromCart = async (req, res) => {
     const { productId, size, color } = req.body;
     const user = req.user;
 
-    // ✅ FIXED: Normalize values for matching
+    
     const normalizedSize = size || "";
     const normalizedColor = color || "";
 
@@ -173,7 +173,7 @@ export const updateQuantity = async (req, res) => {
     const { size, color, quantity } = req.body;
     const user = req.user;
 
-    console.log("🔄 Backend updateQuantity:", {
+    console.log(" Backend updateQuantity:", {
       productId,
       size,
       color,
@@ -275,7 +275,6 @@ export const updateQuantity = async (req, res) => {
   }
 };
 
-// ✅ NEW: Helper function to validate cart items
 
 const getValidatedCartItems = async (cartItems) => {
   const validatedItems = await Promise.all(
@@ -286,7 +285,7 @@ const getValidatedCartItems = async (cartItems) => {
         return null;
       }
 
-      // ✅ FIXED: Better variant matching logic
+      //  Better variant matching logic
       let finalStock = product.countInStock || 0;
       let variantFound = false;
 
@@ -294,7 +293,7 @@ const getValidatedCartItems = async (cartItems) => {
       if (product.variants && product.variants.length > 0) {
         // Try to find matching variant
         const variant = product.variants.find((v) => {
-          // FIXED: Handle empty strings for size/color
+          // Handle empty strings for size/color
           const cartSize = cartItem.size || "";
           const cartColor = cartItem.color || "";
           const variantSize = v.size || "";
@@ -324,8 +323,8 @@ const getValidatedCartItems = async (cartItems) => {
       const result = {
         ...product.toJSON(),
         quantity: cartItem.quantity,
-        size: cartItem.size || "", // Ensure empty string for consistency
-        color: cartItem.color || "", // Ensure empty string for consistency
+        size: cartItem.size || "", 
+        color: cartItem.color || "",
         countInStock: finalStock,
       };
 

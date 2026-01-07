@@ -18,5 +18,3 @@ export const flw = new Flutterwave(
 );
 
 console.log("Flutterwave initialized successfully");
-
-console.log(Object.keys(flw));

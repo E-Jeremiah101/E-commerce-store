@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-// import { nigeriaLocations } from "../../frontend/src/utils/nigeriaLocation.js";
 import { NIGERIAN_LOCATIONS } from "../../frontend/src/utils/nigerianLocations.js";
 
 const addressSchema = new mongoose.Schema({
@@ -124,7 +123,7 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Pre-save hook to hash password before saving to database
+//  hash password before saving to database
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 

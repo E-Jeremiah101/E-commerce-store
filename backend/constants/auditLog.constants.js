@@ -98,7 +98,6 @@ export const ACTIONS = {
   OTHER: "OTHER",
 };
 
-// For frontend display (human readable)
 export const ACTION_LABELS = {
   // Product labels
   CREATE_PRODUCT: "Create Product",

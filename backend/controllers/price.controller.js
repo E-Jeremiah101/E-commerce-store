@@ -2,11 +2,9 @@ import Product from "../models/product.model.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
 
-// Helper to clear cache (add Redis if you use it)
+
 const clearProductCache = async (productId) => {
   try {
-    // Clear any product-related caches here
-    console.log(`✅ Cleared cache for product ${productId}`);
   } catch (error) {
     console.error("Error clearing cache:", error);
   }
@@ -14,11 +12,8 @@ const clearProductCache = async (productId) => {
 
 export const slashProductPrice = async (req, res) => {
   try {
-    console.log("🔪 [PRICE] Slash request received");
-    console.log("🔪 [PRICE] Params:", req.params);
-    console.log("🔪 [PRICE] Body:", req.body);
 
-    const { id } = req.params; // Get ID from route parameter
+    const { id } = req.params; 
     const { newPrice, reason } = req.body;
 
     // Validate input
@@ -33,7 +28,6 @@ export const slashProductPrice = async (req, res) => {
     // Find product
     const product = await Product.findById(id);
     if (!product) {
-      console.log(`❌ Product not found: ${id}`);
       return res.status(404).json({ message: "Product not found" });
     }
 
@@ -134,7 +128,6 @@ export const slashProductPrice = async (req, res) => {
 
 export const resetProductPrice = async (req, res) => {
   try {
-    console.log("🔄 [PRICE] Reset request received");
 
     const { id } = req.params;
     const { reason } = req.body;
@@ -203,8 +196,6 @@ export const resetProductPrice = async (req, res) => {
     // Clear cache
     await clearProductCache(id);
 
-    console.log(`✅ Price reset: ${oldPrice} → ${originalPrice}`);
-
     res.json({
       message: "Price reset successfully",
       product: {
@@ -217,7 +208,7 @@ export const resetProductPrice = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error resetting price:", error);
+    console.error("Error resetting price:", error);
     res.status(500).json({
       message: "Server error",
       error: error.message,
@@ -227,7 +218,6 @@ export const resetProductPrice = async (req, res) => {
 
 export const updateProductPrice = async (req, res) => {
   try {
-    console.log("📝 [PRICE] Update request received");
 
     const { id } = req.params;
     const { newPrice, reason, isSlash = false } = req.body;
@@ -243,7 +233,6 @@ export const updateProductPrice = async (req, res) => {
 
     const oldPrice = product.price;
 
-    // If it's a slash, check conditions
     if (isSlash) {
       if (parseFloat(newPrice) >= parseFloat(oldPrice)) {
         return res.status(400).json({
@@ -259,6 +248,7 @@ export const updateProductPrice = async (req, res) => {
       product.previousPrice = oldPrice;
       product.isPriceSlashed = true;
     } else {
+
       // Regular price update - clear slash if price increased
       if (
         parseFloat(newPrice) > parseFloat(oldPrice) &&
@@ -333,9 +323,6 @@ export const updateProductPrice = async (req, res) => {
     // Clear cache
     await clearProductCache(id);
 
-    console.log(
-      `✅ Price ${isSlash ? "slashed" : "updated"}: ${oldPrice} → ${newPrice}`
-    );
 
     res.json({
       message: `Price ${isSlash ? "slashed" : "updated"} successfully`,
@@ -350,7 +337,7 @@ export const updateProductPrice = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error updating price:", error);
+    console.error(" Error updating price:", error);
     res.status(500).json({
       message: "Server error",
       error: error.message,
@@ -380,7 +367,7 @@ export const getPriceHistory = async (req, res) => {
       previousPrice: product.previousPrice,
     });
   } catch (error) {
-    console.error("❌ Error getting price history:", error);
+    console.error("Error getting price history:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };

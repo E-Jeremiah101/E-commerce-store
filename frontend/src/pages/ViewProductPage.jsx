@@ -299,10 +299,14 @@ const ViewProductPageContent = () => {
 
         <div className="flex items-center gap-4">
           {/* Cart Link */}
-          <Link to={"/cart"} className="relative text-black ">
-            <ShoppingCart size={22} />
+          <Link
+            to="/cart"
+            className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            aria-label="Shopping Cart"
+          >
+            <ShoppingCart size={20} />
             {cart.length > 0 && (
-              <span className="absolute -top-2 -right-2 bg-black text-white rounded-full px-2 text-xs">
+              <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
                 {cart.length}
               </span>
             )}
