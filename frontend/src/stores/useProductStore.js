@@ -180,7 +180,6 @@ export const useProductStore = create((set, get) => ({
     }
   },
 
-  // Add function to fetch variant stock
   fetchVariantStock: async (productId, size, color) => {
     try {
       const response = await axios.get(`/products/stock/${productId}`, {

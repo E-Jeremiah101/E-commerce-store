@@ -14,6 +14,8 @@ import OtherFeatures from "../components/OtherFeatures.jsx";
 import LandingProducts from "../components/LandingProducts.jsx";
 import { SEO, OrganizationSchema } from "../components/SEO";
 import RecentlyViewed from "../components/RecentlyViewed.jsx";
+import BrandStory from "../components/BrandStory.jsx";
+import EditorsPicks from "../components/EditorsPicks.jsx";
 
 const HomePageContent = () => {
   const { settings } = useStoreSettings();
@@ -154,8 +156,12 @@ const HomePageContent = () => {
     >
       {/* SEO Meta Tags */}
       <SEO
-        title={`${settings?.storeName || "Store"} - Quality Products at Great Prices`}
-        description={`Shop at ${settings?.storeName || "Store"} for quality products with fast shipping and secure payments. Discover great deals on trending items.`}
+        title={`${
+          settings?.storeName || "Store"
+        } - Quality Products at Great Prices`}
+        description={`Shop at ${
+          settings?.storeName || "Store"
+        } for quality products with fast shipping and secure payments. Discover great deals on trending items.`}
         image={settings?.logo || "/logo-buz.jpg"}
       />
 
@@ -225,24 +231,24 @@ const HomePageContent = () => {
 
       {/* Main Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 root lg:px-25">
-
         {recommendations.length > 0 && (
           <LandingProducts
             recommendations={recommendations}
-            isLoading={false} 
+            isLoading={false}
           />
         )}
 
         {/* Other Features */}
         <OtherFeatures className="look" />
 
-       
         {products.length > 0 && (
           <FeaturedProducts className="look" featuredProducts={products} />
         )}
-
-        <FAQSection className="look" />
+        <BrandStory />
+        <EditorsPicks />
         <RecentlyViewed className="look" />
+        <FAQSection className="look" />
+        
       </div>
 
       <Footer />

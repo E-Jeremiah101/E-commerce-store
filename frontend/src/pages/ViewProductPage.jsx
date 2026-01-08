@@ -23,7 +23,7 @@ const ViewProductPageContent = () => {
   const { addToCart, isLoading, cart } = useCartStore();
   const { user } = useUserStore();
 
-  const [product, setProduct] = useState(null);
+  const [product, setProduct] = useState(null); 
   const [selectedImage, setSelectedImage] = useState("");
   const [selectedColor, setSelectedColor] = useState("");
   const [selectedSize, setSelectedSize] = useState("");

@@ -276,7 +276,7 @@ const RecentlyViewed = () => {
   }
 
   return (
-    <ScrollReveal direction="up" delay={0.8} duration={1}>
+    <ScrollReveal direction="up" delay={0.9} duration={1}>
       <div className="mb-8 bg-white py-10 px-4 sm:px-6 lg:px-8 ">
         <div className="max-w-7xl mx-auto">
           {/* Header */}

@@ -159,7 +159,7 @@ const Navbar = () => {
                   className="h-10 w-auto transition-transform group-hover:scale-105"
                 />
               ) : (
-                <div className="h-10 w-10 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center">
+                <div className="h-10 w-10  flex items-center justify-center">
                   <span className="text-white font-bold text-lg">
                     {settings?.storeName?.charAt(0) || ""}
                   </span>
