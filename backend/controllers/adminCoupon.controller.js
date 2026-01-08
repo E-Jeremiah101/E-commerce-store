@@ -16,14 +16,12 @@ export const createCoupon = async (req, res) => {
       sendToAllUsers,
     } = req.body;
 
-    //  Required field checks
     if (!discountPercentage || !expirationDate || !couponReason) {
       return res.status(400).json({
         message: "Missing required fields",
       });
     }
 
-    // Prevent manual creation of system coupons
     if (["first_order", "high_value_order"].includes(couponReason)) {
       return res.status(400).json({
         message: "System coupons are auto-generated",
@@ -31,9 +29,8 @@ export const createCoupon = async (req, res) => {
     }
     
 
-    // Create coupon safely
     const coupon = await Coupon.create({
-      code: generateCouponCode(couponReason), // backend-only
+      code: generateCouponCode(couponReason),
       discountPercentage,
       expirationDate,
       couponReason,
@@ -59,10 +56,9 @@ export const createCoupon = async (req, res) => {
         coupon,
       });
     } else {
-      // Global coupon
+
       let emailResult = null;
 
-      // Check if admin wants to send to all users
       if (sendToAllUsers === true) {
         emailResult = await sendGlobalCouponToAllUsers(coupon);
       }
@@ -97,7 +93,6 @@ export const deleteCoupon = async (req, res) => {
       return res.status(404).json({ message: "Coupon not found" });
     }
 
-    // Check if coupon has been used
     if (coupon.usedAt && !force) {
       return res.status(400).json({
         message: "This coupon has already been used.",
@@ -107,10 +102,8 @@ export const deleteCoupon = async (req, res) => {
       });
     }
 
-    // Delete the coupon
     await Coupon.findByIdAndDelete(id);
 
-    // Log coupon deletion
     await AuditLogger.logCouponDeletion(
       req.user._id,
       `${req.user.firstname} ${req.user.lastname}`,
@@ -119,7 +112,6 @@ export const deleteCoupon = async (req, res) => {
       req
     );
 
-    // Log the action if you have user context
     console.log(
       `Coupon ${coupon.code} deleted by ${req.user?.email || "admin"}`
     );
@@ -210,7 +202,6 @@ export const sendCouponEmail = async ({ to, coupon }) => {
 
   const couponValue = `${coupon.discountPercentage}% OFF`;
 
-  // Admin-only messaging
   const subject = `🎁 You’ve Received a Special Reward from ${settings.storeName}`;
   const title = "A Special Discount Just for You!";
   const message = `
@@ -218,7 +209,6 @@ export const sendCouponEmail = async ({ to, coupon }) => {
     <p>Enjoy this exclusive reward on your next purchase with us.</p>
   `;
 
-  // ================= HTML EMAIL =================
   const html = `
     <div style="font-family: Arial, sans-serif; background-color: #f0f9f4; padding: 20px;">
       <div style="max-width: 600px; margin: auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.1);">
@@ -290,7 +280,6 @@ export const sendCouponEmail = async ({ to, coupon }) => {
     </div>
   `;
 
-  // ================= TEXT EMAIL =================
   const text = `
 You’ve received a special discount!
 
@@ -372,7 +361,7 @@ export const sendGlobalCouponToAllUsers = async (coupon) => {
 
       await Promise.all(batchPromises);
 
-      // Add delay between batches to avoid rate limiting
+      // delay between batches to avoid rate limiting
       if (i + BATCH_SIZE < users.length) {
         await new Promise((resolve) => setTimeout(resolve, 2000)); // 2 second delay
       }

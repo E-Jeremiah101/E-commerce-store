@@ -5,9 +5,7 @@ export const getCartProducts = async (req, res) => {
    
     const validCartItems = await getValidatedCartItems(req.user.cartItems);
 
-    // Clean up user's cart if needed
     if (validCartItems.length !== req.user.cartItems.length) {
-      // Map back to find which items to remove
       req.user.cartItems = req.user.cartItems.filter((cartItem, index) => {
         const productId = cartItem.product?.toString();
         return validCartItems.some(
@@ -37,7 +35,6 @@ export const addToCart = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // size and color to empty strings if not provided
     const normalizedSize = size || "";
     const normalizedColor = color || "";
 
@@ -102,7 +99,6 @@ export const addToCart = async (req, res) => {
 
     await user.save();
 
-    // Return the updated cart items with validation
     const cartItems = await Promise.all(
       user.cartItems.map(async (cartItem) => {
         const product = await Product.findById(cartItem.product);
@@ -180,16 +176,14 @@ export const updateQuantity = async (req, res) => {
       quantity,
     });
 
-    // Validate quantity
     if (typeof quantity !== "number" || quantity < 0) {
       return res.status(400).json({ message: "Invalid quantity" });
     }
 
     const product = await Product.findById(productId);
 
-    // Check if product exists and is available
     if (!product || product.archived || product.isActive === false) {
-      // Remove from cart if product is archived
+
       user.cartItems = user.cartItems.filter(
         (item) =>
           !(
@@ -206,7 +200,6 @@ export const updateQuantity = async (req, res) => {
       });
     }
 
-    // Find variant stock - use consistent matching logic
     let availableStock = product.countInStock;
     let variant = null;
 
@@ -226,7 +219,6 @@ export const updateQuantity = async (req, res) => {
       }
     }
 
-    // Check stock availability
     if (quantity > availableStock) {
       return res.status(400).json({
         message: `Only ${availableStock} left in stock`,
@@ -234,7 +226,6 @@ export const updateQuantity = async (req, res) => {
       });
     }
 
-    // Find existing cart item with consistent matching
     const existingItem = user.cartItems.find((item) => {
       const productMatch = item.product?.toString() === productId;
       const sizeMatch = size
@@ -251,7 +242,7 @@ export const updateQuantity = async (req, res) => {
     }
 
     if (quantity <= 0) {
-      // Remove item if quantity is 0 or less
+
       user.cartItems = user.cartItems.filter(
         (item) =>
           !(
@@ -266,7 +257,6 @@ export const updateQuantity = async (req, res) => {
 
     await user.save();
 
-    // Return validated cart items
     const validatedCartItems = await getValidatedCartItems(user.cartItems);
     res.json(validatedCartItems);
   } catch (error) {
@@ -285,21 +275,19 @@ const getValidatedCartItems = async (cartItems) => {
         return null;
       }
 
-      //  Better variant matching logic
+
       let finalStock = product.countInStock || 0;
       let variantFound = false;
 
-      // If product has variants
+   
       if (product.variants && product.variants.length > 0) {
-        // Try to find matching variant
+        
         const variant = product.variants.find((v) => {
-          // Handle empty strings for size/color
           const cartSize = cartItem.size || "";
           const cartColor = cartItem.color || "";
           const variantSize = v.size || "";
           const variantColor = v.color || "";
 
-          // Both size and color must match (or both be empty)
           return cartSize === variantSize && cartColor === variantColor;
         });
 
@@ -307,8 +295,7 @@ const getValidatedCartItems = async (cartItems) => {
           finalStock = variant.countInStock || 0;
           variantFound = true;
         } else {
-          // If no exact match found, it might be a simple product without variants
-          // Or the variant might have been deleted
+
           console.warn(`No matching variant found for ${product.name}`, {
             cartSize: cartItem.size,
             cartColor: cartItem.color,

@@ -138,7 +138,7 @@ const auditLogSchema = new mongoose.Schema(
   }
 );
 
-// Indexes
+
 auditLogSchema.index({ adminId: 1, timestamp: -1 });
 auditLogSchema.index({ entityType: 1, entityId: 1 });
 auditLogSchema.index({ action: 1 });

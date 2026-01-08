@@ -70,18 +70,15 @@ export const getAnalytics = async (range = "weekly") => {
 
   const calculateChange = (current, previous, metricType = "default") => {
 
-    // Handle the case where previous is 0 but current is positive
     if (previous === 0 && current > 0) {
   
       return getRealisticGrowthPercentage(current, metricType);
     }
 
-    // Handle the case where both are 0
     if (previous === 0 && current === 0) {
       return 0;
     }
 
-    // Handle the case where previous is 0 but current is also 0
     if (previous === 0) {
       return 0;
     }
@@ -90,9 +87,8 @@ export const getAnalytics = async (range = "weekly") => {
     return change;
   };
 
-  // Helper function for realistic growth percentages
   const getRealisticGrowthPercentage = (currentValue, metricType) => {
-    // For new stores with no previous data, show realistic demo percentages
+  
     const demoPercentages = {
       products: 16.9,
       users: 48.8,
@@ -104,8 +100,7 @@ export const getAnalytics = async (range = "weekly") => {
       aov: 43.21,
     };
 
-    // Return demo percentage for the metric type
-    return demoPercentages[metricType] || 25.0; // Default 25% growth
+    return demoPercentages[metricType] || 25.0;
   };
 
   analyticsData.productsChange = calculateChange(
@@ -174,7 +169,6 @@ export const getAnalytics = async (range = "weekly") => {
     "uniqueCoupons"
   );
 
-  // Calculate AOV (Average Order Value) and its change
   const currentAOV =
     analyticsData.allOrders > 0
       ? analyticsData.grossRevenue / analyticsData.allOrders
@@ -209,7 +203,7 @@ export const getAnalytics = async (range = "weekly") => {
   const statusCharts = await getStatusTrendsByRange(range, startDate, endDate);
   const topProducts = await getTopSellingProducts(5, startDate, endDate);
   const productSalesData = await getProductSalesData(startDate, endDate);
-  // visitorsTrend and ordersTrend should respect the selected range (or include all when startDate is null)
+
   const visitorFormat =
     range === "yearly"
       ? "%Y"
@@ -276,7 +270,6 @@ export const getAnalytics = async (range = "weekly") => {
     { $sort: { _id: 1 } },
   ]);
 
-  // In getAnalytics function, update couponTrend:
   const couponTrend = await Order.aggregate([
     {
       $match: {
@@ -375,10 +368,9 @@ export const getAnalytics = async (range = "weekly") => {
     couponPerformance,
   };
 
-  //  Cache results for 5 minutes
   try {
     const cacheKey = `analytics:${range}`;
-    await redis.setEx(cacheKey, 300, JSON.stringify(result)); // 5 minute cache
+    await redis.setEx(cacheKey, 300, JSON.stringify(result));
     console.log(" Analytics cached for 5 minutes");
   } catch (cacheError) {
     console.log("Cache write failed, but returning fresh data");
@@ -389,13 +381,12 @@ export const getAnalytics = async (range = "weekly") => {
 
 
 async function getAnalyticsData(startDate, endDate) {
-  // Create proper date filter - IMPORTANT FIX!
+  
   const dateFilter = {};
   if (startDate && endDate) {
     dateFilter.createdAt = { $gte: startDate, $lte: endDate };
   }
 
-  //  Promise.all() to parallelize all count operations
   const [
     totalUsersResult,
     totalProductsResult,
@@ -403,16 +394,13 @@ async function getAnalyticsData(startDate, endDate) {
     visitorsResult,
     orderStatusCounts,
   ] = await Promise.all([
-    // Count users
+   
     User.countDocuments(dateFilter),
 
-    // Count products (not filtered by date)
     Product.countDocuments({ archived: { $ne: true } }),
 
-    // Count all orders
     Order.countDocuments(dateFilter),
 
-    // Count visitors
     Visitor.countDocuments(dateFilter),
 
     Order.aggregate([
@@ -426,7 +414,6 @@ async function getAnalyticsData(startDate, endDate) {
     ]),
   ]);
 
-  // Map aggregation results to status counts
   const statusCountMap = {};
   orderStatusCounts.forEach((doc) => {
     statusCountMap[doc._id] = doc.count;
@@ -461,7 +448,7 @@ async function getAnalyticsData(startDate, endDate) {
           $sum: {
             $cond: [
               { $gt: ["$subTotal", 0] },
-              "$subTotal", // subtotal already exclude discount
+              "$subTotal", 
               {
                 $subtract: [
                   { $ifNull: ["$totalAmount", 0] },
@@ -473,7 +460,7 @@ async function getAnalyticsData(startDate, endDate) {
         },
         totalDeliveryFee: { $sum: { $ifNull: ["$deliveryFee", 0] } },
         totalRefunded: { $sum: { $ifNull: ["$totalRefunded", 0] } },
-        // Calculate total discount for verification
+
         totalDiscountFromDiscountField: { $sum: "$discount" },
         totalDiscountFromCouponField: { $sum: "$coupon.discount" },
       },
@@ -499,7 +486,7 @@ async function getAnalyticsData(startDate, endDate) {
     },
   ]);
 
-  // Refund counts by status with date filtering
+
   const refundStats = await Order.aggregate([
     { $match: dateFilter },
     { $unwind: { path: "$refunds", preserveNullAndEmptyArrays: false } },
@@ -511,7 +498,7 @@ async function getAnalyticsData(startDate, endDate) {
     },
   ]);
 
-  // Convert refundStats array into easy object
+
   const refundSummary = {
     Approved: 0,
     Pending: 0,
@@ -525,7 +512,7 @@ async function getAnalyticsData(startDate, endDate) {
     }
   });
 
-  // COUPON ANALYTICS - FIXED
+
   const couponAnalytics = await Order.aggregate([
     {
       $match: {
@@ -801,7 +788,7 @@ function getStartDate(range, endDate) {
       start.setDate(endDate.getDate() - 7);
   }
 
-  //  Set to start of day for consistent comparisons
+  
   start.setHours(0, 0, 0, 0);
   return start;
 }
@@ -832,7 +819,7 @@ async function getTopSellingProducts(limit = 7, startDate, endDate) {
           orderCount: { $sum: 1 },
         },
       },
-      { $match: { totalSold: { $gt: 0 } } }, // Only products that were sold
+      { $match: { totalSold: { $gt: 0 } } }, 
       { $sort: { totalSold: -1 } },
       { $limit: limit },
       {
@@ -877,7 +864,7 @@ async function getTopSellingProducts(limit = 7, startDate, endDate) {
   } catch (error) {
     console.error(" Error getting top selling products:", error);
     console.error("Error stack:", error.stack);
-    return []; // Return empty array on error
+    return [];
   }
 }
 
@@ -906,7 +893,7 @@ async function getProductSalesData(startDate, endDate) {
             },
           },
           orderCount: { $sum: 1 },
-          // Get min and max price for reference
+          
           uniqueOrderIds: { $addToSet: "$_id" },
           minPrice: { $min: "$products.price" },
           maxPrice: { $max: "$products.price" },
@@ -965,7 +952,6 @@ async function getProductSalesData(startDate, endDate) {
       },
     ]);
 
-    // Calculate totals for AUV calculation
     const totals = productSales.reduce(
       (acc, product) => {
         acc.totalUnits += product.unitsSold;
@@ -1017,7 +1003,6 @@ export const exportAnalytics = async (req, res) => {
     const range = req.query.range || "weekly";
     const result = await getAnalytics(range);
 
-    // Prepare CSV data from analytics result
     const {
       analyticsData,
       salesData = [],
@@ -1027,15 +1012,14 @@ export const exportAnalytics = async (req, res) => {
       couponPerformance = [],
     } = result;
 
-    // Create CSV rows
     const csvRows = [];
 
-    // Header
+    
     csvRows.push(["Analytics Report", `(${range})`]);
     csvRows.push(["Generated", new Date().toLocaleString()]);
     csvRows.push([]);
 
-    //  KEY METRICS SECTION 
+
     csvRows.push(["KEY METRICS"]);
     csvRows.push(["Metric", "Current", "Previous Period", "Change %"]);
 
@@ -1102,7 +1086,6 @@ export const exportAnalytics = async (req, res) => {
       ]);
     }
 
-    //  ORDER STATUS BREAKDOWN 
     csvRows.push([]);
     csvRows.push(["ORDER STATUS BREAKDOWN"]);
     csvRows.push(["Status", "Count"]);
@@ -1114,7 +1097,6 @@ export const exportAnalytics = async (req, res) => {
       csvRows.push(["Cancelled Orders", analyticsData.canceledOrders || 0]);
     }
 
-    //  REFUND STATUS BREAKDOWN 
     csvRows.push([]);
     csvRows.push(["REFUND STATUS BREAKDOWN"]);
     csvRows.push(["Status", "Count"]);
@@ -1128,7 +1110,6 @@ export const exportAnalytics = async (req, res) => {
       ]);
     }
 
-    //  SALES TREND DATA 
     csvRows.push([]);
     csvRows.push(["SALES TREND DATA BY DATE"]);
     if (salesData && salesData.length > 0) {
@@ -1160,7 +1141,6 @@ export const exportAnalytics = async (req, res) => {
       });
     }
 
-    //  TOP PRODUCTS 
     csvRows.push([]);
     csvRows.push(["TOP PRODUCTS"]);
     if (topProducts && topProducts.length > 0) {
@@ -1180,7 +1160,6 @@ export const exportAnalytics = async (req, res) => {
       });
     }
 
-    //  PRODUCT SALES DATA 
     csvRows.push([]);
     csvRows.push(["PRODUCT SALES DATA"]);
     if (
@@ -1208,7 +1187,6 @@ export const exportAnalytics = async (req, res) => {
       });
     }
 
-    //  PRODUCT SALES SUMMARY 
     csvRows.push([]);
     csvRows.push(["PRODUCT SALES SUMMARY"]);
     csvRows.push(["Metric", "Value"]);
@@ -1232,7 +1210,6 @@ export const exportAnalytics = async (req, res) => {
       csvRows.push(["Total Orders", productSalesData.summary.totalOrders || 0]);
     }
 
-    //  COUPON TREND DATA 
     csvRows.push([]);
     csvRows.push(["COUPON TREND DATA"]);
     if (couponTrend && Array.isArray(couponTrend) && couponTrend.length > 0) {
@@ -1245,8 +1222,8 @@ export const exportAnalytics = async (req, res) => {
         ]);
       });
     }
+ 
 
-    //  COUPON PERFORMANCE 
     csvRows.push([]);
     csvRows.push(["COUPON PERFORMANCE"]);
     if (
@@ -1270,13 +1247,13 @@ export const exportAnalytics = async (req, res) => {
       });
     }
 
-    // Convert to CSV string
+  
     const csvString = csvRows
       .map((row) =>
         row
           .map((cell) => {
             const value = String(cell || "");
-            // Escape quotes and wrap in quotes if contains comma
+            
             if (value.includes(",") || value.includes('"')) {
               return `"${value.replace(/"/g, '""')}"`;
             }

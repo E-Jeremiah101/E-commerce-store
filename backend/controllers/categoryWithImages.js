@@ -10,7 +10,6 @@ export const categoryImage = async (req, res) => {
 
     const categoryNames = await Product.distinct("category");
 
-    //  For each category, get one random product image
     const categoriesWithImages = await Promise.all(
       categoryNames.map(async (catName) => {
         const randomProduct = await Product.aggregate([
@@ -67,21 +66,18 @@ export const deleteCategory = async (req, res) => {
     const { id } = req.params;
     const { deleteType = "archive" } = req.body;
 
-    // First, find the category to get its name - save it before deletion
     const categoryToDelete = await Category.findById(id);
 
     if (!categoryToDelete) {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    // Save category info before deletion
     const categoryInfo = {
       _id: categoryToDelete._id,
       name: categoryToDelete.name,
       createdAt: categoryToDelete.createdAt,
     };
 
-    // Get all products in this category (case-insensitive)
     const productsInCategory = await Product.find({
       category: { $regex: new RegExp(`^${categoryToDelete.name}$`, "i") },
     });
@@ -91,19 +87,8 @@ export const deleteCategory = async (req, res) => {
 
     if (productsInCategory.length > 0) {
       if (deleteType === "archive") {
-        // // SOFT DELETE: Archive all products
-        // const updateResult = await Product.updateMany(
-        //   { _id: { $in: productsInCategory.map((p) => p._id) } },
-        //   {
-        //     $set: {
-        //       archived: true,
-        //       isActive: false,
-        //       archivedAt: new Date(),
-        //     },
-        //   }
-        // );
 
-        // Log product archiving
+       
         for (const product of productsInCategory) {
           const requestInfo = AuditLogger.getRequestInfo(req);
           await AuditLogger.log({
@@ -132,9 +117,9 @@ export const deleteCategory = async (req, res) => {
 
         actionMessage = `${affectedProductsCount} product(s) have been archived.`;
       } else if (deleteType === "permanent") {
-        // HARD DELETE: Permanently delete all products and their images
+
         for (const product of productsInCategory) {
-          // Delete images from Cloudinary
+
           if (product.images?.length > 0) {
             for (const imageUrl of product.images) {
               try {
@@ -152,7 +137,6 @@ export const deleteCategory = async (req, res) => {
             }
           }
 
-          // Log product deletion
           const requestInfo = AuditLogger.getRequestInfo(req);
           await AuditLogger.log({
             adminId: req.user._id,
@@ -174,7 +158,6 @@ export const deleteCategory = async (req, res) => {
           });
         }
 
-        // Delete all products from database
         await Product.deleteMany({
           _id: { $in: productsInCategory.map((p) => p._id) },
         });
@@ -183,7 +166,6 @@ export const deleteCategory = async (req, res) => {
       }
     }
 
-    // NOW delete the category
     const deletedCategory = await Category.findByIdAndDelete(id);
 
     if (!deletedCategory) {
@@ -192,7 +174,6 @@ export const deleteCategory = async (req, res) => {
         .json({ message: "Category not found during deletion" });
     }
 
-    // Log the category deletion using the saved category info
     const requestInfo = AuditLogger.getRequestInfo(req);
     await AuditLogger.log({
       adminId: req.user._id,
@@ -205,7 +186,6 @@ export const deleteCategory = async (req, res) => {
       additionalInfo: `Category deleted. ${actionMessage}`,
     });
 
-    // Clear featured products cache if any featured products were affected
     const hadFeaturedProducts = productsInCategory.some((p) => p.isFeatured);
     if (hadFeaturedProducts) {
       await redis.del("featured_products");
@@ -237,10 +217,9 @@ export const getCategoryWithProductCount = async (req, res) => {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    // Count products in this category (case-insensitive)
     const productCount = await Product.countDocuments({
       category: { $regex: new RegExp(`^${category.name}$`, "i") },
-      archived: { $ne: true }, // Only count non-archived products
+      archived: { $ne: true },
     });
 
     res.json({

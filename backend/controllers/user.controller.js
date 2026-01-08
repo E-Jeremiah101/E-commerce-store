@@ -8,7 +8,6 @@ export const getProfile = async (req, res) => {
   try {
 
     if (req.user) {
-      // include permissions 
       if (!req.user.permissions) {
 
         let permissions = [];
@@ -32,7 +31,6 @@ export const getProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Calculate permissions
     let permissions = [];
     if (user.role === "admin" && user.adminType) {
       permissions =
@@ -63,8 +61,6 @@ export const updateProfile = async (req, res) => {
     if (req.body.addresses) user.addresses = req.body.addresses;
 
     await user.save();
-
-    // Re-fetch with cart populated
     const updatedUser = await User.findById(user._id)
       .select("-password")
       .populate("cartItems.product", "name price images");
@@ -100,23 +96,17 @@ export const getAllUsers = async (req, res) => {
         query.$or.push({ _id: search.trim() });
       }
     }
-
-    // Get users with basic info
     const users = await User.find(query)
       .populate("cartItems.product", "name price images")
       .select("-password")
       .sort({ createdAt: -1 });
 
-    // Import models
     const Order = (await import("../models/order.model.js")).default;
     const Coupon = (await import("../models/coupon.model.js")).default;
-
-    // Get order counts and coupon data for each user
     const usersWithStats = await Promise.all(
       users.map(async (user) => {
         const userObj = user.toObject();
         
-        // Get order statistics
         const orderStats = await Order.aggregate([
           { $match: { user: user._id } },
           {
@@ -127,26 +117,22 @@ export const getAllUsers = async (req, res) => {
           }
         ]);
         
-        // Convert array to object
         const statsObj = {};
         orderStats.forEach(stat => {
           statsObj[stat._id] = stat.count;
         });
         
-        // Calculate completed orders
         const completedOrders = statsObj["Delivered"] || 0;
         const CancelledOrders = statsObj["Cancelled"] || 0;
         const totalOrders = orderStats.reduce((total, stat) => total + stat.count, 0);
         
-        // Get coupon data for this user
         const coupons = await Coupon.find({ userId: user._id });
         
-        // Calculate coupon statistics
         const activeCoupons = coupons.filter(c => c.isActive && new Date(c.expirationDate) > new Date()).length;
         const usedCoupons = coupons.filter(c => c.usedAt).length;
         const totalCoupons = coupons.length;
         
-        // Add permissions for admin users
+
         let permissions = [];
         if (userObj.role === "admin" && userObj.adminType) {
           permissions =
@@ -199,10 +185,8 @@ export const updateUserRole = async (req, res) => {
     const previousRole = user.role;
     const previousAdminType = user.adminType;
 
-    // Update role
     user.role = role || previousRole;
 
-    // Update adminType based on role
     if (role === "admin" && adminType) {
       user.adminType = adminType;
     } else if (role === "customer") {
@@ -232,7 +216,6 @@ export const updateUserRole = async (req, res) => {
       });
     }
 
-    // Calculate permissions for the response
     let permissions = [];
     if (user.role === "admin" && user.adminType) {
       permissions =

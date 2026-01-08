@@ -25,15 +25,14 @@ const couponSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: null,
-      // unique: true,
     },
     couponReason: {
       type: String,
       enum: [
         "first_order",
         "high_value_order",
-        "special_reward", // manual (best name)
-        "loyalty_bonus", // manual
+        "special_reward", 
+        "loyalty_bonus",
         "customer_support",
       ],
       required: true,

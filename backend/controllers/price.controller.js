@@ -1,7 +1,7 @@
 import Product from "../models/product.model.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
-
+import storeSettings from "../models/storeSettings.model.js";
 
 const clearProductCache = async (productId) => {
   try {
@@ -16,7 +16,6 @@ export const slashProductPrice = async (req, res) => {
     const { id } = req.params; 
     const { newPrice, reason } = req.body;
 
-    // Validate input
     if (!id) {
       return res.status(400).json({ message: "Product ID is required" });
     }
@@ -25,7 +24,6 @@ export const slashProductPrice = async (req, res) => {
       return res.status(400).json({ message: "Valid price is required" });
     }
 
-    // Find product
     const product = await Product.findById(id);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
@@ -33,14 +31,12 @@ export const slashProductPrice = async (req, res) => {
 
     const oldPrice = product.price;
 
-    // Check if price is actually being reduced
     if (parseFloat(newPrice) >= parseFloat(oldPrice)) {
       return res.status(400).json({
         message: "New price must be lower than current price to slash",
       });
     }
 
-    // Prevent multiple slash - only slash if not already slashed
     if (product.isPriceSlashed && product.previousPrice === oldPrice) {
       return res.status(400).json({
         message:
@@ -48,12 +44,10 @@ export const slashProductPrice = async (req, res) => {
       });
     }
 
-    // Update product with slashed price
     product.previousPrice = oldPrice;
     product.price = parseFloat(newPrice);
     product.isPriceSlashed = true;
 
-    // Add to price history
     product.priceHistory.push({
       price: parseFloat(newPrice),
       previousPrice: oldPrice,
@@ -65,13 +59,11 @@ export const slashProductPrice = async (req, res) => {
 
     await product.save();
 
-    // Calculate discount percentage
     const discountPercentage = (
       ((oldPrice - parseFloat(newPrice)) / oldPrice) *
       100
     ).toFixed(1);
 
-    // Log to audit trail
     const auditInfo = AuditLogger.getRequestInfo(req);
     await AuditLogger.log({
       adminId: req.user._id,
@@ -98,11 +90,10 @@ export const slashProductPrice = async (req, res) => {
         `Price slashed from ₦${oldPrice.toLocaleString()} to ₦${newPrice} (${discountPercentage.toLocaleString()}% discount)` +
         (reason ? ` - Reason: ${reason}` : ""),
     });
-    // Clear cache
     await clearProductCache(id);
 
     console.log(
-      `✅ Price slashed: ${oldPrice} → ${newPrice} (${discountPercentage}% off)`
+      `Price slashed: ${oldPrice} → ${newPrice} (${discountPercentage}% off)`
     );
 
     res.json({
@@ -118,7 +109,7 @@ export const slashProductPrice = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("❌ Error slashing price:", error);
+    console.error("Error slashing price:", error);
     res.status(500).json({
       message: "Server error",
       error: error.message,
@@ -137,7 +128,6 @@ export const resetProductPrice = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Check if price is actually slashed
     if (!product.isPriceSlashed || !product.previousPrice) {
       return res.status(400).json({
         message: "Price is not slashed. Nothing to reset.",
@@ -146,13 +136,16 @@ export const resetProductPrice = async (req, res) => {
 
     const oldPrice = product.price;
     const originalPrice = product.previousPrice;
+    const settings = await storeSettings.findOne();
+    const formatter = new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: settings.currency,
+      });
 
-    // Reset to original price
     product.price = originalPrice;
     product.previousPrice = null;
     product.isPriceSlashed = false;
 
-    // Add to price history
     product.priceHistory.push({
       price: originalPrice,
       previousPrice: oldPrice,
@@ -164,7 +157,6 @@ export const resetProductPrice = async (req, res) => {
 
     await product.save();
 
-    // Log to audit trail
    const auditInfo = AuditLogger.getRequestInfo(req);
    await AuditLogger.log({
      adminId: req.user._id,
@@ -189,11 +181,13 @@ export const resetProductPrice = async (req, res) => {
      ipAddress: auditInfo.ipAddress,
      userAgent: auditInfo.userAgent,
      additionalInfo:
-       `Price reset from ₦${oldPrice.toLocaleString()} to original price ₦${originalPrice.toLocaleString()}` +
+       `Price reset from  ${formatter.format(
+         oldPrice
+       )} to original price  ${formatter.format(originalPrice)}` +
        (reason ? ` - Reason: ${reason}` : ""),
    });
 
-    // Clear cache
+  
     await clearProductCache(id);
 
     res.json({
@@ -249,7 +243,7 @@ export const updateProductPrice = async (req, res) => {
       product.isPriceSlashed = true;
     } else {
 
-      // Regular price update - clear slash if price increased
+    
       if (
         parseFloat(newPrice) > parseFloat(oldPrice) &&
         product.isPriceSlashed
@@ -259,10 +253,10 @@ export const updateProductPrice = async (req, res) => {
       }
     }
 
-    // Update price
+
     product.price = parseFloat(newPrice);
 
-    // Add to price history
+
     product.priceHistory.push({
       price: parseFloat(newPrice),
       previousPrice: oldPrice,
@@ -311,16 +305,15 @@ export const updateProductPrice = async (req, res) => {
       ipAddress: auditInfo.ipAddress,
       userAgent: auditInfo.userAgent,
       additionalInfo:
-        `Price ${
-          isSlash ? "slashed" : "updated"
-        } from ₦${oldPrice.toLocaleString()} to ₦${newPrice.toLocaleString()} (${changeType} of ${Math.abs(
+        `Price ${isSlash ? "slashed" : "updated"} from  ${formatter.format(
+          oldPrice
+        )} to  ${formatter.format(newPrice)} (${changeType} of ${Math.abs(
           priceDifference
         ).toFixed(2)} / ${Math.abs(percentChange)}%)` +
         (isSlash ? ` - ${discountPercentage}% discount applied` : "") +
         (reason ? ` - Reason: ${reason}` : ""),
     });
 
-    // Clear cache
     await clearProductCache(id);
 
 

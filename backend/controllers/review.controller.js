@@ -8,7 +8,6 @@ export const addReview = async (req, res) => {
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    //  Check if user has purchased and received the product
     const hasPurchased = await Order.findOne({
       user: userId,
       "products.product": productId,
@@ -22,7 +21,6 @@ export const addReview = async (req, res) => {
       });
     }
 
-    // Check if user has already reviewed
     const existingReviewIndex = product.reviews.findIndex(
       (r) => r.user.toString() === userId.toString()
     );
@@ -32,7 +30,6 @@ export const addReview = async (req, res) => {
       product.reviews[existingReviewIndex].comment = comment;
       product.reviews[existingReviewIndex].createdAt = Date.now();
     } else {
-      // Add new review
       product.reviews.push({
         user: userId,
         firstname: req.user.firstname,
@@ -42,7 +39,6 @@ export const addReview = async (req, res) => {
       });
     }
 
-    //  Recalculate average rating and number of reviews
     product.numReviews = product.reviews.length;
     product.averageRating =
       product.reviews.reduce((sum, r) => sum + r.rating, 0) /
@@ -104,7 +100,6 @@ export const deleteReview = async (req, res) => {
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-    // Remove review by user
     product.reviews = product.reviews.filter(
       (r) => r.user.toString() !== userId
     );

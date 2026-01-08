@@ -5,7 +5,6 @@ export const saveProduct = async (req, res) => {
     const { productId } = req.body;
     const userId = req.user.id;
 
-    // Check if already saved
     const existingSave = await SavedProduct.findOne({
       user: userId,
       product: productId,
@@ -22,7 +21,6 @@ export const saveProduct = async (req, res) => {
       product: productId,
     });
 
-    // Populate product details for immediate response
     await savedProduct.populate("product");
 
     res.status(201).json({

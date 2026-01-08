@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 
-//  ObjectId for system
 export const SYSTEM_USER = {
   id: new mongoose.Types.ObjectId("000000000000000000000000"),
   name: "System",

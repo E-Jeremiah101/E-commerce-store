@@ -1,6 +1,5 @@
 import StoreSettings from "../models/storeSettings.model.js";
 
-// Complete Nigerian states and LGAs
 export const NIGERIAN_STATES = {
   ABIA: {
     capital: "Umuahia",
@@ -999,10 +998,9 @@ export const NIGERIAN_REGIONS = {
   ],
 };
 
-// Helper function to get region by state name
 function getRegionByStateName(stateName, nigeriaConfig) {
   if (!nigeriaConfig?.regions) {
-    // Use default regions if not configured
+    
     for (const [region, states] of Object.entries(NIGERIAN_REGIONS)) {
       if (states.includes(stateName)) {
         return region;
@@ -1011,7 +1009,6 @@ function getRegionByStateName(stateName, nigeriaConfig) {
     return null;
   }
 
-  // Use configured regions
   const regionMap = Object.fromEntries(nigeriaConfig.regions);
   for (const [region, states] of Object.entries(regionMap)) {
     if (states.includes(stateName)) {
@@ -1021,7 +1018,6 @@ function getRegionByStateName(stateName, nigeriaConfig) {
   return null;
 }
 
-// Helper to get all states
 export function getAllStates() {
   return Object.keys(NIGERIAN_STATES).map((key) => ({
     value: key,
@@ -1029,13 +1025,11 @@ export function getAllStates() {
   }));
 }
 
-// Helper to get LGAs by state
 export function getLGAsByState(stateKey) {
   const state = NIGERIAN_STATES[stateKey];
   return state ? state.lgas : [];
 }
 
-// Default calculation (if no store settings)
 function calculateDefaultZone(deliveryAddress) {
   const { state, city, lga } = deliveryAddress;
 
@@ -1068,11 +1062,9 @@ function calculateDefaultZone(deliveryAddress) {
   return "northern";
 }
 
-// Helper function to get delivery zone based on admin's warehouse location
 async function getDeliveryZone(deliveryAddress, storeSettings) {
   const { warehouseLocation, nigeriaConfig } = storeSettings;
 
-  // If no store settings, use default
   if (!warehouseLocation || !warehouseLocation.state) {
     return calculateDefaultZone(deliveryAddress);
   }
@@ -1085,7 +1077,7 @@ async function getDeliveryZone(deliveryAddress, storeSettings) {
   const customerCity = deliveryAddress.city;
   const customerLGA = deliveryAddress.lga;
 
-  //  Same City
+
   if (
     customerState === adminState &&
     customerCity?.toLowerCase() === adminCity?.toLowerCase()
@@ -1093,17 +1085,17 @@ async function getDeliveryZone(deliveryAddress, storeSettings) {
     return "sameCity";
   }
 
-  //  Same LGA 
+
   if (customerState === adminState && customerLGA === adminLGA) {
     return "sameLGA";
   }
 
-  //  Same State
+
   if (customerState === adminState) {
     return "sameState";
   }
 
-  //   same region
+
   const adminRegion = getRegionByStateName(adminState, nigeriaConfig);
   const customerRegion = getRegionByStateName(customerState, nigeriaConfig);
 
@@ -1111,30 +1103,29 @@ async function getDeliveryZone(deliveryAddress, storeSettings) {
     return "sameRegion";
   }
 
-  //   southern states
+
   const southernRegions = ["SOUTH_SOUTH", "SOUTH_EAST", "SOUTH_WEST"];
   if (customerRegion && southernRegions.includes(customerRegion)) {
     return "southern";
   }
 
-  // Default to northern
+
   return "northern";
 }
 
-// Main delivery fee calculation function
+
 export async function calculateDeliveryFee(deliveryAddress) {
   try {
-    // Get current store settings
+
     const storeSettings = await StoreSettings.findOne();
 
     if (!storeSettings) {
       throw new Error("Store settings not found");
     }
 
-    // Determine delivery zone
     const zone = await getDeliveryZone(deliveryAddress, storeSettings);
 
-    // Get fee based on zone
+
     const shippingFees = storeSettings.shippingFees || {
       sameCity: 500,
       sameLGA: 1000,
@@ -1154,7 +1145,6 @@ export async function calculateDeliveryFee(deliveryAddress) {
   } catch (error) {
     console.error("Error calculating delivery fee:", error);
 
-    // Fallback to default calculation
     const zone = calculateDefaultZone(deliveryAddress);
     const defaultFees = {
       sameCity: 500,

@@ -20,7 +20,6 @@ const savedProductSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Prevent duplicate saves
 savedProductSchema.index({ user: 1, product: 1 }, { unique: true });
 
 const SavedProduct = mongoose.model("SavedProduct", savedProductSchema);

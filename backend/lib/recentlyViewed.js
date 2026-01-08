@@ -17,14 +17,11 @@ export const addToRecentlyViewed = async (userId, product) => {
 
     const key = `${RECENTLY_VIEWED_PREFIX}${userId}`;
     
-    // Ensure Redis is connected
     await ensureConnected();
     
-    // Get ALL existing recently viewed items
     const existingItems = await redis.lRange(key, 0, -1);
     
     if (existingItems.length > 0) {
-      // Log duplicates before removal
       const productIds = existingItems.map(item => {
         try {
           const parsed = JSON.parse(item);
@@ -36,10 +33,8 @@ export const addToRecentlyViewed = async (userId, product) => {
       
     }
     
-    // Create the product JSON string
     const productJson = JSON.stringify(product);
-    
-    // Remove ALL occurrences
+
     let removedCount = 0;
     let currentItems = [...existingItems];
     
@@ -49,8 +44,7 @@ export const addToRecentlyViewed = async (userId, product) => {
         const parsed = JSON.parse(item);
         
         if (parsed._id === product._id.toString()) {
-          // Remove this specific occurrence
-          const removed = await redis.lRem(key, 0, item); // 0 removes ALL occurrences
+          const removed = await redis.lRem(key, 0, item); 
           if (removed > 0) {
             removedCount += removed;
             console.log(` Removed ${removed} duplicate(s) of product ${product._id}`);
@@ -65,13 +59,11 @@ export const addToRecentlyViewed = async (userId, product) => {
       console.log(`Removed total ${removedCount} duplicate(s)`);
     }
     
-    // Add to beginning of list
+
     await redis.lPush(key, productJson);
     
-    // Trim list to keep only last 10 items
     await redis.lTrim(key, 0, 9);
     
-    // Set expiration (30 days)
     await redis.expire(key, 60 * 60 * 24 * 30);
     
   } catch (error) {
@@ -79,7 +71,7 @@ export const addToRecentlyViewed = async (userId, product) => {
   }
 };
 
-// Get recently viewed products for a user
+
 export const getRecentlyViewed = async (userId, limit = 8) => {
   try {
     if (!userId) {
@@ -109,12 +101,10 @@ export const getRecentlyViewed = async (userId, limit = 8) => {
         try {
           const parsed = JSON.parse(item);
 
-          // Ensure _id is a string
           if (parsed._id && typeof parsed._id !== "string") {
             parsed._id = parsed._id.toString();
           }
 
-          // Ensure countInStock is calculated
           if (!parsed.countInStock && parsed.variants) {
             parsed.countInStock = parsed.variants.reduce(
               (sum, v) => sum + (v.countInStock || 0),
@@ -122,7 +112,6 @@ export const getRecentlyViewed = async (userId, limit = 8) => {
             );
           }
 
-          // Calculate discount
           if (
             !parsed.discountPercentage &&
             parsed.isPriceSlashed &&
@@ -149,7 +138,7 @@ export const getRecentlyViewed = async (userId, limit = 8) => {
   }
 };
 
-// Clear recently viewed for a user
+
 export const clearRecentlyViewed = async (userId) => {
   try {
     if (!userId) return;

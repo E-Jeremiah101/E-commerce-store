@@ -123,7 +123,6 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-//  hash password before saving to database
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
@@ -132,7 +131,6 @@ userSchema.pre("save", async function (next) {
     const hashedPassword = await bcrypt.hash(this.password, salt);
 
      if (!this.isNew) {
-       // Get the current password before updating
        const currentPassword = this.password;
 
        this.previousPasswords.push({
@@ -157,7 +155,6 @@ userSchema.methods.comparePassword = async function (password) {
   return bcrypt.compare(password, this.password);
 };
 userSchema.methods.isPasswordUsedBefore = async function (newPassword) {
-  // Check if it's the same as current password
   const isCurrentPassword = await bcrypt.compare(newPassword, this.password);
   if (isCurrentPassword) return true;
 

@@ -1,7 +1,6 @@
 import { AuditLogArchiveService } from "../service/auditLogArchive.js";
 import AuditLogArchive from "../models/auditLogArchive.model.js";
 
-// Create an instance of the service
 const auditLogArchiveService = new AuditLogArchiveService();
 export const getArchives = async (req, res) => {
   try {
@@ -16,19 +15,16 @@ export const getArchives = async (req, res) => {
 
     const query = {};
 
-    // Date range filter
     if (startDate || endDate) {
       query.createdAt = {};
       if (startDate) query.createdAt.$gte = new Date(startDate);
       if (endDate) query.createdAt.$lte = new Date(endDate);
     }
 
-    // Status filter (skip "ALL")
     if (status && status !== "ALL") {
       query.status = status;
     }
 
-    // Search filter (search in metadata or filename)
     if (search) {
       query.$or = [
         { "metadata.actionCounts": { $regex: search, $options: "i" } },
@@ -148,7 +144,6 @@ export const restoreArchive = async (req, res) => {
 
 export const triggerManualArchive = async (req, res) => {
   try {
-    // Check if archive is needed
     const check = await auditLogArchiveService.checkArchiveStatus();
 
     if (!check.needed) {
@@ -159,7 +154,6 @@ export const triggerManualArchive = async (req, res) => {
       });
     }
 
-    // Run manual archive
     const result = await auditLogArchiveService.archiveOldLogs(false);
 
     res.json({

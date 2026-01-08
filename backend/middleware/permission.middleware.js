@@ -6,7 +6,6 @@ export const requirePermission = (permission) => {
       return res.status(403).json({ message: "Admin access required" });
     }
 
-    //  super_admin has all permissions
     if (user.permissions?.includes(permission)) {
       return next();
     }

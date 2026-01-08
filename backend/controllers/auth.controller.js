@@ -29,23 +29,23 @@ const storeRefreshToken = async (userId, refreshToken) => {
     refreshToken,
     "EX",
     7 * 24 * 60 * 60
-  ); // 7days
+  ); 
 };
 
 const setCookies = (res, accessToken, refreshToken) => {
   const isProduction = process.env.NODE_ENV === "production";
 
   res.cookie("accessToken", accessToken, {
-    httpOnly: true, // prevent XSS attacks, cross site scripting attack
+    httpOnly: true, 
     secure: isProduction,
-    sameSite: isProduction ? "strict" : "lax", // prevents CSRF attack, cross-site request forgery attack
-    maxAge:15 * 60 * 1000, // 15 minutes
+    sameSite: isProduction ? "strict" : "lax", 
+    maxAge:15 * 60 * 1000,
   });
   res.cookie("refreshToken", refreshToken, {
-    httpOnly: true, // prevent XSS attacks, cross site scripting attack
+    httpOnly: true, 
     secure: isProduction,
-    sameSite: isProduction ? "strict" : "lax", // prevents CSRF attack, cross-site request forgery attack
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    sameSite: isProduction ? "strict" : "lax", 
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
 
@@ -61,11 +61,9 @@ const logAuthAction = async (req, action, userId = null, changes = {}, additiona
       }
     }
 
-    // For login/logout, we want to log for ALL users (including admins)
-    // We'll check if the user is admin to determine if it's an admin action
+   
     const isAdmin = user?.role === "admin";
 
-    // NEW: Skip logging if not admin (except for critical auth failures)
     const isCriticalAuthFailure = [
       "LOGIN_FAILED",
       "SIGNUP_FAILED",
@@ -73,7 +71,7 @@ const logAuthAction = async (req, action, userId = null, changes = {}, additiona
     ].includes(action);
 
     if (!isAdmin && !isCriticalAuthFailure) {
-      return; // Don't log non-admin actions
+      return;
     }
 
     await AuditLogger.log({
@@ -96,14 +94,12 @@ const logAuthAction = async (req, action, userId = null, changes = {}, additiona
   }
 };
 
-
 const logFailedLogin = async (req, email, reason) => {
   try {
-    // NEW: Check if the user exists and is admin
+    
     const user = await User.findOne({ email });
     const isAdmin = user?.role === "admin";
 
-    // Only log failed admin logins
     if (!isAdmin) {
       return;
     }
@@ -160,8 +156,6 @@ export const signup = async (req, res) => {
       });
     } else {
       const user = await User.create({ firstname, lastname, email, password });
-
-      //authenticate users
 
       const { accessToken, refreshToken } = generateTokens(user._id);
       await storeRefreshToken(user._id, refreshToken);
@@ -295,10 +289,8 @@ export const login = async (req, res) => {
         );
       }
 
-      // Convert to plain object
       const userObj = user.toObject ? user.toObject() : { ...user._doc };
 
-      // Calculate permissions
       if (userObj.role === "admin" && userObj.adminType) {
         if (userObj.adminType === "super_admin") {
           userObj.permissions = Object.values(PERMISSIONS);
@@ -387,7 +379,6 @@ export const logout = async (req, res) => {
   } catch (error) {
     console.log("Error in logout controller", error.message);
 
-    // Log logout error
     await logAuthAction(
       req,
       "LOGOUT_ERROR",
@@ -410,13 +401,11 @@ export const refreshToken = async (req, res) => {
       return res.status(401).json({ message: "No refresh token provided" });
     }
 
-    // Verify old refresh token
     const decoded = jwt.verify(
       oldRefreshToken,
       process.env.REFRESH_TOKEN_SECRET
     );
 
-    // Check that token exists in Redis
     const storedToken = await redis.get(`refresh_token:${decoded.userId}`);
     if (!storedToken || storedToken !== oldRefreshToken) {
       return res
@@ -424,7 +413,6 @@ export const refreshToken = async (req, res) => {
         .json({ message: "Invalid or expired refresh token" });
     }
 
-    //  Generate new tokens
     const newAccessToken = jwt.sign(
       { userId: decoded.userId },
       process.env.ACCESS_TOKEN_SECRET,
@@ -437,10 +425,9 @@ export const refreshToken = async (req, res) => {
       { expiresIn: "7d" }
     );
 
-    //  Store the new refresh token in Redis (and overwrite the old one)
+
     await storeRefreshToken(decoded.userId, newRefreshToken);
 
-    //  Reset cookies (renew expiration)
     setCookies(res, newAccessToken, newRefreshToken);
 
     res.json({ message: "Tokens refreshed successfully" });
@@ -458,10 +445,8 @@ export const getProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Make sure we have a fresh user object with all properties
     const user = req.user;
 
-    // Calculate permissions if not already set
     if (!user.permissions) {
       let permissions = [];
       if (user.role === "admin" && user.adminType) {
@@ -489,7 +474,6 @@ export const forgotPassword = async (req, res) => {
 
     const settings = await storeSettings.findOne();
 
-    // Generate reset token
     const resetToken = crypto.randomBytes(20).toString("hex");
     const resetTokenHash = crypto
       .createHash("sha256")
@@ -497,7 +481,7 @@ export const forgotPassword = async (req, res) => {
       .digest("hex");
 
     user.resetPasswordToken = resetTokenHash;
-    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
     await user.save();
 
     const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
@@ -591,7 +575,6 @@ export const resetPassword = async (req, res) => {
       resetPasswordExpire: { $gt: Date.now() },
     });
 
-    // Check if password was used before
     const isPasswordUsed = await user.isPasswordUsedBefore(password);
     if (isPasswordUsed) {
       if (user.role === "admin"){
@@ -614,7 +597,7 @@ export const resetPassword = async (req, res) => {
       });
     }
 
-    user.password = password; // hash in User model pre-save hook
+    user.password = password; 
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save();
@@ -670,7 +653,6 @@ export const changePassword = async (req, res) => {
 
     const user = await User.findById(userId);
 
-    // Verify current password
     const isMatch = await user.comparePassword(currentPassword);
     if (!isMatch) {
       await logAuthAction(
@@ -685,7 +667,6 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ message: "Current password is incorrect" });
     }
 
-    // Check if new password is same as current
     if (currentPassword === newPassword) {
       await logAuthAction(
         req,
@@ -701,9 +682,6 @@ export const changePassword = async (req, res) => {
       });
     }
 
-   
-
-    // Check if password was used before
     const isPasswordUsed = await user.isPasswordUsedBefore(newPassword);
     if (isPasswordUsed) {
       await logAuthAction(
@@ -722,14 +700,11 @@ export const changePassword = async (req, res) => {
       });
     }
 
-    // Update password (pre-save hook handles history)
     user.password = newPassword;
     await user.save();
 
-    // Invalidate refresh token
     await redis.del(`refresh_token:${userId}`);
 
-    // Clear cookies
     res.clearCookie("accessToken");
     res.clearCookie("refreshToken");
 

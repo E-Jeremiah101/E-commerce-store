@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 
 const auditLogArchiveSchema = new mongoose.Schema(
@@ -56,7 +55,6 @@ const auditLogArchiveSchema = new mongoose.Schema(
   }
 );
 
-// Index for querying archives by period
 auditLogArchiveSchema.index({ periodStart: -1, periodEnd: -1 });
 auditLogArchiveSchema.index({ archivedAt: -1 });
 auditLogArchiveSchema.index({ status: 1 });

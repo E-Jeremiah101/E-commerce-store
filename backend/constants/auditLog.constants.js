@@ -9,7 +9,7 @@ export const ENTITY_TYPES = {
 };
 
 export const ACTIONS = {
-  // Product actions
+
   CREATE_PRODUCT: "CREATE_PRODUCT",
   UPDATE_PRODUCT: "UPDATE_PRODUCT",
   DELETE_PRODUCT: "DELETE_PRODUCT",
@@ -21,7 +21,6 @@ export const ACTIONS = {
   PRICE_UPDATE: "PRICE_UPDATE",
   PRICE_RESET: "PRICE_RESET",
 
-  // Order actions
   UPDATE_ORDER_STATUS: "UPDATE_ORDER_STATUS",
   ORDER_RECOVERY_ATTEMPT: "ORDER_RECOVERY_ATTEMPT",
   ORDER_RECOVERY_SUCCESS: "ORDER_RECOVERY_SUCCESS",
@@ -36,14 +35,12 @@ export const ACTIONS = {
   ORDER_RECOVERY_EMAIL_SENT: "ORDER_RECOVERY_EMAIL_SENT",
   AUTO_ORDER_ARCHIVE: "AUTO_ORDER_ARCHIVE",
 
-  //Coupon actions
   CREATE_COUPON: "CREATE_COUPON",
   DELETE_COUPON: "DELETE_COUPON",
   UPDATE_COUPON: "UPDATE_COUPON",
   TOGGLE_COUPON: "TOGGLE_COUPON",
   COUPON_USED: "COUPON_USED",
 
-  // Auth actions
   LOGIN: "LOGIN",
   LOGOUT: "LOGOUT",
   LOGIN_FAILED: "LOGIN_FAILED",
@@ -59,14 +56,12 @@ export const ACTIONS = {
   RESET_PASSWORD_FAILED: "RESET_PASSWORD_FAILED",
   RESET_PASSWORD_ERROR: "RESET_PASSWORD_ERROR",
 
-  // New inventory actions
   BULK_INVENTORY_UPDATE: "BULK_INVENTORY_UPDATE",
   BULK_INVENTORY_UPDATE_FAILED: "BULK_INVENTORY_UPDATE_FAILED",
   INVENTORY_SYNC: "INVENTORY_SYNC",
   INVENTORY_SYNC_FAILED: "INVENTORY_SYNC_FAILED",
   AUTO_INVENTORY_ADJUSTMENT: "AUTO_INVENTORY_ADJUSTMENT",
 
-  // REFUND ACTIONS
   REFUND_REQUESTED: "REFUND_REQUESTED",
   REFUND_APPROVED: "REFUND_APPROVED",
   REFUND_REJECTED: "REFUND_REJECTED",
@@ -83,22 +78,19 @@ export const ACTIONS = {
   REFUND_WEBHOOK_APPROVED: "REFUND_WEBHOOK_APPROVED",
   REFUND_WEBHOOK_REJECTED: "REFUND_WEBHOOK_REJECTED",
 
-  // Category actions
   CREATE_CATEGORY: "CREATE_CATEGORY",
   UPDATE_CATEGORY: "UPDATE_CATEGORY",
   DELETE_CATEGORY: "DELETE_CATEGORY", 
 
-  // User actions 
   UPDATE_USER_ROLE: "UPDATE_USER_ROLE",  
 
-  // Auth actions
   LOGIN: "LOGIN",
   LOGOUT: "LOGOUT",
   OTHER: "OTHER",
 };
 
 export const ACTION_LABELS = {
-  // Product labels
+
   CREATE_PRODUCT: "Create Product",
   UPDATE_PRODUCT: "Update Product",
   DELETE_PRODUCT: "Delete Product",
@@ -110,7 +102,6 @@ export const ACTION_LABELS = {
   PRICE_UPDATE: "Price Update",
   PRICE_RESET: "Price Reset",
 
-  // Order labels
   UPDATE_ORDER_STATUS: "Update Order Status",
   ORDER_RECOVERY_ATTEMPT: "Order Recovery Attempt",
   ORDER_RECOVERY_SUCCESS: "Order Recovery Success",
@@ -126,14 +117,12 @@ export const ACTION_LABELS = {
   VIEW_USER_ORDER: "View User Order",
   AUTO_ORDER_ARCHIVE: "Auto Order Archive",
 
-  //coupon label
   CREATE_COUPON: "Create Coupon",
   DELETE_COUPON: "Delete Coupon",
   UPDATE_COUPON: "Update Coupon",
   TOGGLE_COUPON: "Toggle Coupon Status",
   COUPON_USED: "Coupon Used",
 
-  // Auth labels
   LOGIN: "Login",
   LOGOUT: "Logout",
   LOGIN_FAILED: "Login Failed",
@@ -149,7 +138,6 @@ export const ACTION_LABELS = {
   RESET_PASSWORD_FAILED: "Reset Password Failed",
   RESET_PASSWORD_ERROR: "Reset Password Error",
 
-  // Inventory labels
   UPDATE_INVENTORY: "Update Inventory",
   BULK_INVENTORY_UPDATE: "Bulk Inventory Update",
   BULK_INVENTORY_UPDATE_FAILED: "Bulk Inventory Update Failed",
@@ -157,7 +145,7 @@ export const ACTION_LABELS = {
   INVENTORY_SYNC_FAILED: "Inventory Sync Failed",
   AUTO_INVENTORY_ADJUSTMENT: "Auto Inventory Adjustment",
 
-  // Refund action labels
+
   REFUND_REQUESTED: "Refund Request Submitted",
   REFUND_APPROVED: "Refund Approved",
   REFUND_REJECTED: "Refund Rejected",
@@ -174,15 +162,12 @@ export const ACTION_LABELS = {
   REFUND_WEBHOOK_APPROVED: "Webhook: Refund Approved",
   REFUND_WEBHOOK_REJECTED: "Webhook: Refund Rejected",
 
-  // Category labels
   CREATE_CATEGORY: "Create Category",
   UPDATE_CATEGORY: "Update Category",
   DELETE_CATEGORY:  "Delete Catgory",
 
-  // User labels
   UPDATE_USER_ROLE: "Update User Role",
 
-  // Auth labels
   LOGIN: "Login",
   LOGOUT: "Logout",
   OTHER: "Other",

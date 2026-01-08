@@ -9,7 +9,7 @@ export const authenticateOptional = async (req, res, next) => {
     const accessToken = req.cookies.accessToken;
 
     if (!accessToken) {
-      // No token, continue without user
+
       req.user = null;
       return next();
     }
@@ -34,18 +34,15 @@ export const authenticateOptional = async (req, res, next) => {
         user.permissions = [];
       }
 
-      // Attach user to request
       req.user = user;
       next();
     } catch (error) {
       if (error.name === "TokenExpiredError") {
 
-        // Token expired, continue without user
         console.log("Token expired in optional auth");
         req.user = null;
         return next();
       }
-      // Other token errors, continue without user
       console.log(
         "Token verification failed in optional auth:",
         error.message

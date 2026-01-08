@@ -83,7 +83,7 @@ export const getUserOrders = async (req, res) => {
       }
 
       const products = order.products.map((p) => {
-        // Check if this product has a refund request
+       
         const refund = order.refunds?.find(
           (r) => r.product?.toString() === p.product?._id?.toString()
         );
@@ -151,7 +151,6 @@ const deductStockForRecoveredItem = async (item) => {
       };
     }
 
-    // For products with variants
     if (product.variants && product.variants.length > 0) {
       
       if (!item.selectedSize && !item.selectedColor) {
@@ -205,7 +204,6 @@ const deductStockForRecoveredItem = async (item) => {
         if (fuzzyVariant) {
           if (fuzzyVariant.countInStock >= item.quantity) {
             fuzzyVariant.countInStock -= item.quantity;
-            // Update item with the actual variant details
             item.selectedSize = fuzzyVariant.size;
             item.selectedColor = fuzzyVariant.color;
             await product.save();
@@ -238,7 +236,6 @@ const deductStockForRecoveredItem = async (item) => {
         };
       }
       
-      // Deduct from specific variant
       if (variant.countInStock >= item.quantity) {
         variant.countInStock -= item.quantity;
         await product.save();
@@ -262,7 +259,7 @@ const deductStockForRecoveredItem = async (item) => {
         };
       }
     } 
-    // For products without variants
+   
     else {
       if (product.countInStock >= item.quantity) {
         product.countInStock -= item.quantity;
@@ -306,13 +303,13 @@ export const supportRecoverOrder = async (req, res) => {
   try {
     const { transaction_ref, flutterwave_ref, customer_email } = req.body;
 
-    console.log("🔄 Order recovery attempt:", {
+    console.log("Order recovery attempt:", {
       transaction_ref,
       flutterwave_ref,
       customer_email,
     });
 
-    // Validate input
+   
     if (!transaction_ref && !flutterwave_ref) {
       return res.status(400).json({
         error:
@@ -356,7 +353,6 @@ export const supportRecoverOrder = async (req, res) => {
       }
     }
 
-    //  Search by Flutterwave Reference
     if (!payment && flutterwave_ref && flutterwave_ref.trim() !== "") {
       console.log("Searching by Flutterwave Reference:", flutterwave_ref);
       searchMethod = "flutterwave_reference";
@@ -399,7 +395,6 @@ export const supportRecoverOrder = async (req, res) => {
       });
     }
 
-    //  Check if order already exists
     const existingOrder = await Order.findOne({
       $or: [
         { flutterwaveTransactionId: payment.id },
@@ -437,12 +432,10 @@ export const supportRecoverOrder = async (req, res) => {
       });
     }
 
-    // EXTRACT PRODUCT INFORMATION
     let recoveredProducts = [];
 
     console.log(" Payment metadata:", payment.meta);
 
-    // Process products from metadata
     if (payment.meta) {
       console.log(" Processing payment metadata...");
 
@@ -507,9 +500,8 @@ export const supportRecoverOrder = async (req, res) => {
       }
     }
 
-    // If no products found in metadata, create generic entry
     if (recoveredProducts.length === 0) {
-      console.log("📦 No product metadata found, creating generic product");
+      
       recoveredProducts = [
         {
           name: "Recovered Order - Products to be confirmed",
@@ -523,7 +515,6 @@ export const supportRecoverOrder = async (req, res) => {
       ];
     }
 
-    // ✅ Find or create user
     let user = await User.findOne({ email: customer_email });
     if (!user) {
       user = await User.create({
@@ -534,10 +525,10 @@ export const supportRecoverOrder = async (req, res) => {
           ? [{ number: payment.customer.phone_number, isDefault: true }]
           : [],
       });
-      console.log("✅ Created new user for recovery:", user.email);
+      console.log("Created new user for recovery:", user.email);
     }
 
-    // ✅ Extract delivery address, phone, delivery fee, coupon, and discount
+   
     const deliveryAddress = payment.meta?.deliveryAddress || payment.meta?.delivery_address || "To be confirmed by customer";
     const phone = payment.meta?.phoneNumber || payment.meta?.phone_number || payment.customer?.phone_number || "To be confirmed";
     const deliveryFee = parseFloat(payment.meta?.deliveryFee) || 0;
@@ -545,8 +536,12 @@ export const supportRecoverOrder = async (req, res) => {
     const discountAmount = parseFloat(payment.meta?.discountAmount) || 0;
     const couponCode = payment.meta?.couponCode || null;
     const finalTotal = parseFloat(payment.meta?.finalTotal) || payment.amount;
+      const settings = await storeSettings.findOne();
+      const formatter = new Intl.NumberFormat(undefined, {
+        style: "currency",
+        currency: settings?.currency || "NGN",
+      });
 
-    // Calculate subtotal
     let subtotal = payment.amount;
     if (deliveryFee > 0 && originalTotal > 0) {
       subtotal = originalTotal;
@@ -554,7 +549,6 @@ export const supportRecoverOrder = async (req, res) => {
       subtotal = payment.amount - deliveryFee;
     }
 
-    // ✅ DEDUCT STOCK FOR RECOVERED PRODUCTS
     const stockDeductionResults = [];
     const outOfStockMessages = [];
 
@@ -566,7 +560,6 @@ export const supportRecoverOrder = async (req, res) => {
         outOfStockMessages.push(deductionResult.message);
       }
 
-      // Update the item with variant details if they were determined during deduction
       if (deductionResult.variantSize !== undefined) {
         item.selectedSize = deductionResult.variantSize;
       }
@@ -575,9 +568,8 @@ export const supportRecoverOrder = async (req, res) => {
       }
     }
 
-    console.log("📊 Stock deduction results:", stockDeductionResults);
+    console.log("Stock deduction results:", stockDeductionResults);
 
-    // ✅ Create the recovered order WITH COUPON AND DISCOUNT
     const order = new Order({
       user: user._id,
       products: recoveredProducts,
@@ -623,25 +615,23 @@ export const supportRecoverOrder = async (req, res) => {
             Recovered on: ${new Date().toLocaleString()}
             
             STOCK DEDUCTION STATUS:
-            ${outOfStockMessages.length > 0 ? '⚠️ SOME ITEMS OUT OF STOCK - ADMIN REVIEW REQUIRED ⚠️' : '✅ All items in stock'}
+            ${outOfStockMessages.length > 0 ? '⚠️ SOME ITEMS OUT OF STOCK - ADMIN REVIEW REQUIRED ⚠️' : 'All items in stock'}
             ${outOfStockMessages.map(msg => `- ${msg}`).join('\n')}`,
     });
 
     await order.save();
-    console.log("✅ Order recovered successfully:", order.orderNumber);
+    console.log("Order recovered successfully:", order.orderNumber);
 
-    // Send recovery email
     (async () => {
       try {
         const recoveryNote = `Recovered via ${searchMethod.replace("_", " ")} - Reference: ${referenceUsed}`;
         await sendRecoveryOrderEmail(customer_email, order, recoveryNote);
-        console.log(`📧 Recovery email sent to: ${customer_email}`);
+        console.log(`Recovery email sent to: ${customer_email}`);
       } catch (emailError) {
-        console.error("❌ Email sending error:", emailError.message);
+        console.error("Email sending error:", emailError.message);
       }
     })();
 
-    // Log the recovery
     await logOrderAction(
       req,
       "ORDER_RECOVERY_SUCCESS",
@@ -714,9 +704,9 @@ export const supportRecoverOrder = async (req, res) => {
            adminNote:
              outOfStockMessages.length > 0
                ? "⚠️ SOME ITEMS ARE OUT OF STOCK. CONSIDER REFUNDING OR RE-STOCKING."
-               : "✅ All items in stock and deducted",
+               : "All items in stock and deducted",
            outOfStockItems: outOfStockMessages,
-           detailedResults: stockDeductionResults, // Add this for debugging
+           detailedResults: stockDeductionResults, 
          },
          nextSteps: [
            "Order automatically recovered with complete details!",
@@ -727,7 +717,9 @@ export const supportRecoverOrder = async (req, res) => {
              : []),
            ...(couponCode
              ? [
-                 `✅ Coupon applied: ${couponCode} (₦${discountAmount} discount)`,
+                 `Coupon applied: ${couponCode} (${formatter.format(
+              discountAmount
+            )} discount)`,
                ]
              : []),
            "Verify the products and delivery address match customer expectation",
@@ -735,7 +727,7 @@ export const supportRecoverOrder = async (req, res) => {
          ],
        });
   } catch (error) {
-    console.error("❌ Order recovery failed:", error);
+    console.error("Order recovery failed:", error);
 
     await AuditLogger.log({
       adminId: req.user?._id,
@@ -770,20 +762,17 @@ export const getAllOrders = async (req, res) => {
 
     let query = {};
 
-    // Filter by archived status
     if (showArchived === "true") {
-      query.isArchived = true; // Show only archived orders
+      query.isArchived = true; 
     } else if (showArchived === "false") {
-      query.isArchived = false; // Show only active orders
+      query.isArchived = false;
     } else {
       query.isArchived = { $ne: true }; 
     }
 
-    // Get date parameters safely with default values
     const startDate = req.query.startDate;
     const endDate = req.query.endDate;
 
-    // Build search filter
     let searchFilter = {};
     if (search) {
       const isObjectId = /^[0-9a-fA-F]{24}$/.test(search);
@@ -806,7 +795,6 @@ export const getAllOrders = async (req, res) => {
       
       const dateFilter = {};
 
-      //date range filter 
       if (startDate && startDate.trim() !== "") {
         const start = new Date(startDate);
         console.log("Parsed start date:", start);
@@ -831,7 +819,6 @@ export const getAllOrders = async (req, res) => {
         }
       }
 
-      // Only add date filter if we have valid dates
       if (Object.keys(dateFilter).length > 0) {
         searchFilter.createdAt = dateFilter;
        
@@ -849,7 +836,7 @@ if (searchFilter.$or) {
 if (searchFilter.createdAt) {
   finalQuery.createdAt = searchFilter.createdAt;
 }
-    // Fetch all orders with basic sorting (newest first by default)
+    
     let orders = await Order.find(finalQuery)
       .populate("user", "firstname lastname email phone address")
       .populate("products.product", "name price image")
@@ -857,8 +844,6 @@ if (searchFilter.createdAt) {
       .populate("refunds.product", "name image")
       .lean();
       
-
-    //  Pending orders always first, then sort by other criteria
     const statusOrder = [
       "Pending",
       "Processing",
@@ -869,18 +854,15 @@ if (searchFilter.createdAt) {
       "Partially Refunded",
     ];
 
-    // Custom sorting function
     orders.sort((a, b) => {
-      // 1. Pending orders ALWAYS come first (highest priority)
+
       if (a.status === "Pending" && b.status !== "Pending") return -1;
       if (b.status === "Pending" && a.status !== "Pending") return 1;
- 
-      // 2. If both are Pending, sort by creation date (newest first)
+
       if (a.status === "Pending" && b.status === "Pending") {
         return new Date(b.createdAt) - new Date(a.createdAt);
       }
 
-      // 3. For non-Pending orders, apply the requested sorting
       if (sortBy === "date") {
         const dateA = new Date(a.createdAt);
         const dateB = new Date(b.createdAt);
@@ -899,17 +881,14 @@ if (searchFilter.createdAt) {
         return sortOrder === "asc" ? indexA - indexB : indexB - indexA;
       }
 
-      //  newest non-Pending orders first
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
 
-    // Map response
     res.status(200).json({
       success: true,
       count: orders.length,
       orders: orders.map((order) => {
 
-        // Compute refund status
         const totalProducts = order.products?.length || 0;
         const approvedCount =
           order.refunds?.filter((r) => r.status === "Approved").length || 0;
@@ -972,14 +951,12 @@ export const updateOrderStatus = async (req, res) => {
 
      if (status === "Cancelled" && oldStatus !== "Cancelled") {
 
-       // RESTORE STOCK BEFORE UPDATING ORDER STATUS
        try {
          console.log(
            ` Restoring stock for cancelled order #${order.orderNumber}`
          );
          const restorationResults = await restoreStockForCancelledOrder(order);
 
-         // Log the stock restoration
          await logOrderAction(
            req,
            "ORDER_CANCELLED_STOCK_RESTORED",
@@ -1047,7 +1024,6 @@ export const updateOrderStatus = async (req, res) => {
 
     await order.save();
 
-    // Styled HTML email
     const emailHtml = `
       <html>
         <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
@@ -1135,7 +1111,6 @@ const reduceVariantStock = async (orderItems) => {
       const product = await Product.findById(item.product);
       if (!product) continue;
 
-      // If product has variants, reduce specific variant stock
       if (product.variants && product.variants.length > 0) {
         const variant = product.variants.find(v => 
           v.size === item.selectedSize && v.color === item.selectedColor
@@ -1148,7 +1123,6 @@ const reduceVariantStock = async (orderItems) => {
           variant.countInStock -= item.quantity;
         }
       } else {
-        // Fallback to overall product stock
         if (product.countInStock < item.quantity) {
           throw new Error(`Not enough stock for ${product.name}`);
         }
@@ -1219,10 +1193,8 @@ export const createOrder = async (req, res) => {
     }
     const totalAmount = Math.max(subtotal - discount, 0);
 
-    // REDUCE STOCK BEFORE CREATING ORDER
     await reduceVariantStock(orderItems);
 
-    // Create order snapshot
     const order = new Order({
       user: user._id,
       products: orderItems,
@@ -1261,7 +1233,6 @@ export const createOrder = async (req, res) => {
        "User placed new order from cart"
      );
 
-    // Clear cart after order
     user.cartItems = [];
     await user.save();
 
@@ -1269,7 +1240,6 @@ export const createOrder = async (req, res) => {
   } catch (err) {
     console.error("Error creating order", err);
     
-    // Provide specific error message for stock issues
     if (err.message.includes("Not enough stock")) {
       return res.status(400).json({ message: err.message });
     }
@@ -1303,13 +1273,11 @@ export const getOrderById = async (req, res) => {
      });
    }
 
-   // Convert both IDs to strings for comparison
    const orderUserId = order.user._id.toString();
    const requestUserId = req.user._id.toString();
 
-   // Check ownership
    if (orderUserId !== requestUserId) {
-     // Check if user is admin (allow admins to view any order)
+  
      if (req.user.role !== "admin") {
        return res.status(403).json({
          success: false,
@@ -1318,7 +1286,7 @@ export const getOrderById = async (req, res) => {
        });
      }
    }
-    // Log order view by admin (if admin is viewing)
+
     if ( req.user.role === "admin") {
       await logOrderAction(
         req,
@@ -1368,7 +1336,6 @@ const sendRecoveryOrderEmail = async (to, order, recoveryInfo) => {
     console.error("Error fetching user name for email:", err);
   }
 
-  // Use paymentMethod from order instead of paymentData
   const paymentMethod = order.paymentMethod || {};
   const tx_ref = order.flutterwaveRef || "N/A";
   const transaction_id = order.flutterwaveTransactionId || "N/A";
@@ -1379,7 +1346,7 @@ const sendRecoveryOrderEmail = async (to, order, recoveryInfo) => {
     currency: settings?.currency || "NGN",
   });
 
-  // Prepare items array
+
   const items = order.products || order.items || [];
 
   const productRows = items

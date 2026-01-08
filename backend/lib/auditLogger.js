@@ -16,7 +16,7 @@ class AuditLogger {
     additionalInfo,
   }) {
     try {
-      // Validate entityType is one of our constants
+
       const validEntityType = Object.values(ENTITY_TYPES).includes(entityType)
         ? entityType
         : ENTITY_TYPES.OTHER;

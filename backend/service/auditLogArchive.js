@@ -33,15 +33,12 @@ class AuditLogArchiveService {
     const now = new Date();
     const periodEnd = new Date(now);
 
-    // Go back 2 months for period start
     const periodStart = new Date(now);
     periodStart.setMonth(periodStart.getMonth() - 2);
 
-    // Set to start of month
     periodStart.setDate(1);
     periodStart.setHours(0, 0, 0, 0);
 
-    // Set period end to end of previous month
     periodEnd.setMonth(periodEnd.getMonth() - 1);
     periodEnd.setDate(0); 
     periodEnd.setHours(23, 59, 59, 999);
@@ -50,8 +47,6 @@ class AuditLogArchiveService {
   }
 
   
-  //  Archive logs older than 2 months
-   
   async archiveOldLogs(autoArchive = false) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -63,7 +58,6 @@ class AuditLogArchiveService {
         `Archiving logs from ${periodStart.toISOString()} to ${periodEnd.toISOString()}`
       );
 
-      // Find logs within the period
       const logs = await AuditLog.find({
         timestamp: {
           $gte: periodStart,
@@ -78,7 +72,6 @@ class AuditLogArchiveService {
         return { success: true, message: "No logs to archive" };
       }
 
-      // Create archive record
       const archiveRecord = new AuditLogArchive({
         periodStart,
         periodEnd,
@@ -93,21 +86,17 @@ class AuditLogArchiveService {
 
       await archiveRecord.save({ session });
 
-      // Create JSON file
       const archiveData = logs.map((log) => log.toObject());
       const jsonData = JSON.stringify(archiveData, null, 2);
 
-      // Compress the data
       const compressedData = await gzip(jsonData);
 
-      // Save to file
       const filename = `audit_logs_${
         periodStart.toISOString().split("T")[0]
       }_to_${periodEnd.toISOString().split("T")[0]}.json.gz`;
       const filepath = path.join(this.archiveDir, filename);
       await writeFile(filepath, compressedData);
 
-      // Calculate file size
       const stats = fs.statSync(filepath);
       const fileSize = this.formatFileSize(stats.size);
       const originalSize = Buffer.byteLength(jsonData, "utf8");
@@ -116,14 +105,12 @@ class AuditLogArchiveService {
         100
       ).toFixed(2);
 
-      // Update archive record
       archiveRecord.archiveFileUrl = `/api/archives/download/${archiveRecord._id}`;
       archiveRecord.fileSize = fileSize;
       archiveRecord.compressionRatio = parseFloat(compressionRatio);
       archiveRecord.status = "completed";
       await archiveRecord.save({ session });
 
-      // Delete archived logs from main collection
       await AuditLog.deleteMany({
         _id: { $in: logs.map((log) => log._id) },
       }).session(session);
@@ -148,7 +135,6 @@ class AuditLogArchiveService {
 
       console.error("Error archiving logs:", error);
 
-      // Update archive record with error
       await AuditLogArchive.findOneAndUpdate(
         { status: "pending" },
         {
@@ -165,8 +151,6 @@ class AuditLogArchiveService {
   }
 
  
-    // Count actions for metadata
- 
   countActions(logs) {
     return logs.reduce((acc, log) => {
       acc[log.action] = (acc[log.action] || 0) + 1;
@@ -174,8 +158,6 @@ class AuditLogArchiveService {
     }, {});
   }
 
-  // Count entity types for metadata
-   
   countEntityTypes(logs) {
     return logs.reduce((acc, log) => {
       acc[log.entityType] = (acc[log.entityType] || 0) + 1;
@@ -183,8 +165,6 @@ class AuditLogArchiveService {
     }, {});
   }
 
-  // Format file size
-  
   formatFileSize(bytes) {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
@@ -192,8 +172,6 @@ class AuditLogArchiveService {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   }
-
-  //Get all archives
 
   async getArchives(page = 1, limit = 20) {
     const skip = (page - 1) * limit;
@@ -253,7 +231,6 @@ class AuditLogArchiveService {
       throw new Error("Archive not found");
     }
 
-    // Delete file
     const filename = `audit_logs_${
       archive.periodStart.toISOString().split("T")[0]
     }_to_${archive.periodEnd.toISOString().split("T")[0]}.json.gz`;
@@ -263,7 +240,6 @@ class AuditLogArchiveService {
       await unlink(filepath);
     }
 
-    // Delete record
     await AuditLogArchive.findByIdAndDelete(archiveId);
 
     return { success: true, message: "Archive deleted" };
@@ -282,7 +258,6 @@ class AuditLogArchiveService {
         throw new Error("Archive not found");
       }
 
-      // Read and decompress file
       const filename = `audit_logs_${
         archive.periodStart.toISOString().split("T")[0]
       }_to_${archive.periodEnd.toISOString().split("T")[0]}.json.gz`;
@@ -296,10 +271,8 @@ class AuditLogArchiveService {
       const decompressedData = zlib.gunzipSync(compressedData);
       const logs = JSON.parse(decompressedData.toString());
 
-      // Insert logs back into main collection
       await AuditLog.insertMany(logs, { session });
 
-      // Update archive status
       archive.status = "completed";
       archive.restoredAt = new Date();
       await archive.save({ session });
@@ -334,7 +307,6 @@ class AuditLogArchiveService {
 
     const { periodStart, periodEnd } = this.getArchivePeriod();
 
-    // Count logs eligible for archive
     const logsToArchive = await AuditLog.countDocuments({
       timestamp: {
         $gte: periodStart,

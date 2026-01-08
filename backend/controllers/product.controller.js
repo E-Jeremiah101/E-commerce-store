@@ -30,7 +30,6 @@ export const checkVariantAvailability = async (req, res) => {
       });
     }
 
-    //  Only check variant stock
     let availableStock = 0;
 
     if (product.variants?.length > 0) {
@@ -46,7 +45,7 @@ export const checkVariantAvailability = async (req, res) => {
 
       availableStock = variant ? variant.countInStock : 0;
     } else {
-      // If no variants exist, product has 0 stock
+      
       return res.json({
         available: false,
         availableStock: 0,
@@ -79,7 +78,6 @@ export const checkCartAvailability = async (req, res) => {
   try {
     const { cartItems } = req.body;
 
-    // If cart is empty, return all available
     if (!cartItems || cartItems.length === 0) {
       return res.json({
         allAvailable: true,
@@ -112,9 +110,7 @@ export const checkCartAvailability = async (req, res) => {
         continue;
       }
 
-
       let availableStock = 0;
-
 
       if (product.variants?.length === 0) {
 
@@ -135,7 +131,6 @@ export const checkCartAvailability = async (req, res) => {
         continue;
       }
 
-      // Find the variant
       const variant = product.variants.find(
         (v) => v.size === item.size && v.color === item.color
       );
@@ -163,7 +158,6 @@ export const checkCartAvailability = async (req, res) => {
 
       const isAvailable = availableStock >= item.quantity;
       
-
       availabilityResults.push({
         productId: item._id,
         available: isAvailable,
@@ -231,7 +225,6 @@ export const updateVariantStock = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Update variants
     if (variants && Array.isArray(variants)) {
       product.variants = variants;
 
@@ -319,7 +312,6 @@ export const getVariantStock = async (req, res) => {
 
     let stock = 0;
 
-    // If variants exist, find specific variant with FLEXIBLE matching
     if (product.variants && product.variants.length > 0) {
       const variant = product.variants.find((v) => {
         const sizeMatches = size
@@ -352,7 +344,6 @@ export const getAllProducts = async (req, res) => {
       "name description price images category sizes colors variants isFeatured archived createdAt previousPrice isPriceSlashed"
     );
 
-    // Transform products for frontend
     const transformedProducts = products.map((product) => {
       const totalVariantStock = product.variants.reduce(
         (sum, v) => sum + (v.countInStock || 0),
@@ -394,7 +385,6 @@ export const getFeaturedProducts = async (req, res) => {
       return res.json(parsed);
     }
 
-    // if not in redis, fetch from mongodb
     featuredProducts = await Product.find({
       isFeatured: true,
       archived: { $ne: true },
@@ -429,8 +419,6 @@ export const getFeaturedProducts = async (req, res) => {
 
     });
 
-    
-    // store in redis for future quick access
     await redis.set("featured_products", JSON.stringify(transformedFeatured));
 
     res.json(transformedFeatured);
@@ -466,7 +454,6 @@ export const createProduct = async (req, res) => {
       );
     }
 
-    // VARIANT-ONLY: Calculate total stock from variants
     const totalVariantStock = variants
       ? variants.reduce((sum, variant) => sum + (variant.countInStock || 0), 0)
       : 0;
@@ -505,7 +492,6 @@ export const createProduct = async (req, res) => {
       } variants`,
     });
 
-    // Automatically create category if it doesn't exist
     if (category) {
       const existingCategory = await Category.findOne({ name: category });
       if (!existingCategory) {
@@ -574,12 +560,10 @@ export const deleteProduct = async (req, res) => {
     product.isActive = false;
     await product.save();
 
-    //mark as archived (soft delete)
     product.archived = true;
     product.isActive = false;
     await product.save();
 
-    // Remove from featured cache if it was featured
     if (product.isFeatured) {
       product.isFeatured = false;
       await product.save();
@@ -664,7 +648,6 @@ export const getProductsByCategory = async (req, res) => {
     if (color) filter.colors = color;
     const products = await Product.find(filter);
 
-    // Transform for variant-only system
     const transformedProducts = products.map((product) => {
       const totalVariantStock = product.variants.reduce(
         (sum, v) => sum + (v.countInStock || 0),
@@ -723,7 +706,7 @@ export const toggleFeaturedProduct = async (req, res) => {
       product.isFeatured = !product.isFeatured;
       const updatedProduct = await product.save();
 
-      // Update cache
+   
       await updateFeaturedProductsCache();
 
       res.json(updatedProduct);
@@ -741,7 +724,6 @@ async function updateFeaturedProductsCache() {
       .select("name price images category sizes colors variants")
       .lean();
 
-    // Transform for variant-only system
     const transformedFeatured = featuredProducts.map((product) => {
       const totalVariantStock =
         product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
@@ -752,7 +734,6 @@ async function updateFeaturedProductsCache() {
       };
     });
 
-    // Set with expiration to prevent stale data
     await redis.set("featured_products", JSON.stringify(transformedFeatured), {
       EX: 3600, 
     });
@@ -763,7 +744,7 @@ async function updateFeaturedProductsCache() {
 }
 
 export const searchProducts = async (req, res) => {
-  const query = req.query.q?.trim(); // remove spaces at the ends
+  const query = req.query.q?.trim(); 
   if (!query) {
     return res.status(400).json({ message: "No search query provided" });
   }
@@ -775,12 +756,10 @@ export const searchProducts = async (req, res) => {
     const textConditions = [];
     const numberConditions = [];
 
-    // Loop through each keyword to build search conditions
 
       keywords.forEach((word, i) => {
       const lowerWord = word.toLowerCase();
 
-      // Handle "under" and "above" for price filtering
       if (!isNaN(word)) {
         const amount = Number(word);
         const prevWord = keywords[i - 1]?.toLowerCase();
@@ -793,7 +772,7 @@ export const searchProducts = async (req, res) => {
           numberConditions.push({ amount }); 
         }
       } else if (lowerWord !== "under" && lowerWord !== "above") {
-        // Build regex for text fields
+        
         textConditions.push(
           { name: { $regex: word, $options: "i" } },
           { description: { $regex: word, $options: "i" } },
@@ -803,16 +782,14 @@ export const searchProducts = async (req, res) => {
       }
     });
 
-    // Combine all text and number conditions
+    
     const queryConditions = {
       $or: [...textConditions, ...numberConditions],
       archived: { $ne: true },
     };
 
-    // Perform MongoDB search
     const products = await Product.find(queryConditions);
 
-    // Transform for variant-only system
     const transformedProducts = products.map((product) => {
       const totalVariantStock = product.variants.reduce(
         (sum, v) => sum + (v.countInStock || 0),
@@ -878,13 +855,10 @@ export const getProductById = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Transform for variant-only system
     const totalVariantStock = product.variants.reduce(
       (sum, v) => sum + (v.countInStock || 0),
       0
     );
-
-    // Calculate discount if slashed
     const discountPercentage =
       product.isPriceSlashed && product.previousPrice
         ? (
@@ -896,7 +870,6 @@ export const getProductById = async (req, res) => {
     const transformedProduct = {
       ...product.toObject(),
       countInStock: totalVariantStock,
-      // Include slash information
       previousPrice: product.previousPrice,
       isPriceSlashed: product.isPriceSlashed,
       discountPercentage: discountPercentage,
@@ -914,7 +887,6 @@ export const getArchivedProducts = async (req, res) => {
   try {
     const products = await Product.find({ archived: true });
 
-    // Transform for variant-only system
     const transformedProducts = products.map((product) => {
       const totalVariantStock = product.variants.reduce(
         (sum, v) => sum + (v.countInStock || 0),
@@ -941,7 +913,6 @@ export const trackProductView = async (req, res, next) => {
       return next();
     }
 
-    // Fetch the product
     const product = await Product.findById(req.params.id)
       .select(
         "name price images category variants previousPrice isPriceSlashed"
@@ -953,11 +924,9 @@ export const trackProductView = async (req, res, next) => {
     }
 
 
-    // Calculate total variant stock
     const totalVariantStock =
       product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) || 0;
 
-    // Calculate discount if slashed
     const discountPercentage =
       product.isPriceSlashed && product.previousPrice
         ? (
@@ -983,7 +952,6 @@ export const trackProductView = async (req, res, next) => {
 
     const { addToRecentlyViewed } = await import("../lib/recentlyViewed.js");
 
-    // For logged-in users
     if (req.user?._id) {
       console.log(
         "Adding to recently viewed for logged-in user:",
@@ -991,7 +959,6 @@ export const trackProductView = async (req, res, next) => {
       );
       await addToRecentlyViewed(req.user._id.toString(), productWithStock);
     }
-    // For guests: generate a unique ID
     else {
       const guestIdentifier = generateGuestIdentifier(req);
       console.log(" Adding to recently viewed for guest:", guestIdentifier);
@@ -1007,11 +974,9 @@ export const trackProductView = async (req, res, next) => {
 
 
 const generateGuestIdentifier = (req) => {
-  //IP + User-Agent as identifier
   const ip = req.ip || req.connection.remoteAddress || "unknown";
   const userAgent = req.headers["user-agent"] || "unknown";
 
-  // Create a simple hash
   const combined = `${ip}-${userAgent}`;
   let hash = 0;
 
@@ -1044,7 +1009,6 @@ export const getRecentlyViewedProducts = async (req, res) => {
     res.json({ products: recentlyViewed });
   } catch (error) {
     console.error("Error getting recently viewed products:", error);
-    // Return empty array on error (NO FALLBACK)
     res.json({ products: [] });
   }
 };
@@ -1111,7 +1075,6 @@ export const permanentDeleteProduct = async (req, res) => {
        additionalInfo: "Product permanently deleted from database",
      });
 
-    // Only delete images if product is archived
     if (product.archived && product.images?.length > 0) {
       for (const url of product.images) {
         const publicId = url.split("/").pop().split(".")[0];
@@ -1141,11 +1104,8 @@ export const exportProductsCSV = async (req, res) => {
     }).select(
       "name price images category sizes colors variants isFeatured archived createdAt previousPrice isPriceSlashed averageRating numReviews"
     );
-
-    // Transform products for CSV
     const csvData = [];
     
-    // Add CSV headers
     csvData.push([
       'Product ID',
       'Name',
@@ -1164,7 +1124,6 @@ export const exportProductsCSV = async (req, res) => {
       'Created At'
     ].join(','));
 
-    // Add product data
     products.forEach((product) => {
       const totalVariantStock = product.variants.reduce(
         (sum, v) => sum + (v.countInStock || 0),
@@ -1180,18 +1139,16 @@ export const exportProductsCSV = async (req, res) => {
             ).toFixed(1)
           : null;
 
-      // Format data for CSV (escape commas and quotes)
       const escapeCSV = (field) => {
         if (field === null || field === undefined) return '';
         const stringField = String(field);
-        // If contains comma, quote, or newline, wrap in quotes and escape quotes
+  
         if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
           return `"${stringField.replace(/"/g, '""')}"`;
         }
         return stringField;
       };
 
-      // Strip HTML from description before exporting
       const cleanDescription = stripHtmlTags(product.description);
 
       csvData.push([
@@ -1213,10 +1170,8 @@ export const exportProductsCSV = async (req, res) => {
       ].join(','));
     });
 
-    // Generate CSV content
     const csvContent = csvData.join('\n');
     
-    // Set headers for file download
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename=products_export.csv');
     
@@ -1238,7 +1193,6 @@ export const exportProductsDetailedCSV = async (req, res) => {
 
     const csvData = [];
     
-    // Add CSV headers for detailed export
     csvData.push([
       'Product ID',
       'Product Name',
@@ -1280,7 +1234,6 @@ export const exportProductsDetailedCSV = async (req, res) => {
         return stringField;
       };
 
-      // If product has variants, create a row for each variant
       if (product.variants && product.variants.length > 0) {
         product.variants.forEach((variant) => {
           csvData.push([
@@ -1301,7 +1254,7 @@ export const exportProductsDetailedCSV = async (req, res) => {
           ].join(','));
         });
       } else {
-        // If no variants, create one row
+      
         csvData.push([
           escapeCSV(product._id),
           escapeCSV(product.name),

@@ -4,7 +4,6 @@ export const getAllTransactions = async (req, res) => {
   try {
     const { search = "", sortBy = "date", sortOrder = "desc" } = req.query;
 
-    // Find ALL payment orders 
     const orders = await Order.find({
       $or: [
         { flutterwaveTransactionId: { $exists: true, $ne: null } },
@@ -18,13 +17,12 @@ export const getAllTransactions = async (req, res) => {
 
     const paymentTransactions = orders
       .map((order) => {
-        // Get the main transaction ID (prefer flutterwaveTransactionId)
+      
         const transactionId =
           order.flutterwaveTransactionId ||
           order.flutterwaveRef ||
           order.orderNumber;
 
-        // Calculate refund status based on refundStatus field and refunds array
         let status = "success";
         if (order.refundStatus === "Fully Refunded") {
           status = "fully refunded";
@@ -70,7 +68,6 @@ export const getAllTransactions = async (req, res) => {
           : true
       );
 
-    // Find completed refund orders
     const ordersWithRefunds = await Order.find({
       "refunds.0": { $exists: true },
       "refunds.status": { $in: ["Approved", "Processing"] },
@@ -79,7 +76,7 @@ export const getAllTransactions = async (req, res) => {
     const refundTransactions = [];
     ordersWithRefunds.forEach((order) => {
       order.refunds.forEach((refund) => {
-        // Only include approved or processing refunds
+
         if (["Approved", "Processing"].includes(refund.status)) {
           const refundStatus =
             refund.status === "Approved" ? "refunded" : "processing";
@@ -112,7 +109,6 @@ export const getAllTransactions = async (req, res) => {
             },
           };
 
-          // Apply search filter
           if (
             !search ||
             tx.transactionId.toLowerCase().includes(search.toLowerCase()) ||
@@ -127,10 +123,8 @@ export const getAllTransactions = async (req, res) => {
       });
     });
 
-    // Combine payments + refunds
     let transactions = [...paymentTransactions, ...refundTransactions];
 
-    // Sort
     transactions.sort((a, b) => {
       if (sortBy === "status") {
         if (sortOrder === "asc") return a.status.localeCompare(b.status);

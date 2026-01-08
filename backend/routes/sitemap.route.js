@@ -3,8 +3,6 @@ import express from "express";
 const router = express.Router();
 
 
-//  Dynamic robots.txt that uses actual domain from request
-
 router.get("/robots.txt", (req, res) => {
   const host = req.get("host") || "yourdomain.com";
   const protocol = req.protocol || "https";
@@ -39,7 +37,6 @@ Sitemap: ${baseUrl}/sitemap-products.xml`;
 });
 
 
-//  Dynamic sitemap.xml - lists all products
  
 router.get("/sitemap.xml", async (req, res) => {
   try {
@@ -74,8 +71,6 @@ router.get("/sitemap.xml", async (req, res) => {
   }
 });
 
-
-//   Dynamic sitemap for products - includes all products
  
 router.get("/sitemap-products.xml", async (req, res) => {
   try {
@@ -88,7 +83,7 @@ router.get("/sitemap-products.xml", async (req, res) => {
     const products = await Product.find()
       .select("_id updatedAt")
       .lean()
-      .limit(50000); // Sitemap has 50k URL limit
+      .limit(50000); 
 
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
     xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';

@@ -55,7 +55,6 @@ const storeSettingsSchema = new mongoose.Schema(
       northern: { type: Number, default: 5000 },
     },
 
-    // Nigerian states and regions configuration
     nigeriaConfig: {
       regions: {
         type: Map,

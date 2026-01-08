@@ -105,13 +105,13 @@ router.get(
   exportProductsDetailedCSV
 );
 
-// Variant-specific routes 
+
 router.get("/:id/variants", getProductVariants);
 router.get("/stock/:productId", getVariantStock);
 // router.get("/debug-stock/:productId", debugProductStock);
 router.get("/:productId/check-availability", checkVariantAvailability);
 
-// Price routes
+
 router.patch(
   "/:id/price/slash",
   protectRoute,

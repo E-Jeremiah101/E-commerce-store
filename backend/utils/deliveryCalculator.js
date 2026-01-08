@@ -1,4 +1,3 @@
-
 const DELIVERY_TIMES = {
   "Same City": { min: 3, max: 7 },
   "Same LGA": { min: 3, max: 7 },
@@ -15,7 +14,6 @@ function addBusinessDays(date, days) {
 
   while (count < days) {
     result.setDate(result.getDate() + 1);
-    //  if it's not a weekend
     if (result.getDay() !== 0 && result.getDay() !== 6) {
       count++;
     }
@@ -30,7 +28,6 @@ export function calculateEstimatedDeliveryDate(deliveryZone) {
   const timeEstimate =
     DELIVERY_TIMES[zone] || DELIVERY_TIMES["Northern Region"];
 
-  // Use average of min and max for the estimated date
   const averageDays = Math.ceil((timeEstimate.min + timeEstimate.max) / 2);
   const today = new Date();
   const estimatedDate = addBusinessDays(today, averageDays);

@@ -15,7 +15,7 @@ const logVariantInventoryAction = async (
   additionalInfo = ""
 ) => {
   try {
-    // Only log if user is an admin
+
     if (!req.user || req.user.role !== "admin") {
       return;
     }
@@ -73,9 +73,8 @@ export const restoreStockForCancelledOrder = async (order) => {
         continue;
       }
 
-      // For products with variants
       if (product.variants && product.variants.length > 0) {
-        // Find the specific variant
+
         const variant = product.variants.find(v => 
           (v.size === item.selectedSize || (!v.size && !item.selectedSize)) &&
           (v.color === item.selectedColor || (!v.color && !item.selectedColor))
@@ -85,7 +84,7 @@ export const restoreStockForCancelledOrder = async (order) => {
           const oldStock = variant.countInStock;
           variant.countInStock += item.quantity;
           
-          // Create inventory log for stock restoration
+
           const inventoryLog = new InventoryLog({
             productId: product._id,
             variantId: variant._id,
@@ -113,7 +112,7 @@ export const restoreStockForCancelledOrder = async (order) => {
             newStock: variant.countInStock
           });
         } else {
-          // Try fuzzy matching
+  
           const fuzzyVariant = product.variants.find(v => {
             const sizeMatch = !item.selectedSize || v.size === item.selectedSize || 
                              v.size === '' || v.size === 'Standard';
@@ -126,7 +125,6 @@ export const restoreStockForCancelledOrder = async (order) => {
             const oldStock = fuzzyVariant.countInStock;
             fuzzyVariant.countInStock += item.quantity;
             
-            // Create inventory log
             const inventoryLog = new InventoryLog({
               productId: product._id,
               variantId: fuzzyVariant._id,
@@ -163,11 +161,10 @@ export const restoreStockForCancelledOrder = async (order) => {
           }
         }
       } else {
-        // For products without variants
+
         const oldStock = product.countInStock || 0;
         product.countInStock = (product.countInStock || 0) + item.quantity;
         
-        // Create inventory log
         const inventoryLog = new InventoryLog({
           productId: product._id,
           variantId: null,
@@ -237,7 +234,7 @@ const getTopSellingProducts = async (
           lastOrderDate: { $max: "$createdAt" },
         },
       },
-      { $match: { totalSold: { $gt: 0 } } }, // Only products that were sold
+      { $match: { totalSold: { $gt: 0 } } }, 
       { $sort: { totalSold: -1 } },
       { $limit: limit },
       {
@@ -284,18 +281,18 @@ const getTopSellingProducts = async (
     return topProducts;
   } catch (error) {
     console.error(" Error getting top selling products:", error);
-    return []; // Return empty array on error
+    return []; 
   }
 };
 
 export const syncInventoryWithStoreOrders = async () => {
   try {
     
-    // Find orders that are delivered but not synced
+  
     const deliveredOrders = await Order.find({
       status: "Pending",
       isProcessed: false 
-    }).limit(50); // Process in batches
+    }).limit(50);
 
     let updatedCount = 0; 
     
@@ -305,7 +302,7 @@ export const syncInventoryWithStoreOrders = async () => {
           const product = await Product.findById(item.product);
           if (!product) continue;
 
-          // Find the specific variant
+          
           if (product.variants && product.variants.length > 0) {
             const variant = product.variants.find(v => 
               (v.size === item.selectedSize || (!v.size && !item.selectedSize)) &&
@@ -315,11 +312,11 @@ export const syncInventoryWithStoreOrders = async () => {
             if (variant) {
               const oldStock = variant.countInStock;
               
-              // Ensure we don't go negative
+          
               const newStock = Math.max(0, oldStock - item.quantity);
               variant.countInStock = newStock;
 
-              // Log the inventory change
+            
               const inventoryLog = new InventoryLog({
                 productId: product._id,
                 variantId: variant._id,
@@ -341,7 +338,6 @@ export const syncInventoryWithStoreOrders = async () => {
           await product.save();
         }
 
-        // Mark order as processed for inventory
         order.isProcessed = true;
         await order.save();
         
@@ -362,13 +358,12 @@ export const syncInventoryWithStoreOrders = async () => {
 
 export const getInventoryDashboard = async (req, res) => {
   try {
-    // Fetch products WITH variants ONLY
+   
     const products = await Product.find({ 
       archived: { $ne: true },
-      "variants.0": { $exists: true } // Only products with variants
+      "variants.0": { $exists: true } 
     }).select("name price category images variants");
 
-    // Calculate totals from VARIANTS ONLY
     let totalStockValue = 0;
     let totalVariantStock = 0;
     const lowStockThreshold = 10;
@@ -376,11 +371,9 @@ export const getInventoryDashboard = async (req, res) => {
     const lowStockProducts = [];
     const outOfStockProducts = [];
     
-    // Process each product's variants
     products.forEach((product) => {
       const productVariants = product.variants || [];
       
-      // Calculate product-level totals
       let productTotalStock = 0;
       let productTotalValue = 0;
       let hasLowStock = false;
@@ -394,22 +387,18 @@ export const getInventoryDashboard = async (req, res) => {
         productTotalStock += variantStock;
         productTotalValue += variantValue;
         
-        // Check for low stock
         if (variantStock > 0 && variantStock <= lowStockThreshold) {
           hasLowStock = true;
         }
         
-        // Check for out of stock
         if (variantStock === 0) {
           hasOutOfStock = true;
         }
       });
       
-      // Add to global totals
       totalVariantStock += productTotalStock;
       totalStockValue += productTotalValue;
       
-      // Add to alert lists if needed
       if (hasLowStock) {
         lowStockProducts.push({
           id: product._id,
@@ -433,10 +422,8 @@ export const getInventoryDashboard = async (req, res) => {
       }
     });
 
-    // Get top selling products from orders (LAST 30 DAYS)
     const topSellingProducts = await getTopSellingProducts(5);
 
-    // Get order stats for dashboard
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const orderStats = await Order.aggregate([
       {
@@ -465,7 +452,6 @@ export const getInventoryDashboard = async (req, res) => {
       deliveredOrders: 0,
     };
 
-    // Calculate total units sold from top selling products
     const totalUnitsSoldLast30Days = topSellingProducts.reduce(
       (sum, product) => sum + (product.totalSold || 0),
       0
@@ -473,7 +459,6 @@ export const getInventoryDashboard = async (req, res) => {
 
   
 
-    // Prepare fast moving products 
     let fastMovingProducts = [];
     let hasOrderData = false;
 
@@ -493,7 +478,7 @@ export const getInventoryDashboard = async (req, res) => {
         source: "orders",
       }));
     } else {
-      //  Find products with the most variant stock
+
       const productsWithStock = products
         .map(product => {
           const productStock = product.variants.reduce(
@@ -529,7 +514,7 @@ export const getInventoryDashboard = async (req, res) => {
         totalStockValue,
         lowStockCount: lowStockProducts.length,
         outOfStockCount: outOfStockProducts.length,
-        // ORDER STATS - FROM ACTUAL ORDERS
+      
         totalOrdersLast30Days: stats.totalOrders,
         deliveredOrdersLast30Days: stats.deliveredOrders,
         totalRevenueLast30Days: stats.totalRevenue,
@@ -608,28 +593,23 @@ export const getStockLevels = async (req, res) => {
 
     let filter = {
       archived: { $ne: true },
-      "variants.0": { $exists: true }, // Only products with variants
+      "variants.0": { $exists: true }, 
     };
 
-    // Search by name
     if (search) {
       filter.name = { $regex: search, $options: "i" };
     }
 
-    // Filter by category
     if (category) {
       filter.category = category;
     }
 
-    // Build query
     let query = Product.find(filter);
 
-    // Select ALL price fields including slash data
     query = query.select(
       "name price category images variants previousPrice isPriceSlashed priceHistory"
     );
 
-    // Apply pagination
     query = query.skip(skip).limit(parseInt(limit)).sort({ createdAt: -1 });
 
     const products = await query;
@@ -637,22 +617,21 @@ export const getStockLevels = async (req, res) => {
 
     console.log(`Found ${products.length} products with variants`);
 
-    // Transform data for VARIANT-ONLY SYSTEM
     const stockLevels = products.map((product) => {
-      // Calculate totals from variants ONLY
+      
       const variantsStock = product.variants.reduce(
         (sum, variant) => sum + (variant.countInStock || 0),
         0
       );
 
-      // Calculate total value from variants ONLY
+  
       const totalValue = product.variants.reduce((sum, variant) => {
         const variantPrice = variant.price || product.price;
         const variantStock = variant.countInStock || 0;
         return sum + variantPrice * variantStock;
       }, 0);
 
-      // Determine worst status among variants
+  
       let status = "healthy";
       const hasOutOfStock = product.variants.some((v) => v.countInStock === 0);
       const hasLowStock = product.variants.some(
@@ -665,7 +644,7 @@ export const getStockLevels = async (req, res) => {
         status = "low";
       }
 
-      //  Calculate discount percentage if price is slashed
+
       let discountPercentage = null;
       if (product.isPriceSlashed && product.previousPrice) {
         discountPercentage = (
@@ -674,7 +653,6 @@ export const getStockLevels = async (req, res) => {
         ).toFixed(1);
       }
 
-      // Transform variants
       const transformedVariants = product.variants.map((variant) => ({
         _id: variant._id,
         id: variant._id?.toString(),
@@ -707,7 +685,6 @@ export const getStockLevels = async (req, res) => {
       };
     });
 
-    // Log sample product with price data
     if (stockLevels.length > 0) {
       console.log(`Sample product price data:`, {
         name: stockLevels[0].name,
@@ -739,7 +716,7 @@ export const getLowStockAlerts = async (req, res) => {
   try {
     const lowStockThreshold = req.query.threshold || 10;
 
-    // Find ALL products with variants 
+    
     const products = await Product.find({
       archived: { $ne: true },
       "variants.0": { $exists: true }, 
@@ -753,7 +730,6 @@ export const getLowStockAlerts = async (req, res) => {
       product.variants.forEach((variant) => {
         const variantStock = variant.countInStock || 0;
 
-        // Check low stock variants
         if (variantStock <= lowStockThreshold && variantStock > 0) {
           alerts.push({
             id: `${product._id}-${variant._id}`,
@@ -779,7 +755,6 @@ export const getLowStockAlerts = async (req, res) => {
           totalLowStock++;
         }
 
-        // Check out of stock variants
         if (variantStock === 0) {
           alerts.push({
             id: `${product._id}-${variant._id}-out`,
@@ -807,7 +782,6 @@ export const getLowStockAlerts = async (req, res) => {
       });
     });
 
-    // Sort by urgency
     alerts.sort((a, b) => {
       if (a.status === "out" && b.status !== "out") return -1;
       if (b.status === "out" && a.status !== "out") return 1;
@@ -838,10 +812,9 @@ export const adjustStock = async (req, res) => {
       quantity,
       reason,
       notes,
-      variantId, // REQUIRED - variantId must be provided
+      variantId, 
     } = req.body;
 
-    // Validate that variantId is provided
     if (!variantId) {
       return res.status(400).json({
         message: "variantId is required in variant-only system",
@@ -853,7 +826,6 @@ export const adjustStock = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Find the variant
     const variant = product.variants.id(variantId);
     if (!variant) {
       return res.status(404).json({ message: "Variant not found" });
@@ -887,10 +859,8 @@ export const adjustStock = async (req, res) => {
 
     variant.countInStock = newStock;
 
-    // Save the product (this will save the variant changes)
     await product.save();
 
-    // Log the adjustment
     const inventoryLog = new InventoryLog({
       productId: product._id,
       variantId: variantId,
@@ -906,7 +876,6 @@ export const adjustStock = async (req, res) => {
 
     await inventoryLog.save();
 
-    // AUDIT LOG: Log the admin action
     await logVariantInventoryAction(
       req,
       ACTIONS.UPDATE_INVENTORY,
@@ -936,7 +905,6 @@ export const adjustStock = async (req, res) => {
       } from ${oldStock} to ${newStock}`
     );
 
-    // Return updated variant data
     res.json({
       message: "Stock adjusted successfully",
       product: {
@@ -965,15 +933,12 @@ export const getInventoryByLocation = async (req, res) => {
   try {
     const settings = await storeSettings.findOne();
 
-    // Fetch products WITH variants ONLY
     const products = await Product.find({
       archived: { $ne: true },
-      "variants.0": { $exists: true }, // Only products with variants
+      "variants.0": { $exists: true }, 
     }).select("name price category variants images");
 
    
-
-    // Main warehouse location
     const locations = [
       {
         id: "main",
@@ -984,15 +949,14 @@ export const getInventoryByLocation = async (req, res) => {
       },
     ];
 
-    // Process all products for the main warehouse
     const locationProducts = [];
     let totalLocationValue = 0;
-    let totalLocationItems = 0; // Total stock items (items with stock > 0)
-    let totalOutOfStockVariants = 0; // Count of variants with 0 stock
+    let totalLocationItems = 0; 
+    let totalOutOfStockVariants = 0; 
     let totalVariants = 0;
 
     products.forEach((product) => {
-      // Calculate total stock from ALL variants of this product
+      
       let productTotalStock = 0;
       let productOutOfStockVariants = 0;
       let productVariantsCount = product.variants.length;
@@ -1010,7 +974,7 @@ export const getInventoryByLocation = async (req, res) => {
       });
 
       if (productTotalStock > 0) {
-        // Calculate product value (using product price as base)
+        
         const productValue = product.price * productTotalStock;
 
         locationProducts.push({
@@ -1027,7 +991,7 @@ export const getInventoryByLocation = async (req, res) => {
         totalLocationValue += productValue;
         totalLocationItems += productTotalStock;
       } else {
-        // Product is completely out of stock
+       
         locationProducts.push({
           productId: product._id,
           productName: product.name,
@@ -1037,21 +1001,20 @@ export const getInventoryByLocation = async (req, res) => {
           variantsCount: productVariantsCount,
           outOfStockVariants: productOutOfStockVariants,
         });
-        // Don't add to totalLocationItems since stock is 0
+      
       }
     });
 
-    // Sort products by value (highest first)
     locationProducts.sort((a, b) => b.value - a.value);
 
     const inventoryByLocation = locations.map((location) => ({
       ...location,
       totalValue: totalLocationValue,
-      totalItems: totalLocationItems, // Items with stock > 0
-      totalVariants: totalVariants, // Total variant count
-      outOfStockVariants: totalOutOfStockVariants, // Variants with 0 stock
-      inStockVariants: totalVariants - totalOutOfStockVariants, // Variants with stock > 0
-      products: locationProducts.slice(0, 10), // Top 10 products
+      totalItems: totalLocationItems, 
+      totalVariants: totalVariants, 
+      outOfStockVariants: totalOutOfStockVariants, 
+      inStockVariants: totalVariants - totalOutOfStockVariants,
+      products: locationProducts.slice(0, 10), 
     }));
 
  
@@ -1060,9 +1023,9 @@ export const getInventoryByLocation = async (req, res) => {
       summary: {
         totalLocations: locations.length,
         totalValueAcrossLocations: totalLocationValue,
-        totalItemsAcrossLocations: totalLocationItems, // Items with stock
-        totalVariantsAcrossLocations: totalVariants, // All variants
-        outOfStockVariantsAcrossLocations: totalOutOfStockVariants, // Out of stock variants
+        totalItemsAcrossLocations: totalLocationItems,
+        totalVariantsAcrossLocations: totalVariants, 
+        outOfStockVariantsAcrossLocations: totalOutOfStockVariants, 
         averageValuePerItem:
           totalLocationItems > 0 ? totalLocationValue / totalLocationItems : 0,
       },
@@ -1077,15 +1040,15 @@ export const getInventoryValuation = async (req, res) => {
   try {
     const { groupBy = "category" } = req.query;
 
-    // Fetch products WITH variants ONLY
+   
     const products = await Product.find({
       archived: { $ne: true },
-      "variants.0": { $exists: true }, // Only products with variants
+      "variants.0": { $exists: true }, 
     }).select("name price category variants");
 
  
 
-    // DEBUG: Calculate total variant stock
+    
     let totalVariantStockDebug = 0;
     products.forEach((product) => {
       const productVariantStock = product.variants.reduce((sum, variant) => {
@@ -1096,12 +1059,9 @@ export const getInventoryValuation = async (req, res) => {
  
 
     if (groupBy === "category") {
-      // Group by category - VARIANT-ONLY SYSTEM
       const categoryGroups = products.reduce((acc, product) => {
         const category = product.category || "Uncategorized";
         const productVariants = product.variants || [];
-
-        // Calculate stock and value from variants ONLY
         const productStock = productVariants.reduce(
           (sum, variant) => sum + (variant.countInStock || 0),
           0
@@ -1113,7 +1073,6 @@ export const getInventoryValuation = async (req, res) => {
           return vSum + variantPrice * variantStock;
         }, 0);
 
-        // Initialize category if not exists
         if (!acc[category]) {
           acc[category] = {
             category,
@@ -1125,13 +1084,13 @@ export const getInventoryValuation = async (req, res) => {
           };
         }
 
-        // Add to category totals
+        
         acc[category].totalValue += productValue;
         acc[category].totalProducts += 1;
         acc[category].totalVariants += productVariants.length;
         acc[category].totalStock += productStock;
 
-        // Only add product if it has variant stock
+    
         if (productStock > 0) {
           acc[category].products.push({
             name: product.name,
@@ -1151,12 +1110,12 @@ export const getInventoryValuation = async (req, res) => {
         return acc;
       }, {});
 
-      // Convert to array and sort
+   
       const valuationData = Object.values(categoryGroups).sort(
         (a, b) => b.totalValue - a.totalValue
       );
 
-      // Calculate summary stats from VARIANTS ONLY
+
       const totalValue = valuationData.reduce(
         (sum, cat) => sum + cat.totalValue,
         0
@@ -1189,7 +1148,6 @@ export const getInventoryValuation = async (req, res) => {
         timestamp: new Date(),
       });
     } else {
-      // Overall valuation - VARIANT-ONLY
       const totalValue = products.reduce((sum, product) => {
         const productValue = product.variants.reduce((vSum, variant) => {
           const variantPrice = variant.price || product.price;
@@ -1213,7 +1171,6 @@ export const getInventoryValuation = async (req, res) => {
 
       const averageValuePerItem = totalStock > 0 ? totalValue / totalStock : 0;
 
-      // Most valuable items
       const mostValuable = products
         .map((product) => {
           const productVariants = product.variants;
@@ -1309,7 +1266,7 @@ export const getInventoryAgingReport = async (req, res) => {
       old: { label: "Old (180+ days)", days: 365, totalValue: 0, totalItems: 0, products: [] }
     };
 
-    // Process each product's variants
+   
     products.forEach(product => {
       const productVariants = product.variants || [];
       
@@ -1319,7 +1276,7 @@ export const getInventoryAgingReport = async (req, res) => {
         const variantStock = variant.countInStock || 0;
         const variantValue = variantPrice * variantStock;
 
-        if (variantStock > 0) { // Only count items in stock
+        if (variantStock > 0) { 
           let bucket;
           
           if (variantAge <= 30) {
@@ -1335,7 +1292,7 @@ export const getInventoryAgingReport = async (req, res) => {
           bucket.totalValue += variantValue;
           bucket.totalItems += variantStock;
 
-          // Add to product list (limit to top 5 per bucket)
+         
           if (bucket.products.length < 5) {
             bucket.products.push({
               productId: product._id,
@@ -1352,19 +1309,18 @@ export const getInventoryAgingReport = async (req, res) => {
       });
     });
 
-    // Calculate totals
+ 
     const totalValue = Object.values(agingBuckets).reduce((sum, bucket) => sum + bucket.totalValue, 0);
     const totalItems = Object.values(agingBuckets).reduce((sum, bucket) => sum + bucket.totalItems, 0);
 
-    // Sort buckets by age (fresh to old)
     const bucketsArray = Object.values(agingBuckets);
 
-    // Find slow movers (highest value in old/stale buckets)
+
     const slowMovers = [...agingBuckets.stale.products, ...agingBuckets.old.products]
       .sort((a, b) => b.totalValue - a.totalValue)
       .slice(0, 5);
 
-    // Calculate aging score (lower is better)
+ 
     const agingScore = Math.round(
       (agingBuckets.fresh.totalValue * 1 + 
        agingBuckets.aging.totalValue * 2 + 
@@ -1376,7 +1332,7 @@ export const getInventoryAgingReport = async (req, res) => {
       summary: {
         totalValue,
         totalItems,
-        agingScore: Math.min(agingScore, 5), // Scale to 1-5
+        agingScore: Math.min(agingScore, 5), 
         freshPercentage: Math.round((agingBuckets.fresh.totalValue / totalValue) * 100),
         stalePercentage: Math.round(((agingBuckets.stale.totalValue + agingBuckets.old.totalValue) / totalValue) * 100),
         reportDate: now
@@ -1439,13 +1395,12 @@ const generateAgingRecommendations = (buckets, totalValue) => {
 export const exportInventoryCSV = async (req, res) => {
   try {
     
-    // Fetch all products with variants
     const products = await Product.find({
       archived: { $ne: true },
       "variants.0": { $exists: true }
     }).select("name price category costPrice images variants countInStock createdAt updatedAt");
 
-    // Create CSV content
+
     const headers = [
       'Product ID',
       'Product Name',
@@ -1476,7 +1431,7 @@ export const exportInventoryCSV = async (req, res) => {
     let outOfStockCount = 0;
     let lowStockCount = 0;
 
-    // Process each product
+   
     products.forEach((product) => {
       const productVariants = product.variants || [];
       const productTotalStock = productVariants.reduce((sum, variant) => 
@@ -1492,7 +1447,6 @@ export const exportInventoryCSV = async (req, res) => {
       totalStockCount += productTotalStock;
       totalProducts++;
 
-      // If product has variants, export each variant separately
       if (productVariants.length > 0) {
         productVariants.forEach((variant) => {
           totalVariants++;
@@ -1532,7 +1486,7 @@ export const exportInventoryCSV = async (req, res) => {
           csvRows.push(row.join(','));
         });
       } else {
-        // Handle products without variants (fallback)
+
         totalVariants++;
         const isLowStock = productTotalStock > 0 && productTotalStock <= 5;
         const isOutOfStock = productTotalStock === 0;
@@ -1565,7 +1519,6 @@ export const exportInventoryCSV = async (req, res) => {
       }
     });
 
-    // Add summary section
     csvRows.push('');
     csvRows.push('SUMMARY');
     csvRows.push(['Metric', 'Value'].join(','));
@@ -1580,14 +1533,12 @@ export const exportInventoryCSV = async (req, res) => {
 
     const csvContent = csvRows.join('\n');
 
-    // Set headers for file download
     const timestamp = new Date().toISOString().split('T')[0];
     const filename = `inventory_export_${timestamp}.csv`;
 
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     
-    // Audit log
     await AuditLogger.log({
       adminId: req.user._id,
       adminName: `${req.user.firstname} ${req.user.lastname}`,

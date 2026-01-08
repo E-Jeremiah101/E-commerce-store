@@ -28,8 +28,8 @@ export async function acquireWebhookLock(transactionId, timeoutMs = 45000) {
     const lockValue = `${transactionId}_${Date.now()}`;
     
     const acquired = await redis.set(lockKey, lockValue, {
-      NX: true, // Only set if not exists
-      PX: timeoutMs // Expire after timeout in milliseconds
+      NX: true, 
+      PX: timeoutMs
     });
     
     console.log(
@@ -59,7 +59,7 @@ export async function storeReservation(reservationId, reservationData) {
       `reservation:${reservationId}`,
       JSON.stringify(reservationData),
       {
-        EX: reservationData.timeoutMinutes * 60 // TTL in seconds
+        EX: reservationData.timeoutMinutes * 60
       }
     );
   } catch (error) {
@@ -89,7 +89,6 @@ export async function deleteReservation(reservationId) {
 
 export async function storeReleasedReservation(reservationId, releaseData) {
   try {
-    // Store released marker for 1 hour
     await redis.set(
       `released_${reservationId}`,
       JSON.stringify(releaseData),

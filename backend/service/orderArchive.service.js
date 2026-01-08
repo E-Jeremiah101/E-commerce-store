@@ -31,7 +31,7 @@ export const archiveOldOrders = async ({
       return { archived: 0 };
     }
 
-    // Prepare archived documents
+  
     const archivedDocs = orders.map((order) => ({
       ...order.toObject(),
       archivedAt: new Date(),
@@ -41,15 +41,14 @@ export const archiveOldOrders = async ({
 
     console.log("Inserting into archive collection...");
 
-    // Use session for atomic operation
     const session = await mongoose.startSession();
     session.startTransaction();
 
     try {
-      // Insert into archive collection
+  
       await OrderArchive.insertMany(archivedDocs, { session });
 
-      //  mark them as archived in the main collection
+      
       const ids = orders.map((o) => o._id);
       await Order.updateMany(
         { _id: { $in: ids } },
@@ -136,7 +135,7 @@ export const getArchivedOrders = async (req, res) => {
     
     const query = {};
 
-    // Search functionality
+   
     if (search && search.trim() !== "") {
       const isObjectId = /^[0-9a-fA-F]{24}$/.test(search);
 
@@ -156,12 +155,11 @@ export const getArchivedOrders = async (req, res) => {
       }
     }
 
-    // Filter by status
+ 
     if (status && status !== "ALL") {
       query.status = status;
     }
 
-    // Filter by archive date range
     const dateFilter = {};
     if (startDate && startDate.trim() !== "") {
       const start = new Date(startDate);
@@ -184,13 +182,10 @@ export const getArchivedOrders = async (req, res) => {
     }
 
 
-    // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Get total count for pagination
     const total = await OrderArchive.countDocuments(query);
 
-    // Determine sort field and order
     let sortField = "archivedAt";
     if (sortBy === "date") sortField = "createdAt";
     if (sortBy === "totalAmount") sortField = "totalAmount";
@@ -208,7 +203,7 @@ export const getArchivedOrders = async (req, res) => {
     res.json({
       success: true,
       count: orders.length,
-      total, // Total matching documents
+      total,
       orders: orders.map((order) => ({
         _id: order._id,
         orderNumber: order.orderNumber,
@@ -246,7 +241,6 @@ export const unarchiveOrders = async ({ daysAgo = 1, limit = 5000 }) => {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
 
-    // Find orders in archive
     const archivedOrders = await OrderArchive.find({
       archivedAt: { $gte: cutoffDate },
       archivedReason: "AUTO_ARCHIVE",
@@ -259,7 +253,6 @@ export const unarchiveOrders = async ({ daysAgo = 1, limit = 5000 }) => {
       return { unarchived: 0 };
     }
 
-    // Check which orders actually need to be unarchived
     const idsToCheck = archivedOrders.map((o) => o.originalId || o._id);
 
     
@@ -288,7 +281,7 @@ export const unarchiveOrders = async ({ daysAgo = 1, limit = 5000 }) => {
     session.startTransaction();
 
     try {
-      //  Update existing orders: remove archived flag
+     
       if (ordersToUpdate.length > 0) {
         const updateIds = ordersToUpdate.map((o) => o.originalId || o._id);
         await Order.updateMany(
@@ -305,22 +298,21 @@ export const unarchiveOrders = async ({ daysAgo = 1, limit = 5000 }) => {
         console.log(` Updated ${ordersToUpdate.length} existing orders`);
       }
 
-      // Create orders that don't exist
       if (ordersToCreate.length > 0) {
         const ordersToInsert = ordersToCreate.map((order) => {
           const orderObj = order.toObject();
           delete orderObj.archivedAt;
           delete orderObj.archivedReason;
           delete orderObj.originalId;
-          delete orderObj._id; // Remove _id to let MongoDB create new one
+          delete orderObj._id; 
           return orderObj;
         });
 
         await Order.insertMany(ordersToInsert, { session });
-        console.log(`✅ Created ${ordersToCreate.length} new orders`);
+        console.log(`Created ${ordersToCreate.length} new orders`);
       }
 
-      // 3. Delete from archive collection
+
       const allArchiveIds = archivedOrders.map((o) => o._id);
       await OrderArchive.deleteMany(
         { _id: { $in: allArchiveIds } },
@@ -351,12 +343,10 @@ export const unarchiveOrders = async ({ daysAgo = 1, limit = 5000 }) => {
     throw error;
   }
 };
-// More specific unarchive function by order IDs
 export const unarchiveOrdersByIds = async (orderIds) => {
   try {
     console.log(" Unarchiving specific orders...");
 
-    // Find orders in archive by IDs
     const archivedOrders = await OrderArchive.find({
       _id: { $in: orderIds },
     });
@@ -367,22 +357,17 @@ export const unarchiveOrdersByIds = async (orderIds) => {
       return { unarchived: 0, message: "No orders found with given IDs" };
     }
 
-    // Prepare for restoration
     const ordersToRestore = archivedOrders.map((order) => {
       const orderObj = order.toObject();
 
-      // Remove archive-specific fields
       delete orderObj.archivedAt;
       delete orderObj.archivedReason;
       delete orderObj.originalId;
 
       return orderObj;
     });
-
-    // Insert back into main collection
     await Order.insertMany(ordersToRestore);
 
-    // Delete from archive
     await OrderArchive.deleteMany({ _id: { $in: orderIds } });
 
     console.log(`Successfully unarchived ${archivedOrders.length} orders`);
@@ -406,13 +391,12 @@ export const recoverSingleOrder = async (archiveId) => {
       throw new Error("Order not found in archive");
     }
 
-    // Check if order already exists in main collection
     const existingOrder = await Order.findById(
       archivedOrder.originalId || archivedOrder._id
     );
 
     if (existingOrder) {
-      // Order exists, just remove the archived flag
+
       await Order.findByIdAndUpdate(existingOrder._id, {
         $set: {
           isArchived: false,
@@ -436,7 +420,6 @@ export const recoverSingleOrder = async (archiveId) => {
       console.log(` Created new order: ${archivedOrder.orderNumber}`);
     }
 
-    // Delete from archive collection
     await OrderArchive.findByIdAndDelete(archiveId);
     console.log(`  Deleted from archive: ${archivedOrder.orderNumber}`);
 

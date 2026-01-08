@@ -17,21 +17,18 @@ export const getAuditLogs = async (req, res) => {
 
     const query = {};
 
-    // Date range filter
     if (startDate || endDate) {
       query.timestamp = {};
       if (startDate) query.timestamp.$gte = new Date(startDate);
       if (endDate) query.timestamp.$lte = new Date(endDate);
     }
 
-    // Filter by action (frontend sends "ALL" for all)
     if (action && action !== "ALL") {
       query.action = action;
     }
 
-    // Filter by entity type (map frontend to backend)
     if (entityType && entityType !== "ALL") {
-      // Frontend sends uppercase,  need proper model name
+ 
       const entityTypeMap = {
         PRODUCT: ENTITY_TYPES.PRODUCT,
         ORDER: ENTITY_TYPES.ORDER,
@@ -58,7 +55,6 @@ export const getAuditLogs = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const total = await AuditLog.countDocuments(query);
 
-    // Get logs with pagination
     const logs = await AuditLog.find(query)
       .sort({ timestamp: -1 })
       .skip(skip)
@@ -66,7 +62,7 @@ export const getAuditLogs = async (req, res) => {
       .populate("adminId", "firstname lastname email")
       .lean();
 
-    // Add human-readable labels
+
     const enrichedLogs = logs.map((log) => ({
       ...log,
       actionLabel: ACTION_LABELS[log.action] || log.action,
@@ -104,7 +100,7 @@ export const getAuditLogStats = async (req, res) => {
       { $match: matchStage },
       {
         $facet: {
-          // Actions by type
+          
           actionsByType: [
             {
               $group: {
@@ -114,7 +110,7 @@ export const getAuditLogStats = async (req, res) => {
             },
             { $sort: { count: -1 } },
           ],
-          // Entities by type
+          
           entitiesByType: [
             {
               $group: {
@@ -124,7 +120,7 @@ export const getAuditLogStats = async (req, res) => {
             },
             { $sort: { count: -1 } },
           ],
-          // Most active admins
+        
           topAdmins: [
             {
               $group: {
@@ -136,7 +132,7 @@ export const getAuditLogStats = async (req, res) => {
             { $sort: { count: -1 } },
             { $limit: 10 },
           ],
-          // Activity by hour
+       
           activityByHour: [
             {
               $group: {
@@ -146,7 +142,7 @@ export const getAuditLogStats = async (req, res) => {
             },
             { $sort: { _id: 1 } },
           ],
-          // Total count
+         
           totalCount: [{ $count: "count" }],
         },
       },
@@ -178,7 +174,7 @@ export const exportAuditLogs = async (req, res) => {
       .populate("adminId", "firstname lastname email")
       .lean();
 
-    // Convert to CSV format
+   
     const csvData = logs.map((log) => ({
       Timestamp: new Date(log.timestamp).toLocaleString(),
       Admin: log.adminName,
@@ -193,7 +189,6 @@ export const exportAuditLogs = async (req, res) => {
     res.setHeader("Content-Type", "text/csv");
     res.setHeader("Content-Disposition", "attachment; filename=audit_logs.csv");
 
-    // Simple CSV generation
     const csvString = [
       Object.keys(csvData[0]).join(","),
       ...csvData.map((row) =>
@@ -237,7 +232,7 @@ export const getPriceHistory = async (req, res) => {
   try {
     const { productId } = req.params;
     
-    // Fetch all price-related audit logs for this product
+  
     const priceLogs = await AuditLog.find({
       entityId: productId,
       entityType: ENTITY_TYPES.PRODUCT,
@@ -254,7 +249,7 @@ export const getPriceHistory = async (req, res) => {
     .populate('adminId', 'firstname lastname email')
     .lean();
 
-    // Format the logs for display
+    
     const formattedLogs = priceLogs.map(log => ({
       id: log._id,
       timestamp: log.timestamp,

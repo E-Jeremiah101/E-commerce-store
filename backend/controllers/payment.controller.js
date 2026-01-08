@@ -61,25 +61,21 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
 
           const variant = product.variants[variantIndex];
           
-
-          // Check stock
           if (variant.countInStock < item.quantity) {
             throw new Error(
               `Only ${variant.countInStock} available, but ${item.quantity} requested`
             );
           }
 
-          // ACTUALLY DEDUCT INVENTORY HERE
           variant.countInStock -= item.quantity;
           variant.reserved = (variant.reserved || 0) + item.quantity;
 
-          // Update total product stock
           product.countInStock = product.variants.reduce(
             (total, v) => total + v.countInStock,
             0
           );
         }
-        // Handle simple products (no variants)
+
         else {
 
           if (product.countInStock < item.quantity) {
@@ -88,7 +84,6 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
             );
           }
 
-          // ACTUALLY DEDUCT INVENTORY HERE
           product.countInStock -= item.quantity;
           product.reserved = (product.reserved || 0) + item.quantity;
 
@@ -98,7 +93,6 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
       }
     });
 
-    // Store reservation in Redis
     await storeReservation(reservationId, {
       products,
       createdAt: new Date(),
@@ -111,7 +105,7 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
   } catch (error) {
     console.error("Reservation failed:", error);
 
-    // Release any partial reservations
+
     try {
       await releaseInventory(reservationId);
     } catch (releaseError) {
@@ -126,7 +120,6 @@ async function reserveInventory(products, reservationId, timeoutMinutes = 4) {
 
 async function releaseInventory(reservationId) {
 
-  // Checking if we've already processed this release
   const alreadyReleased = await getReleasedReservation(reservationId);
   if (alreadyReleased) {
     return;
@@ -250,7 +243,6 @@ async function confirmInventory(reservationId) {
         const product = await Product.findById(item._id).session(session);
         if (!product) continue;
 
-        //  Use flexible matching for variants
         if (item.size || item.color) {
           const variantIndex = product.variants.findIndex((v) => {
             const sizeMatches = item.size
@@ -319,7 +311,6 @@ async function releaseCheckoutResources(reservationId) {
 setInterval(async () => {
 
   try {
-    // Get all Redis reservation keys
     const keys = await redis.keys("reservation:*");
 
     let releasedCount = 0;
@@ -445,7 +436,6 @@ async function reserveCoupon(
         throw new Error(`Coupon ${couponCode} not available`);
       }
 
-      // Reserve the coupon
       coupon.isReserved = true;
       coupon.reservationId = reservationId;
       coupon.reservationExpiresAt = new Date(
@@ -534,7 +524,7 @@ async function checkProductHasActiveReservation(product, activeReservationIds) {
 
 async function checkCouponEligibility(userId, orderAmount) {
   try {
-    // Check if user has any unused, active, non-expired coupons
+
     const existingActiveCoupons = await Coupon.find({
       userId: userId,
       isActive: true,
@@ -547,14 +537,11 @@ async function checkCouponEligibility(userId, orderAmount) {
       return null;
     }
 
-    // Count completed orders for this user
     const orderCount = await Order.countDocuments({
       user: userId,
       flutterwaveTransactionId: { $exists: true, $ne: null },
     });
 
-
-    // Check if user has ever received a first order coupon
     const hasReceivedFirstOrderCoupon = await Coupon.exists({
       userId: userId,
       couponReason: "first_order",
@@ -600,7 +587,6 @@ async function createNewCoupon(userId, options = {}) {
   try {
     console.log(` Creating coupon, reason: ${reason}`);
 
-    // First, deactivate any existing active coupon for this user
     await Coupon.updateMany(
       {
         userId: userId,
@@ -614,7 +600,6 @@ async function createNewCoupon(userId, options = {}) {
       }
     );
 
-    // Generate coupon code based on reason
     let codePrefix = "GIFT";
     if (reason === "first_order") {
       codePrefix = "WELCOME";
@@ -622,13 +607,11 @@ async function createNewCoupon(userId, options = {}) {
       codePrefix = "BIGSPEND";
     }
 
-    // Generate unique coupon code
     let newCode;
     let isUnique = false;
     let attempts = 0;
     const maxAttempts = 5;
 
-    // Keep trying until we get a unique code
     while (!isUnique && attempts < maxAttempts) {
       attempts++;
       const randomSuffix = Math.random()
@@ -637,7 +620,6 @@ async function createNewCoupon(userId, options = {}) {
         .toUpperCase();
       newCode = `${codePrefix}${randomSuffix}`;
 
-      // Check if code already exists
       const existingCoupon = await Coupon.findOne({ code: newCode });
       if (!existingCoupon) {
         isUnique = true;
@@ -650,7 +632,6 @@ async function createNewCoupon(userId, options = {}) {
 
     console.log(` Generated coupon code: ${newCode} for ${reason}`);
 
-    // Create the coupon
     const coupon = new Coupon({
       code: newCode,
       discountPercentage,
@@ -705,7 +686,6 @@ async function processOrderCreation(transactionData) {
     reservationId,
   } = transactionData;
 
-  //  IMMEDIATE DUPLICATE CHECK
   const existingOrder = await Order.findOne({
     $or: [
       { flutterwaveTransactionId: transaction_id },
@@ -718,7 +698,6 @@ async function processOrderCreation(transactionData) {
     return { order: existingOrder, isNew: false };
   }
 
-  //  CREATE ORDER (inventory already reserved)
   try {
   
 
@@ -767,7 +746,6 @@ async function processOrderCreation(transactionData) {
 
     await order.save();
 
-    //  CONFIRM INVENTORY (convert reservation to permanent)
     if (reservationId) {
       await confirmInventory(reservationId);
     }
@@ -775,13 +753,12 @@ async function processOrderCreation(transactionData) {
     if (couponCode?.trim()) {
       await confirmCouponUsage(userId, couponCode, order.orderNumber);
     }
-    //  CLEAR CART
     await User.findByIdAndUpdate(userId, { cartItems: [] });
 
     return { order, isNew: true };
   } catch (error) {
 
-    // Handle duplicate order error
+
     if (error.code === 11000) {
 
       const existingOrder = await Order.findOne({
@@ -835,8 +812,6 @@ export const createCheckoutSession = async (req, res) => {
       });
     }
 
-    //  CHECK AVAILABILITY BEFORE RESERVATION 
-
     try {
       for (const item of products) {
         if (!item._id) continue;
@@ -846,7 +821,6 @@ export const createCheckoutSession = async (req, res) => {
           throw new Error(`Product ${item.name} not found`);
         }
 
-        // Handle variants
         if (item.size || item.color) {
           const variantIndex = product.variants.findIndex((v) => {
             const sizeMatches = item.size
@@ -876,7 +850,7 @@ export const createCheckoutSession = async (req, res) => {
             );
           }
         }
-        // Handle simple products
+ 
         else {
 
           if (product.countInStock < item.quantity) {
@@ -901,7 +875,6 @@ export const createCheckoutSession = async (req, res) => {
         calculatedDeliveryFee = Number(deliveryFee);
       } else {
         
-        //  calculate on backend for delivery fee
         calculatedDeliveryFee = calculateDeliveryFee(
           deliveryAddress.state,
           deliveryAddress.city || "",
@@ -910,7 +883,6 @@ export const createCheckoutSession = async (req, res) => {
       }
     }
 
-    // Calculate totals
     const originalTotal = products.reduce((acc, p) => {
       const qty = p.quantity || 1;
       const price = Number(p.price) || 0;
@@ -1044,7 +1016,6 @@ export const createCheckoutSession = async (req, res) => {
       response?.data?.data?.link || response?.data?.data?.authorization_url;
 
     if (!link) {
-      // Release BOTH inventory AND coupon if payment initialization fails
       await releaseCheckoutResources(reservationId);
       console.error("No payment link returned by Flutterwave:", response.data);
       return res.status(500).json({ message: "Failed to initialize payment" });
@@ -1061,9 +1032,6 @@ export const createCheckoutSession = async (req, res) => {
 };
 
 export const handleFlutterwaveWebhook = async (req, res) => {
-
-  const signature = req.headers["verif-hash"];
-
   let transaction_id;
   let lockAcquired = false;
   let reservationId;
@@ -1109,8 +1077,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     const paymentType = event.data?.payment_type;
     reservationId = event.data?.meta?.reservationId;
 
-
-    // payment validation
     if (paymentType === "banktransfer" || paymentType === "bank_transfer") {
       const isBankTransferSuccessful =
         status === "successful" ||
@@ -1122,7 +1088,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
           `Bank transfer not successful: ${status} for ${event.data?.tx_ref}`
         );
 
-        // Release inventory
         const reservationId = event.data?.meta?.reservationId;
         if (reservationId) {
           await releaseCheckoutResources(reservationId);
@@ -1159,7 +1124,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     console.log(`Processing transaction: ${transaction_id}, status: ${status}`);
 
-    //  REDIS-BASED DISTRIBUTED LOCKING 
     lockAcquired = await acquireWebhookLock(transaction_id, 45000);
 
     if (!lockAcquired) {
@@ -1167,8 +1131,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       return res.status(200).send("Webhook already being processed");
     }
    
-
-    //   DUPLICATE PROTECTION / CHECK
     const existingOrder = await Order.findOne({
       $or: [
         { flutterwaveTransactionId: transaction_id },
@@ -1181,8 +1143,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
         ` DUPLICATE: Order ${existingOrder.orderNumber} already exists`
       );
 
-      // Release any reserved inventory
-
       if (reservationId) {
         await releaseCheckoutResources(reservationId);
       }
@@ -1193,7 +1153,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     if (status !== "successful") {
       console.log(`Payment not successful: ${status} for ${tx_ref}`);
 
-      // Release inventory if payment failed
       const reservationId = event.data?.meta?.reservationId;
       if (reservationId) {
         await releaseInventory(reservationId);
@@ -1206,13 +1165,11 @@ export const handleFlutterwaveWebhook = async (req, res) => {
 
     let data;
 
-   //verify with flutterwave
     const verifyResp = await flw.Transaction.verify({ id: transaction_id });
 
     if (!verifyResp?.data || verifyResp.data.status !== "successful") {
       console.error(`Webhook verification failed for: ${transaction_id}`);
 
-      // Release inventory if verification fails
       if (reservationId) {
         await releaseCheckoutResources(reservationId);
       }
@@ -1266,7 +1223,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     if (!userId) {
       console.error("Missing userId in webhook data");
 
-      // Release inventory if no user ID
       if (reservationId) {
         await releaseCheckoutResources(reservationId);
       }
@@ -1274,7 +1230,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
       return res.status(400).send("Missing userId");
     }
 
-    //  FINAL DUPLICATE CHECK (in case order was created between first check and now)
     const finalDuplicateCheck = await Order.findOne({
       $or: [
         { flutterwaveTransactionId: transaction_id },
@@ -1287,7 +1242,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
         `LATE DUPLICATE: Order ${finalDuplicateCheck.orderNumber} created during processing`
       );
 
-      // Release inventory
       if (reservationId) {
         await releaseCheckoutResources(reservationId);
       }
@@ -1329,8 +1283,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
             order.orderNumber
           } for user: ${userId}`
         );
-
-        // ONLY send email and check coupons for NEW orders
 
         if (isNew) {
           try {
@@ -1374,7 +1326,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
             console.error("Coupon creation failed:", error);
           }
 
-          // SEND ORDER CONFIRMATION EMAIL ONLY FOR NEW ORDERS
           try {
             const user = await User.findById(userId);
             if (user && user.email) {
@@ -1393,7 +1344,6 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     } catch (transactionError) {
       console.error("Transaction failed:", transactionError);
 
-      // Release inventory if transaction fails
       if (reservationId) {
         await releaseCheckoutResources(reservationId);
       }
@@ -1407,14 +1357,13 @@ export const handleFlutterwaveWebhook = async (req, res) => {
   } catch (err) {
     console.error(`Webhook processing error:`, err);
 
-    // Release inventory on error
     if (reservationId) {
       await releasereleaseCheckoutResourcesInventory(reservationId);
     }
 
     return res.status(500).send("Webhook processing failed");
   } finally {
-    // Always release lock if we acquired it
+
     if (lockAcquired && transaction_id) {
       await releaseWebhookLock(transaction_id);
       
@@ -1446,8 +1395,6 @@ export const checkoutSuccess = async (req, res) => {
   let lockAcquired = false;
   const { tx_ref, transaction_id } = req.body;
 
-
-  // ADD VALIDATION
   if (!transaction_id) {
     return res.status(400).json({
       error: "transaction_id is required",
@@ -1457,7 +1404,6 @@ export const checkoutSuccess = async (req, res) => {
 
 
   try {
-    // Duplicate protection
     const existingPaidOrder = await Order.findOne({
       $or: [
         { flutterwaveTransactionId: transaction_id },
@@ -1478,14 +1424,12 @@ export const checkoutSuccess = async (req, res) => {
       });
     }
 
-    // Acquire lock
     lockAcquired = await acquireWebhookLock(transaction_id, 30000);
     if (!lockAcquired) {
       console.log(
         `checkoutSuccess: Lock already acquired for ${transaction_id}`
       );
 
-      // Wait 1 second and check if order exists now
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       const orderNow = await Order.findOne({
@@ -1552,7 +1496,6 @@ export const checkoutSuccess = async (req, res) => {
           finalOrder = order;
           isNewOrder = isNew; 
 
-          // ONLY process coupons and send emails for NEW orders
           if (isNew) {    
             
             const couponEligibility = await checkCouponEligibility(
@@ -1587,7 +1530,6 @@ export const checkoutSuccess = async (req, res) => {
               }
             }
 
-            // Send confirmation email ONLY for new orders
             try {
               const user = await User.findById(userId);
               await sendDetailedOrderEmail({
@@ -1620,7 +1562,6 @@ export const checkoutSuccess = async (req, res) => {
   } catch (error) {
     console.error("checkoutSuccess failed:", error);
 
-    // Release inventory on failure
     const reservationId = req.body.meta?.reservationId;
     if (reservationId) {
       await releaseCheckoutResources(reservationId);
@@ -1630,7 +1571,7 @@ export const checkoutSuccess = async (req, res) => {
       error: error.message || "Checkout failed",
     });
   } finally {
-    // RELEASE LOCK
+
     if (lockAcquired) {
       await releaseWebhookLock(transaction_id);
     }
@@ -1653,7 +1594,6 @@ export const sendDetailedOrderEmail = async ({ to, order }) => {
     console.error("Error fetching user name for email:", err);
   }
 
-  // Use paymentMethod from order instead of paymentData
   const paymentMethod = order.paymentMethod || {};
   const tx_ref = order.flutterwaveRef || "N/A";
   const transaction_id = order.flutterwaveTransactionId || "N/A";
@@ -1664,7 +1604,6 @@ export const sendDetailedOrderEmail = async ({ to, order }) => {
     currency: settings.currency,
   });
 
-  // Prepare items array
   const items = order.products || order.items || [];
 
   const productRows = items
@@ -1846,7 +1785,6 @@ export const sendCouponEmail = async ({
   let message = "";
   let couponValue = `${coupon.discountPercentage}% OFF`;
 
-  // Only handle two coupon types now
   if (couponType === "welcome_coupon") {
     subject = `🎉 Welcome to ${settings.storeName}! Here's Your ${couponValue} Welcome Gift`;
     title = `Welcome to ${settings.storeName}!`;
@@ -1864,7 +1802,6 @@ export const sendCouponEmail = async ({
       <p>As a token of our appreciation, please enjoy this special discount on your next purchase.</p>
     `;
   } else {
-    // Fallback (shouldn't happen with our new system)
     subject = `🎁 Special ${couponValue} Gift from ${settings.storeName}`;
     title = "Here's a Special Gift For You!";
     message = `
@@ -1944,7 +1881,6 @@ export const sendCouponEmail = async ({
     </div>
   `;
 
-  // Plain text version
   const text = `
 ${title}
 

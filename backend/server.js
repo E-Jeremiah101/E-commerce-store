@@ -84,54 +84,46 @@ app.use("/api/locations", locationRoutes);
 
 app.use("/api/webhooks", webhookRoutes);
 
-//authRoute
 app.use("/api/auth", authRouthes);
 
-//productRoutes
 app.use("/api/products", productRoutes);
 
-//cartRoutes
 app.use("/api/cart", cartRoutes);
 
 app.use("/api/admin/coupons", couponRoutes);
 
-//usercouponroutw
 app.use("/api/coupons", userCouponRoutes);
 
-//paymentsRoutes
 app.use("/api/payments", paymentRoutes);
 
-//analyticsRoutes
 app.use("/api/analytics", analyticsRoutes);
 
-//orderRoutes
 app.use("/api/orders", orderRoute);
 
-//adminOderRoute
 app.use("/api/admin/orders", adminOrderRoutes);
 
 app.use("/api/users", userRoutes);
+
 app.use("/api/admin", userRoutes);
 
-//reviewRoute
 app.use("/api/reviews", reviewRoutes);
 
 app.use("/api/store-settings", storeSettingsRoutes);
 
-//VisitorRoute
 app.use("/api/visitors", visitorRoutes);
 
-//RefundRoute
 app.use("/api/refunds", refundRoutes);
 
-// categoryRoute
 app.use("/api", categoryRoutes);
 
 app.use("/api/categories", categoryRoutes);
 
 app.use("/api/saved-products", savedProductRoutes);
+
 app.use("/api/inventory", inventoryRoutes);
+
 app.use("/api/audit-logs", auditRoutes);
+
 app.use("/api/admin", adminTransactionRoutes);
 
 const __filename = fileURLToPath(import.meta.url);

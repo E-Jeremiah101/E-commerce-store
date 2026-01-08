@@ -35,7 +35,6 @@ export const updateStoreSettings = async (req, res) => {
   settings.phoneNumber = phoneNumber;
   settings.currency = currency;
 
-  // Update warehouse location if provided
   if (warehouseLocation) {
     settings.warehouseLocation = {
       ...settings.warehouseLocation,
@@ -43,7 +42,6 @@ export const updateStoreSettings = async (req, res) => {
     };
   }
 
-  // Update shipping fees if provided
   if (shippingFees) {
     settings.shippingFees = {
       ...settings.shippingFees,
@@ -51,7 +49,6 @@ export const updateStoreSettings = async (req, res) => {
     };
   }
 
-  // Update Nigeria config if provided
   if (nigeriaConfig) {
     settings.nigeriaConfig = {
       ...settings.nigeriaConfig,

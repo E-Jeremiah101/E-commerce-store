@@ -947,7 +947,6 @@ export const requestRefund = async (req, res) => {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    // Authorization check
     if (!order.user._id.equals(userId)) {
       return res.status(403).json({ message: "Not authorized" });
     }
@@ -1038,7 +1037,7 @@ export const requestRefund = async (req, res) => {
     });
 
     if (hasExistingRefund) {
-      // Find the existing refund to get its status
+
       const existingRefund = order.refunds.find((refund) => {
         const refundProductId =
           refund.product?.toString() ||
@@ -1052,7 +1051,7 @@ export const requestRefund = async (req, res) => {
         return refundProductId === currentProductId;
       });
       if (existingRefund) {
-        // Calculate total quantity already refunded/requested for this product
+
         const totalRefundedQuantity = order.refunds
           .filter((r) => {
             const rProductId =
@@ -1066,12 +1065,12 @@ export const requestRefund = async (req, res) => {
           })
           .reduce((sum, r) => sum + r.quantity, 0);
 
-        // Calculate remaining quantity that can still be refunded
+
         const remainingQuantity =
           refundProduct.quantity - totalRefundedQuantity;
 
         if (remainingQuantity <= 0) {
-          // All items already refunded/requested
+
           return res.status(400).json({
             message: `Cannot submit another refund request. All ${
               refundProduct.quantity
@@ -1082,7 +1081,6 @@ export const requestRefund = async (req, res) => {
           });
         }
 
-        // Check if requested quantity exceeds remaining quantity
         const requestedQuantity = quantity || refundProduct.quantity;
         if (requestedQuantity > remainingQuantity) {
           return res.status(400).json({
@@ -1105,7 +1103,6 @@ export const requestRefund = async (req, res) => {
       });
     }
 
-    // Create refund entry
     const refundData = {
       product: refundProduct.product?._id || refundProduct.product,
       quantity: refundQuantity,
@@ -1118,7 +1115,6 @@ export const requestRefund = async (req, res) => {
 
     order.refunds.push(refundData);
 
-    // Update order refund status
     const pendingRefunds = order.refunds.filter((r) => r.status === "Pending");
     if (pendingRefunds.length === order.products.length) {
       order.refundStatus = "Full Refund Requested";
@@ -1132,8 +1128,6 @@ export const requestRefund = async (req, res) => {
       success: true,
       message: "Refund request submitted successfully",
     });
-
-    // Send email using the new consistent function
     const newRefund = order.refunds[order.refunds.length - 1];
     await sendRefundRequestedEmail(order, newRefund, settings, formatter);
 
@@ -1169,7 +1163,6 @@ export const approveRefund = async (req, res) => {
     }
 
     
-    // UPDATE STATUS TO PROCESSING IMMEDIATELY
     const oldRefundStatus = refund.status;
     refund.status = "Processing";
     refund.processedAt = new Date();
@@ -1181,7 +1174,6 @@ export const approveRefund = async (req, res) => {
     }
 
 
-    // INITIATE FLUTTERWAVE REFUND
     const refundData = {
       id: order.flutterwaveTransactionId,
       amount: refund.amount,
@@ -1195,7 +1187,6 @@ export const approveRefund = async (req, res) => {
       console.log("Flutterwave response:", flutterwaveResponse);
 
       if (flutterwaveResponse.status === "success") {
-        // Store Flutterwave data
         if (flutterwaveResponse.data?.id) {
           refund.flutterwaveRefundId = flutterwaveResponse.data.id.toString();
         }
@@ -1204,7 +1195,6 @@ export const approveRefund = async (req, res) => {
         }
         refund.flutterwaveResponse = flutterwaveResponse.data;
 
-        //  CHECK IF REFUND IS ALREADY COMPLETED
         const refundStatus = flutterwaveResponse.data?.status?.toLowerCase();
         const isCompleted =
           refundStatus === "completed" ||
@@ -1214,10 +1204,8 @@ export const approveRefund = async (req, res) => {
         if (isCompleted) {
           refund.status = "Approved";
 
-          // Update order totals
           order.totalRefunded = (order.totalRefunded || 0) + refund.amount;
 
-          // Update order status
           const approvedRefunds = order.refunds.filter(
             (r) => r.status === "Approved"
           );
@@ -1229,13 +1217,13 @@ export const approveRefund = async (req, res) => {
             order.status = "Partially Refunded";
           }
         } else {
-          //  Refund is still processing
+        
           refund.status = "Processing";
         }
 
         await order.save();
       } else if (flutterwaveResponse.status === "error") {
-        // Handle Flutterwave errors
+  
         refund.status = "Rejected";
         refund.errorDetails = flutterwaveResponse.message;
         refund.processedAt = new Date();
@@ -1269,7 +1257,6 @@ export const approveRefund = async (req, res) => {
       currency: settings.currency,
     });
 
-    // Send appropriate email
     if (refund.status === "Approved") {
       await sendRefundApprovedEmail(order, refund, settings, formatter);
     } else if (refund.status === "Processing") {
@@ -1327,7 +1314,7 @@ export const approveRefund = async (req, res) => {
 export const flutterwaveWebhook = async (req, res) => {
 
   try {
-    // VERIFY SIGNATURE
+  
     const signature = req.headers["verif-hash"];
     const secretHash = process.env.FLW_WEBHOOK_HASH;
 
@@ -1337,7 +1324,6 @@ export const flutterwaveWebhook = async (req, res) => {
 
     console.log(" Signature verified");
 
-    //  GET THE WEBHOOK DATA
     const event = req.body;
     const { id, status, transaction_ref, amount, flw_ref, tx_ref } =
       event.data || {};
@@ -1346,18 +1332,14 @@ export const flutterwaveWebhook = async (req, res) => {
       `Processing: Event=${event.event}, ID=${id}, Status=${status}`
     );
 
-    //  SEND RESPONSE IMMEDIATELY (BEST PRACTICE)
     res.status(200).json({ success: true });
 
-    //  PROCESS IN BACKGROUND
     setTimeout(async () => {
       try {
 
         let order, refund;
 
     
-
-        // Find by Flutterwave refund ID
         if (id) {
           order = await Order.findOne({
             "refunds.flutterwaveRefundId": id.toString(),
@@ -1371,7 +1353,6 @@ export const flutterwaveWebhook = async (req, res) => {
           }
         }
 
-        //  Find by transaction ID (tx_ref from webhook)
         if (!order && (tx_ref || transaction_ref)) {
           const txId = tx_ref || transaction_ref;
 
@@ -1380,7 +1361,6 @@ export const flutterwaveWebhook = async (req, res) => {
           });
 
           if (order) {
-            // Find Processing refund with similar amount 
             refund = order.refunds.find(
               (r) =>
                 r.status === "Processing" && Math.abs(r.amount - amount) <= 1
@@ -1391,8 +1371,6 @@ export const flutterwaveWebhook = async (req, res) => {
             }
           }
         }
-
-        //  Find by flw_ref
         if (!order && flw_ref) {
           order = await Order.findOne({
             "refunds.flw_ref": flw_ref,
@@ -1404,7 +1382,6 @@ export const flutterwaveWebhook = async (req, res) => {
           }
         }
 
-        //  Find all orders with Processing refunds and match by amount
         if (!order && amount) {
 
 
@@ -1446,10 +1423,8 @@ export const flutterwaveWebhook = async (req, res) => {
           refund.status = "Approved";
           console.log(`Updated status to Approved`);
 
-          // Update order totals
           order.totalRefunded = (order.totalRefunded || 0) + refund.amount;
 
-          // Update order status
           const approvedRefunds = order.refunds.filter(
             (r) => r.status === "Approved"
           );
@@ -1470,10 +1445,8 @@ export const flutterwaveWebhook = async (req, res) => {
           return;
         }
 
-        // Store additional Flutterwave data
         refund.flutterwaveResponse = event.data;
 
-        // Ensure we have the refund ID
         if (id && !refund.flutterwaveRefundId) {
           refund.flutterwaveRefundId = id.toString();
         }
@@ -1511,7 +1484,7 @@ export const flutterwaveWebhook = async (req, res) => {
         console.error(" Webhook processing error:", error.message);
         console.error(error.stack);
       }
-    }, 1000); // 1 second delay
+    }, 1000); 
   } catch (error) {
     console.error(" WEBHOOK ERROR:", error.message);
     res.status(500).send("Webhook processing error");
@@ -1552,10 +1525,8 @@ export const rejectRefund = async (req, res) => {
       });
     }
 
-    // Store old status
     const oldRefundStatus = refund.status;
 
-    // Admin rejection 
     refund.status = "Rejected";
     refund.processedAt = new Date();
     refund.adminRejected = true;
@@ -1583,7 +1554,6 @@ export const rejectRefund = async (req, res) => {
       `Refund rejected by admin for ${formatter.format(refund.amount)}`
     );
 
-    // Send rejection email
     await sendRefundRejectedEmail(
       order,
       refund,
@@ -1610,7 +1580,6 @@ export const retryWebhook = async (req, res) => {
 
     console.log(` Retrying webhook for: ${flutterwaveRefundId}`);
 
-    // Manually call Flutterwave to get refund status
     const refundDetails = await flw.Transaction.fetch_refund({
       id: flutterwaveRefundId,
     });
@@ -1618,7 +1587,6 @@ export const retryWebhook = async (req, res) => {
     console.log("Flutterwave refund details:", refundDetails);
 
     if (refundDetails.status === "success") {
-      // Create mock webhook payload
       const mockPayload = {
         event: "refund.completed",
         data: {
@@ -1631,7 +1599,6 @@ export const retryWebhook = async (req, res) => {
         },
       };
 
-      // Process it
       const mockReq = {
         body: mockPayload,
         headers: {
@@ -1712,10 +1679,8 @@ export const pollRefundStatus = async (req, res) => {
       return res.status(404).json({ message: "Refund not found" });
     }
 
-    // Only poll if status is Processing and we have a Flutterwave refund ID
     if (refund.status === "Processing" && refund.flutterwaveRefundId) {
       try {
-        // Fetch refund status from Flutterwave
         const refundDetails = await flw.Transaction.fetch_refund({
           id: refund.flutterwaveRefundId,
         });
@@ -1728,14 +1693,12 @@ export const pollRefundStatus = async (req, res) => {
                              flutterwaveStatus === "successful";
 
           if (isCompleted && refund.status !== "Approved") {
-            // Update to Approved
+          
             refund.status = "Approved";
             refund.processedAt = new Date();
             
-            // Update order totals
             order.totalRefunded = (order.totalRefunded || 0) + refund.amount;
 
-            // Update order status
             const approvedRefunds = order.refunds.filter(
               (r) => r.status === "Approved"
             );
@@ -1749,7 +1712,6 @@ export const pollRefundStatus = async (req, res) => {
 
             await order.save();
 
-            // Send approval email
             const settings = await storeSettings.findOne();
             const formatter = new Intl.NumberFormat(undefined, {
               style: "currency",
@@ -1768,7 +1730,6 @@ export const pollRefundStatus = async (req, res) => {
         }
       } catch (pollError) {
         console.error("Polling error:", pollError);
-        // Don't fail, just return current status
       }
     }
 

@@ -19,7 +19,6 @@ class AuditLogArchiveJob {
   }
 
 
-    // Run the archive job manually
   async runArchiveJob() {
     if (this.isRunning) {
       console.log("Archive job already running");
@@ -45,7 +44,6 @@ class AuditLogArchiveJob {
 
 
  
-  // manual archive trigger
   async checkArchiveNeeded() {
     return await this.archiveService.checkArchiveStatus();
   }
