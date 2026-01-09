@@ -1,4 +1,3 @@
-// Complete Nigerian States, Cities with auto-derived LGAs
 export const NIGERIAN_LOCATIONS = {
   // Southern States
   ABIA: {
@@ -425,7 +424,6 @@ export const NIGERIAN_LOCATIONS = {
     },
   },
 
-  // Add more northern states as needed
   KANO: {
     label: "Kano State",
     capital: "Kano",
@@ -457,7 +455,6 @@ export const NIGERIAN_LOCATIONS = {
   },
 };
 
-// Helper Functions
 export function getAllStates() {
   return Object.entries(NIGERIAN_LOCATIONS).map(([value, data]) => ({
     value,
@@ -476,20 +473,17 @@ export function getAreasByCity(stateValue, cityName) {
   return state.cities[cityName].areas || [];
 }
 
-// Auto-derive LGA(s) from city
 export function getLGAsByCity(stateValue, cityName) {
   const state = NIGERIAN_LOCATIONS[stateValue];
-  if (!state || !state.cities[cityName]) return [cityName]; // Fallback to city name
+  if (!state || !state.cities[cityName]) return [cityName];
   return state.cities[cityName].lgAs;
 }
 
-// Get primary LGA for delivery calculations
 export function getPrimaryLGAForCity(stateValue, cityName) {
   const lgAs = getLGAsByCity(stateValue, cityName);
-  return lgAs[0] || cityName; // Use first LGA or city as fallback
+  return lgAs[0] || cityName; 
 }
 
-// Get all LGAs for a state (for admin warehouse setup)
 export function getAllLGAsByState(stateValue) {
   const state = NIGERIAN_LOCATIONS[stateValue];
   if (!state) return [];

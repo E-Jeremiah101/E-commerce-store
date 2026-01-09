@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "../css/ClassicSpinDisplay.css";
 import axios from "../lib/axios";
-import { Link } from "react-router-dom";
 import ScrollReveal from "./ScrollReveal.jsx";
 const OtherFeatures = () => {
   const [recommendations, setRecommendations] = useState([]);
@@ -27,10 +26,10 @@ const OtherFeatures = () => {
     "/pack-bag.jpg",
     "/jacket-nice.jpg",
     "/order-now.jpg",
-    "/sport2.jpg",
+    "/shoe-brown.jpg",
     "/glassess.jpg",
     "/brown-jack.jpg",
-    "/white-snick.jpg",
+    "/shoe-brown.jpg",
   ];
 
   // Combine recommendations with fallbacks

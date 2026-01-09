@@ -65,17 +65,15 @@ const SignUpPageContent = () => {
       newErrors.confirmPassword = "Password do not match";
     }
 
-    // stop if frontend validation fails
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
 
-    // call backend
     const result = await signup(formData);
 
     if (result?.error) {
-      setBackendError(result.error); // shows under button
+      setBackendError(result.error); 
       return;
     }
 

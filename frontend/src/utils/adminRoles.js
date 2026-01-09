@@ -39,17 +39,17 @@ export const ROLE_PERMISSIONS = {
     tabs: ["AdminOrder"],
     canEdit: true,
     canDelete: false,
-    canApproveRefunds: true, // Order manager can approve refunds
+    canApproveRefunds: true,
     canSeeUsers: false,
     readOnly: false,
   },
   customer_support: {
     tabs: ["AdminRefunds"],
-    canEdit: false, // Can only view refunds, not approve/decline
+    canEdit: false, 
     canDelete: false,
     canApproveRefunds: false,
     canSeeUsers: false,
-    readOnly: true, // For refunds tab
+    readOnly: true,
   },
   supervisor: {
     tabs: [
@@ -67,7 +67,7 @@ export const ROLE_PERMISSIONS = {
     canEdit: false,
     canDelete: false,
     canApproveRefunds: false,
-    canSeeUsers: false, // Cannot see user management
+    canSeeUsers: false,
     readOnly: true,
   },
 };

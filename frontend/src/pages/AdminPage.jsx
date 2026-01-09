@@ -32,8 +32,6 @@ import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import AdminCoupons from "../components/AdminCoupons.jsx";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
-
-// Define constants at the top
 const STORAGE_KEY = "admin_active_tab";
 
 const tabs = [
@@ -63,7 +61,6 @@ const clearCache = async () => {
   }
 };
 
-// Define permissions locally
 const LOCAL_PERMISSIONS = {
   PRODUCT_READ: "product:read",
   PRODUCT_WRITE: "product:write",
@@ -108,7 +105,6 @@ const LOCAL_ADMIN_ROLE_PERMISSIONS = {
   super_admin: Object.values(LOCAL_PERMISSIONS),
 };
 
-// Map tab IDs to required permissions
 const TAB_PERMISSIONS = {
   create: LOCAL_PERMISSIONS.PRODUCT_WRITE,
   products: LOCAL_PERMISSIONS.PRODUCT_READ,
@@ -128,13 +124,11 @@ const AdminPageContent = () => {
   const { settings } = useStoreSettings();
   const { user } = useUserStore();
 
-  // Calculate permissions if missing from user object
   const permissions = React.useMemo(() => {
     if (user?.permissions && user.permissions.length > 0) {
       return user.permissions;
     }
 
-    // Fallback calculation using local definitions
     if (user?.role === "admin" && user.adminType) {
       if (user.adminType === "super_admin") {
         return Object.values(LOCAL_PERMISSIONS);
@@ -152,7 +146,7 @@ const AdminPageContent = () => {
   console.log("PERMISSIONS:", permissions);
 
   const [activeTab, setActiveTab] = useState(() => {
-    // Try to get saved tab from localStorage on initial render
+    
     try {
       return localStorage.getItem(STORAGE_KEY) || null;
     } catch (error) {
@@ -173,7 +167,6 @@ const AdminPageContent = () => {
 
   const { fetchAllProducts } = useProductStore();
 
-  // Save active tab to localStorage whenever it changes
   useEffect(() => {
     if (activeTab) {
       try {
@@ -203,7 +196,7 @@ const AdminPageContent = () => {
 
   return (
     <div className="bg-gradient-to-br from-white via-gray-100 to-gray-300 flex-2 md:flex md:h-[100vh] md:w-full p md:mx-auto md:overflow-hidden -10 min-h-screen">
-      {/* Desktop sidebar */}
+
       <div className="hidden md:flex w-1/6 bg-gray-700 pb-7 flex-shrink-0 overflow-auto no-scroll flex-col">
         <div className="p-4 text-white">
           <h2 className="text-lg font-semibold mb-4">
@@ -230,7 +223,6 @@ const AdminPageContent = () => {
           ))}
         </ul>
 
-        {/* Clear Cache Button in Sidebar */}
         {(hasPermission(LOCAL_PERMISSIONS.PRODUCT_WRITE) ||
           hasPermission(LOCAL_PERMISSIONS.PRODUCT_READ)) && (
           <div className="mt-auto px-3 py-4">
@@ -244,7 +236,6 @@ const AdminPageContent = () => {
         )}
       </div>
 
-      {/* Mobile tabs */}
       <div className="md:hidden bg-gray-800 py-3 px-2">
         <div className="flex justify-between items-center px-2 mb-3">
           <h2 className="text-white text-lg font-semibold">
@@ -278,7 +269,6 @@ const AdminPageContent = () => {
         </div>
       </div>
 
-      {/* Content area */}
       <div className="flex-1 overflow-y-auto no-scroll">
         {activeTab === "create" &&
           hasPermission(LOCAL_PERMISSIONS.PRODUCT_WRITE) && (

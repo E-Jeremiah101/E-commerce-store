@@ -1,8 +1,6 @@
 import { create } from "zustand";
 import axios from "../lib/axios";
 import { toast } from "react-hot-toast";
-
-// Define permissions locally instead of importing from backend
 const LOCAL_PERMISSIONS = {
   PRODUCT_READ: "product:read",
   PRODUCT_WRITE: "product:write",
@@ -47,7 +45,6 @@ const LOCAL_ADMIN_ROLE_PERMISSIONS = {
   super_admin: Object.values(LOCAL_PERMISSIONS),
 };
 
-// Helper function to calculate permissions
 const calculatePermissions = (userData) => {
   let permissions = [];
   if (userData?.role === "admin" && userData?.adminType) {
@@ -96,21 +93,17 @@ export const useUserStore = create((set, get) => ({
 
     try {
       const res = await axios.post("/auth/login", { email, password });
-
-      // Ensure permissions exist
       const userData = res.data;
       if (!userData.permissions || userData.permissions.length === 0) {
         userData.permissions = calculatePermissions(userData);
       }
 
       set({ user: userData, loading: false });
-
-      // after successful login, attempt to merge any guest cart into the user's server cart
       try {
         const { useCartStore } = await import("./useCartStore");
         await useCartStore.getState().syncGuestCart();
       } catch (e) {
-        // non-fatal: log and continue
+   
         console.debug("No guest cart to sync or sync failed:", e);
       }
       console.log("user is here", userData);
@@ -149,21 +142,19 @@ export const useUserStore = create((set, get) => ({
       const response = await axios.get("/auth/profile");
       const userData = response.data;
 
-      // Ensure permissions exist
       if (!userData.permissions || userData.permissions.length === 0) {
         userData.permissions = calculatePermissions(userData);
       }
 
       set({ user: userData, checkingAuth: false });
     } catch (error) {
-      // If access token expired, try refreshing
+
       if (error.response?.status === 401) {
         try {
           await axios.post("/auth/refresh-token");
           const response = await axios.get("/auth/profile");
           const userData = response.data;
 
-          // Ensure permissions exist
           if (!userData.permissions || userData.permissions.length === 0) {
             userData.permissions = calculatePermissions(userData);
           }
@@ -172,19 +163,16 @@ export const useUserStore = create((set, get) => ({
           return;
         } catch (refreshError) {
           console.error("Auto refresh failed:", refreshError);
-          // Refresh failed with an auth error -> clear user
           if (refreshError.response?.status === 401) {
             set({ checkingAuth: false, user: null });
             return;
           }
-          // If refresh failed due to network or server error, don't log the user out here
+
           set({ checkingAuth: false });
           return;
         }
       }
 
-      // For network errors or 5xx server errors we keep the current user in memory
-      // and only stop the checking state. This avoids logging out users on transient failures.
       console.debug(
         "checkAuth: non-auth error, keeping user in state:",
         error?.message || error
@@ -194,7 +182,7 @@ export const useUserStore = create((set, get) => ({
   },
 
   refreshToken: async () => {
-    // Prevent multiple simultaneous refresh attempts
+
     if (get().checkingAuth) return;
 
     set({ checkingAuth: true });
@@ -203,11 +191,11 @@ export const useUserStore = create((set, get) => ({
       set({ checkingAuth: false });
       return response.data;
     } catch (error) {
-      // Only clear user if refresh token is invalid/unauthorized (401).
+
       if (error.response?.status === 401) {
         set({ user: null, checkingAuth: false });
       } else {
-        // Network or server error: keep user in memory but stop checking
+
         set({ checkingAuth: false });
       }
       throw error;
@@ -215,10 +203,10 @@ export const useUserStore = create((set, get) => ({
   },
 
   startTokenRefreshTimer: async () => {
-    // Clear any previous timer
+
     if (refreshTimeoutId) clearTimeout(refreshTimeoutId);
 
-    const refreshEveryMs = 4 * 60 * 1000; // 14 minutes
+    const refreshEveryMs = 4 * 60 * 1000; 
 
     const scheduleRefresh = async () => {
       try {
@@ -228,7 +216,6 @@ export const useUserStore = create((set, get) => ({
           new Date().toLocaleTimeString()
         );
 
-        // Schedule the next refresh AFTER this one succeeds
         refreshTimeoutId = setTimeout(scheduleRefresh, refreshEveryMs);
       } catch (error) {
         console.error("Auto token refresh failed:", error.message);
@@ -236,11 +223,9 @@ export const useUserStore = create((set, get) => ({
       }
     };
 
-    // Start the first scheduled refresh
     refreshTimeoutId = setTimeout(scheduleRefresh, refreshEveryMs);
   },
 
-  // Stop the refresh timer (on logout or when user is null)
   stopTokenRefreshTimer: () => {
     if (refreshTimeoutId) {
       clearTimeout(refreshTimeoutId);

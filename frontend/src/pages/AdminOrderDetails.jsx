@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import axios from "../lib/axios";
 import { motion } from "framer-motion";
 import GoBackButton from "../components/GoBackButton";
@@ -10,7 +10,6 @@ import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
 const AdminOrderDetailsContent = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -77,7 +76,7 @@ const { settings } = useStoreSettings();
            {order.status}
          </span>
        </motion.div>
-       {/* Order Info */}
+
        <div className=" grid grid-cols-2 text-black gap-5 mt-12 py-6 px-2  ">
          <div>
            <h1 className="text-gray-600">Order Placed</h1>
@@ -94,7 +93,7 @@ const { settings } = useStoreSettings();
          </div>
        </div>
        <div className="py-5 text-3xl border-t-1 border-gray-300  "></div>
-       {/* Customer Info */}
+  
        <div className=" text-black rounded-lg  py-6 px-2">
          <h2 className="text-lg font-semibold mb-4  border-gray-600 pb-2">
            SHIPPING ADDRESS
@@ -164,10 +163,9 @@ const { settings } = useStoreSettings();
                        Qty: {item.quantity}
                      </span>
                      {(() => {
-                       // Find refunds that belong to this specific product
                        const productRefunds =
                          order.refunds?.filter((refund) => {
-                           // Get the product ID from the refund
+
                            let refundProductId;
 
                            if (refund.product) {
@@ -177,19 +175,16 @@ const { settings } = useStoreSettings();
                                refundProductId = refund.product.toString();
                              }
                            } else if (refund.productSnapshot?._id) {
-                             // Handle deleted products
+
                              refundProductId = refund.productSnapshot._id;
                            }
 
-                           // Get the product ID from the current item
                            const currentProductId =
                              item.product?._id?.toString();
 
-                           // Compare IDs
                            return refundProductId === currentProductId;
                          }) || [];
 
-                       // If this product has refunds, show them
                        if (productRefunds.length > 0) {
                          return productRefunds.map((refund, index) => (
                            <div key={index} className="mt-2 p-2 rounded">

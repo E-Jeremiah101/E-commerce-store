@@ -14,31 +14,28 @@ const CategoryPageContent = () => {
   const { category } = useParams();
   const [isLoading, setIsLoading] = useState(true);
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Adjust items per page based on screen size
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 768) {
-        setItemsPerPage(8); // md and above
+        setItemsPerPage(8); 
       } else {
-        setItemsPerPage(10); // mobile
+        setItemsPerPage(10);
       }
     };
 
-    handleResize(); // Run on load
+    handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  //  Fetch category products
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       await fetchProductsByCategory(category);
-      setCurrentPage(1); // Reset to first page when category changes
+      setCurrentPage(1);
       setIsLoading(false);
     };
     fetchData();
@@ -58,7 +55,6 @@ const CategoryPageContent = () => {
       </div>
     );
 
-  //  Pagination logic
   const totalProducts = products?.length || 0;
   const totalPages = Math.ceil(totalProducts / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -92,7 +88,6 @@ const CategoryPageContent = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
-            {/* Back Button - Left aligned */}
             <div className="flex items-center">
               <motion.div
                 whileHover={{ x: -2 }}
@@ -103,7 +98,6 @@ const CategoryPageContent = () => {
               </motion.div>
             </div>
 
-            {/* Page Title - Centered with subtle styling */}
             <div className="absolute left-1/2 transform -translate-x-1/2">
               <div className="flex flex-col items-center">
                 <h2 className="text-[1.1rem] md:text-xl  font-semibold text-gray-900 tracking-tight">

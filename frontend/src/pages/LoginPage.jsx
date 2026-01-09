@@ -27,7 +27,7 @@ const LoginPageContent = () => {
     const result = await login(email, password);
 
     if (result?.error) {
-      setBackendError(result.error); // show the backend message
+      setBackendError(result.error);
       return;
     }
   };

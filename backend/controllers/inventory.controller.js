@@ -4,6 +4,7 @@ import Order from "../models/order.model.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
 import storeSettings from "../models/storeSettings.model.js"
+import redis from "../lib/redis.js";
 
 
 const logVariantInventoryAction = async (
@@ -860,6 +861,10 @@ export const adjustStock = async (req, res) => {
     variant.countInStock = newStock;
 
     await product.save();
+
+    if (product.isFeatured) {
+      await redis.del("featured_products");
+    }
 
     const inventoryLog = new InventoryLog({
       productId: product._id,

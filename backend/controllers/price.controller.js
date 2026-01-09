@@ -274,6 +274,11 @@ export const updateProductPrice = async (req, res) => {
       ? (((oldPrice - parseFloat(newPrice)) / oldPrice) * 100).toFixed(1)
       : null;
     const priceDifference = parseFloat(newPrice) - oldPrice;
+       const settings = await storeSettings.findOne();
+       const formatter = new Intl.NumberFormat(undefined, {
+         style: "currency",
+         currency: settings.currency,
+       });
     const percentChange = ((priceDifference / oldPrice) * 100).toFixed(1);
     const changeType =
       priceDifference > 0

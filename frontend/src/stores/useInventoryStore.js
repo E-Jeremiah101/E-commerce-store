@@ -27,7 +27,7 @@ export const useInventoryStore = create((set, get) => ({
     sortOrder: "asc",
   },
 
-  // Get Dashboard Data
+
   fetchDashboard: async () => {
     set({ loading: true });
     try {
@@ -42,7 +42,6 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  //  Get Stock Levels
   fetchStockLevels: async (page = 1, filters = {}) => {
     set({ loading: true });
     try {
@@ -76,7 +75,6 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  // Get Low Stock Alerts
   fetchLowStockAlerts: async (threshold = 10) => {
     set({ loading: true });
     try {
@@ -125,7 +123,6 @@ export const useInventoryStore = create((set, get) => ({
 
       toast.success("Stock adjusted successfully");
 
-      // Refresh relevant data
       const { activeTab } = get();
       if (activeTab === "stock-levels") {
         get().fetchStockLevels(get().pagination.currentPage);
@@ -144,7 +141,6 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  //  Get Inventory by Location
   fetchInventoryByLocation: async () => {
     set({ loading: true });
     try {
@@ -164,7 +160,6 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  // Get Inventory Valuation
   fetchInventoryValuation: async (groupBy = "category") => {
     set({ loading: true });
     try {
@@ -186,14 +181,12 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  //  Update Filters
   updateFilters: (newFilters) => {
     set((state) => ({
       filters: { ...state.filters, ...newFilters },
     }));
   },
 
-  // Clear Filters
   clearFilters: () => {
     set({
       filters: {
@@ -214,12 +207,10 @@ export const useInventoryStore = create((set, get) => ({
       return sum + product.price * product.totalStock;
     }, 0);
 
-    // Count products where status === "out"
     const outOfStockProductsCount = stockLevels.filter(
       (p) => p.status === "out"
     ).length;
 
-    // Count all out of stock items (including variants) from alerts
     const outOfStockAlertsCount = lowStockAlerts.filter(
       (a) => a.status === "out"
     ).length;
@@ -235,8 +226,8 @@ export const useInventoryStore = create((set, get) => ({
 
     return {
       totalStockValue,
-      outOfStockCount: outOfStockAlertsCount, // Use alerts count for consistency
-      outOfStockProductsCount, // Keep original count if needed elsewhere
+      outOfStockCount: outOfStockAlertsCount, 
+      outOfStockProductsCount, 
       lowStockCount,
       healthyStockCount,
       urgentAlerts,
@@ -244,7 +235,6 @@ export const useInventoryStore = create((set, get) => ({
     };
   },
 
-  // Search Products
   searchInventory: async (query) => {
     set({ loading: true });
     try {
@@ -266,10 +256,8 @@ export const useInventoryStore = create((set, get) => ({
     }
   },
 
-  //  Set Active Tab (for UI state)
   setActiveTab: (tab) => set({ activeTab: tab }),
 
-  // Reset State
   resetInventoryState: () => {
     set({
       dashboardData: null,
@@ -282,7 +270,7 @@ export const useInventoryStore = create((set, get) => ({
       loading: false,
     });
   },
-  // Add these to your store actions
+
   slashProductPrice: async (productId, newPrice, reason = "") => {
     set({ loading: true });
     try {
@@ -300,7 +288,6 @@ export const useInventoryStore = create((set, get) => ({
       console.log(" [STORE] Price slash response:", res.data);
       toast.success("Price slashed successfully!");
 
-      // Update the product in stockLevels
       set((state) => ({
         stockLevels: state.stockLevels.map((product) =>
           product.id === productId
@@ -335,7 +322,6 @@ export const useInventoryStore = create((set, get) => ({
         reason,
       });
 
-      // Update the product in stockLevels
       set((state) => ({
         stockLevels: state.stockLevels.map((product) =>
           product.id === productId
@@ -370,7 +356,6 @@ export const useInventoryStore = create((set, get) => ({
         reason,
       });
 
-      // Update the product in stockLevels
       set((state) => ({
         stockLevels: state.stockLevels.map((product) =>
           product.id === productId
@@ -399,10 +384,9 @@ export const useInventoryStore = create((set, get) => ({
    
     try {
       const res = await axios.get("/inventory/export-csv", {
-        responseType: "blob", // Important for file downloads
+        responseType: "blob",
       });
 
-      // Create download link
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement("a");
       link.href = url;

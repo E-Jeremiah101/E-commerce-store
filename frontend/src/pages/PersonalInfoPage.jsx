@@ -19,7 +19,6 @@ const PersonalInfoPageContent = () => {
   const [saving, setSaving] = useState(false);
   const [nigerianStates, setNigerianStates] = useState([]);
 
-  // Load states on component mount
   useEffect(() => {
     const states = getAllStates();
     setNigerianStates(states);
@@ -72,19 +71,16 @@ const PersonalInfoPageContent = () => {
     fetchProfile();
   }, [setUser]);
 
-  // Get cities for a selected state
   const getCityOptions = (state) => {
     if (!state) return [];
     return getCitiesByState(state);
   };
 
-  // Get LGAs for a selected city
   const getLGAOptions = (state, city) => {
     if (!state || !city) return [];
     return getLGAsByCity(state, city);
   };
 
-  // Get areas for a selected city
   const getAreaOptions = (state, city) => {
     if (!state || !city) return [];
     return getAreasByCity(state, city);
@@ -96,13 +92,11 @@ const PersonalInfoPageContent = () => {
     const defaultPhone = user.phones?.find((p) => p.isDefault);
     const defaultAddress = user.addresses?.find((a) => a.isDefault);
 
-    // Validate phone
     if (!defaultPhone?.number?.trim()) {
       toast.error("Please add a valid phone number.");
       return;
     }
 
-    // Validate address
     if (
       !defaultAddress?.state ||
       !defaultAddress?.city ||
@@ -113,7 +107,6 @@ const PersonalInfoPageContent = () => {
       return;
     }
 
-    // Validate phone format (basic Nigerian format)
     const phoneRegex = /^(?:\+234|0)[789][01]\d{8}$/;
     if (!phoneRegex.test(defaultPhone.number.trim())) {
       toast.error(
@@ -128,18 +121,15 @@ const PersonalInfoPageContent = () => {
       const validateAddress = (address) => {
         const { state, city, lga } = address;
 
-        // Check if state exists
         if (!nigerianStates.some((s) => s.value === state.toUpperCase())) {
           throw new Error(`Invalid state: ${state}`);
         }
 
-        // Check if city exists in state
         const cities = getCityOptions(state.toUpperCase());
         if (!cities.includes(city)) {
           throw new Error(`Invalid city: ${city} for state: ${state}`);
         }
 
-        // Check if LGA exists in city
         const lgas = getLGAOptions(state.toUpperCase(), city);
         if (!lgas.includes(lga)) {
           throw new Error(`Invalid LGA: ${lga} for city: ${city}`);
@@ -148,10 +138,8 @@ const PersonalInfoPageContent = () => {
         return true;
       };
 
-      // Validate all addresses
       user.addresses.forEach(validateAddress);
 
-      // Prepare data for API
       const updateData = {
         phones: user.phones.map((phone) => ({
           ...phone,
@@ -159,7 +147,7 @@ const PersonalInfoPageContent = () => {
         })),
         addresses: user.addresses.map((address) => ({
           ...address,
-          // Ensure state is in correct format (capitalized)
+
           state: address.state.charAt(0).toUpperCase() + address.state.slice(1),
           city: address.city,
           lga: address.lga,
@@ -172,7 +160,6 @@ const PersonalInfoPageContent = () => {
 
       toast.success("Profile updated successfully!");
 
-      // Refresh user data
       const { data } = await axios.get("/api/users/profile");
       setUser(data);
     } catch (err) {
@@ -208,7 +195,6 @@ const PersonalInfoPageContent = () => {
               </motion.div>
             </motion.div>
 
-            {/* Page Title - Centered with subtle styling */}
             <div className="absolute left-1/2 transform -translate-x-1/2">
               <div className="flex flex-col items-center">
                 <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">
@@ -419,7 +405,7 @@ const PersonalInfoPageContent = () => {
                       const city = e.target.value;
                       const updated = [...addresses];
                       updated[i].city = city;
-                      // Auto-set first LGA when city is selected
+ 
                       const lgAs = getLGAsByCity(a.state, city);
                       updated[i].lga = lgAs.length > 0 ? lgAs[0] : "";
                       updated[i].area = "";
@@ -466,7 +452,7 @@ const PersonalInfoPageContent = () => {
                   </select>
                 </div>
 
-                {/* AREA (Optional) */}
+                {/* AREA */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Area/Neighborhood (Optional)

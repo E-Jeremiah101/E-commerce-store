@@ -71,10 +71,10 @@ export const useProductStore = create((set, get) => ({
   deleteProduct: async (productId, deleteType = "archive") => {
     try {
       if (deleteType === "permanent") {
-        // Use permanent delete endpoint
+       
         await axios.delete(`/products/${productId}/permanent`);
       } else {
-        // Use regular delete endpoint (archive)
+    
         await axios.delete(`/products/${productId}`);
       }
 
@@ -204,7 +204,6 @@ export const useProductStore = create((set, get) => ({
       set((state) => ({
         products: state.products.map((product) => {
           if (product._id === productId) {
-            // Update the specific variant's countInStock
             const updatedVariants = product.variants?.map((variant) =>
               variant._id === variantId
                 ? { ...variant, countInStock: res.data.countInStock }

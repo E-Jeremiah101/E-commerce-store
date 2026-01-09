@@ -27,7 +27,7 @@ const saveGuestCart = (cart) => {
 const initialGuestCart = loadGuestCart();
 
 export const useCartStore = create((set, get) => ({
-  // initialize cart from guest storage so guests can see their cart immediately
+
   cart: initialGuestCart,
   coupon: null,
   subtotal: initialGuestCart.reduce(
@@ -74,7 +74,7 @@ export const useCartStore = create((set, get) => ({
 
   getCartItems: async () => {
     try {
-      // If user is logged in, fetch from server. Otherwise use guest cart from localStorage.
+
       const user = (await import("./useUserStore")).useUserStore.getState()
         .user;
       if (!user) {
@@ -105,7 +105,7 @@ export const useCartStore = create((set, get) => ({
       console.error("Failed to clear server cart:", e);
     }
   },
-  //Update the addToCart function for logged-in users
+
   addToCart: async (product, selectedSize, selectedColor) => {
     const { calculateTotals } = get();
     set({ isLoading: true });
@@ -116,7 +116,7 @@ export const useCartStore = create((set, get) => ({
         selectedColor,
       });
 
-      // Check variant stock before adding to cart
+
       const variantStockResponse = await axios.get(
         `/products/stock/${product._id}`,
         {
@@ -140,7 +140,7 @@ export const useCartStore = create((set, get) => ({
         .user;
 
       if (!user) {
-        // GUEST FLOW
+       
         console.log(" Guest cart flow");
         set((prevState) => {
           const existingItem = prevState.cart.find(
@@ -150,7 +150,6 @@ export const useCartStore = create((set, get) => ({
               item.color === selectedColor
           );
 
-          // Check if adding would exceed available stock
           if (existingItem && existingItem.quantity + 1 > availableStock) {
             toast.error(
               `Only ${availableStock} left in stock for this variant`
@@ -187,7 +186,6 @@ export const useCartStore = create((set, get) => ({
       } else {
   
 
-        // Prepare the request body - send empty strings instead of undefined
          const requestBody = {
            productId: product._id,
            size: selectedSize || "", 
@@ -199,7 +197,6 @@ export const useCartStore = create((set, get) => ({
         const response = await axios.post("/cart", requestBody);
         console.log(" Server response:", response.data);
 
-        // Update local state with the response from server
         set({ cart: response.data });
         toast.success("Product added to cart");
       }
@@ -271,7 +268,7 @@ export const useCartStore = create((set, get) => ({
         .user;
 
       if (!user) {
-        // Guest flow
+
         set((prevState) => {
           const newCart = prevState.cart.map((item) =>
             item._id === productId && item.size === size && item.color === color
@@ -285,18 +282,16 @@ export const useCartStore = create((set, get) => ({
         return;
       }
 
-      //  Ensure we always send proper data format
       const requestData = {
         quantity: Math.max(quantity, 1),
         size: size || "", 
         color: color || "",
       };
 
-      console.log("🔄 Updating quantity:", { productId, ...requestData });
+      console.log(" Updating quantity:", { productId, ...requestData });
 
       const response = await axios.put(`/cart/${productId}`, requestData);
 
-      // Use the validated response from server instead of optimistic update
       set({ cart: response.data });
       get().calculateTotals();
     } catch (error) {
@@ -306,7 +301,6 @@ export const useCartStore = create((set, get) => ({
         message: error.message,
       });
 
-      // Revert to previous cart state on error
       await get().getCartItems();
 
       if (error.response?.status === 400) {
@@ -342,28 +336,26 @@ export const useCartStore = create((set, get) => ({
         .user;
 
       if (!user) {
-        // Guest cart validation
+
         const validatedCart = [];
 
         for (const item of cart) {
           try {
-            // Check if product still exists and is not archived
+           
             const response = await axios.get(`/products/${item._id}`);
             const product = response.data.product || response.data;
 
-            // Only keep products that exist and are not archived
             if (product && !product.archived && product.isActive !== false) {
               validatedCart.push(item);
             }
           } catch (error) {
-            // Product doesn't exist or is unavailable - skip it
+
             console.log(
               `Product ${item._id} no longer available, removing from cart`
             );
           }
         }
 
-        // Update cart if any items were removed
         if (validatedCart.length !== cart.length) {
           set({ cart: validatedCart });
           saveGuestCart(validatedCart);
@@ -375,8 +367,7 @@ export const useCartStore = create((set, get) => ({
           );
         }
       } else {
-        // For logged-in users, the backend should handle validation
-        // Just refresh the cart to get cleaned data
+
         const res = await axios.get("/cart");
         set({ cart: res.data });
         get().calculateTotals();
@@ -385,7 +376,7 @@ export const useCartStore = create((set, get) => ({
       console.error("Error validating cart items:", error);
     }
   },
-  // Sync guest cart to server after user logs in
+
   syncGuestCart: async () => {
     const user = (await import("./useUserStore")).useUserStore.getState().user;
     if (!user) return;
@@ -394,7 +385,7 @@ export const useCartStore = create((set, get) => ({
     if (!guestCart || guestCart.length === 0) return;
 
     try {
-      // merge guest items into server cart
+ 
       for (const item of guestCart) {
         const times = item.quantity || 1;
         for (let i = 0; i < times; i++) {
@@ -406,7 +397,6 @@ export const useCartStore = create((set, get) => ({
         }
       }
 
-      // clear guest cart and refresh server cart
       saveGuestCart([]);
       const res = await axios.get("/cart");
       set({ cart: res.data });

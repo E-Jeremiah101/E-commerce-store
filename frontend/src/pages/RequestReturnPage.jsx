@@ -25,14 +25,13 @@ const RequestReturnPageContent = () => {
     reason: "",
   });
 
-  // Get order data from location state or fetch it
   useEffect(() => {
     if (location.state?.order) {
-      // If order data was passed via navigation state
+
       setOrder(location.state.order);
       setLoading(false);
     } else {
-      // Otherwise fetch the order
+
       const fetchOrder = async () => {
         try {
           const { data } = await axios.get(`/orders/vieworders/${id}`, {
@@ -79,16 +78,13 @@ const RequestReturnPageContent = () => {
     } catch (err) {
       console.error(err);
 
-      // Handle specific error cases
       if (err.response?.data?.details?.maxAllowed) {
-        // Show quantity error with suggestion
         const { maxAllowed, requested, suggestion } = err.response.data.details;
         toast.error(
           `You can only refund ${maxAllowed} item(s). ${suggestion}`,
           { autoClose: 5000 }
         );
 
-        // Auto-update quantity field
         setRefundData((prev) => ({
           ...prev,
           quantity: Math.min(prev.quantity, maxAllowed),
@@ -180,7 +176,7 @@ const RequestReturnPageContent = () => {
                   const productPrice = p.product?.price || p.price || 0;
                   const availableQuantity = p.quantity || 1;
 
-                  // Check if this product already has refunds
+
                   const existingRefunds =
                     order.refunds?.filter((refund) => {
                       let refundProductId;
@@ -257,7 +253,6 @@ const RequestReturnPageContent = () => {
               />
             </div>
 
-            {/* Refund Policy */}
             <div className="mb-8 p-4 border border-gray-200 rounded-lg bg-gray-50">
               <h3 className="font-semibold text-gray-900 mb-3">
                 Return Policy
@@ -309,7 +304,6 @@ const RequestReturnPageContent = () => {
           </form>
         </div>
 
-        {/* Order Summary Preview */}
         <div className="bg-white border border-gray-200 rounded-xl p-6">
           <h3 className="font-semibold text-gray-900 mb-4">Order Summary</h3>
           <div className="space-y-4">

@@ -32,7 +32,7 @@ const CartPageContent = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
-            {/* Back Button - Left aligned */}
+
             <div className="flex items-center">
               <motion.div
                 whileHover={{ x: -2 }}
@@ -43,7 +43,6 @@ const CartPageContent = () => {
               </motion.div>
             </div>
 
-            {/* Page Title - Centered with subtle styling */}
             <div className="absolute left-1/2 transform -translate-x-1/2">
               <div className="flex flex-col items-center">
                 <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">
@@ -79,7 +78,6 @@ const CartPageContent = () => {
                   ))}
                 </div>
               )}
-              {/* {cart.length > 0 && <PeopleAlsoBought />} */}
             </motion.div>
 
             {cart.length > 0 && (

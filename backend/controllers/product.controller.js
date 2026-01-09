@@ -394,11 +394,11 @@ export const getFeaturedProducts = async (req, res) => {
       ) 
       .lean();
 
-    if (!featuredProducts.length === 0) {
+    if (featuredProducts.length === 0) {
       return res.status(404).json({ message: "No featured products found" });
     }
 
-  
+   
     const transformedFeatured = featuredProducts.map((product) => {
       const totalVariantStock =
         product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||

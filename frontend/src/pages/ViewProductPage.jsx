@@ -33,7 +33,7 @@ const ViewProductPageContent = () => {
   const [isLoadingSave, setIsLoadingSave] = useState(false);
   const location = useLocation();
 
-  // Price display component
+  
   const PriceDisplay = () => {
     if (!product) return null;
 
@@ -74,7 +74,6 @@ const ViewProductPageContent = () => {
     );
   };
 
-  // Check if product is saved when component loads
   useEffect(() => {
     if (user && product) {
       checkSavedStatus();
@@ -104,7 +103,7 @@ const ViewProductPageContent = () => {
     setIsLoadingSave(true);
     try {
       if (isSaved) {
-        // Unsave
+      
         await fetch(`/api/saved-products/${product._id}`, {
           method: "DELETE",
           headers: {
@@ -114,7 +113,7 @@ const ViewProductPageContent = () => {
         setIsSaved(false);
         toast.success("Removed from wishlist");
       } else {
-        // Save
+
         await fetch("/api/saved-products", {
           method: "POST",
           headers: {
@@ -219,7 +218,7 @@ const ViewProductPageContent = () => {
     return !!variant;
   };
 
-  // If user was redirected to rate the product
+  
   useEffect(() => {
     if (!product) return;
     const params = new URLSearchParams(location.search);
@@ -232,7 +231,7 @@ const ViewProductPageContent = () => {
   }, [product, location.search]);
 
   const handleAddToCart = () => {
-    // Validation for required selections
+   
     if (product.colors?.length > 0 && !selectedColor) {
       toast.error("Please select a color");
       return;
@@ -242,13 +241,13 @@ const ViewProductPageContent = () => {
       return;
     }
 
-    // Check if variant exists
+
     if (!variantExists()) {
       toast.error("This variant is not available");
       return;
     }
 
-    // Check available stock
+
     if (isOutOfStock) {
       toast.error("This variant is out of stock");
       return;

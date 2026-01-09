@@ -11,10 +11,9 @@ const PurchaseSuccessPageContent = () => {
   const [orderNumber, setOrderNumber] = useState("");
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState(null);
   const [error, setError] = useState(null);
-  const [needsRefresh, setNeedsRefresh] = useState(false);
   const { clearCart } = useCartStore();
   const navigate = useNavigate();
-  const hasProcessed = useRef(false); // Prevent duplicate processing
+  const hasProcessed = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -25,7 +24,7 @@ const PurchaseSuccessPageContent = () => {
     const hasPaymentAttempt = tx_ref && tx_ref.includes("ECOSTORE");
 
     if (!hasPaymentAttempt) {
-      console.log("❌ No payment attempt detected");
+      console.log("No payment attempt detected");
       navigate("/purchase-cancel");
       return;
     }
@@ -33,16 +32,14 @@ const PurchaseSuccessPageContent = () => {
     const shouldProceed = status === "successful" || hasPaymentAttempt;
 
     if (!shouldProceed || !transaction_id) {
-      console.log("❌ Missing required parameters");
+      console.log(" Missing required parameters");
       navigate("/purchase-cancel");
       return;
     }
 
-    // Prevent duplicate processing
     if (hasProcessed.current) return;
     hasProcessed.current = true;
 
-    // Proceed with verification
     const handleCheckoutSuccess = async (transaction_id, tx_ref) => {
       try {
         const response = await axios.post("/payments/checkout-success", {
@@ -50,17 +47,15 @@ const PurchaseSuccessPageContent = () => {
           tx_ref,
         });
 
-        console.log("🔍 Backend response:", response.data);
+        console.log("Backend response:", response.data);
 
-        //  Cif the request was actually successful
         if (response.data.success) {
-          // Order completed successfully
+
           clearCart();
           setOrderNumber(response.data.orderNumber);
           setEstimatedDeliveryDate(response.data.estimatedDeliveryDate);
           setIsProcessing(false);
 
-          // Clean up URL
           const url = new URL(window.location);
           url.searchParams.delete("transaction_id");
           url.searchParams.delete("tx_ref");
@@ -68,12 +63,10 @@ const PurchaseSuccessPageContent = () => {
           window.history.replaceState({}, document.title, url);
         } else {
 
-          //  Backend says order is still processing or lock is busy
-          // Wait longer and retry instead of immediate refresh
           console.log("Order still processing, waiting...");
           setTimeout(() => {
-            handleCheckoutSuccess(transaction_id, tx_ref); // Retry same function
-          }, 3000); // Wait 3 seconds before retry
+            handleCheckoutSuccess(transaction_id, tx_ref); 
+          }, 3000);
         }
       } catch (error) {
         console.error("Verification failed:", error);
@@ -99,7 +92,6 @@ const PurchaseSuccessPageContent = () => {
       </div>
     );
 
-  //  Error state
   if (error)
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-700 px-4">

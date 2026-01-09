@@ -14,7 +14,7 @@ export default function useTrackVisitors() {
         const res = await fetch("/api/visitors", { method: "POST" });
         if (!res.ok) {
           console.warn("Failed to record visitor:", res.status);
-          localStorage.removeItem("visitorLogged"); // allow retry
+          localStorage.removeItem("visitorLogged"); 
         } else {
           console.log(" Visitor recorded successfully");
         }
