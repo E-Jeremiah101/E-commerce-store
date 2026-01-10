@@ -1,5 +1,6 @@
 import AuditLog from "../models/auditLog.model.js";
 import { ENTITY_TYPES } from "../constants/auditLog.constants.js";
+import { sanitizeLogEntry, getLogSummary } from "../utils/logSanitization.js";
 
 
 class AuditLogger {
@@ -21,7 +22,8 @@ class AuditLogger {
         ? entityType
         : ENTITY_TYPES.OTHER;
 
-      const logEntry = await AuditLog.create({
+      // Create log entry object
+      const logData = {
         adminId,
         adminName,
         action,
@@ -32,9 +34,14 @@ class AuditLogger {
         ipAddress: ipAddress || "",
         userAgent: userAgent || "",
         additionalInfo: additionalInfo || "",
-      });
+      };
 
-      console.log(` Audit logged: ${action} by ${adminName}`);
+      // Sanitize log data before storage (remove/mask sensitive fields)
+      const sanitizedData = sanitizeLogEntry(logData);
+
+      const logEntry = await AuditLog.create(sanitizedData);
+
+      console.log(`✓ Audit logged: ${getLogSummary(sanitizedData)}`);
       return logEntry;
     } catch (error) {
       console.error("Failed to create audit log:", error);

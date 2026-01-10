@@ -36,6 +36,7 @@ import {
 import { protectRoute, adminRoute} from "../middleware/auth.middleware.js";
 import { authenticateOptional } from "../middleware/authOptional.middleware.js";
 import { requirePermission } from "../middleware/permission.middleware.js";
+import { validateQuery, validateParams, productSchemas } from "../middleware/validateInput.middleware.js";
 
 const router = express.Router();
 
@@ -43,11 +44,11 @@ const router = express.Router();
 
 router.get("/featured", getFeaturedProducts);
 router.get("/recommendations", getRecommendedProducts);
-router.get("/search", searchProducts);
-router.get("/suggestions", getSearchSuggestions);
+router.get("/search", validateQuery(productSchemas.search), searchProducts);
+router.get("/suggestions", validateQuery(productSchemas.suggestions), getSearchSuggestions);
 
 
-router.get("/category/:category", getProductsByCategory);
+router.get("/category/:category", validateParams(productSchemas.byCategory), getProductsByCategory);
 
 
 router.get(

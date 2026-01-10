@@ -1,10 +1,22 @@
 import axios from "axios"
 
+// const axiosInstance = axios.create({
+//   baseURL:
+//     import.meta.mode === "development" ? "http://localhost:5000/api" : "/api",
+//   withCredentials: true, 
+// });
 const axiosInstance = axios.create({
   baseURL:
-    import.meta.mode === "development" ? "http://localhost:5000/api" : "/api",
-  withCredentials: true, 
+    import.meta.env.MODE === "development"
+      ? "http://localhost:5000/api"
+      : "/api",
+  withCredentials: true,
 });
+
+console.log(
+  "✅ Axios Instance configured with baseURL:",
+  axiosInstance.defaults.baseURL
+);
 
 axiosInstance.defaults.timeout = 35000; 
 
@@ -101,3 +113,4 @@ axiosInstance.interceptors.response.use(
 );
 
 export default axiosInstance;
+ 

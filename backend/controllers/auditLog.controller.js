@@ -1,6 +1,7 @@
 import AuditLog from "../models/auditLog.model.js";
 import mongoose from "mongoose";
 import { ENTITY_TYPES, ACTION_LABELS, ENTITY_TYPE_LABELS } from "../constants/auditLog.constants.js";
+import { sanitizeLogResults } from "../utils/logSanitization.js";
 
 export const getAuditLogs = async (req, res) => {
   try {
@@ -69,9 +70,12 @@ export const getAuditLogs = async (req, res) => {
       entityTypeLabel: ENTITY_TYPE_LABELS[log.entityType] || log.entityType,
     }));
 
+    // Sanitize logs before sending to client (remove/mask sensitive data)
+    const sanitizedLogs = sanitizeLogResults(enrichedLogs);
+
     res.json({
       success: true,
-      logs: enrichedLogs,
+      logs: sanitizedLogs,
       pagination: {
         currentPage: parseInt(page),
         totalPages: Math.ceil(total / limit),

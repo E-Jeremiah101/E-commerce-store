@@ -12,10 +12,11 @@ import {
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
 import { requirePermission } from "../middleware/permission.middleware.js";
+import { validateParams, validateBody, refundSchemas } from "../middleware/validateInput.middleware.js";
 requirePermission
 const router = express.Router();
 
-router.post("/:orderId/request", protectRoute, requestRefund);
+router.post("/:orderId/request", protectRoute, validateParams(refundSchemas.create), validateBody(refundSchemas.create), requestRefund);
 
 router.get(
   "/",
