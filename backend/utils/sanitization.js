@@ -1,8 +1,8 @@
 /**
  * MongoDB Injection Prevention Utilities
- * 
+ *
  * Provides safe query building and input sanitization to prevent MongoDB injection attacks
- * 
+ *
  * MongoDB Injection examples that these functions prevent:
  * - {"$ne": null}       // Query injection
  * - {"$gt": ""}         // Comparison injection
@@ -17,7 +17,7 @@
  */
 export const sanitizeString = (value) => {
   if (typeof value !== "string") return value;
-  
+
   // Escape regex special characters to prevent regex injection
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
@@ -31,7 +31,20 @@ export const sanitizeObject = (obj, depth = 0) => {
   if (obj === null || typeof obj !== "object") return obj;
 
   // Dangerous keys that could enable injection
-  const dangerousKeys = ["$ne", "$gt", "$gte", "$lt", "$lte", "$in", "$nin", "$or", "$and", "$where", "$regex", "$text"];
+  const dangerousKeys = [
+    "$ne",
+    "$gt",
+    "$gte",
+    "$lt",
+    "$lte",
+    "$in",
+    "$nin",
+    "$or",
+    "$and",
+    "$where",
+    "$regex",
+    "$text",
+  ];
   const forbiddenKeys = ["__proto__", "constructor", "prototype"];
 
   const sanitized = Array.isArray(obj) ? [] : {};
@@ -77,7 +90,11 @@ export const buildSafeFilter = (input, whitelistedFields) => {
   const filter = {};
 
   for (const field of whitelistedFields) {
-    if (input.hasOwnProperty(field) && input[field] !== undefined && input[field] !== null) {
+    if (
+      input.hasOwnProperty(field) &&
+      input[field] !== undefined &&
+      input[field] !== null
+    ) {
       const value = input[field];
 
       // Reject if value is an object (could contain operators)
@@ -103,7 +120,7 @@ export const buildSafeFilter = (input, whitelistedFields) => {
  */
 export const sanitizeSearchQuery = (query) => {
   if (typeof query !== "string") return "";
-  
+
   // Remove special regex/injection characters
   return query
     .replace(/[.*+?^${}()|[\]\\]/g, "")

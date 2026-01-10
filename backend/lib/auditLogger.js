@@ -2,7 +2,6 @@ import AuditLog from "../models/auditLog.model.js";
 import { ENTITY_TYPES } from "../constants/auditLog.constants.js";
 import { sanitizeLogEntry, getLogSummary } from "../utils/logSanitization.js";
 
-
 class AuditLogger {
   static async log({
     adminId,
@@ -17,7 +16,6 @@ class AuditLogger {
     additionalInfo,
   }) {
     try {
-
       const validEntityType = Object.values(ENTITY_TYPES).includes(entityType)
         ? entityType
         : ENTITY_TYPES.OTHER;

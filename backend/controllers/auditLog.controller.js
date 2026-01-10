@@ -1,6 +1,10 @@
 import AuditLog from "../models/auditLog.model.js";
 import mongoose from "mongoose";
-import { ENTITY_TYPES, ACTION_LABELS, ENTITY_TYPE_LABELS } from "../constants/auditLog.constants.js";
+import {
+  ENTITY_TYPES,
+  ACTION_LABELS,
+  ENTITY_TYPE_LABELS,
+} from "../constants/auditLog.constants.js";
 import { sanitizeLogResults } from "../utils/logSanitization.js";
 
 export const getAuditLogs = async (req, res) => {
@@ -29,7 +33,6 @@ export const getAuditLogs = async (req, res) => {
     }
 
     if (entityType && entityType !== "ALL") {
- 
       const entityTypeMap = {
         PRODUCT: ENTITY_TYPES.PRODUCT,
         ORDER: ENTITY_TYPES.ORDER,
@@ -62,7 +65,6 @@ export const getAuditLogs = async (req, res) => {
       .limit(parseInt(limit))
       .populate("adminId", "firstname lastname email")
       .lean();
-
 
     const enrichedLogs = logs.map((log) => ({
       ...log,
@@ -104,7 +106,6 @@ export const getAuditLogStats = async (req, res) => {
       { $match: matchStage },
       {
         $facet: {
-          
           actionsByType: [
             {
               $group: {
@@ -114,7 +115,7 @@ export const getAuditLogStats = async (req, res) => {
             },
             { $sort: { count: -1 } },
           ],
-          
+
           entitiesByType: [
             {
               $group: {
@@ -124,7 +125,7 @@ export const getAuditLogStats = async (req, res) => {
             },
             { $sort: { count: -1 } },
           ],
-        
+
           topAdmins: [
             {
               $group: {
@@ -136,7 +137,7 @@ export const getAuditLogStats = async (req, res) => {
             { $sort: { count: -1 } },
             { $limit: 10 },
           ],
-       
+
           activityByHour: [
             {
               $group: {
@@ -146,7 +147,7 @@ export const getAuditLogStats = async (req, res) => {
             },
             { $sort: { _id: 1 } },
           ],
-         
+
           totalCount: [{ $count: "count" }],
         },
       },
@@ -178,7 +179,6 @@ export const exportAuditLogs = async (req, res) => {
       .populate("adminId", "firstname lastname email")
       .lean();
 
-   
     const csvData = logs.map((log) => ({
       Timestamp: new Date(log.timestamp).toLocaleString(),
       Admin: log.adminName,
@@ -235,55 +235,61 @@ export const getAuditLogById = async (req, res) => {
 export const getPriceHistory = async (req, res) => {
   try {
     const { productId } = req.params;
-    
-  
+
     const priceLogs = await AuditLog.find({
       entityId: productId,
       entityType: ENTITY_TYPES.PRODUCT,
-      action: { 
+      action: {
         $in: [
-          ACTIONS.PRICE_SLASH, 
-          ACTIONS.PRICE_UPDATE, 
+          ACTIONS.PRICE_SLASH,
+          ACTIONS.PRICE_UPDATE,
           ACTIONS.PRICE_RESET,
-          ACTIONS.UPDATE_PRODUCT
-        ] 
-      }
+          ACTIONS.UPDATE_PRODUCT,
+        ],
+      },
     })
-    .sort({ timestamp: -1 })
-    .populate('adminId', 'firstname lastname email')
-    .lean();
+      .sort({ timestamp: -1 })
+      .populate("adminId", "firstname lastname email")
+      .lean();
 
-    
-    const formattedLogs = priceLogs.map(log => ({
+    const formattedLogs = priceLogs.map((log) => ({
       id: log._id,
       timestamp: log.timestamp,
       adminName: log.adminName,
-      adminEmail: log.adminId?.email || '',
+      adminEmail: log.adminId?.email || "",
       action: log.action,
-      oldPrice: log.changes?.oldPrice || log.changes?.price?.before || 'N/A',
-      newPrice: log.changes?.newPrice || log.changes?.price?.after || 'N/A',
-      changeType: log.changes?.priceChange?.type || 
-                 (log.action === 'PRICE_SLASH' ? 'slash' : 
-                  log.action === 'PRICE_RESET' ? 'reset' : 'update'),
-      percentage: log.changes?.priceChange?.percentage || 
-                 log.changes?.priceChange?.discount || 
-                 log.changes?.price?.discount || 'N/A',
-      reason: log.additionalInfo || 'No reason provided',
+      oldPrice: log.changes?.oldPrice || log.changes?.price?.before || "N/A",
+      newPrice: log.changes?.newPrice || log.changes?.price?.after || "N/A",
+      changeType:
+        log.changes?.priceChange?.type ||
+        (log.action === "PRICE_SLASH"
+          ? "slash"
+          : log.action === "PRICE_RESET"
+          ? "reset"
+          : "update"),
+      percentage:
+        log.changes?.priceChange?.percentage ||
+        log.changes?.priceChange?.discount ||
+        log.changes?.price?.discount ||
+        "N/A",
+      reason: log.additionalInfo || "No reason provided",
       ipAddress: log.ipAddress,
-      discount: log.changes?.priceChange?.discount || 
-               log.changes?.price?.discount || null
+      discount:
+        log.changes?.priceChange?.discount ||
+        log.changes?.price?.discount ||
+        null,
     }));
 
     res.json({
       success: true,
       priceHistory: formattedLogs,
-      total: formattedLogs.length
+      total: formattedLogs.length,
     });
   } catch (error) {
-    console.error('Error fetching price history:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch price history' 
+    console.error("Error fetching price history:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch price history",
     });
   }
 };

@@ -46,7 +46,11 @@ Uses **Joi** schema validation library to validate all inputs before they reach 
 #### Usage
 
 ```javascript
-import { validateBody, validateQuery, commonSchemas } from "../middleware/validateInput.middleware.js";
+import {
+  validateBody,
+  validateQuery,
+  commonSchemas,
+} from "../middleware/validateInput.middleware.js";
 
 // In route handlers
 router.post("/login", validateBody(authSchemas.login), login);
@@ -56,6 +60,7 @@ router.get("/search", validateQuery(productSchemas.search), searchProducts);
 #### Predefined Schemas
 
 **Common Fields** (reusable across endpoints):
+
 ```javascript
 commonSchemas = {
   email,           // RFC 5322 email validation
@@ -72,6 +77,7 @@ commonSchemas = {
 ```
 
 **Predefined Schemas**:
+
 - `authSchemas`: signup, login, forgotPassword, resetPassword, changePassword
 - `productSchemas`: search, suggestions, byCategory, priceFilter
 - `cartSchemas`: add, update, remove
@@ -86,40 +92,48 @@ Provides safe query building functions to prevent injection even if validation i
 #### Key Functions
 
 **`sanitizeString(value)`**
+
 - Escapes regex special characters
 - Prevents regex injection attacks
 
 **`sanitizeObject(obj, depth = 0)`**
+
 - Recursively sanitizes nested objects
 - Removes dangerous keys: `$ne`, `$gt`, `$regex`, `$where`, etc.
 - Prevents prototype pollution (`__proto__`, `constructor`)
 - Depth limit of 10 to prevent infinite recursion
 
 **`buildSafeFilter(input, whitelistedFields)`**
+
 - Whitelist-based filtering
 - Only accepts explicitly allowed fields
 - Rejects object values (could contain operators)
 
 **`sanitizeSearchQuery(query)`**
+
 - Removes special regex/injection characters
 - Limits to 100 chars
 - Trims whitespace
 
 **`buildTextSearchFilter(searchQuery, fields)`**
+
 - Creates safe regex search across multiple fields
 - Escapes all special characters
 - Case-insensitive matching
 
 **`buildPriceRangeFilter(minPrice, maxPrice)`**
+
 - Validates numeric input
 - Prevents negative values
 - Returns safe MongoDB filter object
 
 **`validatePagination(page, limit)`**
+
 - Ensures page >= 1, limit between 1-100
 - Prevents DOS through excessive limit values
 
 **`containsSuspiciousPatterns(value)`**
+
 - Detects injection attempts
 - Checks for MongoDB operators, prototype pollution, etc.
 
@@ -133,8 +147,8 @@ const searchTerm = sanitizeSearchQuery(req.query.search); // Removes dangerous c
 const products = await Product.find({
   $or: [
     { name: { $regex: searchTerm, $options: "i" } },
-    { description: { $regex: searchTerm, $options: "i" } }
-  ]
+    { description: { $regex: searchTerm, $options: "i" } },
+  ],
 });
 
 // Safe filter building with whitelist
@@ -147,22 +161,45 @@ const products = await Product.find(filter);
 Validation applied to **6 critical route files**:
 
 #### Product Routes (`product.routes.js`)
+
 ```javascript
 router.get("/search", validateQuery(productSchemas.search), searchProducts);
-router.get("/suggestions", validateQuery(productSchemas.suggestions), getSearchSuggestions);
-router.get("/category/:category", validateParams(productSchemas.byCategory), getProductsByCategory);
+router.get(
+  "/suggestions",
+  validateQuery(productSchemas.suggestions),
+  getSearchSuggestions
+);
+router.get(
+  "/category/:category",
+  validateParams(productSchemas.byCategory),
+  getProductsByCategory
+);
 ```
 
 #### Auth Routes (`auth.route.js`)
+
 ```javascript
 router.post("/signup", validateBody(authSchemas.signup), signup);
 router.post("/login", validateBody(authSchemas.login), login);
-router.post("/forgot-password", validateBody(authSchemas.forgotPassword), forgotPassword);
-router.post("/reset-password/:token", validateBody(authSchemas.resetPassword), resetPassword);
-router.post("/change-password", validateBody(authSchemas.changePassword), changePassword);
+router.post(
+  "/forgot-password",
+  validateBody(authSchemas.forgotPassword),
+  forgotPassword
+);
+router.post(
+  "/reset-password/:token",
+  validateBody(authSchemas.resetPassword),
+  resetPassword
+);
+router.post(
+  "/change-password",
+  validateBody(authSchemas.changePassword),
+  changePassword
+);
 ```
 
 #### Cart Routes (`cart.route.js`)
+
 ```javascript
 router.post("/", validateBody(cartSchemas.add), addToCart);
 router.delete("/", validateBody(cartSchemas.remove), removeFromCart);
@@ -170,21 +207,33 @@ router.put("/:id", validateBody(cartSchemas.update), updateQuantity);
 ```
 
 #### Coupon Routes (`coupon.route.js`)
+
 ```javascript
 router.post("/validate", validateBody(couponSchemas.validate), validateCoupon);
 ```
 
 #### Order Routes (`orderRoute.js`)
+
 ```javascript
 router.get("/my-orders", validateQuery(orderSchemas.pagination), getUserOrders);
 router.post("/", validateBody(orderSchemas.create), createOrder);
-router.get("/vieworders/:id", validateParams(orderSchemas.getById), getOrderById);
+router.get(
+  "/vieworders/:id",
+  validateParams(orderSchemas.getById),
+  getOrderById
+);
 router.get("/:id", validateParams(orderSchemas.getById), getOrderById);
 ```
 
 #### Refund Routes (`refund.routes.js`)
+
 ```javascript
-router.post("/:orderId/request", validateParams(refundSchemas.create), validateBody(refundSchemas.create), requestRefund);
+router.post(
+  "/:orderId/request",
+  validateParams(refundSchemas.create),
+  validateBody(refundSchemas.create),
+  requestRefund
+);
 ```
 
 ## Defense Layers
@@ -202,18 +251,21 @@ MongoDB Query Execution
 ```
 
 ### Layer 1: Joi Input Validation
+
 - **What it does**: Validates structure and format
 - **When it applies**: Before any code processes the input
 - **What it prevents**: Malformed data, type confusion, invalid formats
 - **Example rejection**: `{"email": {"$ne": null}}` - rejected as not a string
 
 ### Layer 2: Custom Sanitization
+
 - **What it does**: Removes dangerous MongoDB operators and characters
 - **When it applies**: When building database queries
 - **What it prevents**: Injection of operators even if validation bypassed
 - **Example sanitization**: `name: {"$regex": ".*"}` → removed entirely
 
 ### Layer 3: Mongoose Schema
+
 - **What it does**: Enforces database-level schema validation
 - **When it applies**: During document creation/update
 - **What it prevents**: Invalid data reaching database
@@ -222,6 +274,7 @@ MongoDB Query Execution
 ## Best Practices
 
 ### 1. Always Validate at Route Level
+
 ```javascript
 // ✅ Good
 router.post("/api/products", validateBody(productSchema), createProduct);
@@ -231,6 +284,7 @@ router.post("/api/products", createProduct); // No validation
 ```
 
 ### 2. Use Whitelisted Schemas
+
 ```javascript
 // ✅ Good - whitelist approach
 const safeFilter = buildSafeFilter(req.query, ["category", "price"]);
@@ -240,6 +294,7 @@ db.find(req.query);
 ```
 
 ### 3. Validate All Input Types
+
 ```javascript
 // ✅ Good - validate body, query, and params
 router.get("/:id", validateParams(schema), handler);
@@ -251,6 +306,7 @@ router.post("/", validateBody(schema), handler); // Missing query/param validati
 ```
 
 ### 4. Use Safe Query Builders
+
 ```javascript
 // ✅ Good - use safe utilities
 import { buildSafeFilter, sanitizeSearchQuery } from "../utils/sanitization.js";
@@ -261,6 +317,7 @@ const filter = req.query; // Dangerous!
 ```
 
 ### 5. Reject Unknown Fields
+
 ```javascript
 // ✅ Good - stripUnknown: true removes unexpected fields
 const { error, value } = schema.validate(input, { stripUnknown: true });
@@ -272,6 +329,7 @@ const { error, value } = schema.validate(input);
 ## Testing
 
 ### Test Case 1: Basic Injection Attempt
+
 ```javascript
 // Attacker sends
 POST /api/auth/login
@@ -283,6 +341,7 @@ POST /api/auth/login
 ```
 
 ### Test Case 2: Regex Injection
+
 ```javascript
 // Attacker sends
 GET /api/products/search?q=.*&price[$gt]=0
@@ -293,6 +352,7 @@ GET /api/products/search?q=.*&price[$gt]=0
 ```
 
 ### Test Case 3: Safe Price Range
+
 ```javascript
 // Attacker sends
 GET /api/products?minPrice={"$ne": 0}&maxPrice=1000
@@ -303,6 +363,7 @@ GET /api/products?minPrice={"$ne": 0}&maxPrice=1000
 ```
 
 ### Test Case 4: Prototype Pollution
+
 ```javascript
 // Attacker sends
 POST /api/users/profile
@@ -326,18 +387,22 @@ This implementation helps meet requirements from:
 ## Migration Guide
 
 ### Step 1: Install Joi
+
 ```bash
 npm install joi
 ```
 
 ### Step 2: Review Current Routes
+
 Identify all user input sources:
+
 - POST body parameters
 - GET query parameters
 - URL path parameters
 - Headers (in some cases)
 
 ### Step 3: Create Validation Schemas
+
 ```javascript
 // Define in validateInput.middleware.js
 const mySchema = Joi.object({
@@ -348,12 +413,14 @@ const mySchema = Joi.object({
 ```
 
 ### Step 4: Apply Middleware to Routes
+
 ```javascript
 // Before: router.post("/api/endpoint", handler);
 // After: router.post("/api/endpoint", validateBody(mySchema), handler);
 ```
 
 ### Step 5: Test Thoroughly
+
 - Test valid inputs (should pass)
 - Test invalid formats (should reject)
 - Test injection attempts (should reject)
@@ -369,19 +436,22 @@ const mySchema = Joi.object({
 ## Monitoring
 
 ### Log Injection Attempts
+
 ```javascript
-if (error.details?.some(d => d.message.includes("invalid"))) {
+if (error.details?.some((d) => d.message.includes("invalid"))) {
   // Potential attack - log for security monitoring
-  auditLogger.log({ 
-    type: "INJECTION_ATTEMPT", 
+  auditLogger.log({
+    type: "INJECTION_ATTEMPT",
     input: req.body,
-    ip: req.ip 
+    ip: req.ip,
   });
 }
 ```
 
 ### Alert on Patterns
+
 Monitor for:
+
 - Repeated validation errors from same IP
 - Attempts to access ObjectIds with non-hex characters
 - Queries with `$` or `__proto__` in fields

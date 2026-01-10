@@ -33,23 +33,31 @@ import {
   updateProductPrice,
   getPriceHistory,
 } from "../controllers/price.controller.js";
-import { protectRoute, adminRoute} from "../middleware/auth.middleware.js";
+import { protectRoute, adminRoute } from "../middleware/auth.middleware.js";
 import { authenticateOptional } from "../middleware/authOptional.middleware.js";
 import { requirePermission } from "../middleware/permission.middleware.js";
-import { validateQuery, validateParams, productSchemas } from "../middleware/validateInput.middleware.js";
+import {
+  validateQuery,
+  validateParams,
+  productSchemas,
+} from "../middleware/validateInput.middleware.js";
 
 const router = express.Router();
-
-
 
 router.get("/featured", getFeaturedProducts);
 router.get("/recommendations", getRecommendedProducts);
 router.get("/search", validateQuery(productSchemas.search), searchProducts);
-router.get("/suggestions", validateQuery(productSchemas.suggestions), getSearchSuggestions);
+router.get(
+  "/suggestions",
+  validateQuery(productSchemas.suggestions),
+  getSearchSuggestions
+);
 
-
-router.get("/category/:category", validateParams(productSchemas.byCategory), getProductsByCategory);
-
+router.get(
+  "/category/:category",
+  validateParams(productSchemas.byCategory),
+  getProductsByCategory
+);
 
 router.get(
   "/",
@@ -58,7 +66,6 @@ router.get(
   requirePermission("product:read"),
   getAllProducts
 );
-
 
 router.get(
   "/archived",
@@ -76,9 +83,7 @@ router.post(
   createProduct
 );
 
-
 router.post("/check-cart-availability", checkCartAvailability);
-
 
 router.delete(
   "/cache/featured",
@@ -97,7 +102,6 @@ router.get(
   exportProductsCSV
 );
 
-
 router.get(
   "/export/detailed-csv",
   protectRoute,
@@ -106,12 +110,10 @@ router.get(
   exportProductsDetailedCSV
 );
 
-
 router.get("/:id/variants", getProductVariants);
 router.get("/stock/:productId", getVariantStock);
 // router.get("/debug-stock/:productId", debugProductStock);
 router.get("/:productId/check-availability", checkVariantAvailability);
-
 
 router.patch(
   "/:id/price/slash",

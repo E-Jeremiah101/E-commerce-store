@@ -1,9 +1,9 @@
-                    /**
+/**
  * Input Validation Middleware
- * 
+ *
  * Provides centralized input validation using Joi schemas
  * Prevents MongoDB injection, type confusion, buffer overflow, and malformed data
- * 
+ *
  * Security features:
  * - Email validation with strict format checking
  * - Password strength validation (min 8 chars, alphanumeric + special chars)
@@ -33,7 +33,7 @@ export const validateBody = (schema) => (req, res, next) => {
     return res.status(400).json({ success: false, errors: details });
   }
 
-  req.body = value;
+  req.validated = { ...req.validated, body: value };
   next();
 };
 
@@ -54,7 +54,7 @@ export const validateQuery = (schema) => (req, res, next) => {
     return res.status(400).json({ success: false, errors: details });
   }
 
-  req.query = value;
+  req.validated = { ...req.validated, query: value };
   next();
 };
 
@@ -75,7 +75,7 @@ export const validateParams = (schema) => (req, res, next) => {
     return res.status(400).json({ success: false, errors: details });
   }
 
-  req.params = value;
+  req.validated = { ...req.validated, params: value };
   next();
 };
 
@@ -85,16 +85,10 @@ export const validateParams = (schema) => (req, res, next) => {
 
 export const commonSchemas = {
   // Email validation - RFC 5322 simplified
-  email: Joi.string()
-    .email()
-    .max(255)
-    .lowercase()
-    .trim()
-    .required()
-    .messages({
-      "string.email": "Invalid email format",
-      "string.max": "Email must be less than 255 characters",
-    }),
+  email: Joi.string().email().max(255).lowercase().trim().required().messages({
+    "string.email": "Invalid email format",
+    "string.max": "Email must be less than 255 characters",
+  }),
 
   // Password validation - min 8 chars, at least 1 uppercase, 1 lowercase, 1 number, 1 special char
   password: Joi.string()
@@ -154,21 +148,13 @@ export const commonSchemas = {
     }),
 
   // Price range validation
-  priceMin: Joi.number()
-    .min(0)
-    .max(1000000)
-    .optional()
-    .messages({
-      "number.min": "Minimum price cannot be negative",
-    }),
+  priceMin: Joi.number().min(0).max(1000000).optional().messages({
+    "number.min": "Minimum price cannot be negative",
+  }),
 
-  priceMax: Joi.number()
-    .min(0)
-    .max(1000000)
-    .optional()
-    .messages({
-      "number.min": "Maximum price cannot be negative",
-    }),
+  priceMax: Joi.number().min(0).max(1000000).optional().messages({
+    "number.min": "Maximum price cannot be negative",
+  }),
 
   // Order ID validation
   orderId: Joi.string()
@@ -179,31 +165,29 @@ export const commonSchemas = {
     }),
 
   // Order number (alphanumeric)
-  orderNumber: Joi.string()
-    .alphanum()
-    .max(50)
-    .required()
-    .messages({
-      "string.alphanum": "Order number must be alphanumeric",
-    }),
+  orderNumber: Joi.string().alphanum().max(50).required().messages({
+    "string.alphanum": "Order number must be alphanumeric",
+  }),
 
   // Order status validation
   orderStatus: Joi.string()
-    .valid("pending", "confirmed", "shipped", "delivered", "cancelled", "refunded")
+    .valid(
+      "pending",
+      "confirmed",
+      "shipped",
+      "delivered",
+      "cancelled",
+      "refunded"
+    )
     .required()
     .messages({
       "any.only": "Invalid order status",
     }),
 
   // Coupon code validation
-  couponCode: Joi.string()
-    .alphanum()
-    .uppercase()
-    .max(50)
-    .required()
-    .messages({
-      "string.alphanum": "Coupon code must be alphanumeric",
-    }),
+  couponCode: Joi.string().alphanum().uppercase().max(50).required().messages({
+    "string.alphanum": "Coupon code must be alphanumeric",
+  }),
 
   // Address validation
   address: Joi.string()
@@ -224,37 +208,23 @@ export const commonSchemas = {
     }),
 
   // Pagination
-  page: Joi.number()
-    .min(1)
-    .max(10000)
-    .default(1)
-    .optional()
-    .messages({
-      "number.min": "Page must be at least 1",
-    }),
+  page: Joi.number().min(1).max(10000).default(1).optional().messages({
+    "number.min": "Page must be at least 1",
+  }),
 
-  limit: Joi.number()
-    .min(1)
-    .max(100)
-    .default(10)
-    .optional()
-    .messages({
-      "number.min": "Limit must be at least 1",
-      "number.max": "Limit cannot exceed 100",
-    }),
+  limit: Joi.number().min(1).max(100).default(10).optional().messages({
+    "number.min": "Limit must be at least 1",
+    "number.max": "Limit cannot exceed 100",
+  }),
 
   // Date range
-  startDate: Joi.date()
-    .optional()
-    .messages({
-      "date.base": "Start date must be a valid date",
-    }),
+  startDate: Joi.date().optional().messages({
+    "date.base": "Start date must be a valid date",
+  }),
 
-  endDate: Joi.date()
-    .optional()
-    .messages({
-      "date.base": "End date must be a valid date",
-    }),
+  endDate: Joi.date().optional().messages({
+    "date.base": "End date must be a valid date",
+  }),
 };
 
 // ============================================================================
@@ -332,24 +302,16 @@ export const productSchemas = {
 export const cartSchemas = {
   add: Joi.object({
     productId: commonSchemas.productId,
-    quantity: Joi.number()
-      .min(1)
-      .max(1000)
-      .required()
-      .messages({
-        "number.min": "Quantity must be at least 1",
-      }),
+    quantity: Joi.number().min(1).max(1000).required().messages({
+      "number.min": "Quantity must be at least 1",
+    }),
     selectedVariant: Joi.string().optional(),
   }),
 
   update: Joi.object({
-    quantity: Joi.number()
-      .min(1)
-      .max(1000)
-      .required()
-      .messages({
-        "number.min": "Quantity must be at least 1",
-      }),
+    quantity: Joi.number().min(1).max(1000).required().messages({
+      "number.min": "Quantity must be at least 1",
+    }),
   }),
 
   remove: Joi.object({
@@ -391,6 +353,8 @@ export const refundSchemas = {
   }),
 
   getById: Joi.object({
-    id: Joi.string().regex(/^[0-9a-fA-F]{24}$/).required(),
+    id: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .required(),
   }),
 };

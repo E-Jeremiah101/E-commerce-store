@@ -1,16 +1,24 @@
 # MongoDB Injection Prevention - Quick Reference
 
 ## Installation
+
 No additional dependencies needed - using already installed Joi library.
 
 ## Adding Validation to New Routes
 
 ### 1. Import Validation
+
 ```javascript
-import { validateBody, validateQuery, validateParams, productSchemas } from "../middleware/validateInput.middleware.js";
+import {
+  validateBody,
+  validateQuery,
+  validateParams,
+  productSchemas,
+} from "../middleware/validateInput.middleware.js";
 ```
 
 ### 2. Apply to Route
+
 ```javascript
 router.get("/search", validateQuery(productSchemas.search), searchProducts);
 router.post("/", validateBody(productSchemas.create), createProduct);
@@ -20,6 +28,7 @@ router.get("/:id", validateParams(productSchemas.getById), getById);
 ## Common Validation Patterns
 
 ### Search with Injection Prevention
+
 ```javascript
 // ❌ Unsafe
 app.get("/search", (req, res) => {
@@ -35,6 +44,7 @@ app.get("/search", validateQuery(productSchemas.search), (req, res) => {
 ```
 
 ### Filtering with Whitelist
+
 ```javascript
 // ❌ Unsafe - allows any field
 app.get("/products", (req, res) => {
@@ -44,12 +54,17 @@ app.get("/products", (req, res) => {
 // ✅ Safe - whitelist only allowed fields
 import { buildSafeFilter } from "../utils/sanitization.js";
 app.get("/products", (req, res) => {
-  const filter = buildSafeFilter(req.query, ["category", "inStock", "minPrice"]);
+  const filter = buildSafeFilter(req.query, [
+    "category",
+    "inStock",
+    "minPrice",
+  ]);
   db.products.find(filter);
 });
 ```
 
 ### Pagination Safely
+
 ```javascript
 // ❌ Unsafe
 app.get("/products", (req, res) => {
@@ -68,31 +83,33 @@ app.get("/products", validateQuery(commonSchemas.pagination), (req, res) => {
 ## Available Validation Schemas
 
 ### Common Fields
+
 ```javascript
 commonSchemas = {
-  email,          // RFC 5322 compliant email
-  password,       // Min 8 chars, complexity required
-  mongoId,        // 24-char hex ObjectId
-  userId,         // Same as mongoId
-  productId,      // Same as mongoId
-  searchQuery,    // Max 100 chars, alphanumeric
-  category,       // Alphanumeric with hyphens
-  priceMin,       // Number 0-1000000
-  priceMax,       // Number 0-1000000
-  orderId,        // 24-char hex ObjectId
-  orderNumber,    // Alphanumeric
-  orderStatus,    // Enum validation
-  couponCode,     // Alphanumeric uppercase
-  address,        // Alphanumeric with punctuation
-  phoneNumber,    // E.164 format
-  page,           // Number 1-10000
-  limit,          // Number 1-100
-  startDate,      // Date validation
-  endDate         // Date validation
-}
+  email, // RFC 5322 compliant email
+  password, // Min 8 chars, complexity required
+  mongoId, // 24-char hex ObjectId
+  userId, // Same as mongoId
+  productId, // Same as mongoId
+  searchQuery, // Max 100 chars, alphanumeric
+  category, // Alphanumeric with hyphens
+  priceMin, // Number 0-1000000
+  priceMax, // Number 0-1000000
+  orderId, // 24-char hex ObjectId
+  orderNumber, // Alphanumeric
+  orderStatus, // Enum validation
+  couponCode, // Alphanumeric uppercase
+  address, // Alphanumeric with punctuation
+  phoneNumber, // E.164 format
+  page, // Number 1-10000
+  limit, // Number 1-100
+  startDate, // Date validation
+  endDate, // Date validation
+};
 ```
 
 ### Predefined Schemas
+
 - `authSchemas`: signup, login, forgotPassword, resetPassword, changePassword
 - `productSchemas`: search, suggestions, byCategory, priceFilter
 - `cartSchemas`: add, update, remove
@@ -108,34 +125,41 @@ import { commonSchemas } from "../middleware/validateInput.middleware.js";
 
 // Reuse common fields
 const customSchema = Joi.object({
-  email: commonSchemas.email,          // Reuse email validation
-  productId: commonSchemas.productId,  // Reuse product ID validation
+  email: commonSchemas.email, // Reuse email validation
+  productId: commonSchemas.productId, // Reuse product ID validation
   customField: Joi.string()
     .max(100)
     .pattern(/^[a-zA-Z0-9\s]+$/)
-    .required()
+    .required(),
 });
 ```
 
 ## Handling Validation Errors
 
 ### Automatic (Built-in)
+
 ```javascript
 // If validation fails, middleware automatically returns 400
 // No additional error handling needed
 ```
 
 ### Custom Error Handling (Optional)
+
 ```javascript
-router.get("/products/:id", validateParams(Joi.object({ id: Joi.string().required() })), (req, res) => {
-  // If ID validation failed, response already sent by middleware
-  // This code only runs if validation passed
-});
+router.get(
+  "/products/:id",
+  validateParams(Joi.object({ id: Joi.string().required() })),
+  (req, res) => {
+    // If ID validation failed, response already sent by middleware
+    // This code only runs if validation passed
+  }
+);
 ```
 
 ## Testing Injection Prevention
 
 ### Test Script
+
 ```bash
 #!/bin/bash
 
@@ -179,6 +203,7 @@ curl "http://localhost:5000/api/products/search?q=.*"
 ## Troubleshooting
 
 ### "Cannot find module" Error
+
 ```
 Error: Cannot find module '../middleware/validateInput.middleware.js'
 
@@ -186,6 +211,7 @@ Solution: Ensure file exists at backend/middleware/validateInput.middleware.js
 ```
 
 ### "Joi is not defined" Error
+
 ```
 Error: Joi is not defined
 
@@ -194,6 +220,7 @@ import Joi from "joi";
 ```
 
 ### Validation Always Fails
+
 ```
 Check:
 1. Schema field names match request field names
@@ -204,11 +231,13 @@ Check:
 ```
 
 ### Want to Bypass Validation in Development?
+
 ```javascript
 // Not recommended, but possible:
-const validateBody = process.env.NODE_ENV === "production" 
-  ? validateBody 
-  : (schema) => (req, res, next) => next();
+const validateBody =
+  process.env.NODE_ENV === "production"
+    ? validateBody
+    : (schema) => (req, res, next) => next();
 ```
 
 ## Files to Review
@@ -220,6 +249,7 @@ const validateBody = process.env.NODE_ENV === "production"
 ## When to Update Validation
 
 Update validation schemas when:
+
 - ✅ Adding new route endpoints
 - ✅ Changing request data structure
 - ✅ Adding/removing request fields
@@ -228,6 +258,7 @@ Update validation schemas when:
 - ✅ New security requirements identified
 
 Do NOT update validation when:
+
 - ❌ Only changing controller/business logic
 - ❌ Only changing database operations
 - ❌ Only changing response format

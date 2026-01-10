@@ -1,10 +1,9 @@
-
 import express from "express";
 import {
   requestRefund,
   getAllRefundRequests,
   approveRefund,
-  rejectRefund, 
+  rejectRefund,
   retryWebhook,
   checkRefundStatus,
   pollRefundStatus,
@@ -12,11 +11,21 @@ import {
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
 import { requirePermission } from "../middleware/permission.middleware.js";
-import { validateParams, validateBody, refundSchemas } from "../middleware/validateInput.middleware.js";
-requirePermission
+import {
+  validateParams,
+  validateBody,
+  refundSchemas,
+} from "../middleware/validateInput.middleware.js";
+requirePermission;
 const router = express.Router();
 
-router.post("/:orderId/request", protectRoute, validateParams(refundSchemas.create), validateBody(refundSchemas.create), requestRefund);
+router.post(
+  "/:orderId/request",
+  protectRoute,
+  validateParams(refundSchemas.create),
+  validateBody(refundSchemas.create),
+  requestRefund
+);
 
 router.get(
   "/",
@@ -35,7 +44,7 @@ router.put(
 router.put(
   "/:orderId/:refundId/reject",
   protectRoute,
-  adminRoute, 
+  adminRoute,
   rejectRefund
 );
 router.post("/webhook/retry", adminRoute, retryWebhook);

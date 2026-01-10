@@ -15,6 +15,7 @@ This guide documents the comprehensive log sanitization implementation that prev
 ### Current Risk
 
 Without log sanitization, sensitive data could be exposed if:
+
 - Logs are accessed by unauthorized users
 - Logs are exported for debugging or analysis
 - Log storage is compromised
@@ -24,6 +25,7 @@ Without log sanitization, sensitive data could be exposed if:
 ### Sensitive Data Types
 
 1. **Authentication Data** (🔴 Critical)
+
    - Passwords, password hashes
    - API keys, API secrets
    - Access tokens, refresh tokens
@@ -31,6 +33,7 @@ Without log sanitization, sensitive data could be exposed if:
    - OAuth tokens
 
 2. **Payment Information** (🔴 Critical - PCI DSS)
+
    - Credit card numbers
    - CVV/CVC codes
    - Expiry dates
@@ -40,6 +43,7 @@ Without log sanitization, sensitive data could be exposed if:
    - SWIFT codes, IBAN
 
 3. **Personally Identifiable Information** (🟠 High)
+
    - Email addresses
    - Phone numbers
    - Home addresses
@@ -66,6 +70,7 @@ Without log sanitization, sensitive data could be exposed if:
 #### Core Functions
 
 ##### `sanitizeObject(obj, depth = 0)`
+
 ```javascript
 // Recursively sanitizes an object
 // - Blocks forbidden fields completely
@@ -76,7 +81,7 @@ Without log sanitization, sensitive data could be exposed if:
 const result = sanitizeObject({
   password: "secret123",
   email: "user@example.com",
-  card: { number: "4532123456789010" }
+  card: { number: "4532123456789010" },
 });
 
 // Result:
@@ -88,6 +93,7 @@ const result = sanitizeObject({
 ```
 
 ##### `sanitizeLogEntry(logData)`
+
 ```javascript
 // Sanitizes log data BEFORE storage in MongoDB
 // Called by auditLogger.js
@@ -95,7 +101,7 @@ const result = sanitizeObject({
 const logEntry = {
   action: "user_login",
   password: "admin123",
-  data: { email: "admin@example.com" }
+  data: { email: "admin@example.com" },
 };
 
 const sanitized = sanitizeLogEntry(logEntry);
@@ -103,6 +109,7 @@ const sanitized = sanitizeLogEntry(logEntry);
 ```
 
 ##### `sanitizeLogResults(logs)`
+
 ```javascript
 // Sanitizes log data BEFORE API response
 // Additional layer of protection
@@ -114,21 +121,23 @@ res.json({ logs: sanitized });
 ```
 
 ##### `maskValue(value)`
+
 ```javascript
 // Masks sensitive strings
 // Shows first 2 and last 2 characters
 
-maskValue("user@example.com") // "us****om"
-maskValue("secret123") // "se*****23"
-maskValue("john") // "jo**"
+maskValue("user@example.com"); // "us****om"
+maskValue("secret123"); // "se*****23"
+maskValue("john"); // "jo**"
 ```
 
 #### Field Categories
 
 ##### FORBIDDEN_FIELDS (Completely Blocked)
+
 ```javascript
 // Authentication & Security (20 fields)
-password, passwordHash, apiKey, accessToken, refreshToken, 
+password, passwordHash, apiKey, accessToken, refreshToken,
 token, secret, privateKey, ...
 
 // Payment Information (PCI DSS) (17 fields)
@@ -142,6 +151,7 @@ ssn, nationalId, driversLicense, passport, ...
 ```
 
 ##### MASKED_FIELDS (Partially Masked)
+
 ```javascript
 // Shows first 2 and last 2 characters
 email, phone, ipAddress, address,
@@ -153,11 +163,11 @@ firstName, lastName, socialSecurityNumber, ...
 ```javascript
 // Automatic detection of sensitive patterns
 const SENSITIVE_PATTERNS = [
-  /password\s*=/i,           // password=value
-  /token\s*=/i,              // token=value
-  /api_key\s*=/i,            // api_key=value
-  /bearer\s+\w+/i,           // Bearer <token>
-  /\b\d{4}[\s\-]?\d{4}...\b/ // Credit card: 4532-1234-5678-9010
+  /password\s*=/i, // password=value
+  /token\s*=/i, // token=value
+  /api_key\s*=/i, // api_key=value
+  /bearer\s+\w+/i, // Bearer <token>
+  /\b\d{4}[\s\-]?\d{4}...\b/, // Credit card: 4532-1234-5678-9010
 ];
 ```
 
@@ -172,13 +182,13 @@ class AuditLogger {
   static async log({ adminId, action, changes, ...data }) {
     try {
       const logData = { adminId, action, changes, ...data };
-      
+
       // ✅ SANITIZE BEFORE STORAGE
       const sanitizedData = sanitizeLogEntry(logData);
-      
+
       // Store sanitized data in MongoDB
       const logEntry = await AuditLog.create(sanitizedData);
-      
+
       // Safe console logging
       console.log(`✓ Audit logged: ${getLogSummary(sanitizedData)}`);
       return logEntry;
@@ -190,6 +200,7 @@ class AuditLogger {
 ```
 
 **Benefits:**
+
 - Sensitive data never reaches MongoDB
 - Database cannot be exploited to expose credentials
 - Backup files contain sanitized data only
@@ -206,7 +217,7 @@ export const getAuditLogs = async (req, res) => {
       .skip(skip)
       .limit(limit);
 
-    const enrichedLogs = logs.map(log => ({
+    const enrichedLogs = logs.map((log) => ({
       ...log,
       actionLabel: ACTION_LABELS[log.action],
       entityTypeLabel: ENTITY_TYPE_LABELS[log.entityType],
@@ -218,7 +229,9 @@ export const getAuditLogs = async (req, res) => {
     res.json({
       success: true,
       logs: sanitizedLogs,
-      pagination: { /* ... */ }
+      pagination: {
+        /* ... */
+      },
     });
   } catch (error) {
     console.error("Error fetching audit logs:", error);
@@ -227,6 +240,7 @@ export const getAuditLogs = async (req, res) => {
 ```
 
 **Benefits:**
+
 - Multi-layer protection (storage + display)
 - API responses never expose sensitive data
 - Frontend receives safe data only
@@ -238,6 +252,7 @@ export const getAuditLogs = async (req, res) => {
 ### Example 1: Login Audit Log
 
 **Input (Before Sanitization):**
+
 ```javascript
 {
   action: "USER_LOGIN",
@@ -251,6 +266,7 @@ export const getAuditLogs = async (req, res) => {
 ```
 
 **Output (After Sanitization):**
+
 ```javascript
 {
   action: "USER_LOGIN",
@@ -266,6 +282,7 @@ export const getAuditLogs = async (req, res) => {
 ### Example 2: Payment Processing
 
 **Input:**
+
 ```javascript
 {
   action: "PAYMENT_PROCESSED",
@@ -281,6 +298,7 @@ export const getAuditLogs = async (req, res) => {
 ```
 
 **Output:**
+
 ```javascript
 {
   action: "PAYMENT_PROCESSED",
@@ -298,6 +316,7 @@ export const getAuditLogs = async (req, res) => {
 ### Example 3: Nested Objects
 
 **Input:**
+
 ```javascript
 {
   action: "USER_CREATE",
@@ -317,6 +336,7 @@ export const getAuditLogs = async (req, res) => {
 ```
 
 **Output:**
+
 ```javascript
 {
   action: "USER_CREATE",
@@ -342,50 +362,60 @@ export const getAuditLogs = async (req, res) => {
 ### GDPR (General Data Protection Regulation)
 
 ✅ **Article 5(1)(f)** - Integrity and Confidentiality
+
 - Data processed securely and appropriately
 - Unauthorized access prevented
 
 ✅ **Article 32** - Security of Processing
+
 - Encryption of stored data in transit and at rest
 - Regular testing of security measures
 
 ✅ **Article 89(1)** - Safeguards for Processing
+
 - Anonymization techniques applied (masking)
 
 ### PCI DSS (Payment Card Industry Data Security Standard)
 
 ✅ **Requirement 3** - Protect Stored Cardholder Data
+
 - CVV/CVC codes never stored
 - Expiry dates never logged
 - Cardholder names not stored with card numbers
 
 ✅ **Requirement 4** - Encrypt Cardholder Data in Transit
+
 - HTTPS enforced for all payment processing
 - Secure logging practices
 
 ✅ **Requirement 10** - Log and Monitor Access
+
 - Comprehensive audit logging without sensitive data
 - Payment data never appears in logs
 
 ### SOC 2 (Service Organization Control)
 
 ✅ **CC6.1** - Logical Access Controls
+
 - Sensitive data not exposed in logs
 - Authorization tracking without credentials
 
 ✅ **CC7.2** - System Monitoring
+
 - Audit logs protected from unauthorized access
 - Monitoring data does not contain sensitive information
 
 ### HIPAA (Health Insurance Portability and Accountability Act)
 
 ✅ **§164.312(a)(2)(i)** - Encryption and Decryption
+
 - Sensitive data masked in logs
 - Audit trails protected
 
 ### ISO 27001 (Information Security Management)
 
 ✅ **A.12.4.1** - Logging
+
 - Event logs sanitized
 - Sensitive information excluded
 
@@ -400,11 +430,11 @@ To block additional fields, edit `logSanitization.js`:
 ```javascript
 const FORBIDDEN_FIELDS = new Set([
   // Existing fields...
-  
+
   // Add custom fields here
-  'customSecretField',
-  'internalApiKey',
-  'proprietaryData'
+  "customSecretField",
+  "internalApiKey",
+  "proprietaryData",
 ]);
 ```
 
@@ -413,10 +443,10 @@ const FORBIDDEN_FIELDS = new Set([
 ```javascript
 const MASKED_FIELDS = new Set([
   // Existing fields...
-  
+
   // Add custom fields to mask
-  'internalId',
-  'customIdentifier'
+  "internalId",
+  "customIdentifier",
 ]);
 ```
 
@@ -425,10 +455,10 @@ const MASKED_FIELDS = new Set([
 ```javascript
 const SENSITIVE_PATTERNS = [
   // Existing patterns...
-  
+
   // Add custom patterns
   /internal_secret\s*=/i,
-  /proprietary_\w+/i
+  /proprietary_\w+/i,
 ];
 ```
 
@@ -438,7 +468,7 @@ Default maximum recursion depth is 10. To change:
 
 ```javascript
 export const sanitizeObject = (obj, depth = 0) => {
-  if (depth > 20) return '[MAX_DEPTH_EXCEEDED]'; // Change from 10 to 20
+  if (depth > 20) return "[MAX_DEPTH_EXCEEDED]"; // Change from 10 to 20
   // ...
 };
 ```
@@ -450,48 +480,52 @@ export const sanitizeObject = (obj, depth = 0) => {
 ### Unit Testing
 
 ```javascript
-import { sanitizeObject, maskValue, sanitizeLogEntry } from './logSanitization.js';
+import {
+  sanitizeObject,
+  maskValue,
+  sanitizeLogEntry,
+} from "./logSanitization.js";
 
-describe('Log Sanitization', () => {
-  test('blocks forbidden fields', () => {
-    const input = { password: 'secret', name: 'John' };
+describe("Log Sanitization", () => {
+  test("blocks forbidden fields", () => {
+    const input = { password: "secret", name: "John" };
     const result = sanitizeObject(input);
-    
-    expect(result.password).toBe('[REDACTED]');
-    expect(result.name).toBe('John');
+
+    expect(result.password).toBe("[REDACTED]");
+    expect(result.name).toBe("John");
   });
 
-  test('masks sensitive fields', () => {
-    const input = { email: 'user@example.com' };
+  test("masks sensitive fields", () => {
+    const input = { email: "user@example.com" };
     const result = sanitizeObject(input);
-    
-    expect(result.email).toBe('us****om');
+
+    expect(result.email).toBe("us****om");
   });
 
-  test('detects credit card patterns', () => {
-    const input = { data: '4532-1234-5678-9010' };
+  test("detects credit card patterns", () => {
+    const input = { data: "4532-1234-5678-9010" };
     const result = sanitizeObject(input);
-    
+
     expect(result.data).toMatch(/^\*+\d{2}$/);
   });
 
-  test('handles nested objects', () => {
+  test("handles nested objects", () => {
     const input = {
       user: {
-        password: 'secret',
-        email: 'test@example.com'
-      }
+        password: "secret",
+        email: "test@example.com",
+      },
     };
     const result = sanitizeObject(input);
-    
-    expect(result.user.password).toBe('[REDACTED]');
-    expect(result.user.email).toBe('te****om');
+
+    expect(result.user.password).toBe("[REDACTED]");
+    expect(result.user.email).toBe("te****om");
   });
 
-  test('handles circular references', () => {
+  test("handles circular references", () => {
     const obj = { a: {} };
     obj.a.b = obj; // Circular reference
-    
+
     const result = sanitizeObject(obj);
     expect(result).toBeDefined();
   });
@@ -502,19 +536,19 @@ describe('Log Sanitization', () => {
 
 ```javascript
 // Test actual audit logging
-describe('Audit Logger Integration', () => {
-  test('sanitizes logs before storage', async () => {
+describe("Audit Logger Integration", () => {
+  test("sanitizes logs before storage", async () => {
     await AuditLogger.log({
-      adminId: 'admin123',
-      action: 'LOGIN',
-      password: 'should_be_redacted',
-      email: 'test@example.com'
+      adminId: "admin123",
+      action: "LOGIN",
+      password: "should_be_redacted",
+      email: "test@example.com",
     });
 
-    const stored = await AuditLog.findOne({ adminId: 'admin123' });
-    
+    const stored = await AuditLog.findOne({ adminId: "admin123" });
+
     expect(stored.password).toBeUndefined(); // Removed entirely
-    expect(stored.email).toBe('te****om');   // Masked
+    expect(stored.email).toBe("te****om"); // Masked
   });
 });
 ```
@@ -524,16 +558,19 @@ describe('Audit Logger Integration', () => {
 ## Performance Impact
 
 ### Storage Efficiency
+
 - **Reduction**: 15-25% smaller MongoDB documents
 - **Reason**: Sensitive fields completely removed
 - **Benefit**: Faster queries, reduced storage costs
 
 ### Processing Overhead
+
 - **Sanitization Time**: ~1-2ms per log entry (typical)
 - **Maximum**: ~5ms for deeply nested objects
 - **Impact**: Negligible (< 1% overhead)
 
 ### Query Performance
+
 - **Before**: Full scans include all fields
 - **After**: Smaller documents = faster scans
 - **Result**: Better overall performance
@@ -547,18 +584,19 @@ describe('Audit Logger Integration', () => {
 **Problem**: Business logic needs a field that's being blocked
 
 **Solution**:
+
 1. Use non-sensitive field for the same purpose
 2. Add role-based access control
 3. Document why the field is needed
 
 ```javascript
 // Before (Bad)
-const log = { apiKey: 'sk_live_abc123', userId: 'user1' };
+const log = { apiKey: "sk_live_abc123", userId: "user1" };
 
 // After (Good)
-const log = { 
-  apiKeyId: 'key_abc123',  // Hash or ID instead of actual key
-  userId: 'user1' 
+const log = {
+  apiKeyId: "key_abc123", // Hash or ID instead of actual key
+  userId: "user1",
 };
 ```
 
@@ -570,10 +608,10 @@ const log = {
 
 ```javascript
 // Before (Problem)
-const log = { phone: '555-1234' }; // Business phone, not sensitive
+const log = { phone: "555-1234" }; // Business phone, not sensitive
 
 // After (Solution)
-const log = { businessPhone: '555-1234' }; // Won't be masked
+const log = { businessPhone: "555-1234" }; // Won't be masked
 ```
 
 ### Issue: Performance Degradation
@@ -601,8 +639,8 @@ if (isPaymentOperation || isAuthOperation) {
 // Count sanitized fields per day
 db.auditLogs.aggregate([
   { $match: { "[REDACTED]": "[REDACTED]" } },
-  { $group: { _id: "$action", count: { $sum: 1 } } }
-])
+  { $group: { _id: "$action", count: { $sum: 1 } } },
+]);
 ```
 
 ### Alert Rules
@@ -642,6 +680,7 @@ for (const log of logs) {
 ## Best Practices
 
 ✅ **DO:**
+
 - Always sanitize before storage
 - Add second sanitization layer before API response
 - Test with real data patterns
@@ -650,6 +689,7 @@ for (const log of logs) {
 - Keep audit trails of who accessed logs
 
 ❌ **DON'T:**
+
 - Log passwords or tokens, ever
 - Store credit card data in application logs
 - Disable sanitization for "debugging"
@@ -683,9 +723,9 @@ For questions or issues regarding log sanitization:
 
 ## Document History
 
-| Date | Version | Changes |
-|------|---------|---------|
-| Jan 2026 | 1.0 | Initial implementation and documentation |
+| Date     | Version | Changes                                  |
+| -------- | ------- | ---------------------------------------- |
+| Jan 2026 | 1.0     | Initial implementation and documentation |
 
 ---
 
