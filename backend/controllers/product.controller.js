@@ -1,7 +1,7 @@
-import redis  from "../lib/redis.js";
+import redis from "../lib/redis.js";
 import cloudinary from "../lib/cloudinary.js";
 import Product from "../models/product.model.js";
-import {optimizeCloudinaryUrl} from "../lib/optimizeCloudinaryUrl.js";
+import { optimizeCloudinaryUrl } from "../lib/optimizeCloudinaryUrl.js";
 import Category from "../models/categoy.model.js";
 import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
@@ -19,7 +19,6 @@ export const checkVariantAvailability = async (req, res) => {
   try {
     const { productId } = req.params;
     const { size, color, quantity = 1 } = req.query;
-
 
     const product = await Product.findById(productId);
     if (!product) {
@@ -45,7 +44,6 @@ export const checkVariantAvailability = async (req, res) => {
 
       availableStock = variant ? variant.countInStock : 0;
     } else {
-      
       return res.json({
         available: false,
         availableStock: 0,
@@ -73,7 +71,6 @@ export const checkVariantAvailability = async (req, res) => {
   }
 };
 
-
 export const checkCartAvailability = async (req, res) => {
   try {
     const { cartItems } = req.body;
@@ -91,7 +88,6 @@ export const checkCartAvailability = async (req, res) => {
     const unavailableItems = [];
 
     for (const [index, item] of cartItems.entries()) {
-
       const product = await Product.findById(item._id);
       if (!product) {
         console.log(` Product not found in database: ${item._id}`);
@@ -113,7 +109,6 @@ export const checkCartAvailability = async (req, res) => {
       let availableStock = 0;
 
       if (product.variants?.length === 0) {
-
         availabilityResults.push({
           productId: item._id,
           available: false,
@@ -157,7 +152,7 @@ export const checkCartAvailability = async (req, res) => {
       }
 
       const isAvailable = availableStock >= item.quantity;
-      
+
       availabilityResults.push({
         productId: item._id,
         available: isAvailable,
@@ -258,33 +253,32 @@ export const updateVariantInventory = async (req, res) => {
     // Update variant stock
     const newStock = variant.countInStock + quantityChange;
 
-     const requestInfo = AuditLogger.getRequestInfo(req);
-     await AuditLogger.log({
-       adminId: req.user._id,
-       adminName: `${req.user.firstname} ${req.user.lastname}`,
-       action: "UPDATE_INVENTORY",
-       entityType: ENTITY_TYPES.PRODUCT,
-       entityId: product._id,
-       entityName: product.name,
-       changes: {
-         variant: {
-           size: variant.size,
-           color: variant.color,
-           before: { countInStock: oldStock },
-           after: { countInStock: newStock },
-           change: quantityChange,
-         },
-       },
-       ...requestInfo,
-       additionalInfo: `Variant: ${variant.size}/${variant.color}`,
-     });
+    const requestInfo = AuditLogger.getRequestInfo(req);
+    await AuditLogger.log({
+      adminId: req.user._id,
+      adminName: `${req.user.firstname} ${req.user.lastname}`,
+      action: "UPDATE_INVENTORY",
+      entityType: ENTITY_TYPES.PRODUCT,
+      entityId: product._id,
+      entityName: product.name,
+      changes: {
+        variant: {
+          size: variant.size,
+          color: variant.color,
+          before: { countInStock: oldStock },
+          after: { countInStock: newStock },
+          change: quantityChange,
+        },
+      },
+      ...requestInfo,
+      additionalInfo: `Variant: ${variant.size}/${variant.color}`,
+    });
     if (newStock < 0) {
       return res.status(400).json({ message: "Insufficient stock" });
     }
 
     variant.countInStock = newStock;
 
-   
     product.countInStock = 0;
 
     await product.save();
@@ -292,7 +286,6 @@ export const updateVariantInventory = async (req, res) => {
     res.json({
       message: "Variant stock updated successfully",
       countInStock: variant.countInStock,
-      
     });
   } catch (error) {
     console.error("Error updating variant inventory:", error);
@@ -335,7 +328,6 @@ export const getVariantStock = async (req, res) => {
   }
 };
 
-
 export const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find({
@@ -376,33 +368,47 @@ export const getAllProducts = async (req, res) => {
   }
 };
 
-
 export const getFeaturedProducts = async (req, res) => {
   try {
     let featuredProducts = await redis.get("featured_products");
     if (featuredProducts) {
       const parsed = JSON.parse(featuredProducts);
-      return res.json(parsed);
+
+      const validated = parsed.filter((p) => p.isFeatured === true);
+      if (validated.length === parsed.length) {
+        return res.json(parsed);
+      } else {
+        console.warn(
+          ` Cache corrupted: ${parsed.length} total, ${validated.length} featured. Clearing cache.`
+        );
+        await redis.del("featured_products");
+      }
     }
 
-    featuredProducts = await Product.find({
+    const query = {
       isFeatured: true,
       archived: { $ne: true },
-    })
+    };
+
+    console.log(` Querying products with:`, query);
+
+    featuredProducts = await Product.find(query)
       .select(
-        "name price images category sizes colors variants  previousPrice isPriceSlashed priceHistory averageRating numReviews"
-      ) 
+        "name price images category sizes colors variants  previousPrice isPriceSlashed priceHistory averageRating numReviews isFeatured"
+      )
       .lean();
 
     if (featuredProducts.length === 0) {
       return res.status(404).json({ message: "No featured products found" });
     }
 
-   
-    const transformedFeatured = featuredProducts.map((product) => {
-      const totalVariantStock =
-        product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
-        0;
+    const transformedFeatured = featuredProducts
+      .map((product) => {
+        const totalVariantStock =
+          product.variants?.reduce(
+            (sum, v) => sum + (v.countInStock || 0),
+            0
+          ) || 0;
         const discountPercentage =
           product.isPriceSlashed && product.previousPrice
             ? (
@@ -411,15 +417,20 @@ export const getFeaturedProducts = async (req, res) => {
                 100
               ).toFixed(1)
             : null;
-      return {
-        ...product,
-        countInStock: totalVariantStock,
-        discountPercentage,
-      };
+        return {
+          ...product,
+          countInStock: totalVariantStock,
+          discountPercentage,
+        };
+      })
+      .filter((product) => product.countInStock > 0); 
+    if (transformedFeatured.length === 0) {
+      return res.status(404).json({ message: "No featured products in stock" });
+    }
 
+    await redis.set("featured_products", JSON.stringify(transformedFeatured), {
+      EX: 3600, // 1 hour in seconds
     });
-
-    await redis.set("featured_products", JSON.stringify(transformedFeatured));
 
     res.json(transformedFeatured);
   } catch (error) {
@@ -439,7 +450,7 @@ export const createProduct = async (req, res) => {
       sizes,
       colors,
       countInStock,
-      variants, 
+      variants,
     } = req.body;
 
     let uploadedImages = [];
@@ -464,9 +475,9 @@ export const createProduct = async (req, res) => {
       price,
       images: uploadedImages,
       category,
-      sizes: sizes || [], 
+      sizes: sizes || [],
       colors: colors || [],
-      countInStock: 0, 
+      countInStock: 0,
       variants: variants || [],
     });
 
@@ -604,7 +615,7 @@ export const getRecommendedProducts = async (req, res) => {
           sizes: 1,
           colors: 1,
           variants: 1,
-          previousPrice: 1, 
+          previousPrice: 1,
           isPriceSlashed: 1,
           countInStock: {
             $sum: "$variants.countInStock",
@@ -613,21 +624,21 @@ export const getRecommendedProducts = async (req, res) => {
       },
     ]);
 
-      const productsWithDiscount = products.map((product) => {
-        const discountPercentage =
-          product.isPriceSlashed && product.previousPrice
-            ? (
-                ((product.previousPrice - product.price) /
-                  product.previousPrice) *
-                100
-              ).toFixed(1)
-            : null;
+    const productsWithDiscount = products.map((product) => {
+      const discountPercentage =
+        product.isPriceSlashed && product.previousPrice
+          ? (
+              ((product.previousPrice - product.price) /
+                product.previousPrice) *
+              100
+            ).toFixed(1)
+          : null;
 
-        return {
-          ...product,
-          discountPercentage,
-        };
-      });
+      return {
+        ...product,
+        discountPercentage,
+      };
+    });
 
     res.json(productsWithDiscount);
   } catch (error) {
@@ -662,7 +673,7 @@ export const getProductsByCategory = async (req, res) => {
               100
             ).toFixed(1)
           : null;
-      
+
       return {
         ...product.toObject(),
         countInStock: totalVariantStock,
@@ -670,7 +681,7 @@ export const getProductsByCategory = async (req, res) => {
         isPriceSlashed: product.isPriceSlashed,
         discountPercentage: discountPercentage,
       };
-    }); 
+    });
 
     res.json({ products: transformedProducts });
   } catch (error) {
@@ -683,7 +694,7 @@ export const toggleFeaturedProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
     if (product) {
-      const wasFeatured = product.isFeatured; 
+      const wasFeatured = product.isFeatured;
 
       const requestInfo = AuditLogger.getRequestInfo(req);
       await AuditLogger.log({
@@ -706,7 +717,6 @@ export const toggleFeaturedProduct = async (req, res) => {
       product.isFeatured = !product.isFeatured;
       const updatedProduct = await product.save();
 
-   
       await updateFeaturedProductsCache();
 
       res.json(updatedProduct);
@@ -720,44 +730,48 @@ export const toggleFeaturedProduct = async (req, res) => {
 };
 async function updateFeaturedProductsCache() {
   try {
-    const featuredProducts = await Product.find({ isFeatured: true })
-      .select("name price images category sizes colors variants")
+    const featuredProducts = await Product.find({
+      isFeatured: true,
+      archived: { $ne: true },
+    })
+      .select("name price images category sizes colors variants isFeatured")
       .lean();
 
-    const transformedFeatured = featuredProducts.map((product) => {
-      const totalVariantStock =
-        product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) ||
-        0;
-      return {
-        ...product,
-        countInStock: totalVariantStock,
-      };
-    });
+    const transformedFeatured = featuredProducts
+      .map((product) => {
+        const totalVariantStock =
+          product.variants?.reduce(
+            (sum, v) => sum + (v.countInStock || 0),
+            0
+          ) || 0;
+        return {
+          ...product,
+          countInStock: totalVariantStock,
+        };
+      })
+      .filter((product) => product.countInStock > 0); // Remove out-of-stock items
 
     await redis.set("featured_products", JSON.stringify(transformedFeatured), {
-      EX: 3600, 
+      EX: 3600,
     });
-  
   } catch (error) {
     console.log("Error updating featured products cache:", error.message);
   }
 }
 
 export const searchProducts = async (req, res) => {
-  const query = req.query.q?.trim(); 
+  const query = req.query.q?.trim();
   if (!query) {
     return res.status(400).json({ message: "No search query provided" });
   }
 
   try {
-  
     const keywords = query.split(/\s+/).filter(Boolean);
 
     const textConditions = [];
     const numberConditions = [];
 
-
-      keywords.forEach((word, i) => {
+    keywords.forEach((word, i) => {
       const lowerWord = word.toLowerCase();
 
       if (!isNaN(word)) {
@@ -765,14 +779,13 @@ export const searchProducts = async (req, res) => {
         const prevWord = keywords[i - 1]?.toLowerCase();
 
         if (prevWord === "under") {
-          numberConditions.push({ amount: { $lte: amount } }); 
+          numberConditions.push({ amount: { $lte: amount } });
         } else if (prevWord === "above") {
-          numberConditions.push({ amount: { $gte: amount } }); 
+          numberConditions.push({ amount: { $gte: amount } });
         } else {
-          numberConditions.push({ amount }); 
+          numberConditions.push({ amount });
         }
       } else if (lowerWord !== "under" && lowerWord !== "above") {
-        
         textConditions.push(
           { name: { $regex: word, $options: "i" } },
           { description: { $regex: word, $options: "i" } },
@@ -782,7 +795,6 @@ export const searchProducts = async (req, res) => {
       }
     });
 
-    
     const queryConditions = {
       $or: [...textConditions, ...numberConditions],
       archived: { $ne: true },
@@ -847,7 +859,6 @@ export const getSearchSuggestions = async (req, res) => {
   }
 };
 
-
 export const getProductById = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -882,7 +893,6 @@ export const getProductById = async (req, res) => {
   }
 };
 
-
 export const getArchivedProducts = async (req, res) => {
   try {
     const products = await Product.find({ archived: true });
@@ -905,10 +915,8 @@ export const getArchivedProducts = async (req, res) => {
   }
 };
 
-
 export const trackProductView = async (req, res, next) => {
   try {
-
     if (!req.params.id) {
       return next();
     }
@@ -923,7 +931,6 @@ export const trackProductView = async (req, res, next) => {
       return next();
     }
 
-
     const totalVariantStock =
       product.variants?.reduce((sum, v) => sum + (v.countInStock || 0), 0) || 0;
 
@@ -934,7 +941,6 @@ export const trackProductView = async (req, res, next) => {
             100
           ).toFixed(1)
         : null;
-
 
     const productWithStock = {
       _id: product._id.toString(),
@@ -947,7 +953,6 @@ export const trackProductView = async (req, res, next) => {
       discountPercentage,
       previousPrice: product.previousPrice,
       isPriceSlashed: product.isPriceSlashed,
-     
     };
 
     const { addToRecentlyViewed } = await import("../lib/recentlyViewed.js");
@@ -958,8 +963,7 @@ export const trackProductView = async (req, res, next) => {
         req.user._id
       );
       await addToRecentlyViewed(req.user._id.toString(), productWithStock);
-    }
-    else {
+    } else {
       const guestIdentifier = generateGuestIdentifier(req);
       console.log(" Adding to recently viewed for guest:", guestIdentifier);
       await addToRecentlyViewed(`guest:${guestIdentifier}`, productWithStock);
@@ -972,7 +976,6 @@ export const trackProductView = async (req, res, next) => {
   }
 };
 
-
 const generateGuestIdentifier = (req) => {
   const ip = req.ip || req.connection.remoteAddress || "unknown";
   const userAgent = req.headers["user-agent"] || "unknown";
@@ -983,7 +986,7 @@ const generateGuestIdentifier = (req) => {
   for (let i = 0; i < combined.length; i++) {
     const char = combined.charCodeAt(i);
     hash = (hash << 5) - hash + char;
-    hash = hash & hash; 
+    hash = hash & hash;
   }
 
   return Math.abs(hash).toString(16).slice(0, 12);
@@ -991,16 +994,12 @@ const generateGuestIdentifier = (req) => {
 
 export const getRecentlyViewedProducts = async (req, res) => {
   try {
-
     const { getRecentlyViewed } = await import("../lib/recentlyViewed.js");
     let recentlyViewed = [];
 
-
     if (req.user?._id) {
       recentlyViewed = await getRecentlyViewed(req.user._id.toString(), 12);
-    }
- 
-    else {
+    } else {
       const guestIdentifier = generateGuestIdentifier(req);
       console.log("Fetching recently viewed for guest:", guestIdentifier);
       recentlyViewed = await getRecentlyViewed(`guest:${guestIdentifier}`, 8);
@@ -1056,24 +1055,24 @@ export const permanentDeleteProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
-     const requestInfo = AuditLogger.getRequestInfo(req);
-     await AuditLogger.log({
-       adminId: req.user._id,
-       adminName: `${req.user.firstname} ${req.user.lastname}`,
-       action: "PERMANENT_DELETE_PRODUCT",
-       entityType: ENTITY_TYPES.PRODUCT,
-       entityId: product._id,
-       entityName: product.name,
-       changes: {
-         deleted: {
-           name: product.name,
-           imagesCount: product.images?.length || 0,
-           variantsCount: product.variants?.length || 0,
-         },
-       },
-       ...requestInfo,
-       additionalInfo: "Product permanently deleted from database",
-     });
+    const requestInfo = AuditLogger.getRequestInfo(req);
+    await AuditLogger.log({
+      adminId: req.user._id,
+      adminName: `${req.user.firstname} ${req.user.lastname}`,
+      action: "PERMANENT_DELETE_PRODUCT",
+      entityType: ENTITY_TYPES.PRODUCT,
+      entityId: product._id,
+      entityName: product.name,
+      changes: {
+        deleted: {
+          name: product.name,
+          imagesCount: product.images?.length || 0,
+          variantsCount: product.variants?.length || 0,
+        },
+      },
+      ...requestInfo,
+      additionalInfo: "Product permanently deleted from database",
+    });
 
     if (product.archived && product.images?.length > 0) {
       for (const url of product.images) {
@@ -1093,8 +1092,8 @@ export const permanentDeleteProduct = async (req, res) => {
 };
 
 const stripHtmlTags = (html) => {
-  if (!html) return '';
-  return html.replace(/<[^>]*>/g, '').trim();
+  if (!html) return "";
+  return html.replace(/<[^>]*>/g, "").trim();
 };
 
 export const exportProductsCSV = async (req, res) => {
@@ -1105,24 +1104,26 @@ export const exportProductsCSV = async (req, res) => {
       "name price images category sizes colors variants isFeatured archived createdAt previousPrice isPriceSlashed averageRating numReviews"
     );
     const csvData = [];
-    
-    csvData.push([
-      'Product ID',
-      'Name',
-      'Category',
-      'Price',
-      'Previous Price',
-      'Discount Percentage',
-      'Featured',
-      'Average Rating',
-      'Total Reviews',
-      'Total Stock',
-      'Total Variants',
-      'Sizes Available',
-      'Colors Available',
-      'Image URLs',
-      'Created At'
-    ].join(','));
+
+    csvData.push(
+      [
+        "Product ID",
+        "Name",
+        "Category",
+        "Price",
+        "Previous Price",
+        "Discount Percentage",
+        "Featured",
+        "Average Rating",
+        "Total Reviews",
+        "Total Stock",
+        "Total Variants",
+        "Sizes Available",
+        "Colors Available",
+        "Image URLs",
+        "Created At",
+      ].join(",")
+    );
 
     products.forEach((product) => {
       const totalVariantStock = product.variants.reduce(
@@ -1140,10 +1141,14 @@ export const exportProductsCSV = async (req, res) => {
           : null;
 
       const escapeCSV = (field) => {
-        if (field === null || field === undefined) return '';
+        if (field === null || field === undefined) return "";
         const stringField = String(field);
-  
-        if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+
+        if (
+          stringField.includes(",") ||
+          stringField.includes('"') ||
+          stringField.includes("\n")
+        ) {
           return `"${stringField.replace(/"/g, '""')}"`;
         }
         return stringField;
@@ -1151,37 +1156,41 @@ export const exportProductsCSV = async (req, res) => {
 
       const cleanDescription = stripHtmlTags(product.description);
 
-      csvData.push([
-        escapeCSV(product._id),
-        escapeCSV(product.name),
-        escapeCSV(product.category),
-        escapeCSV(product.price),
-        escapeCSV(product.previousPrice || ''),
-        escapeCSV(discountPercentage || ''),
-        escapeCSV(product.isFeatured ? 'Yes' : 'No'),
-        escapeCSV(product.averageRating || 0),
-        escapeCSV(product.numReviews || 0),
-        escapeCSV(totalVariantStock),
-        escapeCSV(product.variants?.length || 0),
-        escapeCSV(product.sizes?.join('; ') || ''),
-        escapeCSV(product.colors?.join('; ') || ''),
-        escapeCSV(product.images?.join('; ') || ''),
-        escapeCSV(product.createdAt.toISOString())
-      ].join(','));
+      csvData.push(
+        [
+          escapeCSV(product._id),
+          escapeCSV(product.name),
+          escapeCSV(product.category),
+          escapeCSV(product.price),
+          escapeCSV(product.previousPrice || ""),
+          escapeCSV(discountPercentage || ""),
+          escapeCSV(product.isFeatured ? "Yes" : "No"),
+          escapeCSV(product.averageRating || 0),
+          escapeCSV(product.numReviews || 0),
+          escapeCSV(totalVariantStock),
+          escapeCSV(product.variants?.length || 0),
+          escapeCSV(product.sizes?.join("; ") || ""),
+          escapeCSV(product.colors?.join("; ") || ""),
+          escapeCSV(product.images?.join("; ") || ""),
+          escapeCSV(product.createdAt.toISOString()),
+        ].join(",")
+      );
     });
 
-    const csvContent = csvData.join('\n');
-    
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=products_export.csv');
-    
+    const csvContent = csvData.join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=products_export.csv"
+    );
+
     res.send(csvContent);
   } catch (error) {
     console.log("Error in exportProductsCSV controller", error.message);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 
 export const exportProductsDetailedCSV = async (req, res) => {
   try {
@@ -1192,23 +1201,25 @@ export const exportProductsDetailedCSV = async (req, res) => {
     );
 
     const csvData = [];
-    
-    csvData.push([
-      'Product ID',
-      'Product Name',
-      'Category',
-      'Base Price',
-      'Previous Price',
-      'Discount Percentage',
-      'Featured',
-      'Variant Size',
-      'Variant Color',
-      'Variant Stock',
-      'Variant SKU',
-      'Variant Price',
-      'Total Product Stock',
-      'Created At'
-    ].join(','));
+
+    csvData.push(
+      [
+        "Product ID",
+        "Product Name",
+        "Category",
+        "Base Price",
+        "Previous Price",
+        "Discount Percentage",
+        "Featured",
+        "Variant Size",
+        "Variant Color",
+        "Variant Stock",
+        "Variant SKU",
+        "Variant Price",
+        "Total Product Stock",
+        "Created At",
+      ].join(",")
+    );
 
     products.forEach((product) => {
       const totalVariantStock = product.variants.reduce(
@@ -1226,9 +1237,13 @@ export const exportProductsDetailedCSV = async (req, res) => {
           : null;
 
       const escapeCSV = (field) => {
-        if (field === null || field === undefined) return '';
+        if (field === null || field === undefined) return "";
         const stringField = String(field);
-        if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+        if (
+          stringField.includes(",") ||
+          stringField.includes('"') ||
+          stringField.includes("\n")
+        ) {
           return `"${stringField.replace(/"/g, '""')}"`;
         }
         return stringField;
@@ -1236,49 +1251,55 @@ export const exportProductsDetailedCSV = async (req, res) => {
 
       if (product.variants && product.variants.length > 0) {
         product.variants.forEach((variant) => {
-          csvData.push([
+          csvData.push(
+            [
+              escapeCSV(product._id),
+              escapeCSV(product.name),
+              escapeCSV(product.category),
+              escapeCSV(product.price),
+              escapeCSV(product.previousPrice || ""),
+              escapeCSV(discountPercentage || ""),
+              escapeCSV(product.isFeatured ? "Yes" : "No"),
+              escapeCSV(variant.size || "Standard"),
+              escapeCSV(variant.color || "Standard"),
+              escapeCSV(variant.countInStock || 0),
+              escapeCSV(variant.sku || ""),
+              escapeCSV(variant.price || product.price),
+              escapeCSV(totalVariantStock),
+              escapeCSV(product.createdAt.toISOString()),
+            ].join(",")
+          );
+        });
+      } else {
+        csvData.push(
+          [
             escapeCSV(product._id),
             escapeCSV(product.name),
             escapeCSV(product.category),
             escapeCSV(product.price),
-            escapeCSV(product.previousPrice || ''),
-            escapeCSV(discountPercentage || ''),
-            escapeCSV(product.isFeatured ? 'Yes' : 'No'),
-            escapeCSV(variant.size || 'Standard'),
-            escapeCSV(variant.color || 'Standard'),
-            escapeCSV(variant.countInStock || 0),
-            escapeCSV(variant.sku || ''),
-            escapeCSV(variant.price || product.price),
-            escapeCSV(totalVariantStock),
-            escapeCSV(product.createdAt.toISOString())
-          ].join(','));
-        });
-      } else {
-      
-        csvData.push([
-          escapeCSV(product._id),
-          escapeCSV(product.name),
-          escapeCSV(product.category),
-          escapeCSV(product.price),
-          escapeCSV(product.previousPrice || ''),
-          escapeCSV(discountPercentage || ''),
-          escapeCSV(product.isFeatured ? 'Yes' : 'No'),
-          'Standard',
-          'Standard',
-          '0',
-          '',
-          escapeCSV(product.price),
-          '0',
-          escapeCSV(product.createdAt.toISOString())
-        ].join(','));
+            escapeCSV(product.previousPrice || ""),
+            escapeCSV(discountPercentage || ""),
+            escapeCSV(product.isFeatured ? "Yes" : "No"),
+            "Standard",
+            "Standard",
+            "0",
+            "",
+            escapeCSV(product.price),
+            "0",
+            escapeCSV(product.createdAt.toISOString()),
+          ].join(",")
+        );
       }
     });
 
-    const csvContent = csvData.join('\n');
-    
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename=products_detailed_export.csv');
-    
+    const csvContent = csvData.join("\n");
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=products_detailed_export.csv"
+    );
+
     res.send(csvContent);
   } catch (error) {
     console.log("Error in exportProductsDetailedCSV controller", error.message);
