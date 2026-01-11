@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useProductStore } from "../stores/useProductStore.js";
@@ -22,14 +21,15 @@ const HomePageContent = () => {
   const [categories, setCategories] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] =
+    useState(true);
   const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
-  
+
   const hasShownInitialRecommendations = useRef(false);
 
   const {
     fetchFeaturedProducts,
-    products,
+    featuredProducts,
     loading: isLoadingProducts,
   } = useProductStore();
 
@@ -52,25 +52,25 @@ const HomePageContent = () => {
     fetchFeaturedProducts();
   }, [fetchFeaturedProducts]);
 
+
+
   useEffect(() => {
     const CACHE_KEY = "cached_recommendations";
     const CACHE_TIME_KEY = "cached_recommendations_time";
-    const REFRESH_INTERVAL = 2 * 60 * 1000; 
+    const REFRESH_INTERVAL = 2 * 60 * 1000;
 
     const fetchRecommendations = async () => {
       const cached = localStorage.getItem(CACHE_KEY);
       const cachedTime = localStorage.getItem(CACHE_TIME_KEY);
-      
-    
+
       if (cached) {
         setRecommendations(JSON.parse(cached));
         hasShownInitialRecommendations.current = true;
       }
-      
-      const isCacheExpired = !cachedTime || 
-        (Date.now() - parseInt(cachedTime) > REFRESH_INTERVAL);
-      
-     
+
+      const isCacheExpired =
+        !cachedTime || Date.now() - parseInt(cachedTime) > REFRESH_INTERVAL;
+
       if (!cached || isCacheExpired) {
         try {
           const res = await axios.get("/products/recommendations");
@@ -80,13 +80,13 @@ const HomePageContent = () => {
           localStorage.setItem(CACHE_TIME_KEY, Date.now().toString());
         } catch (error) {
           console.error("Error fetching fresh recommendations:", error);
-   
+
           if (!cached) {
             setRecommendations([]);
           }
         }
       }
-      
+
       setIsLoadingRecommendations(false);
     };
 
@@ -94,51 +94,65 @@ const HomePageContent = () => {
   }, []);
 
   useEffect(() => {
-    if (!isLoadingCategories && !isLoadingRecommendations && !isLoadingProducts) {
-
+    if (
+      !isLoadingCategories &&
+      !isLoadingRecommendations &&
+      !isLoadingProducts
+    ) {
       setTimeout(() => {
         setIsInitialLoadComplete(true);
       }, 100);
     }
   }, [isLoadingCategories, isLoadingRecommendations, isLoadingProducts]);
 
-
   if (!isInitialLoadComplete) {
     return (
       <div className="min-h-screen bg-white">
         {/* Hero skeleton */}
         <div className="h-64 md:h-96 bg-gray-200 animate-pulse"></div>
-        
+
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* Categories skeleton */}
           <div className="hidden md:flex justify-center gap-6 mb-8">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-6 w-20 bg-gray-200 rounded-full animate-pulse"></div>
+              <div
+                key={i}
+                className="h-6 w-20 bg-gray-200 rounded-full animate-pulse"
+              ></div>
             ))}
           </div>
-          
+
           {/* Mobile categories skeleton */}
           <div className="md:hidden mb-6">
             <div className="flex gap-3 overflow-hidden">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"></div>
+                <div
+                  key={i}
+                  className="h-10 w-24 bg-gray-200 rounded-lg animate-pulse"
+                ></div>
               ))}
             </div>
           </div>
-          
+
           {/* Products skeleton */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-12">
             {[...Array(12)].map((_, i) => (
-              <div key={i} className="h-80 bg-gray-100 rounded-lg animate-pulse"></div>
+              <div
+                key={i}
+                className="h-80 bg-gray-100 rounded-lg animate-pulse"
+              ></div>
             ))}
           </div>
-          
+
           {/* Featured products skeleton */}
           <div className="mb-12">
             <div className="h-8 w-48 bg-gray-200 rounded-lg animate-pulse mb-6"></div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-64 bg-gray-100 rounded-lg animate-pulse"></div>
+                <div
+                  key={i}
+                  className="h-64 bg-gray-100 rounded-lg animate-pulse"
+                ></div>
               ))}
             </div>
           </div>
@@ -241,14 +255,16 @@ const HomePageContent = () => {
         {/* Other Features */}
         <OtherFeatures className="look" />
 
-        {products.length > 0 && (
-          <FeaturedProducts className="look" featuredProducts={products} />
+        {featuredProducts.length > 0 && (
+          <FeaturedProducts
+            className="look"
+            featuredProducts={featuredProducts}
+          />
         )}
         <BrandStory />
         <EditorsPicks />
         <RecentlyViewed className="look" />
         <FAQSection className="look" />
-        
       </div>
 
       <Footer />
