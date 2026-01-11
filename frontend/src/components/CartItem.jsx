@@ -14,6 +14,10 @@ const CartItem = ({ item }) => {
   const [availableStock, setAvailableStock] = useState(item.countInStock || 0);
   const [isCheckingStock, setIsCheckingStock] = useState(false);
 
+  // Fix: Handle null settings properly
+  const storeContext = useStoreSettings();
+  const settings = storeContext?.settings || {};
+
   // Fetch current variant stock when component mounts and periodically
   useEffect(() => {
     const getCurrentStock = async () => {
@@ -55,7 +59,6 @@ const CartItem = ({ item }) => {
     }
   };
 
-  const { settings } = useStoreSettings();
   return (
     <motion.div
       className="px-1 lg:pr-28 text-lg"
@@ -136,7 +139,10 @@ const CartItem = ({ item }) => {
                   {/* Price */}
                   <div className="px-2 rounded text-lg flex justify-between items-center">
                     <p className="text-black font-semibold">
-                      {formatPrice(item.price * item.quantity, settings?.currency)}
+                      {formatPrice(
+                        item.price * item.quantity,
+                        settings?.currency
+                      )}
                     </p>
                   </div>
 

@@ -9,6 +9,7 @@ import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
 import storeSettings from "../models/storeSettings.model.js";
 import { restoreStockForCancelledOrder } from "./inventory.controller.js";
 
+
 const logOrderAction = async (
   req,
   action,
@@ -294,11 +295,89 @@ const deductStockForRecoveredItem = async (item) => {
   }
 };
 
-
 export const supportRecoverOrder = async (req, res) => {
   function generateOrderNumber() {
     return "ORD-" + Math.random().toString(36).substr(2, 9).toUpperCase();
   }
+
+  const markCouponAsUsedForRecovery = async (
+    userId,
+    couponCode,
+    orderNumber
+  ) => {
+    try {
+      if (!couponCode || !couponCode.trim()) return null;
+
+      const couponCodeUpper = couponCode.trim().toUpperCase();
+
+      // Try to find and mark coupon with userId first
+      const usedCoupon = await Coupon.findOneAndUpdate(
+        {
+          code: couponCodeUpper,
+          userId: userId,
+          isActive: true,
+          usedAt: null,
+        },
+        {
+          isActive: false,
+          isReserved: false,
+          usedAt: new Date(),
+          usedInOrder: orderNumber,
+          reservationId: null,
+          reservationExpiresAt: null,
+        },
+        { new: true }
+      );
+
+      if (usedCoupon) {
+        console.log(
+          `✅ Coupon ${couponCode} marked as used for recovered order ${orderNumber}`
+        );
+        return usedCoupon;
+      }
+
+      // If not found with userId, try to find by code only (might be a system coupon)
+      const systemCoupon = await Coupon.findOneAndUpdate(
+        {
+          code: couponCodeUpper,
+          isActive: true,
+          usedAt: null,
+        },
+        {
+          isActive: false,
+          usedAt: new Date(),
+          usedInOrder: orderNumber,
+        },
+        { new: true }
+      );
+
+      if (systemCoupon) {
+        console.log(
+          `✅ System coupon ${couponCode} marked as used for recovered order ${orderNumber}`
+        );
+        return systemCoupon;
+      }
+
+      // Check if coupon was already used
+      const alreadyUsedCoupon = await Coupon.findOne({
+        code: couponCodeUpper,
+        usedAt: { $ne: null },
+      });
+
+      if (alreadyUsedCoupon) {
+        console.log(
+          `⚠️ Coupon ${couponCode} was already used on ${alreadyUsedCoupon.usedAt}`
+        );
+        return alreadyUsedCoupon;
+      }
+
+      console.log(`⚠️ Coupon ${couponCode} not found in database`);
+      return null;
+    } catch (error) {
+      console.error("❌ Error marking coupon as used for recovery:", error);
+      return null;
+    }
+  };
 
   try {
     const { transaction_ref, flutterwave_ref, customer_email } = req.body;
@@ -309,7 +388,6 @@ export const supportRecoverOrder = async (req, res) => {
       customer_email,
     });
 
-   
     if (!transaction_ref && !flutterwave_ref) {
       return res.status(400).json({
         error:
@@ -327,7 +405,6 @@ export const supportRecoverOrder = async (req, res) => {
     let searchMethod = "";
     let referenceUsed = "";
 
-   
     if (transaction_ref && transaction_ref.trim() !== "") {
       console.log("Searching by Transaction Reference:", transaction_ref);
       searchMethod = "transaction_reference";
@@ -345,7 +422,10 @@ export const supportRecoverOrder = async (req, res) => {
 
           if (successfulPayments.length > 0) {
             payment = successfulPayments[0];
-            console.log(" Found payment via Transaction Reference:", payment.id);
+            console.log(
+              " Found payment via Transaction Reference:",
+              payment.id
+            );
           }
         }
       } catch (error) {
@@ -359,13 +439,15 @@ export const supportRecoverOrder = async (req, res) => {
       referenceUsed = flutterwave_ref;
 
       try {
-        
         if (flutterwave_ref.startsWith("JayyTech_")) {
           try {
             const verificationResponse = await flw.Transaction.verify({
               id: flutterwave_ref.trim(),
             });
-            if (verificationResponse.data && verificationResponse.data.status === "successful") {
+            if (
+              verificationResponse.data &&
+              verificationResponse.data.status === "successful"
+            ) {
               payment = verificationResponse.data;
             }
           } catch (error) {}
@@ -374,7 +456,10 @@ export const supportRecoverOrder = async (req, res) => {
             const verificationResponse = await flw.Transaction.verify({
               id: parseInt(flutterwave_ref.trim()),
             });
-            if (verificationResponse.data && verificationResponse.data.status === "successful") {
+            if (
+              verificationResponse.data &&
+              verificationResponse.data.status === "successful"
+            ) {
               payment = verificationResponse.data;
             }
           } catch (error) {}
@@ -473,7 +558,10 @@ export const supportRecoverOrder = async (req, res) => {
               productsData = productsMeta.products;
             }
           } catch (parseError) {
-            console.error(" Error parsing products from meta array:", parseError.message);
+            console.error(
+              " Error parsing products from meta array:",
+              parseError.message
+            );
           }
         }
       }
@@ -495,13 +583,14 @@ export const supportRecoverOrder = async (req, res) => {
               selectedCategory: product.category || null,
             };
           });
-          console.log(` Successfully recovered ${recoveredProducts.length} products`);
+          console.log(
+            ` Successfully recovered ${recoveredProducts.length} products`
+          );
         }
       }
     }
 
     if (recoveredProducts.length === 0) {
-      
       recoveredProducts = [
         {
           name: "Recovered Order - Products to be confirmed",
@@ -528,25 +617,42 @@ export const supportRecoverOrder = async (req, res) => {
       console.log("Created new user for recovery:", user.email);
     }
 
-   
-    const deliveryAddress = payment.meta?.deliveryAddress || payment.meta?.delivery_address || "To be confirmed by customer";
-    const phone = payment.meta?.phoneNumber || payment.meta?.phone_number || payment.customer?.phone_number || "To be confirmed";
+    const deliveryAddress =
+      payment.meta?.deliveryAddress ||
+      payment.meta?.delivery_address ||
+      "To be confirmed by customer";
+    const phone =
+      payment.meta?.phoneNumber ||
+      payment.meta?.phone_number ||
+      payment.customer?.phone_number ||
+      "To be confirmed";
     const deliveryFee = parseFloat(payment.meta?.deliveryFee) || 0;
     const originalTotal = parseFloat(payment.meta?.originalTotal) || 0;
     const discountAmount = parseFloat(payment.meta?.discountAmount) || 0;
     const couponCode = payment.meta?.couponCode || null;
     const finalTotal = parseFloat(payment.meta?.finalTotal) || payment.amount;
-      const settings = await storeSettings.findOne();
-      const formatter = new Intl.NumberFormat(undefined, {
-        style: "currency",
-        currency: settings?.currency || "NGN",
-      });
+    const settings = await storeSettings.findOne();
+    const formatter = new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: settings?.currency || "NGN",
+    });
 
     let subtotal = payment.amount;
     if (deliveryFee > 0 && originalTotal > 0) {
       subtotal = originalTotal;
     } else if (deliveryFee > 0) {
       subtotal = payment.amount - deliveryFee;
+    }
+
+    let couponMarked = false;
+    let markedCoupon = null;
+    if (couponCode && user._id) {
+      markedCoupon = await markCouponAsUsedForRecovery(
+        user._id,
+        couponCode,
+        generateOrderNumber()
+      );
+      couponMarked = !!markedCoupon;
     }
 
     const stockDeductionResults = [];
@@ -570,20 +676,31 @@ export const supportRecoverOrder = async (req, res) => {
 
     console.log("Stock deduction results:", stockDeductionResults);
 
+    const orderNumber = generateOrderNumber();
+
+    if (markedCoupon && couponMarked) {
+      markedCoupon.usedInOrder = orderNumber;
+      await markedCoupon.save();
+    }
+
     const order = new Order({
       user: user._id,
       products: recoveredProducts,
-      orderNumber: generateOrderNumber(),
+      orderNumber: orderNumber,
       subtotal: subtotal,
       discount: discountAmount,
       totalAmount: finalTotal,
       deliveryFee: deliveryFee,
       deliveryAddress: deliveryAddress,
       phone: phone,
-      coupon: couponCode ? {
-        code: couponCode,
-        discount: discountAmount
-      } : null,
+      coupon: couponCode
+        ? {
+            code: couponCode,
+            discount: discountAmount,
+            couponId: markedCoupon?._id || null,
+            wasMarkedUsed: couponMarked,
+          }
+        : null,
       couponCode: couponCode,
       flutterwaveRef: payment.tx_ref,
       flutterwaveTransactionId: payment.id,
@@ -592,13 +709,15 @@ export const supportRecoverOrder = async (req, res) => {
       paymentMethod: {
         method: payment.payment_type || "card",
         status: "PAID",
-        ...(payment.card ? {
-          card: {
-            brand: payment.card.type || "Unknown",
-            last4: payment.card.last_4digits || null,
-            issuer: payment.card.issuer || null,
-          },
-        } : {}),
+        ...(payment.card
+          ? {
+              card: {
+                brand: payment.card.type || "Unknown",
+                last4: payment.card.last_4digits || null,
+                issuer: payment.card.issuer || null,
+              },
+            }
+          : {}),
       },
       isProcessed: false,
       notes: `AUTO-RECOVERED - Found via ${searchMethod}. 
@@ -606,17 +725,36 @@ export const supportRecoverOrder = async (req, res) => {
             Flutterwave Ref: ${payment.flw_ref}
             Transaction Ref: ${payment.tx_ref}
             Transaction ID: ${payment.id}
-            Amount: ₦${payment.currency} ${payment.amount}
+            Amount: ${formatter.format(payment.amount)}
             Customer: ${payment.customer?.name || "N/A"}
             Products: ${recoveredProducts.length} items
-            Coupon: ${couponCode || 'None'}
-            Discount: ${discountAmount > 0 ? `₦${discountAmount}` : 'None'}
-            Delivery Fee: ₦${deliveryFee}
+            Coupon: ${couponCode || "None"}
+            Discount: ${
+              discountAmount > 0 ? formatter.format(discountAmount) : "None"
+            }
+            Delivery Fee: ${formatter.format(deliveryFee)}
             Recovered on: ${new Date().toLocaleString()}
             
+            COUPON STATUS: ${
+              couponMarked
+                ? "✅ Marked as used"
+                : couponCode
+                ? "⚠️ Not marked as used - manual review needed"
+                : "No coupon used"
+            }
+            ${
+              couponCode && markedCoupon?.usedAt
+                ? `Coupon marked used at: ${markedCoupon.usedAt.toLocaleString()}`
+                : ""
+            }
+            
             STOCK DEDUCTION STATUS:
-            ${outOfStockMessages.length > 0 ? '⚠️ SOME ITEMS OUT OF STOCK - ADMIN REVIEW REQUIRED ⚠️' : 'All items in stock'}
-            ${outOfStockMessages.map(msg => `- ${msg}`).join('\n')}`,
+            ${
+              outOfStockMessages.length > 0
+                ? "⚠️ SOME ITEMS OUT OF STOCK - ADMIN REVIEW REQUIRED ⚠️"
+                : "All items in stock"
+            }
+            ${outOfStockMessages.map((msg) => `- ${msg}`).join("\n")}`,
     });
 
     await order.save();
@@ -624,7 +762,10 @@ export const supportRecoverOrder = async (req, res) => {
 
     (async () => {
       try {
-        const recoveryNote = `Recovered via ${searchMethod.replace("_", " ")} - Reference: ${referenceUsed}`;
+        const recoveryNote = `Recovered via ${searchMethod.replace(
+          "_",
+          " "
+        )} - Reference: ${referenceUsed}`;
         await sendRecoveryOrderEmail(customer_email, order, recoveryNote);
         console.log(`Recovery email sent to: ${customer_email}`);
       } catch (emailError) {
@@ -644,88 +785,104 @@ export const supportRecoverOrder = async (req, res) => {
           amount: payment.amount,
           couponCode: couponCode,
           discount: discountAmount,
+          couponMarked: couponMarked,
         },
         stockDeduction: stockDeductionResults,
       },
-      `Order recovered via ${searchMethod.replace("_", " ")}`
+      `Order recovered via ${searchMethod.replace("_", " ")}${
+        couponCode ? ` with coupon ${couponCode}` : ""
+      }`
     );
 
-       res.json({
-         success: true,
-         message: `Order recovered successfully via ${searchMethod.replace(
-           "_",
-           " "
-         )}!`,
-         orderNumber: order.orderNumber,
-         orderId: order._id,
-         customerEmail: customer_email,
-         amount: payment.amount,
-         currency: payment.currency || "NGN",
-         searchMethod: searchMethod.replace("_", " "),
-         referenceType: referenceUsed.startsWith("JayyTech_")
-           ? "Flutterwave Reference"
-           : /^\d+$/.test(referenceUsed)
-           ? "Transaction ID"
-           : "Reference",
-         recoveredDetails: {
-           productsCount: recoveredProducts.length,
-           transactionReference: payment.tx_ref,
-           flutterwaveReference: payment.flw_ref,
-           transactionId: payment.id,
-           paymentType: payment.payment_type || "card",
-           paidAt: new Date(payment.created_at).toLocaleString(),
-           customerName:
-             payment.customer?.name ||
-             `${payment.customer?.firstname || ""} ${
-               payment.customer?.lastname || ""
-             }`.trim() ||
-             customer_email,
-           deliveryAddress: deliveryAddress,
-           phone: phone,
-         },
-         products: recoveredProducts,
-         discountDetails: {
-           couponCode: couponCode,
-           discountAmount: discountAmount,
-           subtotal: subtotal,
-           deliveryFee: deliveryFee,
-           totalAmount: finalTotal,
-         },
-         stockDeductionSummary: {
-           totalItems: recoveredProducts.length,
-           deducted: stockDeductionResults.filter(
-             (r) => r.status === "DEDUCTED"
-           ).length,
-           outOfStock: stockDeductionResults.filter(
-             (r) => r.status === "OUT_OF_STOCK"
-           ).length,
-           errors: stockDeductionResults.filter((r) => r.status === "ERROR")
-             .length,
-           adminNote:
-             outOfStockMessages.length > 0
-               ? "⚠️ SOME ITEMS ARE OUT OF STOCK. CONSIDER REFUNDING OR RE-STOCKING."
-               : "All items in stock and deducted",
-           outOfStockItems: outOfStockMessages,
-           detailedResults: stockDeductionResults, 
-         },
-         nextSteps: [
-           "Order automatically recovered with complete details!",
-           ...(outOfStockMessages.length > 0
-             ? [
-                 "⚠️ REVIEW REQUIRED: Some items are out of stock. Consider contacting customer or processing refund.",
-               ]
-             : []),
-           ...(couponCode
-             ? [
-                 `Coupon applied: ${couponCode} (${formatter.format(
-              discountAmount
-            )} discount)`,
-               ]
-             : []),
-           "Verify the products and delivery address match customer expectation",
-           "Update order status when ready to process",
-         ],
-       });
+    res.json({
+      success: true,
+      message: `Order recovered successfully via ${searchMethod.replace(
+        "_",
+        " "
+      )}!`,
+      orderNumber: order.orderNumber,
+      orderId: order._id,
+      customerEmail: customer_email,
+      amount: payment.amount,
+      currency: payment.currency || "NGN",
+      searchMethod: searchMethod.replace("_", " "),
+      referenceType: referenceUsed.startsWith("JayyTech_")
+        ? "Flutterwave Reference"
+        : /^\d+$/.test(referenceUsed)
+        ? "Transaction ID"
+        : "Reference",
+      recoveredDetails: {
+        productsCount: recoveredProducts.length,
+        transactionReference: payment.tx_ref,
+        flutterwaveReference: payment.flw_ref,
+        transactionId: payment.id,
+        paymentType: payment.payment_type || "card",
+        paidAt: new Date(payment.created_at).toLocaleString(),
+        customerName:
+          payment.customer?.name ||
+          `${payment.customer?.firstname || ""} ${
+            payment.customer?.lastname || ""
+          }`.trim() ||
+          customer_email,
+        deliveryAddress: deliveryAddress,
+        phone: phone,
+      },
+      products: recoveredProducts,
+      discountDetails: {
+        couponCode: couponCode,
+        discountAmount: discountAmount,
+        subtotal: subtotal,
+        deliveryFee: deliveryFee,
+        totalAmount: finalTotal,
+      },
+      couponStatus: {
+        code: couponCode,
+        wasMarkedUsed: couponMarked,
+        discountApplied: discountAmount,
+        couponId: markedCoupon?._id || null,
+        note: couponMarked
+          ? "✅ Coupon marked as used successfully"
+          : couponCode
+          ? "⚠️ Coupon could not be marked as used - may still be active"
+          : "No coupon used",
+      },
+      stockDeductionSummary: {
+        totalItems: recoveredProducts.length,
+        deducted: stockDeductionResults.filter((r) => r.status === "DEDUCTED")
+          .length,
+        outOfStock: stockDeductionResults.filter(
+          (r) => r.status === "OUT_OF_STOCK"
+        ).length,
+        errors: stockDeductionResults.filter((r) => r.status === "ERROR")
+          .length,
+        adminNote:
+          outOfStockMessages.length > 0
+            ? "⚠️ SOME ITEMS ARE OUT OF STOCK. CONSIDER REFUNDING OR RE-STOCKING."
+            : "All items in stock and deducted",
+        outOfStockItems: outOfStockMessages,
+        detailedResults: stockDeductionResults,
+      },
+      nextSteps: [
+        "Order automatically recovered with complete details!",
+        ...(outOfStockMessages.length > 0
+          ? [
+              "⚠️ REVIEW REQUIRED: Some items are out of stock. Consider contacting customer or processing refund.",
+            ]
+          : []),
+        ...(couponCode
+          ? [
+              `Coupon applied: ${couponCode} (${formatter.format(
+                discountAmount
+              )} discount)`,
+              couponMarked
+                ? "✅ Coupon marked as used"
+                : "⚠️ Coupon may still be active - check manually",
+            ]
+          : []),
+        "Verify the products and delivery address match customer expectation",
+        "Update order status when ready to process",
+      ],
+    });
   } catch (error) {
     console.error("Order recovery failed:", error);
 
@@ -750,6 +907,7 @@ export const supportRecoverOrder = async (req, res) => {
     });
   }
 };
+
 
 export const getAllOrders = async (req, res) => {
   try {
@@ -1317,7 +1475,7 @@ export const getOrderById = async (req, res) => {
     console.error("getOrderById error:", error);
     res.status(500).json({ message: "Server error" });
   }
-};
+}; 
   
 
 const sendRecoveryOrderEmail = async (to, order, recoveryInfo) => {

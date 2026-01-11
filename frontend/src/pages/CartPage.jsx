@@ -13,13 +13,20 @@ import ErrorBoundary from "../components/ErrorBoundary.jsx";
 
 const CartPageContent = () => {
   const { cart, isLoading } = useCartStore();
-  const { settings } = useStoreSettings();
+
+  // FIX: Handle null settings properly
+  const storeContext = useStoreSettings();
+  const settings = storeContext?.settings || {};
 
   return (
     <>
       <SEO
         title={`Shopping Cart | ${settings?.storeName || "Store"}`}
-        description={`Review your shopping cart with ${cart.length} items. Proceed to checkout securely at ${settings?.storeName}.`}
+        description={`Review your shopping cart with ${
+          cart.length
+        } items. Proceed to checkout securely at ${
+          settings?.storeName || "our store"
+        }.`}
         image={settings?.logo}
         canonicalUrl={window.location.href}
       />
@@ -32,7 +39,6 @@ const CartPageContent = () => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 sm:h-20">
-
             <div className="flex items-center">
               <motion.div
                 whileHover={{ x: -2 }}
