@@ -1,24 +1,22 @@
-import axios from "axios"
+import axios from "axios";
 
 // const axiosInstance = axios.create({
 //   baseURL:
 //     import.meta.mode === "development" ? "http://localhost:5000/api" : "/api",
-//   withCredentials: true, 
+//   withCredentials: true,
 // });
 const axiosInstance = axios.create({
-  baseURL:
-    import.meta.env.MODE === "development"
-      ? "http://localhost:5000/api"
-      : "/api",
+  baseURL: import.meta.env.MODE === "development" ? "/api" : "/api",
   withCredentials: true,
 });
 
 console.log(
-  "✅ Axios Instance configured with baseURL:",
+  "Axios Instance configured with baseURL:",
   axiosInstance.defaults.baseURL
 );
+console.log("NODE_ENV:", process.env.NODE_ENV);
 
-axiosInstance.defaults.timeout = 35000; 
+axiosInstance.defaults.timeout = 35000;
 
 let isRefreshing = false;
 let failedQueue = [];
@@ -80,17 +78,19 @@ axiosInstance.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      
-      const { data } = await axiosInstance.post("/auth/refresh-token", {}, {
-        timeout: 10000 
-      });
+      const { data } = await axiosInstance.post(
+        "/auth/refresh-token",
+        {},
+        {
+          timeout: 10000,
+        }
+      );
       processQueue(null);
 
       return axiosInstance(originalRequest);
     } catch (refreshError) {
       processQueue(refreshError, null);
 
-      
       if (
         refreshError.code === "NETWORK_ERROR" ||
         refreshError.code === "ECONNABORTED"
@@ -105,7 +105,6 @@ axiosInstance.interceptors.response.use(
         );
       }
       return Promise.reject(refreshError);
-      
     } finally {
       isRefreshing = false;
     }
@@ -113,4 +112,3 @@ axiosInstance.interceptors.response.use(
 );
 
 export default axiosInstance;
- 

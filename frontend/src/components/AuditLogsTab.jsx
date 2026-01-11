@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
-  const AuditLogsTab = () => {
+const AuditLogsTab = () => {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
@@ -169,7 +169,7 @@ import { format } from "date-fns";
     try {
       const response = await axios.get("/audit-logs/archives/status");
       setArchiveStats(response.data);
-      
+
       // Show prompt if archiving is needed and threshold is met
       if (response.data.needed && response.data.logCount > 500) {
         setShowArchivePrompt(true);
@@ -214,7 +214,7 @@ import { format } from "date-fns";
       document.body.appendChild(link);
       link.click();
       link.remove();
-      
+
       showMessage("success", "Logs exported successfully");
     } catch (error) {
       console.error("Error exporting logs:", error);
@@ -223,23 +223,28 @@ import { format } from "date-fns";
   };
 
   const triggerManualArchive = async () => {
-    if (!window.confirm(
-      "Are you sure you want to trigger manual archiving?\n\n" +
-      "This will archive logs older than 2 months. Archived logs will be:\n" +
-      "• Removed from the main database\n" +
-      "• Compressed and stored as files\n" +
-      "• Still accessible in the Archives section\n\n" +
-      "This operation cannot be undone, but you can restore archives if needed."
-    )) {
+    if (
+      !window.confirm(
+        "Are you sure you want to trigger manual archiving?\n\n" +
+          "This will archive logs older than 2 months. Archived logs will be:\n" +
+          "• Removed from the main database\n" +
+          "• Compressed and stored as files\n" +
+          "• Still accessible in the Archives section\n\n" +
+          "This operation cannot be undone, but you can restore archives if needed."
+      )
+    ) {
       return;
     }
 
     try {
       setArchiveLoading(true);
       const response = await axios.post("/audit-logs/archives/trigger");
-      
+
       if (response.data.success) {
-        showMessage("success", response.data.message || "Archive completed successfully");
+        showMessage(
+          "success",
+          response.data.message || "Archive completed successfully"
+        );
         fetchLogs();
         fetchArchiveStats();
         setShowArchivePrompt(false);
@@ -253,7 +258,6 @@ import { format } from "date-fns";
       setArchiveLoading(false);
     }
   };
-
 
   const getActionIcon = (action) => {
     switch (action) {
@@ -388,9 +392,12 @@ import { format } from "date-fns";
 
   const formatTimestamp = (timestamp) => {
     try {
-      return format(new Date(timestamp), "MMM dd, yyyy HH:mm:ss");
+      if (!timestamp) return "Invalid Date";
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return "Invalid Date";
+      return format(date, "MMM dd, yyyy HH:mm:ss");
     } catch (error) {
-      console.error("Error formatting timestamp:", error);
+      console.error("Error formatting timestamp:", error, timestamp);
       return "Invalid Date";
     }
   };
@@ -410,47 +417,51 @@ import { format } from "date-fns";
     const units = ["Bytes", "KB", "MB", "GB"];
     let index = 0;
     let formattedSize = parseFloat(size);
-    
+
     while (formattedSize >= 1024 && index < units.length - 1) {
       formattedSize /= 1024;
       index++;
     }
-    
+
     return `${formattedSize.toFixed(2)} ${units[index]}`;
   };
 
   // Get oldest log date
   const getOldestLogDate = () => {
     if (logs.length === 0) return null;
-    const dates = logs.map(log => new Date(log.timestamp));
+    const dates = logs
+      .map((log) => new Date(log.timestamp))
+      .filter((d) => !isNaN(d.getTime()));
+    if (dates.length === 0) return null;
     return format(new Date(Math.min(...dates)), "MMM dd, yyyy");
   };
 
   // Get newest log date
   const getNewestLogDate = () => {
     if (logs.length === 0) return null;
-    const dates = logs.map(log => new Date(log.timestamp));
+    const dates = logs
+      .map((log) => new Date(log.timestamp))
+      .filter((d) => !isNaN(d.getTime()));
+    if (dates.length === 0) return null;
     return format(new Date(Math.max(...dates)), "MMM dd, yyyy");
   };
   if (loading)
-         return (
-           <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-8">
-             <div className="flex flex-col items-center justify-center h-96">
-               <div className="relative">
-                 <div className="h-24 w-24 rounded-full border-4 border-gray-200 border-t-blue-600 animate-spin"></div>
-                 <div className="absolute inset-0 flex items-center justify-center">
-                   <FileText className="h-10 w-10 text-gray-400 animate-pulse" />
-                 </div>
-               </div>
-               <p className="mt-6 text-lg font-medium text-gray-600">
-                 Loading Audit Logs...
-               </p>
-               <p className="text-sm text-gray-400 mt-2">
-                 Please wait a moment
-               </p>
-             </div>
-           </div>
-         );
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white p-8">
+        <div className="flex flex-col items-center justify-center h-96">
+          <div className="relative">
+            <div className="h-24 w-24 rounded-full border-4 border-gray-200 border-t-blue-600 animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <FileText className="h-10 w-10 text-gray-400 animate-pulse" />
+            </div>
+          </div>
+          <p className="mt-6 text-lg font-medium text-gray-600">
+            Loading Audit Logs...
+          </p>
+          <p className="text-sm text-gray-400 mt-2">Please wait a moment</p>
+        </div>
+      </div>
+    );
 
   return (
     <div className="p-4 md:p-6">
@@ -700,7 +711,6 @@ import { format } from "date-fns";
 
       {/* Filters Section */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6 no-scroll">
-
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
           {/* Search Input - Full width on mobile */}
           <div className="w-full md:flex-1">
@@ -733,7 +743,7 @@ import { format } from "date-fns";
                 <Download className="h-4 w-4" />
                 Export CSV
               </button>
-              <button 
+              <button
                 onClick={triggerManualArchive}
                 disabled={archiveLoading}
                 className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors disabled:opacity-50 whitespace-nowrap"
@@ -758,7 +768,6 @@ import { format } from "date-fns";
           </div>
         </div>
 
-  
         {showFilters && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -766,7 +775,6 @@ import { format } from "date-fns";
             exit={{ opacity: 0, height: 0 }}
             className="mt-4 pt-4 border-t border-gray-200"
           >
-           
             <div className="overflow-x-auto pb-4">
               <div className="flex space-x-4 min-w-max md:min-w-0 md:grid md:grid-cols-2 lg:grid-cols-4 md:gap-4 md:space-x-0">
                 {/* Start Date */}

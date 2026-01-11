@@ -90,16 +90,16 @@ export const commonSchemas = {
     "string.max": "Email must be less than 255 characters",
   }),
 
-  // Password validation - min 8 chars, at least 1 uppercase, 1 lowercase, 1 number, 1 special char
+  // Password validation - min 8 chars, at least 1 uppercase, 1 lowercase, 1 number
   password: Joi.string()
     .min(8)
     .max(128)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
+    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
     .required()
     .messages({
       "string.min": "Password must be at least 8 characters",
       "string.pattern.base":
-        "Password must contain uppercase, lowercase, number, and special character",
+        "Password must contain uppercase, lowercase, and number",
     }),
 
   // MongoDB ObjectId validation
@@ -130,7 +130,7 @@ export const commonSchemas = {
   searchQuery: Joi.string()
     .max(100)
     .trim()
-    .pattern(/^[a-zA-Z0-9\s\-\_]*$/)
+    .pattern(/^[a-zA-Z0-9\s\-\_&]*$/)
     .optional()
     .messages({
       "string.pattern.base": "Search query contains invalid characters",
@@ -141,7 +141,7 @@ export const commonSchemas = {
   category: Joi.string()
     .max(50)
     .trim()
-    .pattern(/^[a-zA-Z0-9\s\-\_]*$/)
+    .pattern(/^[a-zA-Z0-9\s\-\_&]*$/)
     .required()
     .messages({
       "string.pattern.base": "Category name contains invalid characters",
@@ -185,8 +185,8 @@ export const commonSchemas = {
     }),
 
   // Coupon code validation
-  couponCode: Joi.string().alphanum().uppercase().max(50).required().messages({
-    "string.alphanum": "Coupon code must be alphanumeric",
+  couponCode: Joi.string().max(50).trim().required().messages({
+    "string.max": "Coupon code must not exceed 50 characters",
   }),
 
   // Address validation
@@ -302,10 +302,12 @@ export const productSchemas = {
 export const cartSchemas = {
   add: Joi.object({
     productId: commonSchemas.productId,
-    quantity: Joi.number().min(1).max(1000).required().messages({
+    quantity: Joi.number().min(1).max(1000).optional().messages({
       "number.min": "Quantity must be at least 1",
     }),
-    selectedVariant: Joi.string().optional(),
+    selectedVariant: Joi.string().optional().allow(""),
+    size: Joi.string().optional().allow(""),
+    color: Joi.string().optional().allow(""),
   }),
 
   update: Joi.object({

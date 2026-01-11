@@ -27,7 +27,6 @@ const saveGuestCart = (cart) => {
 const initialGuestCart = loadGuestCart();
 
 export const useCartStore = create((set, get) => ({
-
   cart: initialGuestCart,
   coupon: null,
   subtotal: initialGuestCart.reduce(
@@ -74,7 +73,6 @@ export const useCartStore = create((set, get) => ({
 
   getCartItems: async () => {
     try {
-
       const user = (await import("./useUserStore")).useUserStore.getState()
         .user;
       if (!user) {
@@ -116,7 +114,6 @@ export const useCartStore = create((set, get) => ({
         selectedColor,
       });
 
-
       const variantStockResponse = await axios.get(
         `/products/stock/${product._id}`,
         {
@@ -140,7 +137,6 @@ export const useCartStore = create((set, get) => ({
         .user;
 
       if (!user) {
-       
         console.log(" Guest cart flow");
         set((prevState) => {
           const existingItem = prevState.cart.find(
@@ -184,13 +180,11 @@ export const useCartStore = create((set, get) => ({
         set({ isLoading: false });
         return;
       } else {
-  
-
-         const requestBody = {
-           productId: product._id,
-           size: selectedSize || "", 
-           color: selectedColor || "", 
-         };
+        const requestBody = {
+          productId: product._id,
+          size: selectedSize || "",
+          color: selectedColor || "",
+        };
 
         console.log(" Sending to server:", requestBody);
 
@@ -208,6 +202,11 @@ export const useCartStore = create((set, get) => ({
         data: error.response?.data,
         message: error.message,
       });
+      toast.error(
+        error.response?.data?.errors?.[0]?.message ||
+          error.response?.data?.message ||
+          "Failed to add product to cart"
+      );
 
       if (error.response?.status === 400) {
         toast.error(error.response.data?.message || "Invalid product data");
@@ -268,7 +267,6 @@ export const useCartStore = create((set, get) => ({
         .user;
 
       if (!user) {
-
         set((prevState) => {
           const newCart = prevState.cart.map((item) =>
             item._id === productId && item.size === size && item.color === color
@@ -284,7 +282,7 @@ export const useCartStore = create((set, get) => ({
 
       const requestData = {
         quantity: Math.max(quantity, 1),
-        size: size || "", 
+        size: size || "",
         color: color || "",
       };
 
@@ -307,7 +305,7 @@ export const useCartStore = create((set, get) => ({
         toast.error(error.response.data?.message || "Cannot update quantity");
       } else if (error.response?.status === 404) {
         toast.error("Product no longer available");
-        await get().getCartItems(); 
+        await get().getCartItems();
       } else {
         toast.error("Unable to update item quantity.");
       }
@@ -336,12 +334,10 @@ export const useCartStore = create((set, get) => ({
         .user;
 
       if (!user) {
-
         const validatedCart = [];
 
         for (const item of cart) {
           try {
-           
             const response = await axios.get(`/products/${item._id}`);
             const product = response.data.product || response.data;
 
@@ -349,7 +345,6 @@ export const useCartStore = create((set, get) => ({
               validatedCart.push(item);
             }
           } catch (error) {
-
             console.log(
               `Product ${item._id} no longer available, removing from cart`
             );
@@ -367,7 +362,6 @@ export const useCartStore = create((set, get) => ({
           );
         }
       } else {
-
         const res = await axios.get("/cart");
         set({ cart: res.data });
         get().calculateTotals();
@@ -385,7 +379,6 @@ export const useCartStore = create((set, get) => ({
     if (!guestCart || guestCart.length === 0) return;
 
     try {
- 
       for (const item of guestCart) {
         const times = item.quantity || 1;
         for (let i = 0; i < times; i++) {
@@ -405,4 +398,4 @@ export const useCartStore = create((set, get) => ({
       console.error("Failed to sync guest cart:", error);
     }
   },
-})); 
+}));

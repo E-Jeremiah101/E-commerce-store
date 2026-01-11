@@ -64,10 +64,18 @@ export const getAuditLogs = async (req, res) => {
       .skip(skip)
       .limit(parseInt(limit))
       .populate("adminId", "firstname lastname email")
-      .lean();
+      .lean();  
 
-    const enrichedLogs = logs.map((log) => ({
+    // Filter and fix invalid timestamps
+    const validLogs = logs.filter(log => {
+      if (!log.timestamp) return false;
+      const date = new Date(log.timestamp);
+      return !isNaN(date.getTime());
+    });
+
+    const enrichedLogs = validLogs.map((log) => ({
       ...log,
+      timestamp: new Date(log.timestamp).toISOString(), // Convert to ISO string for JSON serialization
       actionLabel: ACTION_LABELS[log.action] || log.action,
       entityTypeLabel: ENTITY_TYPE_LABELS[log.entityType] || log.entityType,
     }));

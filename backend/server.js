@@ -30,6 +30,11 @@ import locationRoutes from "./routes/location.routes.js";
 import sitemapRoutes from "./routes/sitemap.route.js";
 import { startOrderArchiveCron } from "./service/orderArchive.service.js";
 import auditLogArchiveJob from "./jobs/auditLogArchive.job.js";
+import {
+  enforceHttps,
+  addSecurityHeaders,
+  validateHttpsConfig,
+} from "./middleware/https.middleware.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -45,17 +50,26 @@ try {
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL, 
+    origin: process.env.CLIENT_URL,
     credentials: true,
   })
 );
 app.set("trust proxy", true);
+
+
+app.use(enforceHttps());
+
+
+app.use(addSecurityHeaders());
+
+app.use(validateHttpsConfig());
+
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
 // SEO-friendly headers
 app.use((req, res, next) => {
-  // Cache control for static assets
+
   if (req.url.match(/\.(js|css|woff|woff2|eot|ttf|otf)$/)) {
     res.set("Cache-Control", "public, max-age=31536000, immutable");
   }
