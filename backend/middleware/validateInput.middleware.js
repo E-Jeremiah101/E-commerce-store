@@ -22,7 +22,7 @@ import Joi from "joi";
 export const validateBody = (schema) => (req, res, next) => {
   const { error, value } = schema.validate(req.body, {
     abortEarly: false,
-    stripUnknown: true,
+    stripUnknown: false,
   });
 
   if (error) {
@@ -33,7 +33,26 @@ export const validateBody = (schema) => (req, res, next) => {
     return res.status(400).json({ success: false, errors: details });
   }
 
-  req.validated = { ...req.validated, body: value };
+  req.body = value;
+  next();
+};
+
+export const validateBodyAuth = (schema) => (req, res, next) => {
+  // Skip stripping unknown for authenticated routes
+  const { error, value } = schema.validate(req.body, {
+    abortEarly: false,
+    stripUnknown: false,
+  });
+
+  if (error) {
+    const details = error.details.map((detail) => ({
+      field: detail.path.join("."),
+      message: detail.message,
+    }));
+    return res.status(400).json({ success: false, errors: details });
+  }
+
+  req.body = value; // Assign directly to body
   next();
 };
 
@@ -160,7 +179,7 @@ export const commonSchemas = {
   orderId: Joi.string()
     .regex(/^[0-9a-fA-F]{24}$/)
     .required()
-    .messages({
+    .messages({  
       "string.pattern.base": "Invalid order ID format",
     }),
 
@@ -314,10 +333,14 @@ export const cartSchemas = {
     quantity: Joi.number().min(1).max(1000).required().messages({
       "number.min": "Quantity must be at least 1",
     }),
+    size: Joi.string().optional().allow("").default(""),
+    color: Joi.string().optional().allow("").default(""),
   }),
 
   remove: Joi.object({
     productId: commonSchemas.productId,
+    size: Joi.string().optional().allow("").default(""),
+    color: Joi.string().optional().allow("").default(""),
   }),
 };
 

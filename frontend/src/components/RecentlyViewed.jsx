@@ -324,12 +324,12 @@ const RecentlyViewed = () => {
                       : "transform 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94)",
                   }}
                 >
-                  {recentlyViewed.slice(0, 12).map((product) => {
+                  {recentlyViewed.slice(0, 12).map((product, index) => {
                     const isSaved = savedProducts[product._id] || false;
 
                     return (
                       <div
-                        key={product._id}
+                        key={`${product._id}-${index}`}
                         className={`${
                           isMobile ? "w-1/2" : isTablet ? "w-1/3" : "w-1/4"
                         } flex-shrink-0 px-2 sm:px-3`}
@@ -345,7 +345,6 @@ const RecentlyViewed = () => {
                                 alt={product.name}
                               />
 
-                              
                               <div className="absolute inset-0 bg-black opacity-10" />
 
                               {/* Out of Stock Overlay */}

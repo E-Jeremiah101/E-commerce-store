@@ -17,7 +17,6 @@ import {
 import { protectRoute } from "../middleware/auth.middleware.js";
 import {
   validateBody,
-  validateParams,
   authSchemas,
 } from "../middleware/validateInput.middleware.js";
 

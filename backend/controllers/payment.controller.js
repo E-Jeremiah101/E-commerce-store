@@ -2827,6 +2827,8 @@ export const createCheckoutSession = async (req, res) => {
 
     const settings = await storeSettings.findOne();
     const storeCurrency = settings?.currency || "NGN";
+    const storeLogo = settings?.logo || "logo";
+    const storeName = settings?.storeName || "Store";
 
     const payload = {
       tx_ref,
@@ -2867,9 +2869,9 @@ export const createCheckoutSession = async (req, res) => {
         reservationId: reservationId,
       },
       customizations: {
-        title: "EcoStore Purchase",
+        title: `${storeName} purchase`,
         description: "Payment for items in your cart",
-        logo: process.env.STORE_LOGO || "https://yourstore.com/logo.png",
+        logo: storeLogo,
       },
     };
 
