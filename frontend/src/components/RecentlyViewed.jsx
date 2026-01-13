@@ -282,9 +282,9 @@ const RecentlyViewed = () => {
           {/* Header */}
           <div className="flex justify-center items-center mb-5">
             <div className="text-center">
-              <h1 className="text-3xl md:text-4xl font-medium tracking-normal mb-5 text-gray-900">
-                Recently Viewed
-              </h1>
+              <h2 className="text-3xl text-center font-light tracking-tight text-gray-900 mb-4">
+                <span className="font-medium">Recently</span> Viewed
+              </h2>
               <div className="h-px w-16 bg-gray-400 mx-auto mb-2"></div>
             </div>
           </div>
@@ -492,8 +492,6 @@ const RecentlyViewed = () => {
                   </button>
                 </>
               )}
-
-        
             </div>
           ) : (
             <div className="text-center py-8">

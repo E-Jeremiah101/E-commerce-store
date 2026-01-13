@@ -9,9 +9,10 @@ import { Link } from "react-router-dom";
 import FAQSection from "../components/FAQSection.jsx";
 import Footer from "../components/Footer.jsx";
 import HeroSlider from "../components/HeroSlider.jsx";
-import OtherFeatures from "../components/OtherFeatures.jsx";
+import ClassicSpinDisplay from "../components/ClassicSpinDisplay.jsx";
 import LandingProducts from "../components/LandingProducts.jsx";
 import { SEO, OrganizationSchema } from "../components/SEO";
+import MiniCartWidget from "../components/MiniCartWidget.jsx";
 import RecentlyViewed from "../components/RecentlyViewed.jsx";
 import BrandStory from "../components/BrandStory.jsx";
 import EditorsPicks from "../components/EditorsPicks.jsx";
@@ -51,8 +52,6 @@ const HomePageContent = () => {
   useEffect(() => {
     fetchFeaturedProducts();
   }, [fetchFeaturedProducts]);
-
-
 
   useEffect(() => {
     const CACHE_KEY = "cached_recommendations";
@@ -163,7 +162,7 @@ const HomePageContent = () => {
 
   return (
     <motion.div
-      className="relative min-h-screen text-white overflow-hidden"
+      className="relative min-h-screen bg-gradient-to-b from-white via-blue-50 to-blue-100 text-gray-900 overflow-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
@@ -184,7 +183,7 @@ const HomePageContent = () => {
 
       {/* HERO SLIDER */}
       <motion.div
-        className="relative pt-2 md:py-0"
+        className="relative pt-2 md:py-0 drop-shadow-xl rounded-2xl overflow-hidden mb-8"
         initial={{ opacity: 0, x: 40 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.2 }}
@@ -193,30 +192,25 @@ const HomePageContent = () => {
       </motion.div>
 
       {/* Desktop Categories */}
-      <div className="hidden md:flex justify-center items-center text-black mb-5 mt-9 look">
-        <ul className="flex flex-wrap justify-center gap-x-7 gap-y-6 px-30 max-w-5xl text-sm text-center tracking-widest">
+      {/* <div className="hidden md:flex justify-center items-center mb-8 mt-9 look">
+        <ul className="flex flex-wrap justify-center gap-x-7 gap-y-6 px-30 max-w-5xl text-base text-center tracking-widest">
           {categories.map((category) => (
             <li key={category.name}>
               <Link to={`/category/${category.name}`}>
-                <button className="hover:text-gray-300 uppercase">
+                <button className="hover:text-blue-600 font-semibold uppercase transition-colors duration-200">
                   {category.name}
                 </button>
               </Link>
             </li>
           ))}
         </ul>
-      </div>
+      </div> */}
 
       {/* Mobile Categories */}
-      <div className="bg-white pb-4 py-6 border-b md:hidden">
+      <div className=" pb-4 py-6  md:hidden">
         <div className="max-w-7xl mx-auto px-4">
           {categories.length > 0 ? (
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide no-scroll">
-              {/* All Categories Button */}
-              <button className="flex-shrink-0 px-4 py-2 bg-black text-white rounded hover:bg-gray-800 transition-colors whitespace-nowrap uppercase">
-                All Products
-              </button>
-
               {/* Category Buttons */}
               {categories.map((category) => (
                 <Link
@@ -224,7 +218,7 @@ const HomePageContent = () => {
                   to={`/category/${category.name}`}
                   className="flex-shrink-0"
                 >
-                  <button className="px-4 rounded py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors whitespace-nowrap uppercase">
+                  <button className="px-4 rounded py-2 bg-white shadow text-blue-700 hover:bg-blue-100 hover:text-blue-900 transition-colors whitespace-nowrap uppercase font-semibold">
                     {category.name}
                   </button>
                 </Link>
@@ -245,28 +239,73 @@ const HomePageContent = () => {
 
       {/* Main Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 root lg:px-25">
-        {recommendations.length > 0 && (
-          <LandingProducts
-            recommendations={recommendations}
-            isLoading={false}
-          />
-        )}
-
-        {/* Other Features */}
-        <OtherFeatures className="look" />
-
+        {/* Featured Products Section */}
         {featuredProducts.length > 0 && (
-          <FeaturedProducts
-            className="look"
-            featuredProducts={featuredProducts}
-          />
+          <div className="mb-16">
+            <div className="bg-white/80 rounded-2xl shadow-lg p-2 md:p-5">
+              <FeaturedProducts
+                className="look"
+                featuredProducts={featuredProducts}
+              />
+            </div>
+          </div>
         )}
-        <BrandStory className="look" />
-        <EditorsPicks className="look" products={recommendations} />
-        <RecentlyViewed className="look" />
-        <FAQSection className="look" />
+
+        {/* Recommendations Section */}
+        {recommendations.length > 0 && (
+          <div className="mb-16">
+            <h2 className="text-3xl text-center font-light tracking-tight text-gray-900 mb-4">
+              <span className="font-medium">Recommended</span> For You
+            </h2>
+            <div className="bg-white/80 rounded-2xl shadow-lg p-3 md:p-5">
+              <LandingProducts
+                recommendations={recommendations}
+                isLoading={false}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Editors Picks Section */}
+        <div className="mb-16">
+          <div className="bg-white/80 rounded-2xl shadow-lg p-2 md:p-5">
+            <EditorsPicks className="look" products={recommendations} />
+          </div>
+        </div>
+
+        {/* Brand Story Section */}
+        <div className="mb-16">
+          <div className="bg-white/80 rounded-2xl shadow-lg p-2 md:p-5">
+            <BrandStory className="look" />
+          </div>
+        </div>
+
+        {/* classic display Section */}
+        <div className="mb-16">
+          <div className="bg-white/80 rounded-2xl shadow-lg p-6">
+            <ClassicSpinDisplay className="look" />
+          </div>
+        </div>
+
+        {/* Recently Viewed Section */}
+        <div className="mb-16">
+          <div className="bg-white/80 rounded-2xl shadow-lg p-2 md:p-5">
+            <RecentlyViewed className="look" />
+          </div>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mb-20">
+          <h2 className="text-3xl font-extrabold text-gray-700 mb-6 text-center tracking-tight drop-shadow">
+            Frequently Asked Questions
+          </h2>
+          <div className="bg-white/80 rounded-2xl shadow-lg p-6">
+            <FAQSection className="look" />
+          </div>
+        </div>
       </div>
 
+      <MiniCartWidget />
       <Footer />
     </motion.div>
   );

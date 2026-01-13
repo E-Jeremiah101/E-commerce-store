@@ -54,18 +54,6 @@ const Navbar = () => {
       fetchCategories();
     }, []);
 
-  // const categories = [
-  //   { name: "Fragrance", path: "/category/Fragrance" },
-  //   { name: "T-Shirts", path: "/category/t-shirts" },
-  //   { name: "Suits & Blazers", path: "/category/suits&blazers" },
-  //   { name: "Jackets & Outerwear", path: "/category/Jackets&Outerwear" },
-  //   { name: "Underwear & Socks", path: "/category/underwear&socks" },
-  //   { name: "Footwear", path: "/category/footwears" },
-  //   { name: "Sets & Co-ords", path: "/category/sets&cords" },
-  //   { name: "Accessories", path: "/category/Accessories" },
-  //   { name: "Bottoms", path: "/category/bottoms" },
-  // ];
-
   // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
@@ -230,7 +218,7 @@ const Navbar = () => {
                     className="px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors font-medium"
                     onClick={handleLinkClick}
                   >
-                    Orders
+                    My Orders
                   </Link>
                 </>
               )}

@@ -603,7 +603,7 @@ export const getRecommendedProducts = async (req, res) => {
         },
       },
       {
-        $sample: { size: 16 },
+        $sample: { size: 12 },
       },
       {
         $project: {

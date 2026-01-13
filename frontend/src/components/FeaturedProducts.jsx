@@ -261,14 +261,11 @@ const FeaturedProducts = ({ featuredProducts }) => {
 
   return (
     <ScrollReveal direction="up" delay={0.6} duration={1}>
-      <div className="py-19 mt-5">
+      <div className="py-19">
         <div className="container mx-auto px-1 sm:px-4">
-          <div className="text-center">
-            <h1 className="text-3xl md:text-4xl font-medium tracking-normal mb-5 text-gray-900">
-              Just For You
-            </h1>
-            <div className="h-px w-16 bg-gray-400 mx-auto mb-6"></div>
-          </div>
+          <h2 className="text-3xl font-light tracking-tight text-gray-900 mb-9">
+            <span className="font-medium">Featured</span> Products
+          </h2>
 
           <div className="relative">
             <div

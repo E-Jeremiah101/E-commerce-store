@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "../css/ClassicSpinDisplay.css";
-import axios from "../lib/axios";
+import axios from "../lib/axios.js";
 import ScrollReveal from "./ScrollReveal.jsx";
-const OtherFeatures = () => {
+const ClassicSpinDisplay = () => {
   const [recommendations, setRecommendations] = useState([]);
 
   useEffect(() => {
@@ -20,7 +20,6 @@ const OtherFeatures = () => {
     fetchRecommendations();
   }, []);
 
-  // Fallback images in case we don't have enough recommendations
   const fallbackImages = [
     "/hat-fashion.jpg",
     "/pack-bag.jpg",
@@ -44,16 +43,32 @@ const OtherFeatures = () => {
 
   return (
     <ScrollReveal direction="up" delay={0.5} duration={1}>
-      <div className="my-30">
-        <div className="text-black flex justify-center items-center my-14 lg:mt-25 look">
-          <div className="text-center mb-12">
-            <h1 className="text-3xl md:text-4xl font-medium tracking-normal mb-5 text-gray-900">
-              CLASSIC WEARS
+      <div className="mb-30 my-10">
+        <div className="text-center px-4 mb-30">
+          <div className="max-w-3xl mx-auto">
+            <div className="inline-flex items-center justify-center space-x-3 mb-8">
+              <div className="h-px w-12 bg-gradient-to-r from-transparent to-gray-300"></div>
+              <span className="text-xs font-semibold tracking-[0.3em] text-gray-500 uppercase">
+                Premium Collection
+              </span>
+              <div className="h-px w-12 bg-gradient-to-l from-transparent to-gray-300"></div>
+            </div>
+
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-light tracking-tight text-gray-900 mb-6">
+              Classic{" "}
+              <span className="font-medium italic text-gray-800">Wears</span>
             </h1>
-            <div className="h-px w-16 bg-gray-400 mx-auto mb-6"></div>
-            <p className="text-sm md:text-base text-gray-500 tracking-widest uppercase max-w-sm mx-auto">
-              Stay Relaxed, Stay Stylish: Redefine Comfort with the Perfect
-              Style Fit!
+
+            <div className="h-0.5 w-20 bg-gradient-to-r from-gray-300 via-gray-400 to-gray-300 mx-auto mb-8"></div>
+
+            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+              Where timeless elegance meets modern comfort. Redefine your style
+              with
+              <span className="font-medium text-gray-800">
+                {" "}
+                perfectly fitted classics
+              </span>
+              that move with you.
             </p>
           </div>
         </div>
@@ -78,4 +93,4 @@ const OtherFeatures = () => {
   );
 };
 
-export default OtherFeatures;
+export default ClassicSpinDisplay;
