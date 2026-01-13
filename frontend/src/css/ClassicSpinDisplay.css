@@ -1,17 +1,24 @@
-
-.box-head{
-   display: flex;
+.box-head {
+  display: flex;
   justify-content: center;
   align-items: center;
-}
-.box {
-  position: relative;
-  width: 200px;
-  height: 200px;
-  transform-style: preserve-3d;
-  animation: animate 20s linear infinite;
+  perspective: 1200px;
+  min-height: 500px; 
+  padding: 20px; 
+  overflow: hidden;
 }
 
+
+.box {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  transform-style: preserve-3d;
+  animation: animate 20s linear infinite;
+  transition: all 0.3s ease;
+}
+
+/* Animation */
 @keyframes animate {
   0% {
     transform: perspective(1000px) rotateY(0deg);
@@ -29,17 +36,132 @@
   height: 100%;
   transform-origin: center;
   transform-style: preserve-3d;
-  transform: rotateY(calc(var(--i) * 45deg)) translateZ(350px);
-  -webkit-box-reflect: below 0px linear-gradient(transparent, transparent, #0004);
+  -webkit-box-reflect: below 0px linear-gradient(transparent, transparent, rgba(0, 0, 0, 0.1));
 }
 
+
+.box span {
+  transform: rotateY(calc(var(--i) * 45deg)) translateZ(350px);
+}
+
+/* Images */
 .box span img {
   position: absolute;
   top: 0;
-  left: 0;
-  width: 80%;
+  left: 10%;
+  width: 100%;
   height: 100%;
   border: 2px solid white;
   border-radius: 10px;
   object-fit: cover;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Tablet (768px and below) */
+@media (max-width: 885px) {
+  .box-head {
+    min-height: 400px;
+    padding: 15px;
+  }
+  
+  .box {
+    width: 160px;
+    height: 160px;
+  }
+  
+  .box span {
+    transform: rotateY(calc(var(--i) * 45deg)) translateZ(300px);
+  }
+  
+  .box span img {
+    width: 85%; 
+    left: 7.5%; 
+  }
+}
+
+/* Mobile (480px and below) */
+@media (max-width: 480px) {
+  .box-head {
+    min-height: 350px;
+    padding: 10px;
+  }
+  
+  .box {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .box span {
+    transform: rotateY(calc(var(--i) * 45deg)) translateZ(250px);
+  }
+  
+  .box span img {
+    width: 90%; 
+    left: 5%;
+    border: 1.5px solid white; 
+    border-radius: 8px; 
+  }
+  
+ 
+  .box {
+    animation: animate 25s linear infinite; 
+  }
+}
+
+/* Small Mobile (360px and below) */
+@media (max-width: 360px) {
+  .box-head {
+    min-height: 300px;
+  }
+  
+  .box {
+    width: 130px;
+    height: 130px;
+  }
+  
+  .box span {
+    transform: rotateY(calc(var(--i) * 45deg)) translateZ(220px);
+  }
+  
+  .box span img {
+    width: 95%;
+    left: 2.5%;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .box {
+    animation-play-state: running;
+  }
+  
+  /* Add pause on tap for mobile */
+  .box:active {
+    animation-play-state: paused;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .box {
+    animation: none;
+    transform: perspective(1000px) rotateY(0deg);
+  }
+
+  .box span {
+    transform: rotateY(calc(var(--i) * 45deg)) translateZ(250px);
+  }
+}
+
+@media (max-height: 600px) and (orientation: landscape) {
+  .box-head {
+    min-height: 250px;
+  }
+  
+  .box {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .box span {
+    transform: rotateY(calc(var(--i) * 45deg)) translateZ(200px);
+  }
 }
