@@ -11,22 +11,33 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
-
-const logRefundAction = async (req, action, orderId, refundId = null, changes = {}, additionalInfo = "") => {
+const logRefundAction = async (
+  req,
+  action,
+  orderId,
+  refundId = null,
+  changes = {},
+  additionalInfo = ""
+) => {
   try {
     if (!req.user || req.user.role !== "admin") return;
-    
-    const order = await Order.findById(orderId).populate("user", "firstname lastname email");
+
+    const order = await Order.findById(orderId).populate(
+      "user",
+      "firstname lastname email"
+    );
     if (!order) return;
-    
+
     const refund = refundId ? order.refunds.id(refundId) : null;
-    const refundInfo = refund ? {
-      refundId: refund._id,
-      amount: refund.amount,
-      product: refund.productSnapshot?.name || "Unknown Product",
-      status: refund.status,
-    } : null;
-    
+    const refundInfo = refund
+      ? {
+          refundId: refund._id,
+          amount: refund.amount,
+          product: refund.productSnapshot?.name || "Unknown Product",
+          status: refund.status,
+        }
+      : null;
+
     await AuditLogger.log({
       adminId: req.user._id,
       adminName: `${req.user.firstname} ${req.user.lastname}`,
@@ -219,20 +230,19 @@ const getEmailStyles = () => `
 `;
 export const getAllRefundRequests = async (req, res) => {
   try {
-
     const ordersWithRefunds = await Order.find({
-      "refunds.0": { $exists: true }
+      "refunds.0": { $exists: true },
     })
-    .populate("user", "firstname lastname email")
-    .populate("products.product", "name image price")
-    .sort({ createdAt: -1 });
+      .populate("user", "firstname lastname email")
+      .populate("products.product", "name image price")
+      .sort({ createdAt: -1 });
 
     const allRefunds = [];
-    
-    ordersWithRefunds.forEach(order => {
-      order.refunds.forEach(refund => {
-        const product = order.products.find(p => 
-          p.product?._id?.toString() === refund.product?.toString()
+
+    ordersWithRefunds.forEach((order) => {
+      order.refunds.forEach((refund) => {
+        const product = order.products.find(
+          (p) => p.product?._id?.toString() === refund.product?.toString()
         );
 
         allRefunds.push({
@@ -242,22 +252,31 @@ export const getAllRefundRequests = async (req, res) => {
           user: {
             firstname: order.user?.firstname,
             lastname: order.user?.lastname,
-            email: order.user?.email
+            email: order.user?.email,
           },
-          productName: refund.productSnapshot?.name || product?.name || "Deleted Product",
-          productImage: refund.productSnapshot?.image || product?.image || "/images/deleted.png",
-          productPrice: refund.productSnapshot?.price || product?.price || refund.amount / refund.quantity,
+          productName:
+            refund.productSnapshot?.name || product?.name || "Deleted Product",
+          productImage:
+            refund.productSnapshot?.image ||
+            product?.image ||
+            "/images/deleted.png",
+          productPrice:
+            refund.productSnapshot?.price ||
+            product?.price ||
+            refund.amount / refund.quantity,
           amount: refund.amount,
           reason: refund.reason,
           quantity: refund.quantity,
           status: refund.status,
           requestedAt: refund.requestedAt,
-          processedAt: refund.processedAt
+          processedAt: refund.processedAt,
         });
       });
     });
 
-    allRefunds.sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
+    allRefunds.sort(
+      (a, b) => new Date(b.requestedAt) - new Date(a.requestedAt)
+    );
 
     if (req.user && req.user.role === "admin") {
       await AuditLogger.log({
@@ -282,13 +301,11 @@ export const getAllRefundRequests = async (req, res) => {
     }
 
     res.json(allRefunds);
-
   } catch (error) {
     console.error("Get refunds error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 
 // const getRequestedEmailContent = (order, refund, settings, formatter) => {
 //   const productSnapshot = refund.productSnapshot || {};
@@ -738,7 +755,6 @@ const getProcessingEmailContent = (order, refund, settings, formatter) => {
 `;
 };
 
-
 const getApprovedEmailContent = (order, refund, settings, formatter) => {
   const productSnapshot = refund.productSnapshot || {};
   const refundDate = refund.processedAt || new Date();
@@ -900,7 +916,6 @@ const getApprovedEmailContent = (order, refund, settings, formatter) => {
 </html>
 `;
 };
-
 
 const getRejectedEmailContent = (
   order,
@@ -1070,9 +1085,19 @@ const getRejectedEmailContent = (
 `;
 };
 
-export const sendRefundRequestedEmail = async (order, refund, settings, formatter) => {
+export const sendRefundRequestedEmail = async (
+  order,
+  refund,
+  settings,
+  formatter
+) => {
   try {
-    const emailContent = getRequestedEmailContent(order, refund, settings, formatter);
+    const emailContent = getRequestedEmailContent(
+      order,
+      refund,
+      settings,
+      formatter
+    );
     await sendEmail({
       to: order.user.email,
       subject: `Refund Request Received - ${settings?.storeName}`,
@@ -1084,9 +1109,19 @@ export const sendRefundRequestedEmail = async (order, refund, settings, formatte
   }
 };
 
-export const sendRefundProcessingEmail = async (order, refund, settings, formatter) => {
+export const sendRefundProcessingEmail = async (
+  order,
+  refund,
+  settings,
+  formatter
+) => {
   try {
-    const emailContent = getProcessingEmailContent(order, refund, settings, formatter);
+    const emailContent = getProcessingEmailContent(
+      order,
+      refund,
+      settings,
+      formatter
+    );
     await sendEmail({
       to: order.user.email,
       subject: `Refund Processing Started - ${settings?.storeName}`,
@@ -1098,9 +1133,19 @@ export const sendRefundProcessingEmail = async (order, refund, settings, formatt
   }
 };
 
-export const sendRefundApprovedEmail = async (order, refund, settings, formatter) => {
+export const sendRefundApprovedEmail = async (
+  order,
+  refund,
+  settings,
+  formatter
+) => {
   try {
-    const emailContent = getApprovedEmailContent(order, refund, settings, formatter);
+    const emailContent = getApprovedEmailContent(
+      order,
+      refund,
+      settings,
+      formatter
+    );
     await sendEmail({
       to: order.user.email,
       subject: `Refund Successfully Completed - ${settings?.storeName}`,
@@ -1112,9 +1157,21 @@ export const sendRefundApprovedEmail = async (order, refund, settings, formatter
   }
 };
 
-export const sendRefundRejectedEmail = async (order, refund, settings, formatter, reason) => {
+export const sendRefundRejectedEmail = async (
+  order,
+  refund,
+  settings,
+  formatter,
+  reason
+) => {
   try {
-    const emailContent = getRejectedEmailContent(order, refund, settings, formatter, reason);
+    const emailContent = getRejectedEmailContent(
+      order,
+      refund,
+      settings,
+      formatter,
+      reason
+    );
     await sendEmail({
       to: order.user.email,
       subject: `Refund Request Update - ${settings?.storeName}`,
@@ -1125,7 +1182,7 @@ export const sendRefundRejectedEmail = async (order, refund, settings, formatter
     console.error("Refund rejected email failed:", emailErr);
   }
 };
- 
+
 export const requestRefund = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -1233,7 +1290,6 @@ export const requestRefund = async (req, res) => {
     let discountedRefundAmount = refundProduct.price * refundQuantity;
 
     if (order.discount > 0 && order.subtotal > 0) {
-
       const productTotal = refundProduct.price * refundProduct.quantity;
       const productProportion = productTotal / order.subtotal;
 
@@ -1410,7 +1466,6 @@ export const approveRefund = async (req, res) => {
       });
     }
 
-    
     const oldRefundStatus = refund.status;
     refund.status = "Processing";
     refund.processedAt = new Date();
@@ -1420,7 +1475,6 @@ export const approveRefund = async (req, res) => {
     } catch (saveError) {
       console.error("Failed to save order:", saveError);
     }
-
 
     const refundData = {
       id: order.flutterwaveTransactionId,
@@ -1447,6 +1501,7 @@ export const approveRefund = async (req, res) => {
         const isCompleted =
           refundStatus === "completed" ||
           refundStatus === "successful" ||
+          refundStatus === "processing" ||
           flutterwaveResponse.data?.status === "successful";
 
         if (isCompleted) {
@@ -1465,13 +1520,11 @@ export const approveRefund = async (req, res) => {
             order.status = "Partially Refunded";
           }
         } else {
-        
           refund.status = "Processing";
         }
 
         await order.save();
       } else if (flutterwaveResponse.status === "error") {
-  
         refund.status = "Rejected";
         refund.errorDetails = flutterwaveResponse.message;
         refund.processedAt = new Date();
@@ -1511,29 +1564,29 @@ export const approveRefund = async (req, res) => {
       await sendRefundProcessingEmail(order, refund, settings, formatter);
     }
 
-     try {
-       await logRefundAction(
-         req,
-         refund.status === "Approved"
-           ? "REFUND_COMPLETED"
-           : "REFUND_PROCESSING_STARTED",
-         orderId,
-         refundId,
-         {
-           before: { refundStatus: oldRefundStatus },
-           after: {
-             refundStatus: refund.status,
-             flutterwaveRefundId: refund.flutterwaveRefundId,
-           },
-         },
-         `Refund ${
-           refund.status === "Approved" ? "completed" : "processing"
-         }. Amount: ${formatter.format(refund.amount)}`
-       );
-       console.log("Audit log saved successfully");
-     } catch (auditError) {
-       console.error("Audit log failed (non-critical):", auditError);
-     }
+    try {
+      await logRefundAction(
+        req,
+        refund.status === "Approved"
+          ? "REFUND_COMPLETED"
+          : "REFUND_PROCESSING_STARTED",
+        orderId,
+        refundId,
+        {
+          before: { refundStatus: oldRefundStatus },
+          after: {
+            refundStatus: refund.status,
+            flutterwaveRefundId: refund.flutterwaveRefundId,
+          },
+        },
+        `Refund ${
+          refund.status === "Approved" ? "completed" : "processing"
+        }. Amount: ${formatter.format(refund.amount)}`
+      );
+      console.log("Audit log saved successfully");
+    } catch (auditError) {
+      console.error("Audit log failed (non-critical):", auditError);
+    }
 
     return res.json({
       success: true,
@@ -1560,9 +1613,7 @@ export const approveRefund = async (req, res) => {
 };
 
 export const flutterwaveWebhook = async (req, res) => {
-
   try {
-  
     const signature = req.headers["verif-hash"];
     const secretHash = process.env.FLW_WEBHOOK_HASH;
 
@@ -1576,18 +1627,14 @@ export const flutterwaveWebhook = async (req, res) => {
     const { id, status, transaction_ref, amount, flw_ref, tx_ref } =
       event.data || {};
 
-    console.log(
-      `Processing: Event=${event.event}, ID=${id}, Status=${status}`
-    );
+    console.log(`Processing: Event=${event.event}, ID=${id}, Status=${status}`);
 
     res.status(200).json({ success: true });
 
     setTimeout(async () => {
       try {
-
         let order, refund;
 
-    
         if (id) {
           order = await Order.findOne({
             "refunds.flutterwaveRefundId": id.toString(),
@@ -1631,8 +1678,6 @@ export const flutterwaveWebhook = async (req, res) => {
         }
 
         if (!order && amount) {
-
-
           const orders = await Order.find({
             "refunds.status": "Processing",
           });
@@ -1658,14 +1703,11 @@ export const flutterwaveWebhook = async (req, res) => {
           return;
         }
 
-
-
         const finalStates = ["Approved", "Rejected", "Failed"];
         if (finalStates.includes(refund.status)) {
           console.log(` Refund already finalized as: ${refund.status}`);
           return;
         }
-
 
         if (status === "successful" || event.event === "refund.completed") {
           refund.status = "Approved";
@@ -1688,7 +1730,6 @@ export const flutterwaveWebhook = async (req, res) => {
           refund.errorDetails = event.data?.reason || "Refund failed";
           console.log(`Updated status to Rejected`);
         } else {
-          
           console.log(`webhook status is ${status}, keeping as Processing`);
           return;
         }
@@ -1732,14 +1773,12 @@ export const flutterwaveWebhook = async (req, res) => {
         console.error(" Webhook processing error:", error.message);
         console.error(error.stack);
       }
-    }, 1000); 
+    }, 1000);
   } catch (error) {
     console.error(" WEBHOOK ERROR:", error.message);
     res.status(500).send("Webhook processing error");
   }
 };
-
- 
 
 export const rejectRefund = async (req, res) => {
   try {
@@ -1779,7 +1818,7 @@ export const rejectRefund = async (req, res) => {
     refund.processedAt = new Date();
     refund.adminRejected = true;
     refund.errorDetails = rejectionReason;
-    refund.rejectionSource = "admin"; 
+    refund.rejectionSource = "admin";
     refund.rejectionReason = rejectionReason;
 
     await order.save();
@@ -1814,13 +1853,11 @@ export const rejectRefund = async (req, res) => {
       success: true,
       message: "Refund rejected successfully",
     });
-
   } catch (error) {
     console.error("Reject refund error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 
 export const retryWebhook = async (req, res) => {
   try {
@@ -1886,17 +1923,17 @@ export const retryWebhook = async (req, res) => {
 export const checkRefundStatus = async (req, res) => {
   try {
     const { orderId, refundId } = req.params;
-    
+
     const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
-    
+
     const refund = order.refunds.id(refundId);
     if (!refund) {
       return res.status(404).json({ message: "Refund not found" });
     }
-    
+
     res.json({
       refundId: refund._id,
       status: refund.status,
@@ -1912,16 +1949,15 @@ export const checkRefundStatus = async (req, res) => {
   }
 };
 
-
 export const pollRefundStatus = async (req, res) => {
   try {
     const { orderId, refundId } = req.params;
-    
+
     const order = await Order.findById(orderId);
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }
-    
+
     const refund = order.refunds.id(refundId);
     if (!refund) {
       return res.status(404).json({ message: "Refund not found" });
@@ -1937,14 +1973,14 @@ export const pollRefundStatus = async (req, res) => {
 
         if (refundDetails.status === "success") {
           const flutterwaveStatus = refundDetails.data?.status?.toLowerCase();
-          const isCompleted = flutterwaveStatus === "completed" || 
-                             flutterwaveStatus === "successful";
+          const isCompleted =
+            flutterwaveStatus === "completed" ||
+            flutterwaveStatus === "successful";
 
           if (isCompleted && refund.status !== "Approved") {
-          
             refund.status = "Approved";
             refund.processedAt = new Date();
-            
+
             order.totalRefunded = (order.totalRefunded || 0) + refund.amount;
 
             const approvedRefunds = order.refunds.filter(
@@ -1965,7 +2001,7 @@ export const pollRefundStatus = async (req, res) => {
               style: "currency",
               currency: settings.currency,
             });
-            
+
             await sendRefundApprovedEmail(order, refund, settings, formatter);
 
             return res.json({
@@ -1992,7 +2028,3 @@ export const pollRefundStatus = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
-
-
-
