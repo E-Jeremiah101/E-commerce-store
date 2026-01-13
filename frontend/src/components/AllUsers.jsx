@@ -682,6 +682,8 @@ const getOrderCancelledRate = (user) => {
                                 </span>
                               </div>
 
+                              {user.orderStats?.cancelled > 0 &&
+                              <>
                               <div className="w-full bg-gray-200 rounded-full h-1.5">
                                 <div
                                   className="bg-red-600 h-1.5 rounded-full transition-all duration-300"
@@ -691,6 +693,7 @@ const getOrderCancelledRate = (user) => {
                                 ></div>
                               </div>
 
+                              
                               <div className="flex justify-between items-center">
                                 <span className="text-xs font-medium text-gray-700">
                                   Cancelled Rate
@@ -699,6 +702,9 @@ const getOrderCancelledRate = (user) => {
                                   {getOrderCancelledRate(user)}%
                                 </span>
                               </div>
+                              </>
+                              }
+                              
                             </>
                           )}
 
@@ -791,7 +797,6 @@ const getOrderCancelledRate = (user) => {
                                   toast.success(
                                     ` ${user.couponStats.coupons[0]?.code}`
                                   );
-                                  // You can implement a modal here to show coupon details
                                 }}
                                 className="w-full text-xs text-green-600 hover:text-green-800 font-medium py-1 border border-green-100 rounded hover:bg-green-50 transition"
                               >
@@ -1153,11 +1158,9 @@ const getOrderCancelledRate = (user) => {
                         </div>
 
                         <div className="mt-3 flex items-center justify-between">
-                          <span className="text-sm text-gray-500">
-                            Stock: {item.product?.stock || "N/A"}
-                          </span>
+                         
                           <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
-                            ID: {item.product?._id?.slice(-6) || "N/A"}
+                            Product ID: {item.product?._id || "N/A"}
                           </span>
                         </div>
                       </div>

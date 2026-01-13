@@ -5,6 +5,7 @@ import { useCartStore } from "../stores/useCartStore";
 import axios from "../lib/axios";
 import Confetti from "react-confetti";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
+import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 
 const PurchaseSuccessPageContent = () => {
   const [isProcessing, setIsProcessing] = useState(true);
@@ -14,6 +15,7 @@ const PurchaseSuccessPageContent = () => {
   const { clearCart } = useCartStore();
   const navigate = useNavigate();
   const hasProcessed = useRef(false);
+  const { settings } = useStoreSettings();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -142,7 +144,7 @@ const PurchaseSuccessPageContent = () => {
           </h1>
 
           <p className="text-gray-300 text-center mb-2">
-            Thank you for your order on Eco~Store!
+            Thank you for your order on {settings?.storeName}!
           </p>
 
           <p className="text-emerald-400 text-center text-sm mb-6">

@@ -22,8 +22,6 @@ const router = express.Router();
 router.post(
   "/:orderId/request",
   protectRoute,
-  validateParams(refundSchemas.create),
-  validateBody(refundSchemas.create),
   requestRefund
 );
 

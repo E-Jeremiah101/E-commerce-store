@@ -261,8 +261,8 @@ const HomePageContent = () => {
             featuredProducts={featuredProducts}
           />
         )}
-        <BrandStory />
-        <EditorsPicks />
+        <BrandStory className="look" />
+        <EditorsPicks className="look" products={recommendations} />
         <RecentlyViewed className="look" />
         <FAQSection className="look" />
       </div>

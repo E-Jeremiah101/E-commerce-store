@@ -8,6 +8,7 @@ import AuditLogger from "../lib/auditLogger.js";
 import { ENTITY_TYPES, ACTIONS } from "../constants/auditLog.constants.js";
 import storeSettings from "../models/storeSettings.model.js";
 import { restoreStockForCancelledOrder } from "./inventory.controller.js";
+import mongoose from "mongoose";
 
 
 const logOrderAction = async (
@@ -433,41 +434,158 @@ export const supportRecoverOrder = async (req, res) => {
       }
     }
 
-    if (!payment && flutterwave_ref && flutterwave_ref.trim() !== "") {
-      console.log("Searching by Flutterwave Reference:", flutterwave_ref);
-      searchMethod = "flutterwave_reference";
-      referenceUsed = flutterwave_ref;
 
-      try {
-        if (flutterwave_ref.startsWith("JayyTech_")) {
-          try {
-            const verificationResponse = await flw.Transaction.verify({
-              id: flutterwave_ref.trim(),
-            });
-            if (
-              verificationResponse.data &&
-              verificationResponse.data.status === "successful"
-            ) {
-              payment = verificationResponse.data;
+      if (!payment && flutterwave_ref && flutterwave_ref.trim() !== "") {
+        console.log("Searching by Flutterwave Reference:", flutterwave_ref);
+        searchMethod = "flutterwave_reference";
+        referenceUsed = flutterwave_ref;
+
+        try {
+          const ref = flutterwave_ref.trim();
+          if (/^\d+$/.test(ref)) {
+            try {
+              console.log(
+                "Trying verification with transaction ID as string:",
+                ref
+              );
+
+              const transactionId = ref.length <= 15 ? parseInt(ref) : ref;
+
+              const response = await flw.Transaction.verify({
+                id: transactionId,
+              });
+
+              if (response.status === "success" && response.data) {
+                payment = response.data;
+                console.log(
+                  " Found payment via Flutterwave Reference verification"
+                );
+              } else {
+                console.log(" Verification response status:", response.status);
+              }
+            } catch (verifyError) {
+              console.log(" Verification failed:", verifyError.message);
             }
-          } catch (error) {}
-        } else if (/^\d+$/.test(flutterwave_ref)) {
-          try {
-            const verificationResponse = await flw.Transaction.verify({
-              id: parseInt(flutterwave_ref.trim()),
-            });
-            if (
-              verificationResponse.data &&
-              verificationResponse.data.status === "successful"
-            ) {
-              payment = verificationResponse.data;
+          }
+
+          if (!payment) {
+            try {
+              console.log("Trying to fetch by flw_ref:", ref);
+
+              const response = await flw.Transaction.fetch({ flw_ref: ref });
+
+              if (response.data && response.data.length > 0) {
+                const successfulPayments = response.data.filter(
+                  (p) => p.status === "successful"
+                );
+
+                if (successfulPayments.length > 0) {
+                  payment = successfulPayments[0];
+                  console.log(" Found payment via flw_ref parameter");
+                }
+              }
+            } catch (fetchError) {
+              console.log(" Fetch by flw_ref failed:", fetchError.message);
             }
-          } catch (error) {}
+          }
+
+          if (!payment) {
+            try {
+              console.log("Trying to fetch by tx_ref:", ref);
+
+              const response = await flw.Transaction.fetch({ tx_ref: ref });
+
+              if (response.data && response.data.length > 0) {
+                const successfulPayments = response.data.filter(
+                  (p) => p.status === "successful"
+                );
+
+                if (successfulPayments.length > 0) {
+                  payment = successfulPayments[0];
+                  console.log(" Found payment via tx_ref parameter");
+                }
+              }
+            } catch (fetchError) {
+              console.log(" Fetch by tx_ref failed:", fetchError.message);
+            }
+          }
+
+          if (!payment) {
+            try {
+              console.log("Searching through recent transactions...");
+
+              const fromDate = new Date();
+              fromDate.setDate(fromDate.getDate() - 30);
+
+              const toDate = new Date();
+
+              const formatDate = (date) => {
+                return date.toISOString().split("T")[0];
+              };
+
+              const response = await flw.Transaction.fetch({
+                from: formatDate(fromDate),
+                to: formatDate(toDate),
+                
+              });
+
+              if (response.data && response.data.length > 0) {
+                const foundPayment = response.data.find((tx) => {
+                  if (!tx) return false;
+
+                  const fieldsToCheck = [
+                    tx.tx_ref,
+                    tx.flw_ref,
+                    tx.id?.toString(),
+                    tx.reference,
+                    tx.order_ref,
+                  ].filter(Boolean);
+
+                  return fieldsToCheck.some(
+                    (field) => field.toString() === ref
+                  );
+                });
+
+                if (foundPayment && foundPayment.status === "successful") {
+                  payment = foundPayment;
+                  console.log(" Found payment in recent transactions");
+                }
+              }
+            } catch (searchError) {
+              console.log(
+                " Recent transactions search failed:",
+                searchError.message
+              );
+            }
+          }
+          if (payment && !exactMatchFound) {
+            console.log(
+              "WARNING: Found a payment but not sure it's the exact match"
+            );
+            console.log(
+              "Payment found has ref:",
+              payment.tx_ref || payment.flw_ref || payment.id
+            );
+            console.log("Looking for ref:", ref);
+
+            if (
+              payment.tx_ref !== ref &&
+              payment.flw_ref !== ref &&
+              payment.id?.toString() !== ref
+            ) {
+              console.log("Resetting payment - not an exact match");
+              payment = null;
+            }
+          }
+      
+        } catch (error) {
+          console.error(
+            "Flutterwave Reference search completely failed:",
+            error.message
+          );
         }
-      } catch (error) {
-        console.error("Flutterwave Reference search failed:", error.message);
       }
-    }
+
 
     if (!payment) {
       return res.status(404).json({
@@ -1296,6 +1414,7 @@ const reduceVariantStock = async (orderItems) => {
 
 export const createOrder = async (req, res) => {
   try {
+     
     const user = await User.findById(req.user._id).populate(
       "cartItems.product"
     );
@@ -1405,7 +1524,6 @@ export const createOrder = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-import mongoose from "mongoose";
 
 export const getOrderById = async (req, res) => {
   try {

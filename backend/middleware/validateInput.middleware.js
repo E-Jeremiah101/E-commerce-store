@@ -98,6 +98,24 @@ export const validateParams = (schema) => (req, res, next) => {
   next();
 };
 
+
+export const validateOrderInput = (req) => {
+  const errors = [];
+
+  if (req.body.couponCode && typeof req.body.couponCode !== "string") {
+    errors.push("Invalid coupon code format");
+  }
+
+  if (
+    req.body.paymentMethod &&
+    !["card", "bank_transfer", "wallet"].includes(req.body.paymentMethod)
+  ) {
+    errors.push("Invalid payment method");
+  }
+
+  return errors;
+};
+
 // ============================================================================
 // COMMON FIELD SCHEMAS (Reusable across multiple endpoints)
 // ============================================================================
@@ -371,10 +389,54 @@ export const couponSchemas = {
 };
 
 // Refund schemas
+// Refund schemas
 export const refundSchemas = {
+  // For request body validation (when creating a refund)
   create: Joi.object({
+    productId: Joi.alternatives()
+      .try(
+        // Regular MongoDB ObjectId
+        Joi.string().regex(/^[0-9a-fA-F]{24}$/),
+        // Deleted product pattern: "deleted-{orderId}-{name}-{price}"
+        Joi.string().pattern(/^deleted-[a-zA-Z0-9_-]+$/)
+      )
+      .required()
+      .messages({
+        'any.required': 'Product ID is required',
+        'alternatives.match': 'Invalid product ID format',
+      }),
+    quantity: Joi.number().min(1).max(100).optional().default(1).messages({
+      'number.min': 'Quantity must be at least 1',
+      'number.max': 'Quantity cannot exceed 100',
+    }),
+    reason: Joi.string().min(5).max(500).trim().required().messages({
+      'string.empty': 'Reason is required',
+      'string.min': 'Reason must be at least 5 characters',
+      'string.max': 'Reason cannot exceed 500 characters',
+    }),
+  }).unknown(true), // Allow other fields if needed
+
+  // For URL parameters validation (orderId in URL)
+  createParams: Joi.object({
     orderId: commonSchemas.orderId,
-    reason: Joi.string().max(500).trim().required(),
+  }),
+
+  // For approving/rejecting refunds (both params and body)
+  refundActionParams: Joi.object({
+    orderId: commonSchemas.orderId,
+    refundId: Joi.string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .required()
+      .messages({
+        'string.pattern.base': 'Invalid refund ID format',
+      }),
+  }),
+
+  rejectBody: Joi.object({
+    reason: Joi.string().min(5).max(500).trim().required().messages({
+      'string.empty': 'Rejection reason is required',
+      'string.min': 'Reason must be at least 5 characters',
+    }),
   }),
 
   getById: Joi.object({

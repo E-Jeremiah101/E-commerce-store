@@ -1,10 +1,14 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, XCircle } from "lucide-react";
+import { ArrowRight, XCircle, Mail } from "lucide-react";
 import { Link } from "react-router-dom";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
+import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 
 const PurchaseCancelPageContent = () => {
+  const {settings} = useStoreSettings()
+  const supportEmail = settings?.supportEmail || settings?.phoneNumber;
+
   return (
     <div className="h-screen w-screen bg-gray-700 flex items-center justify-center px-4">
       <motion.div
@@ -27,10 +31,20 @@ const PurchaseCancelPageContent = () => {
           </p>
 
           <div className="bg-gray-700 rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-200 text-center">
+            <p className="text-sm text-gray-200 text-center mb-3">
               If you encountered any issues during the checkout process, please
               don&apos;t hesitate to contact our support team.
             </p>
+
+            <div className="flex items-center justify-center gap-2">
+              <Mail size={16} className="text-gray-300" />
+              <a
+                href={`mailto:${supportEmail}`}
+                className="text-blue-400 hover:text-blue-300 font-medium transition-colors"
+              >
+                {supportEmail}
+              </a>
+            </div>
           </div>
 
           <div className="space-y-4">

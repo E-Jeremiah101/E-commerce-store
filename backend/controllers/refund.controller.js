@@ -290,8 +290,164 @@ export const getAllRefundRequests = async (req, res) => {
 };
 
 
+// const getRequestedEmailContent = (order, refund, settings, formatter) => {
+//   const productSnapshot = refund.productSnapshot || {};
+
+//   return `
+// <!DOCTYPE html>
+// <html lang="en">
+// <head>
+//     <meta charset="UTF-8">
+//     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//     <title>Refund Request Received - ${settings?.storeName}</title>
+//     ${getEmailStyles()}
+// </head>
+// <body>
+//     <div class="container">
+//         <div class="header">
+//             <img src="${settings?.logo}" alt="${
+//     settings?.storeName
+//   }" style="max-height: 50px; display: block; margin: 0 auto 12px;">
+//             <h1 style="margin: 0; font-size: 22px; font-weight: 500;">Refund Request Received</h1>
+//             <div class="status-badge">
+//                 Request Submitted
+//             </div>
+//         </div>
+
+//         <div class="content">
+//             <p style="font-size: 16px;">Dear <strong>${
+//               order.user?.firstname || "Customer"
+//             }</strong>,</p>
+//             <p style="color: #6b7280;">We have received your refund request and it is now in our processing queue. Here is what happens next:</p>
+
+//             <div class="details-card">
+//                 <h3 style="margin-top: 0; color: #047857;">Refund Details</h3>
+//                 <div class="refund-info">
+//                     <img src="${
+//                       productSnapshot.image || "/images/deleted.png"
+//                     }" alt="${productSnapshot.name}" class="product-image">
+//                     <div class="product-details">
+//                         <h4 style="margin: 0 0 8px 0; color: #1f2937;">${
+//                           productSnapshot.name || "Deleted Product"
+//                         }</h4>
+//                         <div class="info-grid">
+//                             <div class="info-item">
+//                                 <span style="color: #6b7280;">Quantity:</span>
+//                                 <span style="font-weight: 600;">${
+//                                   refund.quantity
+//                                 }</span>
+//                             </div>
+//                             <div class="info-item">
+//                                 <span style="color: #6b7280;">Amount:</span>
+//                                 <span style="font-weight: 600; color: #047857;">${formatter.format(
+//                                   refund.amount
+//                                 )}</span>
+//                             </div>
+//                             <div class="info-item">
+//                                 <span style="color: #6b7280;">Refund ID:</span>
+//                                 <span style="font-family: monospace; font-size: 13px;">${refund._id
+//                                   .toString()
+//                                   .slice(-12)
+//                                   .toUpperCase()}</span>
+//                             </div>
+//                             <div class="info-item">
+//                                 <span style="color: #6b7280;">Order:</span>
+//                                 <span style="font-weight: 600;">${
+//                                   order.orderNumber
+//                                 }</span>
+//                             </div>
+//                         </div>
+//                     </div>
+//                 </div>
+//             </div>
+
+//             <div class="timeline">
+//                 <h4 style="margin-top: 0; color: #047857;">What Happens Next</h4>
+//                 <div class="timeline-item">
+//                     <div class="timeline-number">1</div>
+//                     <div>Our team reviews your request (1-2 business days)</div>
+//                 </div>
+//                 <div class="timeline-item">
+//                     <div class="timeline-number">2</div>
+//                     <div>Item inspection by delivery agent (if required)</div>
+//                 </div>
+//                 <div class="timeline-item">
+//                     <div class="timeline-number">3</div>
+//                     <div>Refund processing via payment gateway</div>
+//                 </div>
+//                 <div class="timeline-item">
+//                     <div class="timeline-number">4</div>
+//                     <div>Funds returned to original payment method</div>
+//                 </div>
+//                 <p style="margin: 16px 0 0 0; font-size: 14px; color: #047857;">
+//                     <strong>Estimated total time:</strong> 7-10 business days
+//                 </p>
+//             </div>
+
+//             <div class="note-box">
+//                 <h4 style="margin-top: 0; color: #92400e;">Important Notes</h4>
+//                 <ul style="margin: 8px 0; padding-left: 20px; color: #92400e;">
+//                     <li>Keep the item in original condition</li>
+//                     <li>Preserve packaging and accessories</li>
+//                     <li>Have your receipt/order number ready</li>
+//                     <li>Be available for agent inspection if required</li>
+//                 </ul>
+//             </div>
+
+//             <p style="text-align: center; margin: 24px 0;">
+//                 <a href="${
+//                   process.env.CLIENT_URL
+//                 }/account/orders" class="action-button">
+//                     Track Your Refund
+//                 </a>
+//             </p>
+
+//             <p style="color: #6b7280; text-align: center; font-size: 14px;">
+//                 Need help? Contact our support team:<br>
+//                 <a href="mailto:${
+//                   settings?.supportEmail
+//                 }" style="color: #047857; font-weight: 600;">
+//                     ${settings?.supportEmail}
+//                 </a>
+//             </p>
+//         </div>
+
+//         <div class="footer">
+//             <p style="margin: 0 0 12px 0;">
+//                 <img src="${settings?.logo}" alt="${
+//     settings?.storeName
+//   }" style="max-height: 30px; opacity: 0.8;">
+//             </p>
+//             <p style="margin: 0 0 8px 0;">${
+//               settings?.storeName
+//             } • Refund Management System</p>
+//             <p style="margin: 0; font-size: 12px;">
+//                 This is an automated message. Please do not reply to this email.
+//             </p>
+//         </div>
+//     </div>
+// </body>
+// </html>
+// `;
+// };
 const getRequestedEmailContent = (order, refund, settings, formatter) => {
   const productSnapshot = refund.productSnapshot || {};
+
+  // Safely get values with defaults
+  const originalPrice =
+    refund.originalPrice !== undefined
+      ? refund.originalPrice
+      : productSnapshot.price || refund.amount / refund.quantity;
+
+  const discountApplied =
+    refund.discountApplied !== undefined ? refund.discountApplied : 0;
+
+  const originalAmount = originalPrice * refund.quantity;
+  const calculatedDiscount = originalAmount - refund.amount;
+
+  // Use the actual discountApplied if available, otherwise calculate it
+  const displayDiscount =
+    discountApplied > 0 ? discountApplied : calculatedDiscount;
 
   return `
 <!DOCTYPE html>
@@ -330,18 +486,34 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
                         <h4 style="margin: 0 0 8px 0; color: #1f2937;">${
                           productSnapshot.name || "Deleted Product"
                         }</h4>
+                        <div style="background: #f0fdf4; padding: 12px; border-radius: 6px; margin: 12px 0;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                                <span style="color: #065f46;">Original Amount:</span>
+                                <span>${formatter.format(originalAmount)}</span>
+                            </div>
+                            ${
+                              displayDiscount > 0
+                                ? `<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
+                                    <span style="color: #92400e;">Coupon Deduction:</span>
+                                    <span style="color: #92400e;">-${formatter.format(
+                                      displayDiscount
+                                    )}</span>
+                                   </div>`
+                                : ""
+                            }
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid #d1fae5;">
+                                <span style="color: #047857; font-weight: 600;">Refund Amount:</span>
+                                <span style="font-size: 18px; font-weight: 700; color: #047857;">${formatter.format(
+                                  refund.amount
+                                )}</span>
+                            </div>
+                        </div>
                         <div class="info-grid">
                             <div class="info-item">
                                 <span style="color: #6b7280;">Quantity:</span>
                                 <span style="font-weight: 600;">${
                                   refund.quantity
                                 }</span>
-                            </div>
-                            <div class="info-item">
-                                <span style="color: #6b7280;">Amount:</span>
-                                <span style="font-weight: 600; color: #047857;">${formatter.format(
-                                  refund.amount
-                                )}</span>
                             </div>
                             <div class="info-item">
                                 <span style="color: #6b7280;">Refund ID:</span>
@@ -356,6 +528,14 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
                                   order.orderNumber
                                 }</span>
                             </div>
+                            ${
+                              order.coupon?.code
+                                ? `<div class="info-item">
+                                    <span style="color: #6b7280;">Coupon Applied:</span>
+                                    <span style="font-weight: 600;">${order.coupon.code}</span>
+                                   </div>`
+                                : ""
+                            }
                         </div>
                     </div>
                 </div>
@@ -383,6 +563,20 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
                     <strong>Estimated total time:</strong> 7-10 business days
                 </p>
             </div>
+
+            ${
+              displayDiscount > 0
+                ? `<div class="note-box">
+                     <h4 style="margin-top: 0; color: #92400e;">Important Note</h4>
+                     <p style="color: #92400e; margin: 8px 0;">
+                         The refund amount has been adjusted to deduct the proportional discount 
+                         from the coupon code "${
+                           order.coupon?.code || ""
+                         }" applied to your original order.
+                     </p>
+                   </div>`
+                : ""
+            }
 
             <div class="note-box">
                 <h4 style="margin-top: 0; color: #92400e;">Important Notes</h4>
@@ -430,8 +624,6 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
 </html>
 `;
 };
-
-
 const getProcessingEmailContent = (order, refund, settings, formatter) => {
   const productSnapshot = refund.productSnapshot || {};
 
@@ -940,6 +1132,27 @@ export const requestRefund = async (req, res) => {
     const { productId, quantity, reason } = req.body;
     const userId = req.user._id;
 
+    if (!productId || typeof productId !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID is required",
+      });
+    }
+
+    if (!reason || typeof reason !== "string" || reason.trim().length < 5) {
+      return res.status(400).json({
+        success: false,
+        message: "Reason must be at least 5 characters",
+      });
+    }
+
+    if (quantity && (isNaN(quantity) || quantity < 1)) {
+      return res.status(400).json({
+        success: false,
+        message: "Quantity must be at least 1",
+      });
+    }
+
     const order = await Order.findById(orderId)
       .populate("products.product")
       .populate("user", "firstname lastname email");
@@ -980,7 +1193,10 @@ export const requestRefund = async (req, res) => {
     if (productId.startsWith("deleted-")) {
       // Handle already deleted products
       order.products.forEach((p) => {
-        const generatedId = `deleted-${orderId}-${p.name.replace(/\s+/g, "_")}-${p.price}`;
+        const generatedId = `deleted-${orderId}-${p.name.replace(
+          /\s+/g,
+          "_"
+        )}-${p.price}`;
         if (generatedId === productId) {
           refundProduct = p;
           productSnapshot = {
@@ -992,7 +1208,6 @@ export const requestRefund = async (req, res) => {
         }
       });
     } else {
-      
       order.products.forEach((p) => {
         if (p.product?._id?.toString() === productId) {
           refundProduct = p;
@@ -1014,7 +1229,32 @@ export const requestRefund = async (req, res) => {
       quantity || refundProduct.quantity,
       refundProduct.quantity
     );
-    const refundAmount = refundProduct.price * refundQuantity;
+
+    let discountedRefundAmount = refundProduct.price * refundQuantity;
+
+    if (order.discount > 0 && order.subtotal > 0) {
+
+      const productTotal = refundProduct.price * refundProduct.quantity;
+      const productProportion = productTotal / order.subtotal;
+
+      const productDiscount = order.discount * productProportion;
+
+      const discountPerUnit = productDiscount / refundProduct.quantity;
+
+      discountedRefundAmount =
+        (refundProduct.price - discountPerUnit) * refundQuantity;
+
+      console.log(`Refund calculation with coupon deduction:
+        - Product total: ${productTotal}
+        - Product proportion: ${productProportion.toFixed(4)}
+        - Product discount: ${productDiscount.toFixed(2)}
+        - Discount per unit: ${discountPerUnit.toFixed(2)}
+        - Original amount: ${refundProduct.price * refundQuantity}
+        - Discounted amount: ${discountedRefundAmount.toFixed(2)}
+      `);
+    }
+
+    const refundAmount = Math.round(discountedRefundAmount * 100) / 100;
 
     if (refundAmount < 100) {
       return res.status(400).json({
@@ -1022,7 +1262,6 @@ export const requestRefund = async (req, res) => {
       });
     }
 
-   
     const hasExistingRefund = order.refunds.some((refund) => {
       const refundProductId =
         refund.product?.toString() ||
@@ -1037,7 +1276,6 @@ export const requestRefund = async (req, res) => {
     });
 
     if (hasExistingRefund) {
-
       const existingRefund = order.refunds.find((refund) => {
         const refundProductId =
           refund.product?.toString() ||
@@ -1050,8 +1288,8 @@ export const requestRefund = async (req, res) => {
 
         return refundProductId === currentProductId;
       });
-      if (existingRefund) {
 
+      if (existingRefund) {
         const totalRefundedQuantity = order.refunds
           .filter((r) => {
             const rProductId =
@@ -1065,12 +1303,10 @@ export const requestRefund = async (req, res) => {
           })
           .reduce((sum, r) => sum + r.quantity, 0);
 
-
         const remainingQuantity =
           refundProduct.quantity - totalRefundedQuantity;
 
         if (remainingQuantity <= 0) {
-
           return res.status(400).json({
             message: `Cannot submit another refund request. All ${
               refundProduct.quantity
@@ -1111,6 +1347,9 @@ export const requestRefund = async (req, res) => {
       status: "Pending",
       requestedAt: new Date(),
       productSnapshot: productSnapshot,
+      originalPrice: refundProduct.price,
+      discountApplied: refundProduct.price * refundQuantity - refundAmount,
+      couponDeducted: order.discount > 0,
     };
 
     order.refunds.push(refundData);
@@ -1127,16 +1366,25 @@ export const requestRefund = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Refund request submitted successfully",
+      refundDetails: {
+        amount: formatter.format(refundAmount),
+        quantity: refundQuantity,
+        productName: productSnapshot.name,
+        discountApplied: formatter.format(
+          refundProduct.price * refundQuantity - refundAmount
+        ),
+        originalAmount: formatter.format(refundProduct.price * refundQuantity),
+        netRefund: formatter.format(refundAmount),
+      },
     });
+
     const newRefund = order.refunds[order.refunds.length - 1];
     await sendRefundRequestedEmail(order, newRefund, settings, formatter);
-
   } catch (error) {
     console.error("Refund request error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-
 export const approveRefund = async (req, res) => {
   try {
     const { orderId, refundId } = req.params;

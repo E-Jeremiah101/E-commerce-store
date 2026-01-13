@@ -102,10 +102,10 @@ const orderSchema = new mongoose.Schema(
     deliveryZone: {
       type: String,
       enum: [
-        "Same City", 
-        "Same LGA", 
-        "Same State", 
-        "Same Region", 
+        "Same City",
+        "Same LGA",
+        "Same State",
+        "Same Region",
         "Southern Region",
         "Northern Region",
       ],
@@ -134,7 +134,7 @@ const orderSchema = new mongoose.Schema(
         product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
         quantity: Number,
         amount: Number,
-        reason: String, 
+        reason: String,
         rejectionReason: String,
         rejectedBy: {
           type: String,
@@ -154,6 +154,9 @@ const orderSchema = new mongoose.Schema(
           image: String,
           price: Number,
         },
+        originalPrice: { type: Number, default: 0 },
+        discountApplied: { type: Number, default: 0 },
+        couponDeducted: { type: Boolean, default: false },
       },
     ],
 

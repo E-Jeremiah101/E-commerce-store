@@ -353,7 +353,7 @@ const ViewOrderPageContent = () => {
         )}
 
         <p className="tracking-wider font-bold text-lg mt-2">
-          Total: ₦{order.totalAmount.toLocaleString()}
+          Total: {formatPrice(order.totalAmount, settings?.currency)}
         </p>
       </div>
     </motion.div>

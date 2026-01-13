@@ -1,21 +1,60 @@
 // components/EditorsPicks.jsx
 import { Link } from "react-router-dom";
-import {  User } from "lucide-react";
+import { User } from "lucide-react";
 import ScrollReveal from "./ScrollReveal.jsx";
 import { useState, useEffect } from "react";
-import { useProductStore } from "../stores/useProductStore";
+import { useProductStore } from "../stores/useProductStore.js";
 
-const EditorsPicks = ({ className = "" }) => {
+const EditorsPicks = ({ className = "", products = [] }) => {
   const [picks, setPicks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const { products, fetchAllProducts } = useProductStore();
+  const [loading, setLoading] = useState(false);
+  const { fetchAllProducts } = useProductStore();
 
-  // Get 2 random products from the products array
-  const getRandomProducts = () => {
-    if (!products || products.length === 0) return [];
+  // If no products are passed as props, fetch them
+  useEffect(() => {
+    const loadProducts = async () => {
+      if (products && products.length > 0) {
+        // Use products passed as props
+        console.log("Using products from props:", products.length);
+        createPicks(products);
+      } else {
+        // Fetch products if none provided
+        setLoading(true);
+        try {
+          console.log("Fetching products from store...");
+          await fetchAllProducts();
+          // Store will update and trigger re-render
+        } catch (error) {
+          console.error("Error fetching products:", error);
+          createPicks([]);
+        } finally {
+          setLoading(false);
+        }
+      }
+    };
 
-    // Create a copy and shuffle
-    const shuffled = [...products];
+    loadProducts();
+  }, [products, fetchAllProducts]);
+
+  // Also watch for store updates
+  const { products: storeProducts } = useProductStore();
+
+  useEffect(() => {
+    if (storeProducts && storeProducts.length > 0 && picks.length === 0) {
+      console.log("Store products updated:", storeProducts.length);
+      createPicks(storeProducts);
+    }
+  }, [storeProducts]);
+
+  const getRandomProducts = (productsArray) => {
+    if (!productsArray || productsArray.length === 0) return [];
+
+    if (productsArray.length <= 2) {
+      return [...productsArray];
+    }
+
+    // Shuffle and get 2 random products
+    const shuffled = [...productsArray];
     for (let i = shuffled.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
@@ -24,35 +63,40 @@ const EditorsPicks = ({ className = "" }) => {
     return shuffled.slice(0, 2);
   };
 
-  // Transform random products into editorial picks
-  const createEditorialPicks = (selectedProducts) => {
-    if (selectedProducts.length === 0) {
-      return [
+  const createPicks = (productsArray) => {
+    const randomProducts = getRandomProducts(productsArray);
+
+    if (randomProducts.length === 0) {
+      // Fallback content
+      setPicks([
         {
           id: "1",
-          title: "Discover Our Collection",
-          narrative: "Explore our curated selection of quality products.",
+          title: "Editor's Choice: Discover Excellence",
+          narrative:
+            "Our team selects products that define quality standards in their respective categories.",
           image:
             "https://images.unsplash.com/photo-1511556820780-d912e42b4980?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80",
           curator: "Editorial Team",
           date: new Date().toLocaleDateString("en-US", { month: "long" }),
           productLink: "/products",
-          productName: "Browse Products",
+          productName: "Premium Collection",
           category: "Collection",
         },
         {
           id: "2",
-          title: "Featured Designs",
-          narrative: "Handpicked items showcasing exceptional craftsmanship.",
+          title: "Curated Selection: Artisan Craftsmanship",
+          narrative:
+            "Handpicked items showcasing exceptional attention to detail and innovative design.",
           image:
             "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?ixlib=rb-4.0.3&auto=format&fit=crop&w=1600&q=80",
           curator: "Curated Team",
           date: new Date().toLocaleDateString("en-US", { month: "long" }),
-          productLink: "/collections/all",
-          productName: "View All",
+          productLink: "/collections",
+          productName: "Artisan Works",
           category: "Featured",
         },
-      ];
+      ]);
+      return;
     }
 
     const titles = [
@@ -65,45 +109,38 @@ const EditorsPicks = ({ className = "" }) => {
       "Chosen for its innovative approach and meticulous attention to detail. This product represents the standard we believe in.",
     ];
 
-    return selectedProducts.map((product, index) => ({
-      id: product._id || product.id,
-      title: titles[index] || "Editor's Selection",
+    const categories = ["Premium Selection", "Design Excellence"];
+
+    const editorialPicks = randomProducts.map((product, index) => ({
+      id: product._id || `temp-${index}`,
+      title: titles[index] || titles[0],
       narrative: narratives[index] || narratives[0],
-      image: product.images?.[0] || "/placeholder-editorial.jpg",
+      image:
+        product.images?.[0] ||
+        "https://images.unsplash.com/photo-1511556820780-d912e42b4980?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
       curator: "Editorial Board",
       date: new Date().toLocaleDateString("en-US", {
         month: "long",
         year: "numeric",
       }),
-      productLink: `/product/${product._id || product.id}`,
-      productName: product.name,
-      category: product.category || "Featured",
+      productLink: `/product/${product._id}`,
+      productName: product.name || "Featured Product",
+      category: product.category || categories[index] || "Featured",
     }));
+
+    setPicks(editorialPicks);
   };
 
-  // Load initial products
-  useEffect(() => {
-    const loadProducts = async () => {
-      setLoading(true);
-      await fetchAllProducts();
-      const randomProducts = getRandomProducts();
-      setPicks(createEditorialPicks(randomProducts));
-      setLoading(false);
-    };
-
-    loadProducts();
-  }, []);
-
-  // Set up auto-refresh every 2 minutes
+  // Auto-refresh every 2 minutes
   useEffect(() => {
     const intervalId = setInterval(() => {
       console.log("Refreshing editor's picks...");
-      const randomProducts = getRandomProducts();
-      setPicks(createEditorialPicks(randomProducts));
+      const currentProducts = products || storeProducts || [];
+      createPicks(currentProducts);
     }, 120000); // 2 minutes
 
     return () => clearInterval(intervalId);
-  }, [products]); // Re-run when products change
+  }, [products, storeProducts]);
 
   if (loading) {
     return (

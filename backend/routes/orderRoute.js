@@ -8,7 +8,6 @@ import { protectRoute } from "../middleware/auth.middleware.js";
 import {
   validateQuery,
   validateParams,
-  validateBody,
   orderSchemas,
 } from "../middleware/validateInput.middleware.js";
 
@@ -19,11 +18,10 @@ router.get(
   validateQuery(orderSchemas.pagination),
   getUserOrders
 );
-router.post("/", protectRoute, validateBody(orderSchemas.create), createOrder);
+router.post("/", protectRoute, createOrder);
 router.get(
   "/vieworders/:id",
   protectRoute,
-  validateParams(orderSchemas.getById),
   getOrderById
 );
 router.get(

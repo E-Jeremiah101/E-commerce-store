@@ -93,7 +93,7 @@ const { settings } = useStoreSettings();
          </div>
        </div>
        <div className="py-5 text-3xl border-t-1 border-gray-300  "></div>
-  
+
        <div className=" text-black rounded-lg  py-6 px-2">
          <h2 className="text-lg font-semibold mb-4  border-gray-600 pb-2">
            SHIPPING ADDRESS
@@ -165,7 +165,6 @@ const { settings } = useStoreSettings();
                      {(() => {
                        const productRefunds =
                          order.refunds?.filter((refund) => {
-
                            let refundProductId;
 
                            if (refund.product) {
@@ -175,7 +174,6 @@ const { settings } = useStoreSettings();
                                refundProductId = refund.product.toString();
                              }
                            } else if (refund.productSnapshot?._id) {
-
                              refundProductId = refund.productSnapshot._id;
                            }
 
@@ -312,7 +310,7 @@ const { settings } = useStoreSettings();
          )}
 
          <p className="tracking-wider font-bold text-lg mt-2">
-           Total: ₦{order.totalAmount.toLocaleString()}
+           Total: {formatPrice(order.totalAmount, settings?.currency)}
          </p>
        </div>
      </motion.div>

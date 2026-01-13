@@ -34,7 +34,7 @@ export default function AdminCoupons() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
 
-  // Statistics
+
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -43,7 +43,7 @@ export default function AdminCoupons() {
     totalDiscountValue: 0,
   });
 
-  // Pagination state
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
@@ -56,7 +56,6 @@ export default function AdminCoupons() {
     note: "",
   });
 
-  //  FETCH COUPONS 
   const fetchCoupons = async () => {
     try {
       setLoading(true);
@@ -64,7 +63,6 @@ export default function AdminCoupons() {
       setCoupons(data);
       setTotalPages(Math.ceil(data.length / itemsPerPage));
 
-      // Calculate statistics
       const now = new Date();
       const active = data.filter(
         (c) => c.isActive && new Date(c.expirationDate) > now
@@ -96,7 +94,7 @@ export default function AdminCoupons() {
     fetchCoupons();
   }, []);
 
-  //  CREATE COUPON 
+
   const handleCreate = async () => {
     if (!form.expirationDate) {
       toast.error("Expiration date is required");
@@ -121,7 +119,7 @@ export default function AdminCoupons() {
         toast.success(response.data.message);
         setShowModal(false);
 
-        // Show email stats if available
+    
         if (response.data.emailStats) {
           const stats = response.data.emailStats;
           toast.success(
@@ -136,7 +134,7 @@ export default function AdminCoupons() {
           );
         }
 
-        // Reset form
+   
         setForm({
           discountPercentage: 15,
           expirationDate: "",
