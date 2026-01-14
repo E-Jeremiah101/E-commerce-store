@@ -7,7 +7,7 @@ import {
   User,
   Package,
   Menu,
-  X, 
+  X,
   Heart,
   Search,
   ChevronDown,
@@ -40,19 +40,19 @@ const Navbar = () => {
   const mobileCollectionsRef = useRef(null);
 
   useEffect(() => {
-      const fetchCategories = async () => {
-        try {
-          const res = await axios.get("/categories-with-images");
-          setCategories(res.data);
-        } catch (error) {
-          setCategories([]);
-          console.error("Error fetching categories:", error);
-        } finally {
-          setIsLoadingCategories(false);
-        }
-      };
-      fetchCategories();
-    }, []);
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get("/categories-with-images");
+        setCategories(res.data);
+      } catch (error) {
+        setCategories([]);
+        console.error("Error fetching categories:", error);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   // Handle scroll effect
   useEffect(() => {
@@ -184,22 +184,23 @@ const Navbar = () => {
                     }`}
                   />
                 </button>
-
                 {desktopCollectionsOpen && (
-                  <div className="absolute left-1/2 transform -translate-x-1/2 grid md:grid-cols-3 lg:grid-cols-3 gap-2 mt-1 w-3xl bg-white rounded-xl shadow-2xl border border-gray-100 py-2 z-50 animate-in slide-in-from-top-2 duration-200">
-                    {categories.map((category) => (
-                      <Link
-                        key={category.name}
-                        to={`/category/${category.name}`}
-                        className="block px-4 py-3 text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors font-medium"
-                        onClick={() => {
-                          setDesktopCollectionsOpen(false);
-                          handleLinkClick();
-                        }}
-                      >
-                        {category.name}
-                      </Link>
-                    ))}
+                  <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-[600px] bg-white rounded-xl shadow-2xl border border-gray-100 py-4 z-50 animate-in slide-in-from-top-2 duration-200">
+                    <div className="grid grid-cols-3 gap-4 px-4">
+                      {categories.map((category) => (
+                        <Link
+                          key={category.name}
+                          to={`/category/${category.name}`}
+                          className="block px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors font-medium text-center shadow-sm"
+                          onClick={() => {
+                            setDesktopCollectionsOpen(false);
+                            handleLinkClick();
+                          }}
+                        >
+                          {category.name}
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -247,7 +248,7 @@ const Navbar = () => {
               </button>
 
               {/* Cart */}
-              <Link 
+              <Link
                 to="/cart"
                 className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                 aria-label="Shopping Cart"
@@ -341,12 +342,12 @@ const Navbar = () => {
                 ) : (
                   <div className="h-8 w-8  rounded-lg flex items-center justify-center">
                     <span className="text-white font-bold">
-                      {settings?.storeName?.charAt(0)  || ""}
+                      {settings?.storeName?.charAt(0) || ""}
                     </span>
                   </div>
                 )}
                 <span className="font-bold text-gray-900">
-                  {settings?.storeName || "" }
+                  {settings?.storeName || ""}
                 </span>
               </Link>
 

@@ -33,6 +33,7 @@ const HomePageContent = () => {
     featuredProducts,
     loading: isLoadingProducts,
   } = useProductStore();
+  
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -218,7 +219,7 @@ const HomePageContent = () => {
                   to={`/category/${category.name}`}
                   className="flex-shrink-0"
                 >
-                  <button className="px-4 rounded py-2 bg-white shadow text-blue-700 hover:bg-blue-100 hover:text-blue-900 transition-colors whitespace-nowrap uppercase font-semibold">
+                  <button className="px-4 rounded py-2  shadow text-white bg-black/100 hover:text-black hover:bg-white transition-colors whitespace-nowrap uppercase font-semibold">
                     {category.name}
                   </button>
                 </Link>
@@ -289,9 +290,9 @@ const HomePageContent = () => {
 
         {/* Recently Viewed Section */}
         <div className="mb-16">
-          <div className="bg-white/80 rounded-2xl shadow-lg p-2 md:p-5">
+          
             <RecentlyViewed className="look" />
-          </div>
+         
         </div>
 
         {/* FAQ Section */}

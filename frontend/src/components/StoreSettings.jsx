@@ -415,7 +415,7 @@ export default function StoreSettings() {
           {/* Shipping Fees */}
           <div className="border-t pt-8">
             <h3 className="font-medium text-lg mb-4">
-              Shipping Fees {formatPrice("", "NGN")}
+              Shipping Fees
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Input

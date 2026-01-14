@@ -807,9 +807,18 @@ export const searchProducts = async (req, res) => {
         (sum, v) => sum + (v.countInStock || 0),
         0
       );
+      const discountPercentage =
+        product.isPriceSlashed && product.previousPrice
+          ? (
+              ((product.previousPrice - product.price) /
+                product.previousPrice) *
+              100
+            ).toFixed(1)
+          : null;
       return {
         ...product.toObject(),
         countInStock: totalVariantStock,
+        discountPercentage,
       };
     });
 

@@ -10,6 +10,7 @@ import OrderSummary from "../components/OrderSummary";
 import GiftCouponCard from "../components/GiftCouponCard";
 import GoBackButton from "../components/GoBackButton";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 const CartPageContent = () => {
   const { cart, isLoading } = useCartStore();
@@ -17,6 +18,10 @@ const CartPageContent = () => {
   // FIX: Handle null settings properly
   const storeContext = useStoreSettings();
   const settings = storeContext?.settings || {};
+
+  if (isLoading && cart.length === 0) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <>

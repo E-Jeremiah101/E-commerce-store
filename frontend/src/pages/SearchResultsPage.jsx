@@ -3,8 +3,6 @@ import { useParams, useSearchParams, Link } from "react-router-dom";
 import ProductCard from "../components/ProductCard.jsx";
 import { SEO } from "../components/SEO";
 import axios from "../lib/axios";
-import { useCartStore } from "../stores/useCartStore";
-import { toast } from "react-hot-toast";
 import GoBackButton from "../components/GoBackButton";
 import { motion } from "framer-motion";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
@@ -13,8 +11,6 @@ const SearchResultsPageContent = () => {
   const [products, setProducts] = useState([]);
   const [searchParams] = useSearchParams();
   const query = searchParams.get("q");
-
-  const { addToCart } = useCartStore();
 
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
@@ -117,10 +113,12 @@ const SearchResultsPageContent = () => {
         ) : products.length === 0 ? (
           <p>No products found.</p>
         ) : (
+          <div className="bg-white/80 rounded-2xl shadow-lg p-3 md:p-5">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {displayedProducts?.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))}
+          </div>
           </div>
         )}
         {/*  Pagination Controls */}
