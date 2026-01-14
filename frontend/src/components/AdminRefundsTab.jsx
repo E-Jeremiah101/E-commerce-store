@@ -17,13 +17,13 @@ const AdminRefundsTab = () => {
   const [dateFilter, setDateFilter] = useState("");
   const [selectedReason, setSelectedReason] = useState(null);
   const [loadingStates, setLoadingStates] = useState({});
-  const [showRejectModal, setShowRejectModal] = useState(null); 
+  const [silentLoading, setSilentLoading] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-
 
   // Fetch all refund requests
   useEffect(() => {
@@ -89,12 +89,15 @@ const AdminRefundsTab = () => {
 
   // Silent refresh function
   const fetchRefundsSilently = async () => {
+    setSilentLoading(true);
     try {
       const res = await axios.get("/refunds");
       setRefunds(res.data || []);
       setFilteredRefunds(res.data || []);
     } catch (err) {
       console.error("Silent refresh failed:", err);
+    } finally {
+      setSilentLoading(false);
     }
   };
 
@@ -115,7 +118,7 @@ const AdminRefundsTab = () => {
           r.refundId === refundId
             ? {
                 ...r,
-                status: response.data.currentStatus, 
+                status: response.data.currentStatus,
                 processedAt: new Date().toISOString(),
                 flutterwaveRefundId: response.data.flutterwaveRefundId,
               }
@@ -201,7 +204,7 @@ const AdminRefundsTab = () => {
     }
   };
 
-  // Add to AdminRefundsTab component
+  //
   const handleSyncRefund = async (orderId, refundId) => {
     try {
       setLoadingStates((prev) => ({ ...prev, [refundId]: "syncing" }));
@@ -252,7 +255,6 @@ const AdminRefundsTab = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-       
         <h2 className="text-lg font-semibold mb-4">Refund Requests</h2>
 
         {/* Filters */}
@@ -306,9 +308,13 @@ const AdminRefundsTab = () => {
               </div>
               <button
                 onClick={fetchRefundsSilently}
-                className="px-4 py-2 bg-white border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 text-sm font-medium transition-colors"
+                className="px-4 py-2 bg-white border border-blue-300 text-blue-700 rounded-lg hover:bg-blue-50 text-sm font-medium transition-colors flex items-center gap-2"
+                disabled={silentLoading}
               >
-                Refresh Now
+                {silentLoading && (
+                  <span className="inline-block w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
+                )}
+                {silentLoading ? "Refreshing..." : "Refresh"}
               </button>
             </div>
           </div>
@@ -391,7 +397,7 @@ const AdminRefundsTab = () => {
                             : r.status === "Rejected"
                             ? "bg-red-100 text-red-800"
                             : r.status === "Processing"
-                            ? "bg-blue-100 text-blue-800 animate-pulse" 
+                            ? "bg-blue-100 text-blue-800 animate-pulse"
                             : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
@@ -448,10 +454,16 @@ const AdminRefundsTab = () => {
                             onClick={() =>
                               handleSyncRefund(r.orderId, r.refundId)
                             }
-                            className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium"
+                            className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium flex items-center gap-2"
                             title="Check refund status"
+                            disabled={loadingStates[r.refundId] === "syncing"}
                           >
-                            Check Status
+                            {loadingStates[r.refundId] === "syncing" && (
+                              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                            )}
+                            {loadingStates[r.refundId] === "syncing"
+                              ? "Syncing..."
+                              : "Sync"}
                           </button>
                         </div>
                       )}
@@ -680,4 +692,3 @@ const AdminRefundsTab = () => {
 };
 
 export default AdminRefundsTab;
-
