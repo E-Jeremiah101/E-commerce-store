@@ -192,21 +192,6 @@ const HomePageContent = () => {
         <HeroSlider />
       </motion.div>
 
-      {/* Desktop Categories */}
-      {/* <div className="hidden md:flex justify-center items-center mb-8 mt-9 look">
-        <ul className="flex flex-wrap justify-center gap-x-7 gap-y-6 px-30 max-w-5xl text-base text-center tracking-widest">
-          {categories.map((category) => (
-            <li key={category.name}>
-              <Link to={`/category/${category.name}`}>
-                <button className="hover:text-blue-600 font-semibold uppercase transition-colors duration-200">
-                  {category.name}
-                </button>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div> */}
-
       {/* Mobile Categories */}
       <div className=" pb-4 py-6  md:hidden">
         <div className="max-w-7xl mx-auto px-4">

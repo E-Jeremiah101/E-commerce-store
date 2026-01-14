@@ -744,13 +744,17 @@ export const createCheckoutSession = async (req, res) => {
     const { products, couponCode, deliveryAddress, deliveryFee, deliveryZone } =
       req.body;
     const userId = req.user._id;
-
     if (!Array.isArray(products) || products.length === 0) {
       return res.status(400).json({ error: "Invalid or empty products array" });
     }
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: "User not found" });
+
+        const settings = await storeSettings.findOne();
+        const storeCurrency = settings?.currency || "NGN";
+        const storeLogo = settings?.logo || "logo";
+        const storeName = settings?.storeName || "Store";
 
     const defaultPhone =
       user.phones?.find((p) => p.isDefault) || user.phones?.[0];
@@ -876,7 +880,7 @@ export const createCheckoutSession = async (req, res) => {
       0,
       originalTotal - discountAmount + finalDeliveryFee
     );
-    const tx_ref = `ECOSTORE-${Date.now()}`;
+    const tx_ref = `${storeName}-${Date.now()}`;
 
     const reservationId = `res_${tx_ref}`;
     try {
@@ -914,10 +918,7 @@ export const createCheckoutSession = async (req, res) => {
       console.log(`   Coupon Details: ${validCoupon.discountPercentage}% off`);
     }
 
-    const settings = await storeSettings.findOne();
-    const storeCurrency = settings?.currency || "NGN";
-    const storeLogo = settings?.logo || "logo";
-    const storeName = settings?.storeName || "Store";
+
 
     const payload = {
       tx_ref,
@@ -1599,7 +1600,7 @@ export const sendDetailedOrderEmail = async ({ to, order }) => {
       <div style="max-width: 700px; margin: auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.06);">
         <div style="background: #10b981; padding: 22px; text-align: center; color: #fff;">
           <img src="${settings?.logo}" alt="${
-    settings?.storeName
+    settings?.storeName || "Store"
   }" style="max-height:50px; display:block; margin: 0 auto 8px;" />
           <h1 style="margin:0; font-size:20px;">Order Confirmation</h1>
           <div style="margin-top:6px; font-size:15px;">${
@@ -1674,7 +1675,7 @@ export const sendDetailedOrderEmail = async ({ to, order }) => {
 
         <div style="background: #1e293b; padding: 20px; text-align: center; color: #94a3b8; font-size: 13px;">
           <p style="margin: 0 0 10px 0;"><p style="margin-top:18px;">Thanks for choosing <strong> ${
-            settings?.storeName
+            settings?.storeName || "Store"
           }</strong> </p>
           <p style="margin: 0;">Need help? Contact us at <a href="mailto:${
             settings?.supportEmail

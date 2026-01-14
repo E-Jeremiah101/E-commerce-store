@@ -98,44 +98,84 @@ const AdminOrdersPage = () => {
   console.log("Fetching orders with params:", params);
 
  
-  const fetchOrders = async () => {
-    try {
-      setIsFetching(true);
+  // const fetchOrders = async () => {
+  //   try {
+  //     setIsFetching(true);
 
-      setOrders([]);
+  //     setOrders([]);
 
-      if (viewMode === "archived") {
+  //     if (viewMode === "archived") {
 
-        // Get from archive collection
-        const { data } = await axios.get("/admin/orders/archived", {
-          params,
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        setOrders(data.orders);
-      } else {
+  //       // Get from archive collection
+  //       const { data } = await axios.get("/admin/orders/archived", {
+  //         params,
+  //         headers: {
+  //           Authorization: `Bearer ${localStorage.getItem("token")}`,
+  //         },
+  //       });
+  //       setOrders(data.orders);
+  //     } else {
         
-        const { data } = await axios.get("/admin/orders", {
-          params,
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
+  //       const { data } = await axios.get("/admin/orders", {
+  //         params,
+  //         headers: {
+  //           Authorization: `Bearer ${localStorage.getItem("token")}`,
+  //         },
+  //       });
          
-        // Filter out archived orders on the frontend
-        const activeOrders = data.orders.filter((order) => !order.isArchived);
-        setOrders(activeOrders);
-      }
-    } catch (error) {
-      console.error("Fetch orders failed:", error);
-      setOrders([]);
-    } finally {
-      setIsFetching(false);
-      setLoading(false);
-    }
-  };
+  //       // Filter out archived orders on the frontend
+  //       const activeOrders = data.orders.filter((order) => !order.isArchived);
+  //       setOrders(activeOrders);
+  //     }
+  //   } catch (error) {
+  //     console.error("Fetch orders failed:", error);
+  //     setOrders([]);
+  //   } finally {
+  //     setIsFetching(false);
+  //     setLoading(false);
+  //   }
+  // };
+const fetchOrders = async (isStatusUpdate = false) => {
+  try {
+    setIsFetching(true);
 
+    // Only clear orders if it's NOT a status update
+    if (!isStatusUpdate) {
+      setOrders([]);
+    }
+
+    if (viewMode === "archived") {
+      // Get from archive collection
+      const { data } = await axios.get("/admin/orders/archived", {
+        params,
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      setOrders(data.orders);
+    } else {
+      const { data } = await axios.get("/admin/orders", {
+        params,
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      // Filter out archived orders on the frontend
+      const activeOrders = data.orders.filter((order) => !order.isArchived);
+      setOrders(activeOrders);
+    }
+  } catch (error) {
+    console.error("Fetch orders failed:", error);
+    // Don't clear on error
+    if (!isStatusUpdate) {
+      setOrders([]);
+    }
+  } finally {
+    setIsFetching(false);
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchOrders();
@@ -392,7 +432,7 @@ const AdminOrdersPage = () => {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-      fetchOrders();
+      fetchOrders(true);
       setOpenDropdownId(null);
     } catch (err) {
       console.error(err);
@@ -578,7 +618,7 @@ const AdminOrdersPage = () => {
             <input
               type="text"
               placeholder={`Search by ${
-                viewMode === "active" ? "ORD/EC0STORE/Id" : "Order Number"
+                viewMode === "active" ? "ORD/Ref/Id" : "Order Number"
               }`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}

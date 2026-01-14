@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import axios from "../lib/axios";
 import { motion } from "framer-motion";
-import { useUserStore } from "../stores/useUserStore.js";
-
+import { useStoreSettings } from "./StoreSettingsContext.jsx";
 const Recovery = () => {
   const [searchMethod, setSearchMethod] = useState("transaction_ref");
   const [formData, setFormData] = useState({
@@ -12,8 +11,8 @@ const Recovery = () => {
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const { user } = useUserStore();
-
+ const {settings} = useStoreSettings()
+ const storeName = settings?.storeName || "Store"
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -69,7 +68,7 @@ Order Number: ${error.response.data.orderDetails.orderNumber}
 Status: ${error.response.data.orderDetails.status}
 Customer: ${error.response.data.orderDetails.customer}
 Email: ${error.response.data.orderDetails.customerEmail}
-Amount: ₦${error.response.data.orderDetails.totalAmount}
+Amount: ${error.response.data.orderDetails.totalAmount}
 
 This order already exists in the system.
           `,
@@ -115,10 +114,10 @@ ${
           <h3 className="font-semibold text-blue-800 mb-2">Reference Guide:</h3>
           <div className="text-sm text-blue-700">
             <div className="mb-2">
-              <strong>Transaction Reference:</strong> ECOSTORE-1764xxxx
+              <strong>Transaction ID/Ref:</strong> {storeName}-1764xxxx
             </div>
             <div>
-              <strong>Flutterwave Reference:</strong> JayyTech_xxx
+              <strong>Flutterwave Reference:</strong> 28427xxxx
             </div>
           </div>
         </div>
@@ -135,7 +134,7 @@ ${
                 className="mr-2"
               />
               <span>
-                <strong>Transaction Reference</strong>
+                <strong>Transaction ID/Ref</strong>
               </span>
             </label>
             <label className="flex items-center">
@@ -158,7 +157,7 @@ ${
           {searchMethod === "transaction_ref" && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Transaction Reference *
+                Transaction ID/Ref *
               </label>
               <input
                 type="text"
@@ -168,7 +167,7 @@ ${
                 }
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
-                placeholder="ECOSTORE-1764257590757"
+                
               />
             </div>
           )}
@@ -187,7 +186,7 @@ ${
                 }
                 required
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
-                placeholder="JayyTech_VTVIKF176425766668140070"
+                
               />
             </div>
           )}

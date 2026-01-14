@@ -11,7 +11,11 @@ import {
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
 import { requirePermission } from "../middleware/permission.middleware.js";
-
+import {
+  validateParams,
+  validateBody,
+  refundSchemas,
+} from "../middleware/validateInput.middleware.js";
 requirePermission;
 const router = express.Router();
 
@@ -19,7 +23,7 @@ router.post(
   "/:orderId/request",
   protectRoute,
   requestRefund
-); 
+);
 
 router.get(
   "/",
@@ -52,7 +56,7 @@ router.get(
   "/:orderId/:refundId/poll",
   protectRoute,
   adminRoute,
-  pollRefundStatus 
+  pollRefundStatus
 );
 
 export default router;
