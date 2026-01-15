@@ -25,7 +25,6 @@ const router = express.Router();
 router.post(
   "/signup",
   signupRateLimiter,
-  validateBody(authSchemas.signup),
   signup
 );
 router.post("/login", loginRateLimiter, validateBody(authSchemas.login), login);
@@ -35,19 +34,20 @@ router.get("/profile", protectRoute, getProfile);
 router.post(
   "/forgot-password",
   forgotPasswordRateLimiter,
-  validateBody(authSchemas.forgotPassword),
+  
   forgotPassword
 );
 router.post(
   "/reset-password/:token",
-  validateBody(authSchemas.resetPassword),
+ 
   resetPassword
 );
 router.post(
   "/change-password",
   protectRoute,
-  validateBody(authSchemas.changePassword),
+
   changePassword
 );
 
 export default router;
+// validateBody(authSchemas.signup),validateBody(authSchemas.forgotPassword), validateBody(authSchemas.resetPassword),  validateBody(authSchemas.changePassword),
