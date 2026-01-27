@@ -14,7 +14,7 @@ const MiniCartWidget = () => {
   if (cart.length === 0) return null;
 
   return (
-    <div className="fixed z-50 bottom-6 right-6 md:bottom-8 md:right-8 bg-white/90 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-4 backdrop-blur-md animate-fade-in-up">
+    <div className="fixed z-40 bottom-6 right-6 md:bottom-8 md:right-8 bg-white/90 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-4 backdrop-blur-md animate-fade-in-up">
       <ShoppingCart className="text-blue-600" size={28} />
       <div className="flex flex-col">
         <span className="text-base font-semibold text-gray-900">
