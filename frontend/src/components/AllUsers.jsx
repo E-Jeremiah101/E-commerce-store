@@ -21,6 +21,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Trash2
 } from "lucide-react";
 import { useUserStore } from "../stores/useUserStore.js";
 import { motion } from "framer-motion";
@@ -68,14 +69,13 @@ const AllUsers = () => {
         { withCredentials: true }
       );
       setUsers(res.data);
-      setFilteredUsers(res.data); // Initialize filtered users
+      setFilteredUsers(res.data); 
 
-      // Calculate comprehensive stats
       const total = res.data.length;
       const customers = res.data.filter((u) => u.role === "customer").length;
       const admins = res.data.filter((u) => u.role === "admin").length;
 
-      // Calculate order statistics
+ 
       let totalOrders = 0;
       let completedOrders = 0;
       let totalCartValue = 0;
@@ -86,7 +86,7 @@ const AllUsers = () => {
         completedOrders += user.orderStats?.completed || 0;
         CancelledOrders += user.orderStats?.cancelled || 0;
 
-        // Calculate cart value
+     
         if (user.cartItems?.length > 0) {
           const cartTotal = user.cartItems.reduce((sum, item) => {
             return sum + (item.product?.price || 0) * (item.quantity || 1);
@@ -135,6 +135,30 @@ const AllUsers = () => {
       toast.error("Failed to load admin types");
     }
   };
+
+  const deleteUser = async (userId) => {
+  if (!window.confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+    return;
+  }
+
+  try {
+    const response = await axios.delete(`/api/admin/users/${userId}`, {
+      withCredentials: true,
+    });
+
+    if (response.data.success) {
+      toast.success(response.data.message || "User deleted successfully");
+      fetchUsers(); 
+    } else {
+      toast.error(response.data.message || "Failed to delete user");
+    }
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    toast.error(
+      error.response?.data?.message || "Failed to delete user"
+    );
+  }
+};
 
   const updateUserRole = async (userId, role, adminType = null) => {
     try {
@@ -257,8 +281,8 @@ const AllUsers = () => {
   };
 
   const getPaginationRange = () => {
-    const totalNumbers = 5; // Number of page buttons to show
-    const totalBlocks = totalNumbers + 2; // Including first, last, and ellipsis
+    const totalNumbers = 5;
+    const totalBlocks = totalNumbers + 2;
 
     if (totalPages <= totalBlocks) {
       return Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -288,13 +312,13 @@ const AllUsers = () => {
     return pages;
   };
 
-  // Helper function to get admin type label
+
   const getAdminTypeLabel = (value) => {
     const adminType = adminTypes.find((type) => type.value === value);
     return adminType ? adminType.label : value || "Not Set";
   };
 
-  // Get admin type icon
+
   const getAdminTypeIcon = (type) => {
     switch (type) {
       case "super_admin":
@@ -348,17 +372,16 @@ const AllUsers = () => {
     }
   };
 
-  // Check if current user can edit target user
   const canEditUser = (targetUser) => {
     if (!currentUser) return false;
 
-    // Super admin can edit anyone
+
     if (currentUser.adminType === "super_admin") return true;
 
-    // Don't allow editing super admin unless you are super admin
+  
     if (targetUser.adminType === "super_admin") return false;
 
-    // Don't allow editing yourself unless you're super admin
+ 
     if (
       targetUser._id === currentUser._id &&
       currentUser.adminType !== "super_admin"
@@ -367,6 +390,27 @@ const AllUsers = () => {
     }
 
     return true;
+  };
+
+  const canDeleteUser = (targetUser) => {
+    if (!currentUser) return false;
+
+    if (targetUser._id === currentUser._id) return false;
+
+
+    if (currentUser.adminType === "super_admin") return true;
+
+
+    if (targetUser.adminType === "super_admin") return false;
+
+    if (
+      currentUser.permissions?.includes("user:write") &&
+      targetUser.role === "customer"
+    ) {
+      return true;
+    }
+
+    return false;
   };
 
   const canChangeAdminType = (targetUser) => {
@@ -384,7 +428,7 @@ const AllUsers = () => {
     );
   };
 
-  // Helper function to get order completion rate
+  
   const getOrderCompletionRate = (user) => {
     const completed = user.orderStats?.completed || 0;
     const total = user.orderStats?.total || 0;
@@ -399,7 +443,7 @@ const getOrderCancelledRate = (user) => {
   if (total === 0) return 0;
   return Math.round((cancelled / total) * 100);
 };
-  // Format order completion for display
+ 
   const formatOrderCompletion = (user) => {
     const completed = user.orderStats?.completed || 0;
     const total = user.orderStats?.total || 0;
@@ -448,7 +492,7 @@ const getOrderCancelledRate = (user) => {
             {currentUser?.adminType && (
               <span
                 className={`px-2 py-1 rounded-full text-xs font-medium ${getAdminTypeColor(
-                  currentUser.adminType
+                  currentUser.adminType,
                 )}`}
               >
                 {getAdminTypeLabel(currentUser.adminType)}
@@ -682,29 +726,27 @@ const getOrderCancelledRate = (user) => {
                                 </span>
                               </div>
 
-                              {user.orderStats?.cancelled > 0 &&
-                              <>
-                              <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                <div
-                                  className="bg-red-600 h-1.5 rounded-full transition-all duration-300"
-                                  style={{
-                                    width: `${getOrderCancelledRate(user)}%`,
-                                  }}
-                                ></div>
-                              </div>
+                              {user.orderStats?.cancelled > 0 && (
+                                <>
+                                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                    <div
+                                      className="bg-red-600 h-1.5 rounded-full transition-all duration-300"
+                                      style={{
+                                        width: `${getOrderCancelledRate(user)}%`,
+                                      }}
+                                    ></div>
+                                  </div>
 
-                              
-                              <div className="flex justify-between items-center">
-                                <span className="text-xs font-medium text-gray-700">
-                                  Cancelled Rate
-                                </span>
-                                <span className="text-xs font-bold text-red-600">
-                                  {getOrderCancelledRate(user)}%
-                                </span>
-                              </div>
-                              </>
-                              }
-                              
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-xs font-medium text-gray-700">
+                                      Cancelled Rate
+                                    </span>
+                                    <span className="text-xs font-bold text-red-600">
+                                      {getOrderCancelledRate(user)}%
+                                    </span>
+                                  </div>
+                                </>
+                              )}
                             </>
                           )}
 
@@ -739,7 +781,7 @@ const getOrderCancelledRate = (user) => {
                               <div className="flex items-center space-x-2">
                                 <span
                                   className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center ${getAdminTypeColor(
-                                    user.adminType
+                                    user.adminType,
                                   )}`}
                                 >
                                   {getAdminTypeIcon(user.adminType)}
@@ -795,7 +837,7 @@ const getOrderCancelledRate = (user) => {
                               <button
                                 onClick={() => {
                                   toast.success(
-                                    ` ${user.couponStats.coupons[0]?.code}`
+                                    ` ${user.couponStats.coupons[0]?.code}`,
                                   );
                                 }}
                                 className="w-full text-xs text-green-600 hover:text-green-800 font-medium py-1 border border-green-100 rounded hover:bg-green-50 transition"
@@ -825,7 +867,7 @@ const getOrderCancelledRate = (user) => {
                                 <p className="text-xs text-gray-500">
                                   {formatPrice(
                                     getCartTotal(user.cartItems),
-                                    settings?.currency
+                                    settings?.currency,
                                   )}
                                 </p>
                               </div>
@@ -877,6 +919,17 @@ const getOrderCancelledRate = (user) => {
                               Change Admin Type
                             </button>
                           )}
+
+                          {/* Delete User Button */}
+                          {canDeleteUser(user) && (
+                            <button
+                              onClick={() => deleteUser(user._id)}
+                              className="px-4 py-2 text-sm rounded-lg font-medium transition flex items-center justify-center bg-gradient-to-r from-red-50 to-red-100 text-red-700 hover:from-red-100 hover:to-red-200 border border-red-200"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete User
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -908,7 +961,7 @@ const getOrderCancelledRate = (user) => {
               Showing{" "}
               {Math.min(
                 (currentPage - 1) * itemsPerPage + 1,
-                filteredUsers.length
+                filteredUsers.length,
               )}{" "}
               to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of{" "}
               {filteredUsers.length} users
@@ -1072,7 +1125,7 @@ const getOrderCancelledRate = (user) => {
                     {selectedUser.cartItems?.length || 0} items • Total:{" "}
                     {formatPrice(
                       getCartTotal(selectedUser.cartItems),
-                      settings?.currency
+                      settings?.currency,
                     )}
                   </p>
 
@@ -1115,7 +1168,7 @@ const getOrderCancelledRate = (user) => {
                           <span className="font-bold text-blue-600">
                             {formatPrice(
                               (item.product?.price || 0) * (item.quantity || 1),
-                              settings?.currency
+                              settings?.currency,
                             )}
                           </span>
                         </div>
@@ -1133,7 +1186,7 @@ const getOrderCancelledRate = (user) => {
                             <span className="ml-2 font-medium">
                               {formatPrice(
                                 item.product?.price || 0,
-                                settings?.currency
+                                settings?.currency,
                               )}
                             </span>
                           </div>
@@ -1158,7 +1211,6 @@ const getOrderCancelledRate = (user) => {
                         </div>
 
                         <div className="mt-3 flex items-center justify-between">
-                         
                           <span className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-700">
                             Product ID: {item.product?._id || "N/A"}
                           </span>
@@ -1209,7 +1261,7 @@ const getOrderCancelledRate = (user) => {
                   <p className="text-2xl font-bold text-blue-600">
                     {formatPrice(
                       getCartTotal(selectedUser.cartItems),
-                      settings?.currency
+                      settings?.currency,
                     )}
                   </p>
                 </div>
@@ -1267,7 +1319,7 @@ const getOrderCancelledRate = (user) => {
                       <div className="mt-2">
                         <span
                           className={`px-3 py-1.5 rounded-lg text-sm font-medium flex items-center ${getAdminTypeColor(
-                            selectedUser.adminType
+                            selectedUser.adminType,
                           )}`}
                         >
                           {getAdminTypeIcon(selectedUser.adminType)}
@@ -1397,7 +1449,7 @@ const getOrderCancelledRate = (user) => {
                         updateUserRole(
                           selectedUser._id,
                           "admin",
-                          selectedAdminType
+                          selectedAdminType,
                         )
                       }
                       disabled={!selectedAdminType}
@@ -1465,7 +1517,7 @@ const getOrderCancelledRate = (user) => {
                   </p>
                   <div
                     className={`px-3 py-2 rounded-lg ${getAdminTypeColor(
-                      selectedUser.adminType
+                      selectedUser.adminType,
                     )}`}
                   >
                     <div className="flex items-center">
@@ -1488,7 +1540,7 @@ const getOrderCancelledRate = (user) => {
                     .filter(
                       (type) =>
                         type.value !== "super_admin" ||
-                        currentUser?.adminType === "super_admin"
+                        currentUser?.adminType === "super_admin",
                     )
                     .map((type) => (
                       <div
@@ -1549,7 +1601,7 @@ const getOrderCancelledRate = (user) => {
                       <span className="text-sm text-gray-700">Current:</span>
                       <span
                         className={`px-2 py-1 rounded text-xs ${getAdminTypeColor(
-                          selectedUser.adminType
+                          selectedUser.adminType,
                         )}`}
                       >
                         {getAdminTypeLabel(selectedUser.adminType)}
@@ -1559,7 +1611,7 @@ const getOrderCancelledRate = (user) => {
                       <span className="text-sm text-gray-700">New:</span>
                       <span
                         className={`px-2 py-1 rounded text-xs ${getAdminTypeColor(
-                          newAdminType
+                          newAdminType,
                         )}`}
                       >
                         {getAdminTypeLabel(newAdminType)}

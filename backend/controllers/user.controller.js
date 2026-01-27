@@ -258,3 +258,76 @@ export const getAdminTypes = (req, res) => {
 
   res.json(adminTypes);
 };
+
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+   
+    if (id === req.user._id) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot delete your own account",
+      });
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+   
+    if (user.adminType === "super_admin" && req.user.adminType !== "super_admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only super admin can delete super admin accounts",
+      });
+    }
+
+    
+    const userInfo = {
+      id: user._id,
+      name: `${user.firstname} ${user.lastname}`,
+      email: user.email,
+      role: user.role,
+      adminType: user.adminType,
+    };
+
+   
+    await User.findByIdAndDelete(id);
+
+    
+    if (req.user && req.user.role === "admin") {
+      await AuditLogger.log({
+        adminId: req.user._id,
+        adminName: `${req.user.firstname} ${req.user.lastname}`,
+        action: "DELETE_USER",
+        entityType: ENTITY_TYPES.USER,
+        entityId: user._id,
+        entityName: `${user.firstname} ${user.lastname}`,
+        changes: {
+          deletedUser: userInfo,
+        },
+        ipAddress: req.ip || req.headers["x-forwarded-for"],
+        userAgent: req.headers["user-agent"] || "",
+        additionalInfo: `User permanently deleted by ${req.user.email}`,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "User deleted successfully",
+      deletedUser: userInfo,
+    });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error deleting user",
+      error: error.message,
+    });
+  }
+};

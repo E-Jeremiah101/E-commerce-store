@@ -5,6 +5,7 @@ import {
   getAllUsers,
   updateUserRole,
   getAdminTypes,
+  deleteUser,
 } from "../controllers/user.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
@@ -37,6 +38,14 @@ router.put(
   adminRoute,
   requirePermission("user:write"),
   updateUserRole
+);
+
+router.delete(
+  "/users/:id",
+  protectRoute,
+  adminRoute,
+  requirePermission("user:write"),
+  deleteUser,
 );
 
 export default router;

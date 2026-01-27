@@ -83,6 +83,7 @@ export const ACTIONS = {
   DELETE_CATEGORY: "DELETE_CATEGORY", 
 
   UPDATE_USER_ROLE: "UPDATE_USER_ROLE",  
+  DELETE_USER: "DELETE_USER",
 
   LOGIN: "LOGIN",
   LOGOUT: "LOGOUT",
@@ -167,6 +168,7 @@ export const ACTION_LABELS = {
   DELETE_CATEGORY:  "Delete Catgory",
 
   UPDATE_USER_ROLE: "Update User Role",
+  DELETE_USER: "Delete User",
 
   LOGIN: "Login",
   LOGOUT: "Logout",

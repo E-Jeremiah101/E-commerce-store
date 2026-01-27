@@ -30,6 +30,7 @@ import {
   AlertTriangle,
   Info,
   FileText,
+  Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -131,6 +132,7 @@ const AuditLogsTab = () => {
 
     // User actions
     { value: "UPDATE_USER_ROLE", label: "Update User Role" },
+    { value: "DELETE_USER", label: "Delete User" },
   ];
 
   // Entity types for dropdown
@@ -378,6 +380,8 @@ const AuditLogsTab = () => {
       // User actions
       case "UPDATE_USER_ROLE":
         return <AlertCircle className="h-4 w-4 text-indigo-500" />;
+      case "DELETE_USER":
+        return <Trash2 className="h-4 w-4 text-indigo-500" />;   
 
       // Auth actions
       case "LOGIN":

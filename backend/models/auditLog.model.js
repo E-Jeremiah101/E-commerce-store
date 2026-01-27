@@ -12,7 +12,7 @@ const auditLogSchema = new mongoose.Schema(
     adminId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      default:null,
+      default: null,
     },
     adminName: {
       type: String,
@@ -57,7 +57,6 @@ const auditLogSchema = new mongoose.Schema(
         "FLUTTERWAVE_NETWORK_ERROR",
         "REFUND_WEBHOOK_APPROVED",
         "REFUND_WEBHOOK_REJECTED",
-        
 
         // Auth actions
         "LOGIN",
@@ -91,7 +90,7 @@ const auditLogSchema = new mongoose.Schema(
         "ORDER_CANCELLED_STOCK_RESTORED",
         "ORDER_CANCELLED_STOCK_RESTORE_FAILED",
         "AUTO_ORDER_ARCHIVE",
- 
+
         //coupon
         "CREATE_COUPON",
         "DELETE_COUPON",
@@ -106,12 +105,21 @@ const auditLogSchema = new mongoose.Schema(
 
         // User actions
         "UPDATE_USER_ROLE",
+        "DELETE_USER",
       ],
     },
     entityType: {
       type: String,
       required: true,
-      enum: ["Product", "Order", "User", "Category", "Coupon", "System", "Other"],
+      enum: [
+        "Product",
+        "Order",
+        "User",
+        "Category",
+        "Coupon",
+        "System",
+        "Other",
+      ],
     },
     entityId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -135,7 +143,7 @@ const auditLogSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 
