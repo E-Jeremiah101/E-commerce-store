@@ -95,20 +95,16 @@ export default function UserBadge({
           >
             {name}
           </span>
-          {/* small nametag (first letter of first & last in a pill) */}
           <div className="mt-0.5 flex items-center space-x-2">
-            {user && (
+            {user?.role ? (
               <span className="text-xs text-gray-500 tracking-widest">
                 {user.role.toUpperCase()}
               </span>
-            )}
-            {!user && (
+            ) : (
               <span className="text-xs text-gray-500 tracking-widest">
-                {"GUEST"}
+                GUEST
               </span>
             )}
-
-            {/* optionally add role/status text */}
           </div>
         </div>
       )}

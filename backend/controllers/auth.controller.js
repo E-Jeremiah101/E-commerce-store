@@ -559,10 +559,123 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
+// export const resetPassword = async (req, res) => {
+//   try {
+//     const { token } = req.params;
+//     const { password } = req.body;
+//     const settings = await storeSettings.findOne();
+
+//     const resetTokenHash = crypto
+//       .createHash("sha256")
+//       .update(token)
+//       .digest("hex");
+
+//     const user = await User.findOne({
+//       resetPasswordToken: resetTokenHash,
+//       resetPasswordExpire: { $gt: Date.now() },
+//     });
+
+//     const isPasswordUsed = await user.isPasswordUsedBefore(password);
+//     if (isPasswordUsed) {
+//       if (user.role === "admin"){
+//       await logAuthAction(
+//         req,
+//         "RESET_PASSWORD_FAILED",
+//         user._id,
+//         {
+//           reason: "Password reuse not allowed",
+//           attemptedReuse: true,
+//           historySize: user.previousPasswords.length,
+//         },
+//         "Password reset failed - attempted to reuse old password"
+//       );
+//     }
+//       return res.status(400).json({
+//         message:
+//           "New password cannot be the same as your current or previous passwords",
+//         code: "PASSWORD_REUSE",
+//       });
+//     }
+
+//     user.password = password; 
+//     user.resetPasswordToken = undefined;
+//     user.resetPasswordExpire = undefined;
+//     await user.save();
+
+//     if (user.role === "admin") {
+//     await logAuthAction(
+//       req,
+//       "RESET_PASSWORD",
+//       user._id,
+//       {
+//         passwordReset: {
+//           tokenUsed: true,
+//           passwordChanged: true,
+//           timestamp: new Date().toISOString(),
+//         },
+//       },
+//       "Password reset successfully"
+//     );
+//   }
+
+//     (async () => {
+//       try {
+//         await sendEmail({
+//           to: user.email,
+//           subject: "Password Reset Successful",
+//           html: `
+//             <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6; max-width: 600px; margin: auto;">
+//               <h2 style="color: #27ae60;">Password Reset Successful</h2>
+//               <p>Hello ${user.firstname},</p>
+//               <p>Your password has been successfully reset.</p>
+//               <p>If you did not initiate this password reset, please contact our support team immediately.</p>
+//               <p>Best regards,<br><strong>${settings.storeName} Security Team</strong></p>
+//             </div>
+//           `,
+//         });
+//       } catch (emailError) {
+//         console.error("Password reset confirmation email failed:", emailError);
+//       }
+//     })();
+
+//     res.json({ message: "Password reset successful" });
+//   } catch (error) {
+//     console.error("Reset password error:", error);
+
+//     res.status(500).json({ message: "Server error" });
+//   }
+// };
 export const resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
-    const { password } = req.body;
+    const { password, confirmPassword } = req.body; // Add confirmPassword
+
+    // Add check for confirmPassword
+    if (!confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        errors: [
+          {
+            field: "confirmPassword",
+            message: "Confirm password is required",
+          },
+        ],
+      });
+    }
+
+    // Check if passwords match
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        errors: [
+          {
+            field: "confirmPassword",
+            message: "Passwords do not match",
+          },
+        ],
+      });
+    }
+
     const settings = await storeSettings.findOne();
 
     const resetTokenHash = crypto
@@ -570,54 +683,71 @@ export const resetPassword = async (req, res) => {
       .update(token)
       .digest("hex");
 
+    // Find user with valid token
     const user = await User.findOne({
       resetPasswordToken: resetTokenHash,
       resetPasswordExpire: { $gt: Date.now() },
     });
 
-    const isPasswordUsed = await user.isPasswordUsedBefore(password);
-    if (isPasswordUsed) {
-      if (user.role === "admin"){
-      await logAuthAction(
-        req,
-        "RESET_PASSWORD_FAILED",
-        user._id,
-        {
-          reason: "Password reuse not allowed",
-          attemptedReuse: true,
-          historySize: user.previousPasswords.length,
-        },
-        "Password reset failed - attempted to reuse old password"
-      );
-    }
+    // Check if user exists and token is valid
+    if (!user) {
       return res.status(400).json({
-        message:
-          "New password cannot be the same as your current or previous passwords",
-        code: "PASSWORD_REUSE",
+        success: false,
+        message: "Invalid or expired reset token",
       });
     }
 
-    user.password = password; 
+    // Check password reuse (only if user exists)
+    const isPasswordUsed = await user.isPasswordUsedBefore(password);
+    if (isPasswordUsed) {
+      if (user.role === "admin") {
+        await logAuthAction(
+          req,
+          "RESET_PASSWORD_FAILED",
+          user._id,
+          {
+            reason: "Password reuse not allowed",
+            attemptedReuse: true,
+            historySize: user.previousPasswords.length,
+          },
+          "Password reset failed - attempted to reuse old password",
+        );
+      }
+      return res.status(400).json({
+        success: false,
+        errors: [
+          {
+            field: "password",
+            message:
+              "New password cannot be the same as your current or previous passwords",
+          },
+        ],
+      });
+    }
+
+    // Update password
+    user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save();
 
     if (user.role === "admin") {
-    await logAuthAction(
-      req,
-      "RESET_PASSWORD",
-      user._id,
-      {
-        passwordReset: {
-          tokenUsed: true,
-          passwordChanged: true,
-          timestamp: new Date().toISOString(),
+      await logAuthAction(
+        req,
+        "RESET_PASSWORD",
+        user._id,
+        {
+          passwordReset: {
+            tokenUsed: true,
+            passwordChanged: true,
+            timestamp: new Date().toISOString(),
+          },
         },
-      },
-      "Password reset successfully"
-    );
-  }
+        "Password reset successfully",
+      );
+    }
 
+    // Send confirmation email
     (async () => {
       try {
         await sendEmail({
@@ -638,106 +768,17 @@ export const resetPassword = async (req, res) => {
       }
     })();
 
-    res.json({ message: "Password reset successful" });
+    res.json({
+      success: true,
+      message: "Password reset successful",
+    });
   } catch (error) {
     console.error("Reset password error:", error);
 
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
-export const changePassword = async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-    const userId = req.user._id;
-
-    const user = await User.findById(userId);
-
-    const isMatch = await user.comparePassword(currentPassword);
-    if (!isMatch) {
-      await logAuthAction(
-        req,
-        "CHANGE_PASSWORD_FAILED",
-        userId,
-        {
-          reason: "Incorrect current password",
-        },
-        "Password change failed - incorrect current password"
-      );
-      return res.status(400).json({ message: "Current password is incorrect" });
-    }
-
-    if (currentPassword === newPassword) {
-      await logAuthAction(
-        req,
-        "CHANGE_PASSWORD_FAILED",
-        userId,
-        {
-          reason: "Same as current password",
-        },
-        "Password change failed - same as current password"
-      );
-      return res.status(400).json({ 
-        message: "New password cannot be the same as current password" 
-      });
-    }
-
-    const isPasswordUsed = await user.isPasswordUsedBefore(newPassword);
-    if (isPasswordUsed) {
-      await logAuthAction(
-        req,
-        "CHANGE_PASSWORD_FAILED",
-        userId,
-        {
-          reason: "Password reuse not allowed",
-          attemptedReuse: true,
-        },
-        "Password change failed - attempted to reuse old password"
-      );
-      return res.status(400).json({ 
-        message: "New password cannot be the same as your previous passwords",
-        code: "PASSWORD_REUSE"
-      });
-    }
-
-    user.password = newPassword;
-    await user.save();
-
-    await redis.del(`refresh_token:${userId}`);
-
-    res.clearCookie("accessToken");
-    res.clearCookie("refreshToken");
-
-    await logAuthAction(
-      req,
-      "CHANGE_PASSWORD",
-      userId,
-      {
-        passwordChanged: true,
-        timestamp: new Date().toISOString(),
-        previousPasswordsCount: user.previousPasswords.length,
-        passwordStrength: passwordValidation.score,
-      },
-      "Password changed directly from profile"
-    );
-
-    res.json({ 
-      message: "Password changed successfully. Please login again.",
-      requiresReauth: true 
+    res.status(500).json({
+      success: false,
+      message: "Server error",
     });
-  } catch (error) {
-    console.error("Change password error:", error);
-    
-    await logAuthAction(
-      req,
-      "CHANGE_PASSWORD_ERROR",
-      req.user?._id || null,
-      {
-        error: error.message,
-      },
-      "Password change process failed"
-    );
-    
-    res.status(500).json({ message: "Server error" });
   }
 };
+ 

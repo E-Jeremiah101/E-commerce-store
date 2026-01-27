@@ -15,24 +15,31 @@
  */
 
 import Joi from "joi";
+import User from "../models/user.model.js"
 
 /**
  * Middleware factory for validating request body
  */
 export const validateBody = (schema) => (req, res, next) => {
+
+   console.log("Validation middleware called for path:", req.path);
+   console.log("Request body received:", JSON.stringify(req.body, null, 2));
+   console.log("Schema being validated against:", schema.describe());
   const { error, value } = schema.validate(req.body, {
     abortEarly: false,
     stripUnknown: false,
   });
 
   if (error) {
+
+    console.log("Validation errors:", JSON.stringify(error.details, null, 2));
     const details = error.details.map((detail) => ({
       field: detail.path.join("."),
       message: detail.message,
     }));
     return res.status(400).json({ success: false, errors: details });
   }
-
+console.log("Validation passed, cleaned value:", value);
   req.body = value;
   next();
 };
@@ -125,19 +132,13 @@ export const commonSchemas = {
   email: Joi.string().email().max(255).lowercase().trim().required().messages({
     "string.email": "Invalid email format",
     "string.max": "Email must be less than 255 characters",
-  }),
+  }), 
 
-  // Password validation - min 8 chars, at least 1 uppercase, 1 lowercase, 1 number
-  password: Joi.string()
-    .min(8)
-    .max(128)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
-    .required()
-    .messages({
-      "string.min": "Password must be at least 8 characters",
-      "string.pattern.base":
-        "Password must contain uppercase, lowercase, and number",
-    }),
+  // Password validation - min 6 chars
+  password: Joi.string().min(6).max(128).required().messages({
+    "string.min": "Password must be at least 8 characters",
+    "string.max": "Password cannot exceed 128 characters",
+  }),
 
   // MongoDB ObjectId validation
   mongoId: Joi.string()
@@ -197,7 +198,7 @@ export const commonSchemas = {
   orderId: Joi.string()
     .regex(/^[0-9a-fA-F]{24}$/)
     .required()
-    .messages({  
+    .messages({
       "string.pattern.base": "Invalid order ID format",
     }),
 
@@ -214,7 +215,7 @@ export const commonSchemas = {
       "shipped",
       "delivered",
       "cancelled",
-      "refunded"
+      "refunded",
     )
     .required()
     .messages({
@@ -279,8 +280,16 @@ export const authSchemas = {
       .messages({
         "any.only": "Passwords do not match",
       }),
-    firstName: Joi.string().max(50).trim().required(),
-    lastName: Joi.string().max(50).trim().required(),
+    firstname: Joi.string().max(50).trim().required().messages({
+      // lowercase 'firstname'
+      "string.empty": "First name is required",
+      "string.max": "First name cannot exceed 50 characters",
+    }),
+    lastname: Joi.string().max(50).trim().required().messages({
+      // lowercase 'lastname'
+      "string.empty": "Last name is required",
+      "string.max": "Last name cannot exceed 50 characters",
+    }),
   }),
 
   login: Joi.object({
@@ -293,7 +302,6 @@ export const authSchemas = {
   }),
 
   resetPassword: Joi.object({
-    token: Joi.string().required(),
     password: commonSchemas.password,
     confirmPassword: Joi.string()
       .valid(Joi.ref("password"))
@@ -303,16 +311,6 @@ export const authSchemas = {
       }),
   }),
 
-  changePassword: Joi.object({
-    currentPassword: Joi.string().required(),
-    newPassword: commonSchemas.password,
-    confirmPassword: Joi.string()
-      .valid(Joi.ref("newPassword"))
-      .required()
-      .messages({
-        "any.only": "Passwords do not match",
-      }),
-  }),
 };
 
 // Product schemas

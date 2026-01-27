@@ -7,7 +7,6 @@ import {
   getProfile,
   forgotPassword,
   resetPassword,
-  changePassword,
 } from "../controllers/auth.controller.js";
 import {
   loginRateLimiter,
@@ -25,6 +24,7 @@ const router = express.Router();
 router.post(
   "/signup",
   signupRateLimiter,
+  validateBody(authSchemas.signup),
   signup
 );
 router.post("/login", loginRateLimiter, validateBody(authSchemas.login), login);
@@ -33,21 +33,14 @@ router.post("/refresh-token", refreshToken);
 router.get("/profile", protectRoute, getProfile);
 router.post(
   "/forgot-password",
-  forgotPasswordRateLimiter,
-  
-  forgotPassword
+  // forgotPasswordRateLimiter,
+  validateBody(authSchemas.forgotPassword),
+  forgotPassword,
 );
 router.post(
   "/reset-password/:token",
- 
-  resetPassword
-);
-router.post(
-  "/change-password",
-  protectRoute,
-
-  changePassword
+  validateBody(authSchemas.resetPassword),
+  resetPassword,
 );
 
 export default router;
-// validateBody(authSchemas.signup),validateBody(authSchemas.forgotPassword), validateBody(authSchemas.resetPassword),  validateBody(authSchemas.changePassword),

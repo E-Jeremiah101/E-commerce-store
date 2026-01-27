@@ -11,7 +11,6 @@ const ProductCard = ({ product }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useUserStore();
 
-  // Check if product is saved
   useEffect(() => {
     if (user) {
       checkSavedStatus();
@@ -41,7 +40,7 @@ const ProductCard = ({ product }) => {
     setIsLoading(true);
     try {
       if (isSaved) {
-        // Unsave
+  
         await fetch(`/api/saved-products/${product._id}`, {
           method: "DELETE",
           headers: {
@@ -51,7 +50,7 @@ const ProductCard = ({ product }) => {
         setIsSaved(false);
         toast.success("Removed from wishlist");
       } else {
-        // Save
+ 
         await fetch("/api/saved-products", {
           method: "POST",
           headers: {

@@ -41,7 +41,7 @@ const ProductsList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 15;
 
-  // Delete confirmation state
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
   const [deleteType, setDeleteType] = useState("archive");
@@ -51,12 +51,12 @@ const ProductsList = () => {
 
   const { settings } = useStoreSettings();
 
-  // Get unique categories for filter
+
   const categories = [
     ...new Set(products?.map((p) => p.category).filter(Boolean)),
   ];
 
-  // Filter and sort products
+
   const filteredProducts =
     products?.filter((product) => {
       const matchesSearch =
@@ -77,7 +77,7 @@ const ProductsList = () => {
       return matchesSearch && matchesCategory && matchesStock;
     }) || [];
 
-  // Sort products
+ 
   const sortedProducts = [...filteredProducts].sort((a, b) => {
     switch (sortBy) {
       case "name":

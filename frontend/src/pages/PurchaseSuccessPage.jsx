@@ -6,7 +6,7 @@ import axios from "../lib/axios";
 import Confetti from "react-confetti";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
-
+ 
 const PurchaseSuccessPageContent = () => {
   const [isProcessing, setIsProcessing] = useState(true);
   const [orderNumber, setOrderNumber] = useState("");

@@ -80,6 +80,7 @@ export const useUserStore = create((set, get) => ({
         lastname,
         email,
         password,
+        confirmPassword,
       });
       set({ user: res.data, loading: false });
     } catch (error) {

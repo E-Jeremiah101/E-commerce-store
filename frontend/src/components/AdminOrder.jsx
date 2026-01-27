@@ -98,44 +98,8 @@ const AdminOrdersPage = () => {
   console.log("Fetching orders with params:", params);
 
  
-  // const fetchOrders = async () => {
-  //   try {
-  //     setIsFetching(true);
 
-  //     setOrders([]);
-
-  //     if (viewMode === "archived") {
-
-  //       // Get from archive collection
-  //       const { data } = await axios.get("/admin/orders/archived", {
-  //         params,
-  //         headers: {
-  //           Authorization: `Bearer ${localStorage.getItem("token")}`,
-  //         },
-  //       });
-  //       setOrders(data.orders);
-  //     } else {
-        
-  //       const { data } = await axios.get("/admin/orders", {
-  //         params,
-  //         headers: {
-  //           Authorization: `Bearer ${localStorage.getItem("token")}`,
-  //         },
-  //       });
-         
-  //       // Filter out archived orders on the frontend
-  //       const activeOrders = data.orders.filter((order) => !order.isArchived);
-  //       setOrders(activeOrders);
-  //     }
-  //   } catch (error) {
-  //     console.error("Fetch orders failed:", error);
-  //     setOrders([]);
-  //   } finally {
-  //     setIsFetching(false);
-  //     setLoading(false);
-  //   }
-  // };
-const fetchOrders = async (isStatusUpdate = false) => {
+  const fetchOrders = async (isStatusUpdate = false) => {
   try {
     setIsFetching(true);
 
