@@ -111,7 +111,7 @@ const Delivered = () => {
         />
 
         {orders.filter((order) => order.status === "Delivered").length === 0 ? (
-          <p className="text-center text-gray-500">You have no orders yet.</p>
+          <p className="text-center text-gray-500">No delivered orders.</p>
         ) : (
           orders
             .filter((order) => order.status === "Delivered")

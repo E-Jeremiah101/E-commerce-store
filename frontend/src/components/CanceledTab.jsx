@@ -48,7 +48,7 @@ const CanceledTab = () => {
         <ToastContainer position="top-center" autoClose={3000} />
 
         {orders.filter((order) => order.status === "Cancelled").length === 0 ? (
-          <p className="text-center text-gray-500">No Canceled orders</p>
+          <p className="text-center text-gray-500">No canceled orders</p>
         ) : (
           orders
             .filter((order) => order.status === "Cancelled")
