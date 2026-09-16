@@ -5,25 +5,24 @@ import {
   getAllUsers,
   updateUserRole,
   getAdminTypes,
-  deleteUser,
+  deleteUser, 
 } from "../controllers/user.controller.js";
 import { protectRoute } from "../middleware/auth.middleware.js";
 import { adminRoute } from "../middleware/auth.middleware.js";
 import { requirePermission } from "../middleware/permission.middleware.js";
 
-const router = express.Router();
+const router = express.Router(); 
 
 router.get("/profile", protectRoute, getProfile);
 router.put("/update-profile", protectRoute, updateProfile);
 
 router.get(
   "/users",
-  protectRoute,
+  protectRoute,  
   adminRoute,
   requirePermission("user:read"),
-  getAllUsers
-);
-
+  getAllUsers  
+); 
 router.get(
   "/users/admin-types",
   protectRoute,
