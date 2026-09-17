@@ -17,7 +17,7 @@ router.get("/profile", protectRoute, getProfile);
 router.put("/update-profile", protectRoute, updateProfile);
 
 router.get(
-  "/users",
+  "/users", 
   protectRoute,  
   adminRoute,
   requirePermission("user:read"),
@@ -37,7 +37,7 @@ router.put(
   adminRoute,
   requirePermission("user:write"),
   updateUserRole
-);
+); 
 
 router.delete(
   "/users/:id",

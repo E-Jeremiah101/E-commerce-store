@@ -561,6 +561,7 @@ export const deleteProduct = async (req, res) => {
         after: {
           archived: true,
           isActive: false,
+          archivedAt: new Date(),
         },
       },
       ...requestInfo,
@@ -569,11 +570,9 @@ export const deleteProduct = async (req, res) => {
 
     product.archived = true;
     product.isActive = false;
+    product.archivedAt = new Date();
     await product.save();
 
-    product.archived = true;
-    product.isActive = false;
-    await product.save();
 
     if (product.isFeatured) {
       product.isFeatured = false;
