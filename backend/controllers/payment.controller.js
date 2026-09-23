@@ -295,7 +295,8 @@ setInterval(async () => {
     const keys = await redis.keys("reservation:*");
 
     let releasedCount = 0;
-    let expiredButStuckCount = 0;
+    let expiredButStuckCount = 0; 
+
 
     const activeReservationIds = new Set();
     for (const key of keys) {
@@ -1314,7 +1315,7 @@ export const handleFlutterwaveWebhook = async (req, res) => {
     console.error(`Webhook processing error:`, err);
 
     if (reservationId) {
-      await releasereleaseCheckoutResourcesInventory(reservationId);
+      await releaseCheckoutResources(reservationId);
     }
 
     return res.status(500).send("Webhook processing failed");

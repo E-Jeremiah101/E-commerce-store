@@ -23,7 +23,7 @@ const PurchaseSuccessPageContent = () => {
     const tx_ref = params.get("tx_ref");
     const status = params.get("status");
 
-    const hasPaymentAttempt = tx_ref && tx_ref.includes("ECOSTORE");
+    const hasPaymentAttempt = tx_ref && tx_ref.includes(settings?.storeName);
 
     if (!hasPaymentAttempt) {
       console.log("No payment attempt detected");
