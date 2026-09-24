@@ -243,7 +243,7 @@ const Navbar = () => {
               >
                 <Search size={20} />
                 {isSearchOpen && (
-                  <div className="absolute -bottom-1 left-1/2 w-2 h-2 bg-blue-500 rounded-full -translate-x-1/2"></div>
+                  <div className="absolute -bottom-1 left-1/2 w-2 h-2 -translate-x-1/2"></div>
                 )}
               </button>
 
@@ -364,7 +364,7 @@ const Navbar = () => {
                     <Search size={20} />
                   )}
                   {isSearchOpen && (
-                    <div className="absolute -bottom-1 left-1/2 w-2 h-2 bg-blue-500 rounded-full -translate-x-1/2"></div>
+                    <div className="absolute "></div>
                   )}
                 </button>
 

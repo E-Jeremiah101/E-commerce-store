@@ -43,6 +43,8 @@ const AdminOrdersPage = () => {
   const navigate = useNavigate();
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState(null);
+  const [showStatusConfirm, setShowStatusConfirm] = useState(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -387,22 +389,47 @@ const AdminOrdersPage = () => {
     "December",
   ];
 
-  const handleStatusChange = async (orderId, newStatus) => {
-    try {
-      await axios.put(
-        `/admin/orders/${orderId}/status`,
-        { status: newStatus },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
-      fetchOrders(true);
-      setOpenDropdownId(null);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // const handleStatusChange = async (orderId, newStatus) => {
+  //   try {
+  //     await axios.put(
+  //       `/admin/orders/${orderId}/status`,
+  //       { status: newStatus },
+  //       {
+  //         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+  //       }
+  //     );
+  //     fetchOrders(true);
+  //     setOpenDropdownId(null);
+  //     setShowStatusConfirm(null);
+  //   } catch (err) {
+  //     console.error(err);
+  //     setShowRestoreConfirm(null)
+  //   }
+  // };
+const handleStatusChange = async (orderId, newStatus) => {
+  if (statusUpdating) return; // prevent double-click
+  setStatusUpdating(true);
 
+  try {
+    await axios.put(
+      `/admin/orders/${orderId}/status`,
+      { status: newStatus },
+      {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      },
+    );
+
+    await fetchOrders(true);
+    setShowStatusConfirm(null);
+  } catch (err) {
+    console.error("Status update failed:", err);
+    alert(
+      "Failed to update status: " + (err.response?.data?.error || err.message),
+    );
+  } finally {
+    setStatusUpdating(false);
+  }
+};
   const handleRestoreOrder = async (archiveId) => {
     try {
       await axios.post(
@@ -569,6 +596,107 @@ const AdminOrdersPage = () => {
                 >
                   <RotateCcw size={16} />
                   Restore Order
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Status Change Confirmation Modal */}
+        {showStatusConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                Confirm Status Change
+              </h3>
+
+              <p className="text-gray-600 mb-4">
+                Are you sure you want to update order{" "}
+                <span className="font-semibold text-gray-900">
+                  {showStatusConfirm.orderNumber}
+                </span>
+                ?
+              </p>
+
+              {/* Visual status transition */}
+              <div className="flex items-center justify-center gap-3 mb-6 p-3 bg-gray-50 rounded-lg">
+                <span
+                  className={`py-1 px-3 rounded text-xs font-medium ${getStatusColor(
+                    showStatusConfirm.currentStatus,
+                  )}`}
+                >
+                  {showStatusConfirm.currentStatus}
+                </span>
+
+                <span className="text-gray-400 text-lg">→</span>
+
+                <span
+                  className={`py-1 px-3 rounded text-xs font-medium ${getStatusColor(
+                    showStatusConfirm.newStatus,
+                  )}`}
+                >
+                  {showStatusConfirm.newStatus}
+                </span>
+              </div>
+
+              {/* Extra warning for Cancelled */}
+              {showStatusConfirm.newStatus === "Cancelled" && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700">
+                    ⚠️ Cancelling an order is usually final. The customer will
+                    be notified. Make sure this is intentional.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setShowStatusConfirm(null)}
+                  className="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() =>
+                    handleStatusChange(
+                      showStatusConfirm.orderId,
+                      showStatusConfirm.newStatus,
+                    )
+                  }
+                  disabled={statusUpdating}
+                  className={`px-4 py-2 text-sm text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed ${
+                    showStatusConfirm.newStatus === "Cancelled"
+                      ? "bg-red-600 hover:bg-red-700"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  {statusUpdating ? (
+                    <>
+                      <svg
+                        className="animate-spin h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        />
+                      </svg>
+                      Updating...
+                    </>
+                  ) : (
+                    "Confirm Change"
+                  )}
                 </button>
               </div>
             </div>
@@ -961,7 +1089,7 @@ const AdminOrdersPage = () => {
                                 <span className="text-purple-500">
                                   Archived:{" "}
                                   {new Date(
-                                    order.archivedAt
+                                    order.archivedAt,
                                   ).toLocaleDateString()}
                                 </span>
                               </>
@@ -1021,7 +1149,7 @@ const AdminOrdersPage = () => {
                         <div className="flex flex-col space-y-2">
                           <span
                             className={`py-1 px-2 rounded text-xs font-medium text-center ${getStatusColor(
-                              order.status
+                              order.status,
                             )}`}
                           >
                             {order.status}
@@ -1085,20 +1213,24 @@ const AdminOrdersPage = () => {
                                         }
 
                                         return (
+ 
                                           <button
                                             key={statusOption}
-                                            onClick={() =>
-                                              handleStatusChange(
-                                                order._id,
-                                                statusOption
-                                              )
-                                            }
+                                            onClick={() => {
+                                              setShowStatusConfirm({
+                                                orderId: order._id,
+                                                orderNumber: order.orderNumber,
+                                                currentStatus: order.status,
+                                                newStatus: statusOption,
+                                              });
+                                              setOpenDropdownId(null); // close the dropdown
+                                            }}
                                             className="block w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
                                           >
                                             {statusOption}
                                           </button>
                                         );
-                                      }
+                                      },
                                     )}
 
                                     {getValidNextStatuses(order.status)

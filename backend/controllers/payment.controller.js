@@ -1601,8 +1601,8 @@ export const sendDetailedOrderEmail = async ({ to, order }) => {
       <div style="max-width: 700px; margin: auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 6px 18px rgba(0,0,0,0.06);">
         <div style="background: #10b981; padding: 22px; text-align: center; color: #fff;">
           <img src="${settings?.logo}" alt="${
-    settings?.storeName || "Store"
-  }" style="max-height:50px; display:block; margin: 0 auto 8px;" />
+            settings?.storeName || "Store"
+          }" style="max-height:50px; display:block; margin: 0 auto 8px;" />
           <h1 style="margin:0; font-size:20px;">Order Confirmation</h1>
           <div style="margin-top:6px; font-size:15px;">${
             order.orderNumber || "N/A"
@@ -1631,21 +1631,21 @@ export const sendDetailedOrderEmail = async ({ to, order }) => {
           </table>
           <p style="margin-top: 20px; font-size: 16px;">
             <strong>Original Subtotal:</strong> ${formatter.format(
-              subtotal
+              subtotal,
             )} <br>
                     ${
                       discount > 0
                         ? `
                   
                       <strong>Coupon Discount:</strong> - ${formatter.format(
-                        discount
+                        discount,
                       )}
                    
           `
                         : ""
                     }<br>
             <strong>Delivery Fee:</strong> ${formatter.format(
-              order.deliveryFee
+              order.deliveryFee,
             )}<br>
             <strong>Final Total:</strong> ${formatter.format(totalAmount)}
           </p>
@@ -1678,12 +1678,21 @@ export const sendDetailedOrderEmail = async ({ to, order }) => {
           <p style="margin: 0 0 10px 0;"><p style="margin-top:18px;">Thanks for choosing <strong> ${
             settings?.storeName || "Store"
           }</strong> </p>
-          <p style="margin: 0;">Need help? Contact us at <a href="mailto:${
-            settings?.supportEmail
-          }" 
-             style="color: #10b981; text-decoration: none;">${
-               settings?.supportEmail
-             }</a></p>
+          <p style="margin: 0 0 8px; font-size: 14px; ">
+            <strong>Need help? Contact support:</strong>
+          </p> 
+          <p style="margin: 4px 0; font-size: 14px;">
+            📧 Email: 
+            <a href="mailto:${settings?.supportEmail}" style="color: #2980b9; text-decoration: none;">
+              ${settings?.supportEmail}
+            </a>
+          </p>
+          <p style="margin: 4px 0; font-size: 14px;">
+            📞 Phone: 
+            <a href="tel:${(settings?.phoneNumber).replace(/\s/g, "")}" style="color: #2980b9; text-decoration: none;">
+              ${settings?.phoneNumber}
+            </a>
+          </p>
         </div>
       </div>
     </div>

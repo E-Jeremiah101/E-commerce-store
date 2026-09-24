@@ -1301,51 +1301,70 @@ export const updateOrderStatus = async (req, res) => {
     await order.save();
 
     const emailHtml = `
-      <html>
-        <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
-          <div style="max-width: 600px; margin: auto; background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #eee;">
-            <h2 style="color: #2c3e50; text-align: center;"> Order Status Update</h2>
-            <p>Hi <strong>${order.user?.firstname || "Customer"}</strong>,</p>
-            <p>Your order <strong>${
-              order.orderNumber
-            }</strong> has been updated.</p>
-            
-            <p style="font-size: 16px;">
-              <strong>Current Status:</strong> 
-              <span style="color: ${
-                status === "Shipped"
-                  ? "green"
-                  : status === "Delivered"
-                  ? "#2ecc71"
-                  : status === "Cancelled"
+  <html>
+    <body style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px;">
+      <div style="max-width: 600px; margin: auto; background: #ffffff; padding: 20px; border-radius: 8px; border: 1px solid #eee;">
+        <h2 style="color: #2c3e50; text-align: center;"> Order Status Update</h2>
+        <p>Hi <strong>${order.user?.firstname || "Customer"}</strong>,</p>
+        <p>Your order <strong>${
+          order.orderNumber
+        }</strong> has been updated.</p>
+        
+        <p style="font-size: 16px;">
+          <strong>Current Status:</strong> 
+          <span style="color: ${
+            status === "Shipped"
+              ? "green"
+              : status === "Delivered"
+                ? "#2ecc71"
+                : status === "Cancelled"
                   ? "red"
                   : "orange"
-              }; font-weight: bold;">
-                ${status.charAt(0).toUpperCase() + status.slice(1)}
-              </span>
-            </p>
+          }; font-weight: bold;">
+            ${status.charAt(0).toUpperCase() + status.slice(1)}
+          </span>
+        </p>
 
-            ${
-              status === "Delivered"
-                ? `<p>Your package has been delivered. We hope you enjoy your purchase!</p>`
-                : status === "Shipped"
-                ? `<p>Your order is on the way! You’ll receive it soon.</p>`
-                : status === "Processing"
+        ${
+          status === "Delivered"
+            ? `<p>Your package has been delivered. We hope you enjoy your purchase!</p>`
+            : status === "Shipped"
+              ? `<p>Your order is on the way! You’ll receive it soon.</p>`
+              : status === "Processing"
                 ? `<p>We’re currently preparing your order.</p>`
                 : status === "Cancelled"
-                ? `<p>Unfortunately, your order has been cancelled. Please contact support if this wasn’t expected.</p>`
-                : ""
-            }
+                  ? `<p>Unfortunately, your order has been cancelled. Please contact support if this wasn’t expected.</p>`
+                  : ""
+        }
 
-            <p style="margin-top: 30px; font-size: 14px; color: #555;">
-              Best regards, <br>
-              <strong>The ${settings?.storeName} Team </strong>
-            </p>
-          </div>
-        </body>
-      </html>
-    `;
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
 
+        <div style="background: #f4f8fb; padding: 15px; border-radius: 6px; text-align: center;">
+          <p style="margin: 0 0 8px; font-size: 15px; color: #2c3e50;">
+            <strong>Need help? Contact our Customer Service</strong>
+          </p>
+          <p style="margin: 4px 0; font-size: 14px; color: #555;">
+            📧 Email: 
+            <a href="mailto:${settings?.supportEmail}" style="color: #2980b9; text-decoration: none;">
+              ${settings?.supportEmail }
+            </a>
+          </p>
+          <p style="margin: 4px 0; font-size: 14px; color: #555;">
+            📞 Phone: 
+            <a href="tel:${(settings?.phoneNumber).replace(/\s/g, "")}" style="color: #2980b9; text-decoration: none;">
+              ${settings?.phoneNumber }
+            </a>
+          </p>
+        </div>
+
+        <p style="margin-top: 30px; font-size: 14px; color: #555;">
+          Best regards, <br>
+          <strong>The ${settings?.storeName} Team </strong>
+        </p>
+      </div>
+    </body>
+  </html>
+`;
     console.log(" Order updated:", order);
      res.status(200).json({
        success: true,
