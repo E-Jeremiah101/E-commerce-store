@@ -339,8 +339,8 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
     <div class="container">
         <div class="header">
             <img src="${settings?.logo}" alt="${
-    settings?.storeName
-  }" style="max-height: 50px; display: block; margin: 0 auto 12px;">
+              settings?.storeName
+            }" style="max-height: 50px; display: block; margin: 0 auto 12px;">
             <h1 style="margin: 0; font-size: 22px; font-weight: 500;">Refund Request Received</h1>
             <div class="status-badge">
                 Request Submitted
@@ -373,7 +373,7 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
                                 ? `<div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
                                     <span style="color: #92400e;">Coupon Deduction:</span>
                                     <span style="color: #92400e;">-${formatter.format(
-                                      displayDiscount
+                                      displayDiscount,
                                     )}</span>
                                    </div>`
                                 : ""
@@ -381,7 +381,7 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid #d1fae5;">
                                 <span style="color: #047857; font-weight: 600;">Refund Amount:</span>
                                 <span style="font-size: 18px; font-weight: 700; color: #047857;">${formatter.format(
-                                  refund.amount
+                                  refund.amount,
                                 )}</span>
                             </div>
                         </div>
@@ -394,7 +394,7 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
                             </div>
                             <div class="info-item">
                                 <span style="color: #6b7280;">Refund ID:</span>
-                                <span style="font-family: monospace; font-size: 13px;">${refund._id
+                                <span style="font-weight: 600;">${refund._id
                                   .toString()
                                   .slice(-12)
                                   .toUpperCase()}</span>
@@ -421,19 +421,15 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
             <div class="timeline">
                 <h4 style="margin-top: 0; color: #047857;">What Happens Next</h4>
                 <div class="timeline-item">
-                    <div class="timeline-number">1</div>
                     <div>Our team reviews your request (1-2 business days)</div>
                 </div>
                 <div class="timeline-item">
-                    <div class="timeline-number">2</div>
                     <div>Item inspection by delivery agent (if required)</div>
                 </div>
                 <div class="timeline-item">
-                    <div class="timeline-number">3</div>
                     <div>Refund processing via payment gateway</div>
                 </div>
                 <div class="timeline-item">
-                    <div class="timeline-number">4</div>
                     <div>Funds returned to original payment method</div>
                 </div>
                 <p style="margin: 16px 0 0 0; font-size: 14px; color: #047857;">
@@ -465,13 +461,6 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
                 </ul>
             </div>
 
-            <p style="text-align: center; margin: 24px 0;">
-                <a href="${
-                  process.env.CLIENT_URL
-                }/account/orders" class="action-button">
-                    Track Your Refund
-                </a>
-            </p>
 
             <p style="color: #6b7280; text-align: center; font-size: 14px;">
                 Need help? Contact our support team:<br>
@@ -486,8 +475,8 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
         <div class="footer">
             <p style="margin: 0 0 12px 0;">
                 <img src="${settings?.logo}" alt="${
-    settings?.storeName
-  }" style="max-height: 30px; opacity: 0.8;">
+                  settings?.storeName
+                }" style="max-height: 30px; opacity: 0.8;">
             </p>
             <p style="margin: 0 0 8px 0;">${
               settings?.storeName
@@ -544,7 +533,7 @@ const getProcessingEmailContent = (order, refund, settings, formatter) => {
                         <div style="background: #dbeafe; padding: 12px; border-radius: 6px; margin-top: 8px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <span style="color: #1e40af;">Refund Amount:</span>
-                                <span style="font-size: 20px; font-weight: 700; color: #1e40af;">${formatter.format(
+                                <span style="font-size: 20px; font-weight: 600; color: #1e40af;">${formatter.format(
                                   refund.amount
                                 )}</span>
                             </div>
@@ -556,23 +545,23 @@ const getProcessingEmailContent = (order, refund, settings, formatter) => {
             <div class="timeline">
                 <h4 style="margin-top: 0; color: #047857;">Current Status Timeline</h4>
                 <div class="timeline-item">
-                    <div class="timeline-number" style="color: #047857; background-color: #d1fae5;">✓</div>
+    
                     <div><strong style="color: #047857;">Request Approved</strong> - ${new Date(
                       refund.processedAt
                     ).toLocaleDateString()}</div>
                 </div>
                 <div class="timeline-item">
-                    <div class="timeline-number">2</div>
+                    
                     <div><strong style="color: #047857;">Payment Processing</strong> - With ${
                       settings?.paymentGateway || "payment gateway"
                     }</div>
                 </div>
                 <div class="timeline-item">
-                    <div class="timeline-number">3</div>
+                   
                     <div>Funds Returned - To original payment method</div>
                 </div>
                 <div class="timeline-item">
-                    <div class="timeline-number">4</div>
+                  
                     <div>Completion Notification - Email confirmation</div>
                 </div>
                 <p style="margin: 16px 0 0 0; font-size: 14px; color: #047857;">
@@ -632,8 +621,8 @@ const getApprovedEmailContent = (order, refund, settings, formatter) => {
     <div class="container">
         <div class="header">
             <img src="${settings?.logo}" alt="${
-    settings?.storeName
-  }" style="max-height: 50px; display: block; margin: 0 auto 12px;">
+              settings?.storeName
+            }" style="max-height: 50px; display: block; margin: 0 auto 12px;">
             <h1 style="margin: 0; font-size: 22px; font-weight: 500;">Refund Successfully Completed</h1>
             <div class="status-badge">
                 Refunded
@@ -649,7 +638,7 @@ const getApprovedEmailContent = (order, refund, settings, formatter) => {
             <div class="highlight-box">
                 <div style="font-size: 14px; color: #065f46; margin-bottom: 8px;">REFUND AMOUNT</div>
                 <div style="font-size: 36px; font-weight: 700; color: #047857;">${formatter.format(
-                  refund.amount
+                  refund.amount,
                 )}</div>
                 <div style="font-size: 14px; color: #065f46; margin-top: 8px;">
                     Completed on ${new Date(refundDate).toLocaleDateString(
@@ -659,7 +648,7 @@ const getApprovedEmailContent = (order, refund, settings, formatter) => {
                         year: "numeric",
                         month: "long",
                         day: "numeric",
-                      }
+                      },
                     )}
                 </div>
             </div>
@@ -677,7 +666,7 @@ const getApprovedEmailContent = (order, refund, settings, formatter) => {
                         <div class="info-grid">
                             <div class="info-item">
                                 <span style="color: #6b7280;">Refund ID:</span>
-                                <span style="font-family: monospace; font-weight: 600;">${refund._id
+                                <span style="font-weight: 600;">${refund._id
                                   .toString()
                                   .slice(-12)
                                   .toUpperCase()}</span>
@@ -694,10 +683,7 @@ const getApprovedEmailContent = (order, refund, settings, formatter) => {
                                   refund.quantity
                                 }</span>
                             </div>
-                            <div class="info-item">
-                                <span style="color: #6b7280;">Payment Method:</span>
-                                <span style="font-weight: 600;">Original payment method</span>
-                            </div>
+       
                         </div>
                     </div>
                 </div>
@@ -706,25 +692,17 @@ const getApprovedEmailContent = (order, refund, settings, formatter) => {
             <div class="timeline" style="background: #f0fdf4; border-left-color: #047857;">
                 <h4 style="margin-top: 0; color: #047857;">Refund Timeline</h4>
                 <div class="timeline-item">
-                    <div class="timeline-number" style="color: #047857; background-color: #d1fae5;">✓</div>
                     <div><strong>Request Submitted</strong> - ${new Date(
-                      refund.requestedAt
+                      refund.requestedAt,
                     ).toLocaleDateString()}</div>
                 </div>
                 <div class="timeline-item">
-                    <div class="timeline-number" style="color: #047857; background-color: #d1fae5;">✓</div>
                     <div><strong>Approval & Processing</strong> - ${new Date(
-                      refund.processedAt
+                      refund.processedAt,
                     ).toLocaleDateString()}</div>
                 </div>
-                <div class="timeline-item">
-                    <div class="timeline-number" style="color: #047857; background-color: #d1fae5;">✓</div>
-                    <div><strong>Payment Gateway Completed</strong> - Today</div>
-                </div>
-                <div class="timeline-item">
-                    <div class="timeline-number" style="color: #047857; background-color: #d1fae5;">✓</div>
-                    <div><strong>Funds Returned</strong> - Transaction complete</div>
-                </div>
+
+               
             </div>
 
             <div class="note-box">
@@ -761,8 +739,8 @@ const getApprovedEmailContent = (order, refund, settings, formatter) => {
         <div class="footer">
             <p style="margin: 0 0 12px 0;">
                 <img src="${settings?.logo}" alt="${
-    settings?.storeName
-  }" style="max-height: 30px; opacity: 0.8;">
+                  settings?.storeName
+                }" style="max-height: 30px; opacity: 0.8;">
             </p>
             <p style="margin: 0 0 8px 0; color: #d1d5db;">${
               settings?.storeName
@@ -800,8 +778,8 @@ const getRejectedEmailContent = (
     <div class="container">
         <div class="header">
             <img src="${settings?.logo}" alt="${
-    settings?.storeName
-  }" style="max-height: 50px; display: block; margin: 0 auto 12px;">
+              settings?.storeName
+            }" style="max-height: 50px; display: block; margin: 0 auto 12px;">
             <h1 style="margin: 0; font-size: 22px; font-weight: 500;">Refund Request Not Approved</h1>
             <div class="status-badge">
                 Not Approved
@@ -828,12 +806,12 @@ const getRejectedEmailContent = (
                             <div class="info-item">
                                 <span style="color: #6b7280;">Requested Amount:</span>
                                 <span style="font-weight: 600;">${formatter.format(
-                                  refund.amount
+                                  refund.amount,
                                 )}</span>
                             </div>
                             <div class="info-item">
                                 <span style="color: #6b7280;">Refund ID:</span>
-                                <span style="font-family: monospace;">${refund._id
+                                <span style="font-weight: 600;">${refund._id
                                   .toString()
                                   .slice(-12)
                                   .toUpperCase()}</span>
@@ -847,7 +825,7 @@ const getRejectedEmailContent = (
                             <div class="info-item">
                                 <span style="color: #6b7280;">Decision Date:</span>
                                 <span style="font-weight: 600;">${new Date(
-                                  refund.processedAt || new Date()
+                                  refund.processedAt || new Date(),
                                 ).toLocaleDateString()}</span>
                             </div>
                         </div>
@@ -873,21 +851,18 @@ const getRejectedEmailContent = (
             <div class="timeline" style="background: #fef2f2; border-left-color: #dc2626;">
                 <h4 style="margin-top: 0; color: #dc2626;">Request Timeline</h4>
                 <div class="timeline-item">
-                    <div class="timeline-number" style="color: #047857; background-color: #d1fae5;">✓</div>
+                    
                     <div>Request Submitted - ${new Date(
-                      refund.requestedAt
+                      refund.requestedAt,
                     ).toLocaleDateString()}</div>
                 </div>
                 <div class="timeline-item">
-                    <div class="timeline-number" style="color: #dc2626; background-color: #fecaca;">X</div>
+                    
                     <div><strong>Not Approved</strong> - ${new Date(
-                      refund.processedAt || new Date()
+                      refund.processedAt || new Date(),
                     ).toLocaleDateString()}</div>
                 </div>
-                <div class="timeline-item">
-                    <div class="timeline-number">3</div>
-                    <div>Notification Sent - This email</div>
-                </div>
+               
             </div>
 
             <div class="note-box">
@@ -915,12 +890,8 @@ const getRejectedEmailContent = (
                 }" style="color: #0369a1; font-weight: 600; font-size: 16px;">
                     ${settings?.supportEmail}
                 </a>
-                <p style="margin-top: 12px;">
-                    <a href="${
-                      process.env.CLIENT_URL
-                    }/contact" style="color: #3b82f6; text-decoration: underline;">
-                        Contact Support Form
-                    </a>
+                <p style="margin-top: 10px;">
+                     ${settings?.phoneNumber}
                 </p>
             </div>
 

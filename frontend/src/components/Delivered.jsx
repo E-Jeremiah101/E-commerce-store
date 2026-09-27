@@ -3,7 +3,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "../lib/axios.js";
 import { requestRefund } from "../stores/refundRequestStore.js";
-import GoBackButton from "./GoBackButton.jsx";
+import { STATUS_STYLES } from "./statusStyle.jsx";
 import { motion } from "framer-motion";
 import { Loader } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -97,7 +97,6 @@ const Delivered = () => {
 
   return (
     <>
-
       <motion.div
         className=" max-w-4xl mx-auto mt-7 no-scroll"
         initial={{ opacity: 0, y: 20 }}
@@ -124,10 +123,8 @@ const Delivered = () => {
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-semibold"> {order.orderNumber}</h3>
                   <span
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      order.status === "Delivered"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ring-1 ring-inset ${
+                      STATUS_STYLES[order.status] || STATUS_STYLES.Delivered
                     }`}
                   >
                     {order.displayStatus || order.status}
@@ -165,7 +162,7 @@ const Delivered = () => {
                               <p className="text-gray-800 font-semibold ">
                                 {formatPrice(
                                   item.price * item.quantity,
-                                  settings?.currency
+                                  settings?.currency,
                                 )}
                               </p>
                             </div>
@@ -226,20 +223,20 @@ const Delivered = () => {
                                         refund.status === "Refunded"
                                           ? "bg-green-100 text-green-700"
                                           : refund.status === "Processing"
-                                          ? "bg-blue-100 text-blue-700"
-                                          : refund.status === "Rejected"
-                                          ? "bg-red-100 text-red-700"
-                                          : "bg-yellow-100 text-yellow-700"
+                                            ? "bg-blue-100 text-blue-700"
+                                            : refund.status === "Rejected"
+                                              ? "bg-red-50 text-red-700 ring-red-600/20"
+                                              : "bg-yellow-100 text-yellow-700"
                                       }`}
                                     >
                                       {refund.status === "Approved" ||
                                       refund.status === "Refunded"
                                         ? "Refunded"
                                         : refund.status === "Processing"
-                                        ? "Refund Processing"
-                                        : refund.status === "Rejected"
-                                        ? "Refund Rejected"
-                                        : "Refund Pending"}
+                                          ? "Refund Processing"
+                                          : refund.status === "Rejected"
+                                            ? "Refund Rejected"
+                                            : "Refund Pending"}
                                     </span>
                                   </div>
                                 ));
@@ -329,7 +326,7 @@ const Delivered = () => {
                   min="1"
                   max={
                     selectedOrder.products.find(
-                      (p) => p.product?._id === refundData.productId
+                      (p) => p.product?._id === refundData.productId,
                     )?.quantity || 1
                   }
                   value={refundData.quantity}

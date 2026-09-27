@@ -1,5 +1,6 @@
+
 import { motion } from "framer-motion";
-import  { useState } from "react";
+import { useState } from "react";
 import { SEO } from "../components/SEO";
 import { useStoreSettings } from "../components/StoreSettingsContext.jsx";
 import Ongoing from "../components/Ongoing.jsx";
@@ -8,7 +9,8 @@ import RefundTab from "../components/RefundTab.jsx";
 import CanceledTab from "../components/CanceledTab.jsx";
 import GoBackButton from "../components/GoBackButton";
 import ErrorBoundary from "../components/ErrorBoundary.jsx";
-const tabs = [
+
+const TABS = [
   { id: "ongoing", label: "Ongoing" },
   { id: "delivered", label: "Delivered" },
   { id: "refunded", label: "Refunded" },
@@ -27,58 +29,66 @@ const OrderHistoryPageContent = () => {
         image={settings?.logo}
         canonicalUrl={window.location.href}
       />
-      <motion.div
-        className="fixed top-0 left-0 right-0 z-40 bg-white backdrop-blur-md"
-        style={{ borderBottom: "none", boxShadow: "none" }}
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16 sm:h-20">
-            <div className="flex items-center">
-              <motion.div
-                whileHover={{ x: -2 }}
-                whileTap={{ scale: 0.95 }}
-                className="p-2 -ml-2 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <GoBackButton />
-              </motion.div>
-            </div>
 
-            <div className="absolute left-1/2 transform -translate-x-1/2">
-              <div className="flex flex-col items-center">
-                <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 tracking-tight">
-                  My Orders
-                </h2>
-              </div>
+      <div className="min-h-screen bg-neutral-50">
+        {/* Sticky header */}
+        <motion.header
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="sticky top-0 z-30 bg-neutral-50/80 backdrop-blur-md border-b border-neutral-200/60"
+        >
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="relative flex items-center h-16">
+              <GoBackButton fallback="/" />
+
+              <h1 className="absolute left-1/2 -translate-x-1/2 text-base sm:text-lg font-semibold text-neutral-900 tracking-tight">
+                My Orders
+              </h1>
             </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.header>
 
-      <div className="min-h-screen relative overflow-hidden ">
-        <div className="relative z-10 container mx-auto px-4 py-16">
-          <div className="flex justify-center cursor-pointer  mt-6">
-            {tabs.map((tab) => (
-              <span
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center px-3 py-2 mx-2  transition-colors duration-200 ${
-                  activeTab === tab.id
-                    ? " text-black border-b-2"
-                    : " text-black "
-                }`}
-              >
-                {tab.label}
-              </span>
-            ))}
+        <motion.main
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6"
+        >
+          {/* Tabs */}
+          <div
+            role="tablist"
+            aria-label="Order status"
+            className="flex gap-1 p-1 bg-white border border-neutral-200 rounded-lg shadow-sm overflow-x-auto"
+          >
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`relative flex-1 whitespace-nowrap px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900/10 ${
+                    isActive
+                      ? "bg-neutral-900 text-white"
+                      : "text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
-          {activeTab === "ongoing" && <Ongoing />}
-          {activeTab === "delivered" && <Delivered />}
-          {activeTab === "refunded" && <RefundTab />}
-          {activeTab === "canceled" && <CanceledTab />}
-        </div>
+
+          {/* Content */}
+          <div className="mt-6">
+            {activeTab === "ongoing" && <Ongoing />}
+            {activeTab === "delivered" && <Delivered />}
+            {activeTab === "refunded" && <RefundTab />}
+            {activeTab === "canceled" && <CanceledTab />}
+          </div>
+        </motion.main>
       </div>
     </>
   );

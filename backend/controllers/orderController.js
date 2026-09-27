@@ -1293,7 +1293,7 @@ export const updateOrderStatus = async (req, res) => {
     );
 
     order.status = status;
-    order.isProcessed = newIsProcessed;
+    order.isProcessed = newIsProcessed; 
     
 
     if (status === "Delivered") order.deliveredAt = Date.now();
@@ -1324,7 +1324,7 @@ export const updateOrderStatus = async (req, res) => {
             ${status.charAt(0).toUpperCase() + status.slice(1)}
           </span>
         </p>
-
+ 
         ${
           status === "Delivered"
             ? `<p>Your package has been delivered. We hope you enjoy your purchase!</p>`
@@ -1375,7 +1375,7 @@ export const updateOrderStatus = async (req, res) => {
              stockRestored: true,
              note: "Items have been returned to inventory",
            }
-         : {}),
+         : {}), 
      });
 
     (async () => {
@@ -1397,8 +1397,6 @@ export const updateOrderStatus = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
- 
-
 
 const reduceVariantStock = async (orderItems) => {
   try {

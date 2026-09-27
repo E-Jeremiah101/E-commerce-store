@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { toast, ToastContainer } from "react-toastify";
+import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { STATUS_STYLES } from "./statusStyle.jsx";
 import axios from "../lib/axios.js";
-import { requestRefund } from "../stores/refundRequestStore.js";
-import GoBackButton from "./GoBackButton.jsx";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { formatPrice } from "../utils/currency.js";
@@ -41,7 +40,6 @@ const Ongoing = () => {
 
   return (
     <>
-
       <motion.div
         className=" max-w-4xl mx-auto mt-7 no-scroll"
         initial={{ opacity: 0, y: 20 }}
@@ -54,7 +52,7 @@ const Ongoing = () => {
           (order) =>
             order.status === "Pending" ||
             order.status === "Processing" ||
-            order.status === "Shipped"
+            order.status === "Shipped",
         ).length === 0 ? (
           <p className="text-center text-gray-500">No ongoing orders.</p>
         ) : (
@@ -63,7 +61,7 @@ const Ongoing = () => {
               (order) =>
                 order.status === "Pending" ||
                 order.status === "Processing" ||
-                order.status === "Shipped"
+                order.status === "Shipped",
             )
 
             .map((order) => (
@@ -78,10 +76,8 @@ const Ongoing = () => {
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="font-semibold"> {order.orderNumber}</h3>
                     <span
-                      className={`px-3 py-1 rounded-full text-sm ${
-                           order.status === "Pending"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-yellow-100 text-yellow-700"
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ring-1 ring-inset ${
+                        STATUS_STYLES[order.status] || STATUS_STYLES.Pending
                       }`}
                     >
                       {order.displayStatus || order.status}
@@ -90,13 +86,6 @@ const Ongoing = () => {
                   <p className="text-xs md:text-sm text-gray-500">
                     Placed on {new Date(order.createdAt).toLocaleDateString()}
                   </p>
-
-                  {order.status === "Delivered" && (
-                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">
-                      {order.status} on{" "}
-                      {new Date(order.deliveredAt).toLocaleDateString()}
-                    </p>
-                  )}
 
                   <ul className="space-y-4 mb-4">
                     {order.products.map((item) => (
@@ -119,7 +108,7 @@ const Ongoing = () => {
                             <p className="text-gray-800 font-semibold ">
                               {formatPrice(
                                 item.price * item.quantity,
-                                settings?.currency
+                                settings?.currency,
                               )}
                             </p>
                           </div>

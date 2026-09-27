@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "../lib/axios.js";
-import GoBackButton from "./GoBackButton.jsx";
+import { STATUS_STYLES } from "./statusStyle.jsx";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { formatPrice } from "../utils/currency.js";
@@ -67,15 +67,8 @@ const RefundTab = () => {
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-semibold"> {order.orderNumber}</h3>
                   <span
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      order.status === "Refunded"
-                        ? "bg-purple-600 text-white"
-                        : order.status === "Partially Refunded"
-                        ? "bg-pink-600 text-white"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {order.displayStatus || order.status}
+                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ring-1 ring-inset ${  STATUS_STYLES[order.status]}`} >{order.displayStatus || order.status}
+
                   </span>
                 </div>
                 <p className="text-xs md:text-sm text-gray-500">
@@ -170,25 +163,18 @@ const RefundTab = () => {
                                 return productRefunds.map((refund, index) => (
                                   <div key={index} className="mt-2 p-2 rounded">
                                     <span
-                                      className={`inline-block px-2 py-1 text-xs rounded ${
-                                        refund.status === "Approved" ||
-                                        refund.status === "Refunded"
-                                          ? "bg-green-100 text-green-700"
-                                          : refund.status === "Processing"
-                                          ? "bg-blue-100 text-blue-700"
-                                          : refund.status === "Rejected"
-                                          ? "bg-red-100 text-red-700"
-                                          : "bg-yellow-100 text-yellow-700"
+                                      className={`inline-block px-2 py-1 text-xs rounded${
+                                        STATUS_STYLES[order.status] 
                                       }`}
                                     >
                                       {refund.status === "Approved" ||
                                       refund.status === "Refunded"
                                         ? "Refunded"
                                         : refund.status === "Processing"
-                                        ? "Refund Processing"
-                                        : refund.status === "Rejected"
-                                        ? "Refund Rejected"
-                                        : "Refund Pending"}
+                                          ? "Refund Processing"
+                                          : refund.status === "Rejected"
+                                            ? "Refund Rejected"
+                                            : "Refund Pending"}
                                     </span>
                                   </div>
                                 ));

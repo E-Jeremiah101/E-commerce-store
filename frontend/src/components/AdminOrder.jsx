@@ -13,6 +13,7 @@ import {
   Package,
 } from "lucide-react";
 import { formatPrice } from "../utils/currency.js";
+import { STATUS_STYLES } from "./statusStyle.jsx";
 import { useStoreSettings } from "./StoreSettingsContext.jsx";
 
 const STATUS_WORKFLOW = {
@@ -22,7 +23,7 @@ const STATUS_WORKFLOW = {
   Delivered: [],
   Cancelled: [],
   Refunded: [],
-  "Partially Refunded": [], 
+  "Partially Refunded": [],
 };
 
 const AdminOrdersPage = () => {
@@ -99,49 +100,47 @@ const AdminOrdersPage = () => {
 
   console.log("Fetching orders with params:", params);
 
- 
-
   const fetchOrders = async (isStatusUpdate = false) => {
-  try {
-    setIsFetching(true);
+    try {
+      setIsFetching(true);
 
-    // Only clear orders if it's NOT a status update
-    if (!isStatusUpdate) {
-      setOrders([]);
-    }
+      // Only clear orders if it's NOT a status update
+      if (!isStatusUpdate) {
+        setOrders([]);
+      }
 
-    if (viewMode === "archived") {
-      // Get from archive collection
-      const { data } = await axios.get("/admin/orders/archived", {
-        params,
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      setOrders(data.orders);
-    } else {
-      const { data } = await axios.get("/admin/orders", {
-        params,
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      if (viewMode === "archived") {
+        // Get from archive collection
+        const { data } = await axios.get("/admin/orders/archived", {
+          params,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        setOrders(data.orders);
+      } else {
+        const { data } = await axios.get("/admin/orders", {
+          params,
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
 
-      // Filter out archived orders on the frontend
-      const activeOrders = data.orders.filter((order) => !order.isArchived);
-      setOrders(activeOrders);
+        // Filter out archived orders on the frontend
+        const activeOrders = data.orders.filter((order) => !order.isArchived);
+        setOrders(activeOrders);
+      }
+    } catch (error) {
+      console.error("Fetch orders failed:", error);
+      // Don't clear on error
+      if (!isStatusUpdate) {
+        setOrders([]);
+      }
+    } finally {
+      setIsFetching(false);
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Fetch orders failed:", error);
-    // Don't clear on error
-    if (!isStatusUpdate) {
-      setOrders([]);
-    }
-  } finally {
-    setIsFetching(false);
-    setLoading(false);
-  }
-};
+  };
 
   useEffect(() => {
     fetchOrders();
@@ -234,7 +233,7 @@ const AdminOrdersPage = () => {
         const firstDayLast = new Date(
           today.getFullYear(),
           today.getMonth() - 1,
-          1
+          1,
         );
         const lastDayLast = new Date(today.getFullYear(), today.getMonth(), 0);
         setDateRange({
@@ -266,13 +265,13 @@ const AdminOrdersPage = () => {
   // Calendar navigation
   const prevMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1)
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1),
     );
   };
 
   const nextMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1)
+      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
     );
   };
 
@@ -389,47 +388,31 @@ const AdminOrdersPage = () => {
     "December",
   ];
 
-  // const handleStatusChange = async (orderId, newStatus) => {
-  //   try {
-  //     await axios.put(
-  //       `/admin/orders/${orderId}/status`,
-  //       { status: newStatus },
-  //       {
-  //         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-  //       }
-  //     );
-  //     fetchOrders(true);
-  //     setOpenDropdownId(null);
-  //     setShowStatusConfirm(null);
-  //   } catch (err) {
-  //     console.error(err);
-  //     setShowRestoreConfirm(null)
-  //   }
-  // };
-const handleStatusChange = async (orderId, newStatus) => {
-  if (statusUpdating) return; // prevent double-click
-  setStatusUpdating(true);
+  const handleStatusChange = async (orderId, newStatus) => {
+    if (statusUpdating) return; // prevent double-click
+    setStatusUpdating(true);
 
-  try {
-    await axios.put(
-      `/admin/orders/${orderId}/status`,
-      { status: newStatus },
-      {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      },
-    );
+    try {
+      await axios.put(
+        `/admin/orders/${orderId}/status`,
+        { status: newStatus },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        },
+      );
 
-    await fetchOrders(true);
-    setShowStatusConfirm(null);
-  } catch (err) {
-    console.error("Status update failed:", err);
-    alert(
-      "Failed to update status: " + (err.response?.data?.error || err.message),
-    );
-  } finally {
-    setStatusUpdating(false);
-  }
-};
+      await fetchOrders(true);
+      setShowStatusConfirm(null);
+    } catch (err) {
+      console.error("Status update failed:", err);
+      alert(
+        "Failed to update status: " +
+          (err.response?.data?.error || err.message),
+      );
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
   const handleRestoreOrder = async (archiveId) => {
     try {
       await axios.post(
@@ -437,7 +420,7 @@ const handleStatusChange = async (orderId, newStatus) => {
         {},
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
+        },
       );
       alert("Order restored successfully!");
       fetchOrders();
@@ -445,7 +428,7 @@ const handleStatusChange = async (orderId, newStatus) => {
     } catch (err) {
       console.error(err);
       alert(
-        "Failed to restore order: " + err.response?.data?.error || err.message
+        "Failed to restore order: " + err.response?.data?.error || err.message,
       );
     }
   };
@@ -481,14 +464,20 @@ const handleStatusChange = async (orderId, newStatus) => {
   // Get status badge color
   const getStatusColor = (status) => {
     switch (status) {
+      case "Pending":
+        return `${STATUS_STYLES[status]}`;
+      case "Processing":
+        return `${STATUS_STYLES[status]}`;
+      case "Shipped":
+        return `${STATUS_STYLES[status]}`;
       case "Delivered":
-        return "bg-green-600 text-white";
+        return `${STATUS_STYLES[status]}`;
       case "Cancelled":
-        return "bg-red-600 text-white";
+        return `${STATUS_STYLES[status]}`;
       case "Refunded":
-        return "bg-purple-600 text-white";
+        return `${STATUS_STYLES[status]}`;
       case "Partially Refunded":
-        return "bg-pink-600 text-white";
+        return `${STATUS_STYLES[status]}`;
       default:
         return "bg-yellow-500 text-white";
     }
@@ -1213,7 +1202,6 @@ const handleStatusChange = async (orderId, newStatus) => {
                                         }
 
                                         return (
- 
                                           <button
                                             key={statusOption}
                                             onClick={() => {

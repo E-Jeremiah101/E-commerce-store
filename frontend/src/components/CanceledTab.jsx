@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "../lib/axios.js";
-import GoBackButton from "./GoBackButton.jsx";
+import { STATUS_STYLES } from "./statusStyle.jsx";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { formatPrice } from "../utils/currency.js";
@@ -59,14 +59,9 @@ const CanceledTab = () => {
               >
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="font-semibold"> {order.orderNumber}</h3>
-                  <span
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      order.status === "Cancelled"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {order.displayStatus || order.status}
+                  <span 
+                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ring-1 ring-inset ${  STATUS_STYLES[order.status]}`} >{order.displayStatus || order.status} 
+
                   </span>
                 </div>
                 <p className="text-xs md:text-sm text-gray-500">
