@@ -260,7 +260,7 @@ const RequestReturnPageContent = () => {
               <ul className="text-sm text-gray-600 space-y-2">
                 <li className="flex items-start">
                   <span className="inline-block w-2 h-2 bg-red-500 rounded-full mt-1 mr-2"></span>
-                  Returns must be requested within 48 hours of delivery
+                  Returns must be requested within 7 days of delivery
                 </li>
                 <li className="flex items-start">
                   <span className="inline-block w-2 h-2 bg-red-500 rounded-full mt-1 mr-2"></span>
@@ -272,8 +272,10 @@ const RequestReturnPageContent = () => {
                 </li>
                 <li className="flex items-start">
                   <span className="inline-block w-2 h-2 bg-red-500 rounded-full mt-1 mr-2"></span>
-                  Shipping fees are non-refundable unless the item is incorrect
-                  or defective
+                  <b>
+                    Shipping fees are non-refundable unless the item is incorrect
+                  </b>
+                  
                 </li>
               </ul>
             </div>

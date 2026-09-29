@@ -19,7 +19,7 @@ const FAQSection = () => {
     {
       question: "Can I return or exchange an item?",
       answer:
-        "We offer returns with refunds only (no exchanges). Items must be returned within 48 hours of delivery and must be unused with original packaging intact. Refunds are processed within 5-7 business days after we receive your return.",
+        "We offer returns with refunds only (no exchanges). Items must be returned within 7 days of delivery and must be unused with original packaging intact. Refunds are processed within 5-7 business days after we receive your return.",
     },
     {
       question: "How can I track my order?",

@@ -454,6 +454,7 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
             <div class="note-box">
                 <h4 style="margin-top: 0; color: #92400e;">Important Notes</h4>
                 <ul style="margin: 8px 0; padding-left: 20px; color: #92400e;">
+                    <li>Shipping fees are non-refundable unless the item is incorrect </li>
                     <li>Keep the item in original condition</li>
                     <li>Preserve packaging and accessories</li>
                     <li>Have your receipt/order number ready</li>
@@ -1272,6 +1273,7 @@ export const requestRefund = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
 export const approveRefund = async (req, res) => {
   try {
     const { orderId, refundId } = req.params;
