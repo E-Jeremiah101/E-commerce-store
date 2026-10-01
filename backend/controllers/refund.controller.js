@@ -1272,7 +1272,7 @@ export const requestRefund = async (req, res) => {
     console.error("Refund request error:", error);
     res.status(500).json({ message: "Server error", error: error.message });
   }
-};
+}; 
 
 export const approveRefund = async (req, res) => {
   try {
@@ -1751,7 +1751,7 @@ export const retryWebhook = async (req, res) => {
       error: error.message,
     });
   }
-};
+}; 
 
 export const checkRefundStatus = async (req, res) => {
   try {

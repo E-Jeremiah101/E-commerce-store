@@ -9,6 +9,8 @@ import { useCartStore } from "./stores/useCartStore.js";
 import useTrackVisitors from "./stores/useTrackVisitors.js";
 
 const HomePage = lazy(() => import("./pages/HomePage.jsx"));
+const AboutUs = lazy(() => import("./pages/AboutUs.jsx"));
+const ContactSupport = lazy(() => import("./pages/ContactSupport.Jsx"));
 const SignUpPage = lazy(() => import("./pages/SignUpPage.jsx"));
 const LoginPage = lazy(() => import("./pages/LoginPage.jsx"));
 const AdminPage = lazy(() => import("./pages/AdminPage.jsx"));
@@ -117,6 +119,8 @@ function App() {
           />
           <Route path="/category/:category" element={<CategoryPage />} />
           <Route path="/product/:id" element={<ViewProductPage />} />
+          <Route path="/about-us" element={<AboutUs />} />
+          <Route path="/contact-us" element={<ContactSupport />} />
           <Route path="/cart" element={<CartPage />} />
           <Route
             path="/order-history"

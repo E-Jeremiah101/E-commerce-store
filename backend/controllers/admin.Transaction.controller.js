@@ -30,13 +30,13 @@ export const getAllTransactions = async (req, res) => {
         const refundedQty = approvedRefunds.reduce(
           (sum, r) => sum + (r.quantity || 0),
           0,
-        );
+        ); 
 
         const orderedQty = (order.products || []).reduce(
           (sum, p) => sum + (p.quantity || 0),
           0,
         );
-
+ 
         let status;
         if (refundedQty === 0) {
           const raw = (order.paymentMethod?.status || "").toLowerCase();

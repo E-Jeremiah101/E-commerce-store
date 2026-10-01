@@ -31,7 +31,11 @@ const Footer = () => {
                     {" "}
                     <Link to={"/"}>Home</Link>
                   </td>
-                  <td>Privacy</td>
+
+                  <td>
+                    {" "}
+                    <Link to={"/about-us"}>About Us</Link>
+                  </td>
                   <td>
                     <FaWhatsapp />
                   </td>
@@ -40,14 +44,14 @@ const Footer = () => {
                   <td>
                     <Link to={"/cart"}>Cart</Link>
                   </td>
-                  <td>FAQs</td>
+                  <td><Link to={"/contactSupport"}>Contact</Link></td>
                   <td>
                     <FaTiktok />
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <Link to={"/Personal - info"}>Profile</Link>
+                    <Link to={"/Personal-info"}>Profile</Link>
                   </td>
                   <td></td>
                   <td>
@@ -63,7 +67,7 @@ const Footer = () => {
             <img
               src={settings?.logo}
               alt={settings?.storeName}
-              className="h-10 w-auto"
+              className="h-10 w-auto rounded-2xl"
             />
           )}
           <span className="text-black px-2 font-bold text-xl">

@@ -328,9 +328,9 @@ const FeaturedProducts = ({ featuredProducts }) => {
                             <div className="absolute top-0 right-0 h-full  bg-opacity-50 flex items-start justify-start ">
                               {product.isPriceSlashed &&
                                 product.previousPrice && (
-                                  <span className="bg-red-100 text-red-800 text-xs px-2 py-1">
-                                    {Math.round(product.discountPercentage)}%
-                                    OFF
+                                  <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-2xl">
+                                    -{(product.discountPercentage)}%
+                                    
                                   </span>
                                 )}
                             </div>

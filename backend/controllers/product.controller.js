@@ -670,7 +670,7 @@ export const getProductsByCategory = async (req, res) => {
               ((product.previousPrice - product.price) /
                 product.previousPrice) *
               100
-            ).toFixed(1)
+            )
           : null;
 
       return {

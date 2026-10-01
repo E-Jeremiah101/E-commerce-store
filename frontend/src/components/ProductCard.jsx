@@ -75,35 +75,34 @@ const ProductCard = ({ product }) => {
     <div className="flex-w-full relative flex-col h-full overflow-hidden border-gray-700">
       <div className="absolute -top-1 -right-0 z-10">
         {product.isPriceSlashed && product.previousPrice && (
-          <span className="bg-red-100 text-red-800 text-xs font-medium px-1 py-1">
-            {Math.round(product.discountPercentage)}% OFF
+          <span className="bg-red-100 text-red-800 text-xs  font-medium px-1 py-1 rounded-2xl">
+            -{Math.round(product.discountPercentage)}% 
           </span>
         )}
       </div>
       {/* Product Image */}
-      <Link to={`/product/${product._id}`}>
-        <div className="relative flex overflow-hidden h-50 rounded-xs">
-          <img
-            className="object-cover w-full h-full hover:scale-105 transition-transform"
-            src={product.images?.[0]}
-            alt={product.name}
-            loading="lazy"
-          />
+     <Link to={`/product/${product._id}`}>
+  <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-neutral-100">
+    <img
+      className="object-cover w-full h-full hover:scale-105 transition-transform duration-500"
+      src={product.images?.[0]}
+      alt={product.name}
+      loading="lazy"
+    />
 
-          {/* Dark overlay for better contrast */}
-          <div className="absolute inset-0 bg-black opacity-10" />
+    {/* Dark overlay for better contrast */}
+    <div className="absolute inset-0 bg-black/5" />
 
-          {/* Out of Stock Overlay */}
-          {product.countInStock === 0 && (
-            <div className="absolute inset-0 bg-black/40 bg-opacity-50 flex items-center justify-center">
-              <span className="bg-red-600 text-white text-xs font-bold px-3 py-2 rounded-sm shadow-lg">
-                OUT OF STOCK
-              </span>
-            </div>
-          )}
-        </div>
-      </Link>
-
+    {/* Out of Stock Overlay */}
+    {product.countInStock === 0 && (
+      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+        <span className="bg-red-600 text-white text-xs font-bold px-3 py-2 rounded-sm shadow-lg">
+          OUT OF STOCK
+        </span>
+      </div>
+    )}
+  </div>
+</Link>
       {/* Product Info */}
       <div className="mt-1 px-2 pb-1 space-y-2  flex flex-col ">
         <Link to={`/product/${product._id}`} className="m-0">
