@@ -60,8 +60,6 @@ app.set("trust proxy", true);
 app.use(enforceHttps());
 
 
-// app.use(addSecurityHeaders());
-// CSP applied directly — no middleware indirection
 app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
@@ -73,10 +71,8 @@ app.use((req, res, next) => {
       "font-src 'self' data:",
       "connect-src 'self' https://api.flutterwave.com https://formspree.io",
       "frame-src 'self' https://checkout.flutterwave.com",
-    ].join("; ")
+    ].join("; "),
   );
-  // Temporary marker to verify deploy
-  res.setHeader("X-CSP-Source", "server-js-direct");
   next();
 });
 
