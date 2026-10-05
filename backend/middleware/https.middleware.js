@@ -38,6 +38,36 @@ export const addHstsHeader = () => {
   };
 };
 
+export const addSecurityHeaders = () => {
+  return (req, res, next) => {
+
+    res.setHeader("X-Content-Type-Options", "nosniff");
+
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
+    res.setHeader(
+      "Permissions-Policy",
+      "geolocation=(), microphone=(), camera=(), payment=()"
+    );
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://api.flutterwave.com https://formspree.io",
+      "frame-src 'self' https://checkout.flutterwave.com",
+    ].join("; ");
+
+    res.setHeader("Content-Security-Policy", csp);
+
+    next();
+  };
+};
 
 export const validateHttpsConfig = () => {
   return (req, res, next) => {
