@@ -53,11 +53,17 @@ export const addSecurityHeaders = () => {
       "Permissions-Policy",
       "geolocation=(), microphone=(), camera=(), payment=()"
     );
+    const csp = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: https:",
+      "font-src 'self' data:",
+      "connect-src 'self' https://api.flutterwave.com https://formspree.io",
+      "frame-src 'self' https://checkout.flutterwave.com",
+    ].join("; ");
 
-    res.setHeader(
-      "Content-Security-Policy",
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.flutterwave.com; frame-src 'self' https://checkout.flutterwave.com"
-    );
+    res.setHeader("Content-Security-Policy", csp);
 
     next();
   };
