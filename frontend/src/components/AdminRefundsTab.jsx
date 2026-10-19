@@ -57,7 +57,7 @@ const AdminRefundsTab = () => {
           r.user?.email?.toLowerCase().includes(term) ||
           r.user?._id?.toLowerCase().includes(term) ||
           r.orderId?.toLowerCase().includes(term) ||
-          r.refundId?.toLowerCase().includes(term)
+          r.refundId?.toLowerCase().includes(term),
       );
     }
 
@@ -74,9 +74,8 @@ const AdminRefundsTab = () => {
     setFilteredRefunds(filtered);
   }, [searchTerm, statusFilter, dateFilter, refunds]);
 
-  // Add after your existing useEffect
+  // Real-time refresh every 30 seconds for Processing refunds
   useEffect(() => {
-    // Real-time refresh every 30 seconds for Processing refunds
     const interval = setInterval(() => {
       const hasProcessing = refunds.some((r) => r.status === "Processing");
       if (hasProcessing) {
@@ -101,18 +100,33 @@ const AdminRefundsTab = () => {
     }
   };
 
+  // ---------------------------------------------------------------
+  // Approve refund — handles INSUFFICIENT_BALANCE (HTTP 402)
+  // ---------------------------------------------------------------
   const handleApprove = async (orderId, refundId) => {
     try {
       setLoadingStates((prev) => ({ ...prev, [refundId]: "approving" }));
 
       const response = await axios.put(
-        `/refunds/${orderId}/${refundId}/approve`
+        `/refunds/${orderId}/${refundId}/approve`,
       );
 
-      // Show success toast
+      // Only treat as success if the server says so
+      if (!response.data?.success) {
+        // Defensive: server returned 200 but success=false
+        const msg =
+          response.data?.message ||
+          response.data?.error ||
+          "Refund could not be initiated";
+        toast.error(msg, { autoClose: 6000 });
+        // Refresh to get the true status (should still be Pending)
+        fetchRefundsSilently();
+        return;
+      }
+
       toast.success(response.data.message || "Refund initiated successfully");
 
-      // Update UI immediately
+      // Update UI only now — never optimistically before this point
       setRefunds((prev) =>
         prev.map((r) =>
           r.refundId === refundId
@@ -122,8 +136,8 @@ const AdminRefundsTab = () => {
                 processedAt: new Date().toISOString(),
                 flutterwaveRefundId: response.data.flutterwaveRefundId,
               }
-            : r
-        )
+            : r,
+        ),
       );
 
       if (response.data.currentStatus === "Processing") {
@@ -131,15 +145,13 @@ const AdminRefundsTab = () => {
         const pollInterval = setInterval(async () => {
           try {
             const pollResponse = await axios.get(
-              `/refunds/${orderId}/${refundId}/poll`
+              `/refunds/${orderId}/${refundId}/poll`,
             );
 
             if (pollResponse.data.updated) {
-              // Status was updated, refresh the list
               fetchRefundsSilently();
               clearInterval(pollInterval);
 
-              // Show success message if now Approved
               if (pollResponse.data.currentStatus === "Approved") {
                 toast.success("Refund completed successfully!");
               }
@@ -157,7 +169,31 @@ const AdminRefundsTab = () => {
       }
     } catch (err) {
       console.error("Initiate refund failed:", err);
-      toast.error(err.response?.data?.message || "Failed to initiate refund");
+
+      const data = err.response?.data || {};
+
+      // ---- Insufficient balance: keep status Pending, show clear message ----
+      if (
+        err.response?.status === 402 ||
+        data.code === "INSUFFICIENT_BALANCE"
+      ) {
+        toast.error(
+          data.message ||
+            "Refund could not be processed: the merchant account balance is insufficient. The refund remains Pending.",
+          { autoClose: 8000 },
+        );
+        // Do NOT change local status — it must stay Pending so the admin
+        // can retry after topping up. A silent refresh ensures consistency.
+        fetchRefundsSilently();
+        return;
+      }
+
+      // Any other error
+      toast.error(data.message || data.error || "Failed to initiate refund", {
+        autoClose: 6000,
+      });
+      // Refresh so UI reflects whatever the server actually persisted
+      fetchRefundsSilently();
     } finally {
       setLoadingStates((prev) => ({ ...prev, [refundId]: null }));
     }
@@ -169,7 +205,7 @@ const AdminRefundsTab = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const displayeRequest = filteredRefunds.slice(
     startIndex,
-    startIndex + itemsPerPage
+    startIndex + itemsPerPage,
   );
 
   const handlePrev = () => setCurrentPage((p) => Math.max(p - 1, 1));
@@ -180,7 +216,7 @@ const AdminRefundsTab = () => {
   const handleReject = async (
     orderId,
     refundId,
-    reason = "Rejected by admin"
+    reason = "Rejected by admin",
   ) => {
     try {
       setLoadingStates((prev) => ({ ...prev, [refundId]: "rejecting" }));
@@ -193,8 +229,8 @@ const AdminRefundsTab = () => {
         prev.map((r) =>
           r.refundId === refundId
             ? { ...r, status: "Rejected", processedAt, rejectionReason: reason }
-            : r
-        )
+            : r,
+        ),
       );
     } catch (err) {
       console.error("Reject refund failed:", err);
@@ -204,7 +240,6 @@ const AdminRefundsTab = () => {
     }
   };
 
-  //
   const handleSyncRefund = async (orderId, refundId) => {
     try {
       setLoadingStates((prev) => ({ ...prev, [refundId]: "syncing" }));
@@ -213,7 +248,6 @@ const AdminRefundsTab = () => {
 
       if (response.data.updated) {
         toast.success("Status updated!");
-        // Refresh the list
         const res = await axios.get("/refunds");
         setRefunds(res.data || []);
         setFilteredRefunds(res.data || []);
@@ -227,6 +261,7 @@ const AdminRefundsTab = () => {
       setLoadingStates((prev) => ({ ...prev, [refundId]: null }));
     }
   };
+
   const { settings } = useStoreSettings();
 
   if (loading)
@@ -395,10 +430,10 @@ const AdminRefundsTab = () => {
                           r.status === "Approved"
                             ? "bg-green-100 text-green-800"
                             : r.status === "Rejected"
-                            ? "bg-red-100 text-red-800"
-                            : r.status === "Processing"
-                            ? "bg-blue-100 text-blue-800 animate-pulse"
-                            : "bg-yellow-100 text-yellow-800"
+                              ? "bg-red-100 text-red-800"
+                              : r.status === "Processing"
+                                ? "bg-blue-100 text-blue-800 animate-pulse"
+                                : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
                         {r.status}
@@ -446,8 +481,7 @@ const AdminRefundsTab = () => {
                         </div>
                       )}
 
-                      {/* Show info message for Processing refunds */}
-
+                      {/* Sync button for Processing refunds */}
                       {r.status === "Processing" && (
                         <div className="flex gap-2">
                           <button
@@ -545,7 +579,7 @@ const AdminRefundsTab = () => {
                       rejectionReason.trim().length < 5
                     ) {
                       toast.error(
-                        "Please enter a reason (at least 5 characters)"
+                        "Please enter a reason (at least 5 characters)",
                       );
                       return;
                     }
@@ -553,7 +587,7 @@ const AdminRefundsTab = () => {
                     handleReject(
                       showRejectModal.orderId,
                       showRejectModal.refundId,
-                      rejectionReason
+                      rejectionReason,
                     );
                     setShowRejectModal(null);
                     setRejectionReason("");
@@ -600,7 +634,7 @@ const AdminRefundsTab = () => {
                 Price:{" "}
                 {formatPrice(
                   selectedProduct?.productPrice,
-                  settings?.currency
+                  settings?.currency,
                 ) || 0}
               </p>
               <p className="text-sm text-gray-600 mb-1">

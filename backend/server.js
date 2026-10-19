@@ -32,7 +32,6 @@ import { startOrderArchiveCron } from "./service/orderArchive.service.js";
 import auditLogArchiveJob from "./jobs/auditLogArchive.job.js";
 import {
   enforceHttps,
-  addSecurityHeaders,
   validateHttpsConfig,
 } from "./middleware/https.middleware.js";
 dotenv.config();

@@ -44,7 +44,9 @@ const Footer = () => {
                   <td>
                     <Link to={"/cart"}>Cart</Link>
                   </td>
-                  <td><Link to={"/contactSupport"}>Contact</Link></td>
+                  <td>
+                    <Link to={"/contactSupport"}>Contact</Link>
+                  </td>
                   <td>
                     <FaTiktok />
                   </td>
@@ -60,6 +62,10 @@ const Footer = () => {
                 </tr>
               </tbody>
             </table>
+            In the approve refund, when a refund is approved but the account
+            balance is insufficient, the admin should get a message that the
+            account is insufficient and the approved shouldn't go through ( it
+            should neither show approve or reject).
           </div>
         </div>
         <Link to={"/"} className="flex justify-center items-center mb-3">

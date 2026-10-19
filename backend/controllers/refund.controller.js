@@ -53,6 +53,28 @@ const logRefundAction = async (
     console.error("Failed to log refund action:", error);
   }
 };
+
+
+const isInsufficientBalanceError = (...parts) => {
+  const m = parts
+    .flat(Infinity)
+    .filter(Boolean)
+    .map((p) => (typeof p === "string" ? p : JSON.stringify(p)))
+    .join(" | ")
+    .toLowerCase();
+
+  return (
+    m.includes("insufficient wallet balance") ||
+    m.includes("insufficient balance") ||
+    m.includes("insufficient funds") ||
+    m.includes("insufficient_balance") ||
+    m.includes("insufficient-funds") ||
+    m.includes("wallet balance") ||
+    m.includes("balance is insufficient") ||
+    m.includes("not enough balance") ||
+    m.includes("low balance")
+  );
+};
 const getEmailStyles = () => `
   <style>
     body {
@@ -351,7 +373,7 @@ const getRequestedEmailContent = (order, refund, settings, formatter) => {
             <p style="font-size: 16px;">Dear <strong>${
               order.user?.firstname || "Customer"
             }</strong>,</p>
-            <p style="color: #6b7280;">We have received your refund request and it is now in our processing queue. Here is what happens next:</p>
+            <p style="color: #6b7280;">We have received your refund request and it is now in our processing queue.</p>
 
             <div class="details-card">
                 <h3 style="margin-top: 0; color: #047857;">Refund Details</h3>
@@ -1069,10 +1091,10 @@ export const requestRefund = async (req, res) => {
       currency: settings.currency,
     });
 
-    if (hoursSinceDelivery > 48) {
+    if (hoursSinceDelivery >= 168) {
       return res.status(400).json({
         success: false,
-        message: "Returns must be requested within 48 hours of delivery.",
+        message: "Returns must be requested within 7 days of delivery.",
       });
     }
 
@@ -1274,13 +1296,183 @@ export const requestRefund = async (req, res) => {
   }
 }; 
 
+// export const approveRefund = async (req, res) => {
+//   try {
+//     const { orderId, refundId } = req.params;
+
+//     const order = await Order.findById(orderId).populate(
+//       "user",
+//       "firstname lastname email"
+//     );
+
+//     if (!order) {
+//       return res.status(404).json({ message: "Order not found" });
+//     }
+
+//     const refund = order.refunds.id(refundId);
+//     if (!refund) {
+//       return res.status(404).json({ message: "Refund request not found" });
+//     }
+
+//     if (refund.status !== "Pending") {
+//       return res.status(400).json({
+//         message: `Refund is already ${refund.status}`,
+//         currentStatus: refund.status,
+//       });
+//     }
+
+//     const oldRefundStatus = refund.status;
+//     refund.status = "Processing";
+//     refund.processedAt = new Date();
+//     try {
+//       await order.save();
+//       console.log("Refund status updated to Processing successfully");
+//     } catch (saveError) {
+//       console.error("Failed to save order:", saveError);
+//     }
+
+//     const refundData = {
+//       id: order.flutterwaveTransactionId,
+//       amount: refund.amount,
+//     };
+
+//     console.log("Initiating Flutterwave refund:", refundData);
+
+//     let flutterwaveResponse;
+//     try {
+//       flutterwaveResponse = await flw.Transaction.refund(refundData);
+//       console.log("Flutterwave response:", flutterwaveResponse);
+
+//       if (flutterwaveResponse.status === "success") {
+//         if (flutterwaveResponse.data?.id) {
+//           refund.flutterwaveRefundId = flutterwaveResponse.data.id.toString();
+//         }
+//         if (flutterwaveResponse.data?.flw_ref) {
+//           refund.flw_ref = flutterwaveResponse.data.flw_ref;
+//         }
+//         refund.flutterwaveResponse = flutterwaveResponse.data;
+
+//         const refundStatus = flutterwaveResponse.data?.status?.toLowerCase();
+//         const isCompleted =
+//           refundStatus === "completed" ||
+//           refundStatus === "successful" ||
+//           refundStatus === "processing" ||
+//           flutterwaveResponse.data?.status === "successful";
+
+//         if (isCompleted) {
+//           refund.status = "Approved";
+
+//           order.totalRefunded = (order.totalRefunded || 0) + refund.amount;
+
+//           const approvedRefunds = order.refunds.filter(
+//             (r) => r.status === "Approved"
+//           );
+//           if (approvedRefunds.length === order.products.length) {
+//             order.refundStatus = "Fully Refunded";
+//             order.status = "Refunded";
+//           } else if (approvedRefunds.length > 0) {
+//             order.refundStatus = "Partially Refunded";
+//             order.status = "Partially Refunded";
+//           }
+//         } else {
+//           refund.status = "Processing";
+//         }
+
+//         await order.save();
+//       } else if (flutterwaveResponse.status === "error") {
+//         refund.status = "Rejected";
+//         refund.errorDetails = flutterwaveResponse.message;
+//         refund.processedAt = new Date();
+//         await order.save();
+
+//         return res.status(400).json({
+//           success: false,
+//           message: "Flutterwave refund failed",
+//           error: flutterwaveResponse.message,
+//           currentStatus: refund.status,
+//         });
+//       }
+//     } catch (flutterwaveError) {
+//       console.error("Flutterwave API error:", flutterwaveError);
+
+//       refund.status = "Rejected";
+//       refund.errorDetails = flutterwaveError.message;
+//       await order.save();
+
+//       return res.status(500).json({
+//         success: false,
+//         message: "Flutterwave API error",
+//         error: flutterwaveError.message,
+//         currentStatus: refund.status,
+//       });
+//     }
+
+//     const settings = await storeSettings.findOne();
+//     const formatter = new Intl.NumberFormat(undefined, {
+//       style: "currency",
+//       currency: settings.currency,
+//     });
+
+//     if (refund.status === "Approved") {
+//       await sendRefundApprovedEmail(order, refund, settings, formatter);
+//     } else if (refund.status === "Processing") {
+//       await sendRefundProcessingEmail(order, refund, settings, formatter);
+//     }
+
+//     try {
+//       await logRefundAction(
+//         req,
+//         refund.status === "Approved"
+//           ? "REFUND_COMPLETED"
+//           : "REFUND_PROCESSING_STARTED",
+//         orderId,
+//         refundId,
+//         {
+//           before: { refundStatus: oldRefundStatus },
+//           after: {
+//             refundStatus: refund.status,
+//             flutterwaveRefundId: refund.flutterwaveRefundId,
+//           },
+//         },
+//         `Refund ${
+//           refund.status === "Approved" ? "completed" : "processing"
+//         }. Amount: ${formatter.format(refund.amount)}`
+//       );
+//       console.log("Audit log saved successfully");
+//     } catch (auditError) {
+//       console.error("Audit log failed (non-critical):", auditError);
+//     }
+
+//     return res.json({
+//       success: true,
+//       message:
+//         refund.status === "Approved"
+//           ? "Refund completed successfully!"
+//           : "Refund submitted for processing. Status will update when payment gateway confirms.",
+//       currentStatus: refund.status,
+//       refundId: refund._id,
+//       flutterwaveRefundId: refund.flutterwaveRefundId,
+//       flw_ref: refund.flw_ref,
+//       note:
+//         refund.status === "Approved"
+//           ? "Refund completed immediately via Flutterwave API"
+//           : "Waiting for webhook confirmation",
+//     });
+//   } catch (error) {
+//     console.error("Approve refund error:", error);
+//     res.status(500).json({
+//       message: "Server error processing refund",
+//       error: error.message,
+//     });
+//   }
+// };
 export const approveRefund = async (req, res) => {
   try {
     const { orderId, refundId } = req.params;
 
     const order = await Order.findById(orderId).populate(
       "user",
-      "firstname lastname email"
+      "firstname lastname email",
     );
 
     if (!order) {
@@ -1300,8 +1492,49 @@ export const approveRefund = async (req, res) => {
     }
 
     const oldRefundStatus = refund.status;
+
+    
+    try {
+      const balanceFn =
+        flw?.Balance?.get ||
+        flw?.Wallet?.get_balance ||
+        flw?.Wallet?.getBalance;
+      if (typeof balanceFn === "function") {
+        const balanceRes = await balanceFn.call(flw.Balance || flw.Wallet);
+        const available =
+          balanceRes?.data?.available_balance ??
+          balanceRes?.data?.balance ??
+          balanceRes?.data?.available ??
+          null;
+
+        if (available !== null && Number(available) < Number(refund.amount)) {
+          // Do NOT touch refund status — keep it Pending
+          return res.status(402).json({
+            success: false,
+            code: "INSUFFICIENT_BALANCE",
+            message:
+              "Refund could not be processed: the merchant account balance is insufficient. " +
+              "Please top up your Flutterwave wallet and try again. The refund remains Pending.",
+            currentStatus: "Pending",
+            originalStatus: oldRefundStatus,
+            requiredAmount: refund.amount,
+            availableBalance: available,
+          });
+        }
+      }
+    } catch (balanceErr) {
+      // Non-fatal — continue to attempt the refund; gateway will validate.
+      console.warn(
+        "Pre-flight balance check skipped:",
+        balanceErr?.message || balanceErr,
+      );
+    }
+    // ---------------------------------------------------------------------
+
+    // Move to Processing before calling gateway (so webhooks can correlate)
     refund.status = "Processing";
     refund.processedAt = new Date();
+
     try {
       await order.save();
       console.log("Refund status updated to Processing successfully");
@@ -1321,6 +1554,59 @@ export const approveRefund = async (req, res) => {
       flutterwaveResponse = await flw.Transaction.refund(refundData);
       console.log("Flutterwave response:", flutterwaveResponse);
 
+      // ---------- Gateway returned an error object ----------
+      if (flutterwaveResponse.status === "error") {
+        // Flutterwave puts the real reason in `.data` (string), while `.message`
+        // is often a generic "Some error occured". Check EVERYTHING.
+        const gwMessage = flutterwaveResponse.message || "";
+        const gwData = flutterwaveResponse.data || "";
+        const gwCombined =
+          typeof gwData === "string" ? `${gwMessage} | ${gwData}` : gwMessage;
+
+        if (
+          isInsufficientBalanceError(
+            gwMessage,
+            gwData,
+            flutterwaveResponse?.error,
+            flutterwaveResponse,
+          )
+        ) {
+          // Roll back — do NOT mark rejected
+          refund.status = "Pending";
+          refund.processedAt = undefined;
+          refund.errorDetails = undefined;
+          refund.flutterwaveRefundId = undefined;
+          refund.flw_ref = undefined;
+          refund.flutterwaveResponse = undefined;
+          await order.save();
+
+          return res.status(402).json({
+            success: false,
+            code: "INSUFFICIENT_BALANCE",
+            message:
+              "Refund could not be processed: the merchant account balance is insufficient. " +
+              "Please top up your Flutterwave wallet and try again. The refund remains Pending.",
+            currentStatus: "Pending",
+            originalStatus: oldRefundStatus,
+            gatewayMessage: gwCombined,
+          });
+        }
+
+        // Any other gateway error → reject as before
+        refund.status = "Rejected";
+        refund.errorDetails = gwCombined || "Flutterwave refund failed";
+        refund.processedAt = new Date();
+        await order.save();
+
+        return res.status(400).json({
+          success: false,
+          message: "Flutterwave refund failed",
+          error: gwCombined,
+          currentStatus: refund.status,
+        });
+      }
+
+      // ---------- Gateway returned success ----------
       if (flutterwaveResponse.status === "success") {
         if (flutterwaveResponse.data?.id) {
           refund.flutterwaveRefundId = flutterwaveResponse.data.id.toString();
@@ -1343,7 +1629,7 @@ export const approveRefund = async (req, res) => {
           order.totalRefunded = (order.totalRefunded || 0) + refund.amount;
 
           const approvedRefunds = order.refunds.filter(
-            (r) => r.status === "Approved"
+            (r) => r.status === "Approved",
           );
           if (approvedRefunds.length === order.products.length) {
             order.refundStatus = "Fully Refunded";
@@ -1357,34 +1643,60 @@ export const approveRefund = async (req, res) => {
         }
 
         await order.save();
-      } else if (flutterwaveResponse.status === "error") {
-        refund.status = "Rejected";
-        refund.errorDetails = flutterwaveResponse.message;
-        refund.processedAt = new Date();
-        await order.save();
-
-        return res.status(400).json({
-          success: false,
-          message: "Flutterwave refund failed",
-          error: flutterwaveResponse.message,
-          currentStatus: refund.status,
-        });
       }
     } catch (flutterwaveError) {
       console.error("Flutterwave API error:", flutterwaveError);
 
+      const errMsg =
+        flutterwaveError?.message ||
+        flutterwaveError?.response?.data?.message ||
+        flutterwaveError?.response?.data ||
+        String(flutterwaveError);
+
+      if (
+        isInsufficientBalanceError(
+          flutterwaveError?.message,
+          flutterwaveError?.response?.data?.message,
+          flutterwaveError?.response?.data,
+          flutterwaveError?.response?.data?.data,
+          String(flutterwaveError),
+        )
+      ) {
+        refund.status = "Pending";
+        refund.processedAt = undefined;
+        refund.errorDetails = undefined;
+        refund.flutterwaveRefundId = undefined;
+        refund.flw_ref = undefined;
+        refund.flutterwaveResponse = undefined;
+        await order.save();
+
+        return res.status(402).json({
+          success: false,
+          code: "INSUFFICIENT_BALANCE",
+          message:
+            "Refund could not be processed: the merchant account balance is insufficient. " +
+            "Please top up your Flutterwave wallet and try again. The refund remains Pending.",
+          currentStatus: "Pending",
+          originalStatus: oldRefundStatus,
+          gatewayMessage: errMsg,
+        });
+      }
+
+      // Any other API error → reject as before
       refund.status = "Rejected";
-      refund.errorDetails = flutterwaveError.message;
+      refund.errorDetails = errMsg;
+      refund.processedAt = new Date();
       await order.save();
 
       return res.status(500).json({
         success: false,
         message: "Flutterwave API error",
-        error: flutterwaveError.message,
+        error: errMsg,
         currentStatus: refund.status,
       });
     }
 
+    // ---------- Emails + audit for genuine transitions ----------
     const settings = await storeSettings.findOne();
     const formatter = new Intl.NumberFormat(undefined, {
       style: "currency",
@@ -1395,7 +1707,7 @@ export const approveRefund = async (req, res) => {
       await sendRefundApprovedEmail(order, refund, settings, formatter);
     } else if (refund.status === "Processing") {
       await sendRefundProcessingEmail(order, refund, settings, formatter);
-    }
+    } 
 
     try {
       await logRefundAction(
@@ -1414,7 +1726,7 @@ export const approveRefund = async (req, res) => {
         },
         `Refund ${
           refund.status === "Approved" ? "completed" : "processing"
-        }. Amount: ${formatter.format(refund.amount)}`
+        }. Amount: ${formatter.format(refund.amount)}`,
       );
       console.log("Audit log saved successfully");
     } catch (auditError) {
@@ -1444,7 +1756,6 @@ export const approveRefund = async (req, res) => {
     });
   }
 };
-
 export const flutterwaveWebhook = async (req, res) => {
   try {
     const signature = req.headers["verif-hash"];

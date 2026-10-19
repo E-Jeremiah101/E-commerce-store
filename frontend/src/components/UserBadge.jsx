@@ -2,13 +2,7 @@
 import React from "react";
 import axiosInstance from "../lib/axios";
 import { useUserStore } from "../stores/useUserStore";
-/**
- * Props:
- *  - name: full name string (e.g. "Enofe Jeremiah")
- *  - size: "sm" | "md" | "lg"  (default "md")
- *  - showFullName: boolean (if false, only shows initials)
- *  - className: extra classes for the wrapper
- */
+
 
 const initialsFromName = (name = "") => {
   const parts = name.trim().split(/\s+/);
@@ -100,6 +94,7 @@ export default function UserBadge({
               <span className="text-xs text-gray-500 tracking-widest">
                 {user.role.toUpperCase()}
               </span>
+              
             ) : (
               <span className="text-xs text-gray-500 tracking-widest">
                 GUEST
